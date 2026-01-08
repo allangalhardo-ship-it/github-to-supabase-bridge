@@ -25,8 +25,8 @@
     --foreground: 0 0% 11%;                    /* #1D1D1D - texto principal */
     --surface-alt: 120 20% 97%;                /* #F6F9F6 - superfície alternativa */
     
-    /* Cards */
-    --card: 120 20% 97%;                       /* #F6F9F6 - cards com surface-alt */
+    /* Cards - verde claro */
+    --card: 142 41% 94%;                       /* #E8F6ED - primary-light */
     --card-foreground: 0 0% 11%;               /* #1D1D1D */
     
     /* Popovers */
