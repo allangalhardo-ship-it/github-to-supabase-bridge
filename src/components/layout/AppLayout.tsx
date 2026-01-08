@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Logo, LogoMark } from '@/components/brand/Logo';
 import {
   LayoutDashboard,
   UtensilsCrossed,
@@ -15,7 +16,6 @@ import {
   SlidersHorizontal,
   LogOut,
   Menu,
-  ChefHat,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -42,18 +42,13 @@ const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => {
   return (
     <div className="flex flex-col h-full bg-sidebar text-sidebar-foreground">
       {/* Header com logo */}
-      <div className="p-6 border-b border-sidebar-border">
-        <div className="flex items-center gap-3">
-          <div className="bg-sidebar-primary p-2 rounded-lg">
-            <ChefHat className="h-6 w-6 text-sidebar-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="font-bold text-lg text-sidebar-foreground">GastroGestor</h1>
-            <p className="text-xs text-sidebar-foreground/70 truncate max-w-[150px]">
-              {usuario?.nome}
-            </p>
-          </div>
-        </div>
+      <div className="p-5 border-b border-sidebar-border">
+        <Logo size="sm" theme="dark" />
+        {usuario?.nome && (
+          <p className="text-xs text-sidebar-foreground/60 mt-2 truncate">
+            {usuario.nome}
+          </p>
+        )}
       </div>
 
       {/* Navigation */}
@@ -118,10 +113,7 @@ const AppLayout = () => {
               <SidebarContent onNavigate={() => setOpen(false)} />
             </SheetContent>
           </Sheet>
-          <div className="flex items-center gap-2">
-            <ChefHat className="h-6 w-6 text-white" />
-            <span className="font-bold text-lg text-white">GastroGestor</span>
-          </div>
+          <Logo size="sm" theme="dark" />
         </header>
 
         {/* Main Content */}
