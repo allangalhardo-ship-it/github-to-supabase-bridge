@@ -90,8 +90,12 @@ const Produtos = () => {
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
+      if (!usuario?.empresa_id) {
+        throw new Error('Seu cadastro ainda não foi finalizado. Saia e entre novamente.');
+      }
+
       const { error } = await supabase.from('produtos').insert({
-        empresa_id: usuario!.empresa_id,
+        empresa_id: usuario.empresa_id,
         nome: data.nome,
         categoria: data.categoria || null,
         preco_venda: parseFloat(data.preco_venda) || 0,
