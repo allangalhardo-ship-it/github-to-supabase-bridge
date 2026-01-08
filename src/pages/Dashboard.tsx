@@ -195,7 +195,17 @@ const Dashboard = () => {
   const impostoPercent = config?.imposto_medio_sobre_vendas || 10;
   const impostos = receitaBruta * (impostoPercent / 100);
   
-  const lucroEstimado = margemContribuicao - custoFixoTotal - impostos;
+  // Taxa do app de delivery (aplicada nas vendas via delivery)
+  const taxaAppPercent = (config as any)?.taxa_app_delivery || 12;
+  const vendasDelivery = vendas?.filter(v => 
+    v.canal && ['ifood', 'rappi', '99food', 'delivery', 'app'].some(c => 
+      v.canal!.toLowerCase().includes(c)
+    )
+  ) || [];
+  const receitaDelivery = vendasDelivery.reduce((sum, v) => sum + Number(v.valor_total), 0);
+  const taxaAppTotal = receitaDelivery * (taxaAppPercent / 100);
+  
+  const lucroEstimado = margemContribuicao - custoFixoTotal - impostos - taxaAppTotal;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -298,7 +308,7 @@ const Dashboard = () => {
                   {formatCurrency(lucroEstimado)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Após custos fixos e impostos
+                  Após custos fixos, impostos{taxaAppTotal > 0 ? ` e taxas app (${formatCurrency(taxaAppTotal)})` : ''}
                 </p>
               </>
             )}
