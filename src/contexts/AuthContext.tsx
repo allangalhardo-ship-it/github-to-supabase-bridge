@@ -107,14 +107,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (empresaError) throw empresaError;
 
       // 3. Create usuario profile
-      const { error: usuarioError } = await supabase
+      const { data: usuarioData, error: usuarioError } = await supabase
         .from('usuarios')
         .insert({
           id: authData.user.id,
           empresa_id: empresaData.id,
           nome,
           email,
-        });
+        })
+        .select()
+        .single();
 
       if (usuarioError) throw usuarioError;
 
@@ -136,6 +138,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
 
       if (configError) console.error('Error creating config:', configError);
+
+      // 6. Set usuario in state immediately after signup
+      setUsuario(usuarioData);
 
       return { error: null };
     } catch (error) {
