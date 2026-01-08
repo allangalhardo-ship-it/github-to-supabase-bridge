@@ -59,7 +59,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (session?.user) {
           // Use setTimeout to avoid potential race conditions
           setTimeout(async () => {
-            const usuario = await fetchUsuario(session.user.id);
+            let usuario = await fetchUsuario(session.user.id);
+
+            // If the user exists in auth but doesn't have an app profile yet,
+            // bootstrap it on the backend and retry.
+            if (!usuario) {
+              const { error: bootstrapError } = await supabase.functions.invoke('bootstrap-account', {
+                body: {},
+              });
+
+              if (bootstrapError) {
+                console.error('Error bootstrapping account:', bootstrapError);
+              } else {
+                usuario = await fetchUsuario(session.user.id);
+              }
+            }
+
             setUsuario(usuario);
             setLoading(false);
           }, 0);
@@ -71,12 +86,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+
       if (session?.user) {
-        fetchUsuario(session.user.id).then(setUsuario);
+        let usuario = await fetchUsuario(session.user.id);
+
+        if (!usuario) {
+          const { error: bootstrapError } = await supabase.functions.invoke('bootstrap-account', {
+            body: {},
+          });
+
+          if (bootstrapError) {
+            console.error('Error bootstrapping account:', bootstrapError);
+          } else {
+            usuario = await fetchUsuario(session.user.id);
+          }
+        }
+
+        setUsuario(usuario);
       }
+
       setLoading(false);
     });
 
@@ -85,62 +116,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string, nome: string, nomeEmpresa: string) => {
     try {
-      // 1. Create auth user
+      // 1. Create auth user (store extra data in user metadata)
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: window.location.origin,
+          data: {
+            nome,
+            nomeEmpresa,
+          },
         },
       });
 
       if (authError) throw authError;
       if (!authData.user) throw new Error('Erro ao criar usuário');
 
-      // 2. Create empresa
-      const { data: empresaData, error: empresaError } = await supabase
-        .from('empresas')
-        .insert({ nome: nomeEmpresa })
-        .select()
-        .single();
+      // 2. Ensure app profile exists (empresa + usuario + defaults)
+      const { data: bootstrapData, error: bootstrapError } = await supabase.functions.invoke(
+        'bootstrap-account',
+        {
+          body: { nome, nomeEmpresa },
+        }
+      );
 
-      if (empresaError) throw empresaError;
+      if (bootstrapError) throw bootstrapError;
 
-      // 3. Create usuario profile
-      const { data: usuarioData, error: usuarioError } = await supabase
-        .from('usuarios')
-        .insert({
-          id: authData.user.id,
-          empresa_id: empresaData.id,
-          nome,
-          email,
-        })
-        .select()
-        .single();
-
-      if (usuarioError) throw usuarioError;
-
-      // 4. Add admin role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: authData.user.id,
-          role: 'admin',
-        });
-
-      if (roleError) throw roleError;
-
-      // 5. Create default configuracoes
-      const { error: configError } = await supabase
-        .from('configuracoes')
-        .insert({
-          empresa_id: empresaData.id,
-        });
-
-      if (configError) console.error('Error creating config:', configError);
-
-      // 6. Set usuario in state immediately after signup
-      setUsuario(usuarioData);
+      // 3. Set usuario in state immediately
+      if (bootstrapData?.usuario) {
+        setUsuario(bootstrapData.usuario);
+      }
 
       return { error: null };
     } catch (error) {
