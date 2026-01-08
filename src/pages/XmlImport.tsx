@@ -497,10 +497,10 @@ const XmlImport = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Camera className="h-5 w-5" />
-                Foto do Cupom/Nota
+                Foto ou PDF do DANFE/Cupom
               </CardTitle>
               <CardDescription>
-                Tire uma foto ou envie imagem do cupom fiscal. A IA extrai os dados automaticamente.
+                Envie uma foto, imagem ou PDF do cupom fiscal/DANFE. A IA extrai os dados automaticamente.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -508,7 +508,7 @@ const XmlImport = () => {
                 <Input
                   ref={imageInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/*,application/pdf"
                   capture="environment"
                   onChange={handleImageUpload}
                   disabled={isProcessingAI}
@@ -521,6 +521,9 @@ const XmlImport = () => {
                   </div>
                 )}
               </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Formatos aceitos: JPG, PNG, WEBP, PDF
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
