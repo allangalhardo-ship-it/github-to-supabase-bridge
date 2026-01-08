@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,8 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, Check, AlertCircle, Plus, Link2 } from 'lucide-react';
+import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Key, QrCode, Loader2 } from 'lucide-react';
 
 interface XmlItem {
   produto_descricao: string;
@@ -40,6 +41,10 @@ const XmlImport = () => {
   const [mappingDialogOpen, setMappingDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<XmlItem | null>(null);
   const [newInsumoNome, setNewInsumoNome] = useState('');
+  const [isProcessingAI, setIsProcessingAI] = useState(false);
+  const [accessKey, setAccessKey] = useState('');
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch insumos para mapeamento
   const { data: insumos } = useQuery({
@@ -70,6 +75,10 @@ const XmlImport = () => {
 
   const parseXmlFile = async (file: File) => {
     const text = await file.text();
+    parseXmlContent(text);
+  };
+
+  const parseXmlContent = (text: string) => {
     const parser = new DOMParser();
     const xml = parser.parseFromString(text, 'text/xml');
 
@@ -145,6 +154,167 @@ const XmlImport = () => {
     }
   };
 
+  // Process image with AI
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsProcessingAI(true);
+    try {
+      // Convert to base64
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+
+      const { data, error } = await supabase.functions.invoke('process-nfe', {
+        body: { type: 'image', content: base64 }
+      });
+
+      if (error) throw error;
+
+      if (data.success && data.data) {
+        const nfeData = data.data;
+        // Convert to our format
+        const itens: XmlItem[] = nfeData.itens?.map((item: any) => {
+          const mapeamento = mapeamentos?.find(m => 
+            m.descricao_nota?.toLowerCase() === item.descricao?.toLowerCase()
+          );
+          return {
+            produto_descricao: item.descricao || '',
+            ean: item.ean || '',
+            quantidade: item.quantidade || 0,
+            unidade: item.unidade || 'un',
+            valor_total: item.valorTotal || 0,
+            custo_unitario: item.valorUnitario || 0,
+            insumo_id: mapeamento?.insumo_id,
+            mapeado: !!mapeamento,
+          };
+        }) || [];
+
+        setParsedNota({
+          numero: nfeData.numero || '',
+          fornecedor: nfeData.fornecedor?.nome || '',
+          data_emissao: nfeData.dataEmissao || '',
+          valor_total: nfeData.valorTotal || 0,
+          itens,
+        });
+        toast({ title: 'Cupom processado!', description: `${itens.length} itens encontrados.` });
+      } else {
+        toast({
+          title: 'Erro ao processar imagem',
+          description: data.message || 'Não foi possível extrair dados.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error processing image:', error);
+      toast({
+        title: 'Erro',
+        description: 'Falha ao processar imagem com IA.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsProcessingAI(false);
+    }
+  };
+
+  // Process access key
+  const handleAccessKeySubmit = async () => {
+    const cleanKey = accessKey.replace(/\D/g, '');
+    if (cleanKey.length !== 44) {
+      toast({
+        title: 'Chave inválida',
+        description: 'A chave de acesso deve conter 44 dígitos.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsProcessingAI(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('process-nfe', {
+        body: { type: 'accessKey', content: cleanKey }
+      });
+
+      if (error) throw error;
+
+      if (data.data) {
+        const nfeData = data.data;
+        setParsedNota({
+          numero: nfeData.numero || '',
+          fornecedor: nfeData.fornecedor?.nome || nfeData.fornecedor?.cnpj || '',
+          data_emissao: nfeData.dataEmissao || '',
+          valor_total: nfeData.valorTotal || 0,
+          itens: [],
+        });
+      }
+      
+      toast({
+        title: data.success ? 'Chave validada' : 'Atenção',
+        description: data.message,
+        variant: data.success ? 'default' : 'destructive',
+      });
+    } catch (error) {
+      console.error('Error processing access key:', error);
+      toast({
+        title: 'Erro',
+        description: 'Falha ao processar chave de acesso.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsProcessingAI(false);
+    }
+  };
+
+  // Process QR Code
+  const handleQrCodeSubmit = async () => {
+    if (!qrCodeUrl.trim()) {
+      toast({
+        title: 'URL vazia',
+        description: 'Cole a URL do QR Code do cupom fiscal.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsProcessingAI(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('process-nfe', {
+        body: { type: 'qrCode', content: qrCodeUrl }
+      });
+
+      if (error) throw error;
+
+      if (data.data) {
+        const nfeData = data.data;
+        setParsedNota({
+          numero: nfeData.numero || '',
+          fornecedor: nfeData.fornecedor?.nome || nfeData.fornecedor?.cnpj || '',
+          data_emissao: nfeData.dataEmissao || '',
+          valor_total: nfeData.valorTotal || 0,
+          itens: [],
+        });
+      }
+
+      toast({
+        title: data.success ? 'QR Code processado' : 'Atenção',
+        description: data.message,
+        variant: data.success ? 'default' : 'destructive',
+      });
+    } catch (error) {
+      console.error('Error processing QR code:', error);
+      toast({
+        title: 'Erro',
+        description: 'Falha ao processar QR Code.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsProcessingAI(false);
+    }
+  };
+
   const createInsumoMutation = useMutation({
     mutationFn: async (nome: string) => {
       const { data, error } = await supabase
@@ -209,7 +379,7 @@ const XmlImport = () => {
           empresa_id: usuario!.empresa_id,
           numero: parsedNota.numero,
           fornecedor: parsedNota.fornecedor,
-          data_emissao: parsedNota.data_emissao,
+          data_emissao: parsedNota.data_emissao || null,
           valor_total: parsedNota.valor_total,
         })
         .select()
@@ -275,32 +445,155 @@ const XmlImport = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Importar NF-e</h1>
-        <p className="text-muted-foreground">Importe notas fiscais XML para atualizar estoque automaticamente</p>
+        <h1 className="text-3xl font-bold text-foreground">Importar Nota Fiscal</h1>
+        <p className="text-muted-foreground">Importe via XML, foto, chave de acesso ou QR Code</p>
       </div>
 
-      {/* Upload Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
-            Upload de XML
-          </CardTitle>
-          <CardDescription>
-            Selecione um arquivo XML de NF-e ou NFC-e
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <Input
-              type="file"
-              accept=".xml"
-              onChange={handleFileChange}
-              className="max-w-md"
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Tabs for different import methods */}
+      <Tabs defaultValue="xml" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="xml" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            <span className="hidden sm:inline">XML</span>
+          </TabsTrigger>
+          <TabsTrigger value="foto" className="flex items-center gap-2">
+            <Camera className="h-4 w-4" />
+            <span className="hidden sm:inline">Foto</span>
+          </TabsTrigger>
+          <TabsTrigger value="chave" className="flex items-center gap-2">
+            <Key className="h-4 w-4" />
+            <span className="hidden sm:inline">Chave</span>
+          </TabsTrigger>
+          <TabsTrigger value="qrcode" className="flex items-center gap-2">
+            <QrCode className="h-4 w-4" />
+            <span className="hidden sm:inline">QR Code</span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="xml">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Upload className="h-5 w-5" />
+                Upload de XML
+              </CardTitle>
+              <CardDescription>
+                Selecione um arquivo XML de NF-e ou NFC-e
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Input
+                type="file"
+                accept=".xml"
+                onChange={handleFileChange}
+                className="max-w-md"
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="foto">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Camera className="h-5 w-5" />
+                Foto do Cupom/Nota
+              </CardTitle>
+              <CardDescription>
+                Tire uma foto ou envie imagem do cupom fiscal. A IA extrai os dados automaticamente.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4">
+                <Input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleImageUpload}
+                  disabled={isProcessingAI}
+                  className="max-w-md"
+                />
+                {isProcessingAI && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Processando com IA...</span>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="chave">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Key className="h-5 w-5" />
+                Chave de Acesso NFe
+              </CardTitle>
+              <CardDescription>
+                Digite os 44 dígitos da chave de acesso da nota fiscal
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-end gap-4">
+                <div className="flex-1 max-w-lg">
+                  <Label htmlFor="accessKey">Chave de Acesso (44 dígitos)</Label>
+                  <Input
+                    id="accessKey"
+                    placeholder="0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000"
+                    value={accessKey}
+                    onChange={(e) => setAccessKey(e.target.value)}
+                    disabled={isProcessingAI}
+                    maxLength={54}
+                  />
+                </div>
+                <Button onClick={handleAccessKeySubmit} disabled={isProcessingAI}>
+                  {isProcessingAI ? <Loader2 className="h-4 w-4 animate-spin" /> : "Consultar"}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                ⚠️ Consulta completa requer integração com API SEFAZ (dados limitados)
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="qrcode">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <QrCode className="h-5 w-5" />
+                QR Code do Cupom
+              </CardTitle>
+              <CardDescription>
+                Cole a URL do QR Code do cupom fiscal (NFC-e)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-end gap-4">
+                <div className="flex-1 max-w-lg">
+                  <Label htmlFor="qrCode">URL do QR Code</Label>
+                  <Input
+                    id="qrCode"
+                    placeholder="https://www.sefaz.rs.gov.br/NFCE/..."
+                    value={qrCodeUrl}
+                    onChange={(e) => setQrCodeUrl(e.target.value)}
+                    disabled={isProcessingAI}
+                  />
+                </div>
+                <Button onClick={handleQrCodeSubmit} disabled={isProcessingAI}>
+                  {isProcessingAI ? <Loader2 className="h-4 w-4 animate-spin" /> : "Processar"}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                ⚠️ Consulta completa requer integração com API SEFAZ (dados limitados)
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Parsed Nota */}
       {parsedNota && (
@@ -310,87 +603,104 @@ const XmlImport = () => {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
-                  NF-e {parsedNota.numero}
+                  NF-e {parsedNota.numero || '(sem número)'}
                 </CardTitle>
                 <CardDescription>
-                  {parsedNota.fornecedor} • {parsedNota.data_emissao}
+                  {parsedNota.fornecedor || 'Fornecedor não identificado'}
+                  {parsedNota.data_emissao && ` • ${parsedNota.data_emissao}`}
                 </CardDescription>
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold">{formatCurrency(parsedNota.valor_total)}</p>
-                <Badge variant={itensMapeados === totalItens ? 'default' : 'secondary'}>
-                  {itensMapeados}/{totalItens} itens mapeados
-                </Badge>
+                {totalItens > 0 && (
+                  <Badge variant={itensMapeados === totalItens ? 'default' : 'secondary'}>
+                    {itensMapeados}/{totalItens} itens mapeados
+                  </Badge>
+                )}
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Produto</TableHead>
-                  <TableHead>EAN</TableHead>
-                  <TableHead className="text-right">Qtd</TableHead>
-                  <TableHead className="text-right">Custo Unit.</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {parsedNota.itens.map((item, index) => (
-                  <TableRow key={index}>
-                    <TableCell className="font-medium">{item.produto_descricao}</TableCell>
-                    <TableCell className="text-muted-foreground">{item.ean || '-'}</TableCell>
-                    <TableCell className="text-right">
-                      {item.quantidade} {item.unidade}
-                    </TableCell>
-                    <TableCell className="text-right">{formatCurrency(item.custo_unitario)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(item.valor_total)}</TableCell>
-                    <TableCell className="text-center">
-                      {item.mapeado ? (
-                        <Badge variant="default" className="gap-1">
-                          <Check className="h-3 w-3" />
-                          Mapeado
-                        </Badge>
-                      ) : (
-                        <Badge variant="destructive" className="gap-1">
-                          <AlertCircle className="h-3 w-3" />
-                          Não mapeado
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {!item.mapeado && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedItem(item);
-                            setMappingDialogOpen(true);
-                          }}
-                        >
-                          <Link2 className="h-4 w-4 mr-1" />
-                          Mapear
-                        </Button>
-                      )}
-                    </TableCell>
+            {parsedNota.itens.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Produto</TableHead>
+                    <TableHead>EAN</TableHead>
+                    <TableHead className="text-right">Qtd</TableHead>
+                    <TableHead className="text-right">Custo Unit.</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                    <TableHead></TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {parsedNota.itens.map((item, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="font-medium">{item.produto_descricao}</TableCell>
+                      <TableCell className="text-muted-foreground">{item.ean || '-'}</TableCell>
+                      <TableCell className="text-right">
+                        {item.quantidade} {item.unidade}
+                      </TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.custo_unitario)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.valor_total)}</TableCell>
+                      <TableCell className="text-center">
+                        {item.mapeado ? (
+                          <Badge variant="default" className="gap-1">
+                            <Check className="h-3 w-3" />
+                            Mapeado
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive" className="gap-1">
+                            <AlertCircle className="h-3 w-3" />
+                            Não mapeado
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {!item.mapeado && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedItem(item);
+                              setMappingDialogOpen(true);
+                            }}
+                          >
+                            <Link2 className="h-4 w-4 mr-1" />
+                            Mapear
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Nenhum item encontrado na nota fiscal.</p>
+                <p className="text-sm">Tente usar o método de upload de XML ou foto para obter os itens.</p>
+              </div>
+            )}
 
             <div className="flex justify-end gap-2 pt-4">
               <Button variant="outline" onClick={() => setParsedNota(null)}>
                 Cancelar
               </Button>
-              <Button
-                onClick={() => importarNotaMutation.mutate()}
-                disabled={importarNotaMutation.isPending}
-              >
-                <Check className="mr-2 h-4 w-4" />
-                Importar Nota
-              </Button>
+              {parsedNota.itens.length > 0 && (
+                <Button
+                  onClick={() => importarNotaMutation.mutate()}
+                  disabled={importarNotaMutation.isPending}
+                >
+                  {importarNotaMutation.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Check className="mr-2 h-4 w-4" />
+                  )}
+                  Importar Nota
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
