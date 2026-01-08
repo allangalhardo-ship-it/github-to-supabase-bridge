@@ -1,96 +1,132 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* GastroGestor - Green Ops Premium Design System
+   Identidade visual focada em gestão para food delivery (iFood/99/MEI Food)
+   Transmite: organização, decisão financeira, ganhar dinheiro com comida
 */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
+    /* Primary Colors - Verde Principal */
+    --primary: 142 49% 46%;                    /* #3BAF63 - verde principal */
+    --primary-foreground: 0 0% 100%;           /* branco */
+    --primary-dark: 149 80% 26%;               /* #0D773B - decisional/contraste */
+    --primary-light: 142 41% 94%;              /* #E8F6ED - superfícies leves */
+    
+    /* CTA - Call to Action */
+    --cta: 142 58% 49%;                        /* #34C759 - confirmar/salvar/continuar */
+    
+    /* Neutrals */
+    --background: 0 0% 100%;                   /* #FFFFFF - branco */
+    --foreground: 0 0% 11%;                    /* #1D1D1D - texto principal */
+    --surface-alt: 120 20% 97%;                /* #F6F9F6 - superfície alternativa */
+    
+    /* Cards */
+    --card: 120 20% 97%;                       /* #F6F9F6 - cards com surface-alt */
+    --card-foreground: 0 0% 11%;               /* #1D1D1D */
+    
+    /* Popovers */
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
+    --popover-foreground: 0 0% 11%;
+    
+    /* Secondary - para botões secundários */
+    --secondary: 142 41% 94%;                  /* #E8F6ED - primary-light */
+    --secondary-foreground: 149 80% 26%;       /* #0D773B - primary-dark */
+    
+    /* Muted - textos secundários */
+    --muted: 120 20% 97%;                      /* #F6F9F6 */
+    --muted-foreground: 220 9% 46%;            /* #6B7280 - neutral-text-secondary */
+    
+    /* Accent */
+    --accent: 142 41% 94%;                     /* #E8F6ED */
+    --accent-foreground: 149 80% 26%;          /* #0D773B */
+    
+    /* Semantic Colors */
+    --destructive: 0 68% 50%;                  /* #D52B2B - error */
+    --destructive-foreground: 0 0% 100%;
+    --warning: 39 91% 55%;                     /* #F5A623 */
+    --success: 142 58% 49%;                    /* #34C759 */
+    --info: 204 70% 53%;                       /* #3498DB */
+    
+    /* Form Elements */
+    --border: 142 20% 88%;                     /* verde suave para bordas */
+    --input: 142 20% 88%;
+    --ring: 142 49% 46%;                       /* primary para focus */
+    
+    /* Radius - 8px para arredondamento */
     --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    
+    /* Shadows */
+    --shadow-card: 0px 2px 8px rgba(0, 0, 0, 0.05);
+    
+    /* Sidebar - Header verde escuro */
+    --sidebar-background: 149 80% 26%;         /* #0D773B - primary-dark */
+    --sidebar-foreground: 0 0% 100%;           /* branco */
+    --sidebar-primary: 142 58% 49%;            /* CTA verde */
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 149 70% 22%;             /* verde mais escuro para hover */
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 149 60% 30%;
+    --sidebar-ring: 142 58% 49%;
+    
+    /* Chart Colors */
+    --chart-1: 142 49% 46%;                    /* primary */
+    --chart-2: 142 58% 49%;                    /* CTA */
+    --chart-3: 204 70% 53%;                    /* info */
+    --chart-4: 39 91% 55%;                     /* warning */
+    --chart-5: 149 80% 26%;                    /* primary-dark */
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    /* Dark theme - mantém a essência verde */
+    --primary: 142 49% 46%;
+    --primary-foreground: 0 0% 100%;
+    --primary-dark: 142 58% 49%;
+    --primary-light: 149 40% 15%;
+    
+    --cta: 142 58% 49%;
+    
+    --background: 150 10% 8%;
+    --foreground: 0 0% 95%;
+    --surface-alt: 150 10% 12%;
+    
+    --card: 150 10% 12%;
+    --card-foreground: 0 0% 95%;
+    
+    --popover: 150 10% 10%;
+    --popover-foreground: 0 0% 95%;
+    
+    --secondary: 149 40% 15%;
+    --secondary-foreground: 142 49% 70%;
+    
+    --muted: 150 10% 15%;
+    --muted-foreground: 220 9% 60%;
+    
+    --accent: 149 40% 15%;
+    --accent-foreground: 142 49% 70%;
+    
+    --destructive: 0 68% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --warning: 39 91% 50%;
+    --success: 142 58% 45%;
+    --info: 204 70% 50%;
+    
+    --border: 150 10% 20%;
+    --input: 150 10% 20%;
+    --ring: 142 49% 46%;
+    
+    --sidebar-background: 150 15% 10%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 142 58% 49%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 150 15% 15%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 150 10% 18%;
+    --sidebar-ring: 142 58% 49%;
   }
 }
 
@@ -99,7 +135,75 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+  }
+
+  /* Typography */
+  h1, h2, h3 {
+    @apply font-bold text-foreground;
+  }
+
+  h1 {
+    @apply text-2xl md:text-3xl;
+  }
+
+  h2 {
+    @apply text-xl md:text-2xl;
+  }
+
+  h3 {
+    @apply text-lg md:text-xl;
+  }
+}
+
+@layer components {
+  /* Card with shadow */
+  .card-premium {
+    @apply bg-card rounded-lg border;
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Financial numbers - positive */
+  .financial-positive {
+    @apply font-semibold;
+    color: hsl(var(--primary-dark));
+  }
+
+  /* Financial numbers - negative */
+  .financial-negative {
+    @apply font-semibold;
+    color: hsl(var(--destructive));
+  }
+
+  /* Table with alternating rows */
+  .table-striped tbody tr:nth-child(even) {
+    background-color: hsl(var(--surface-alt));
+  }
+
+  /* CTA Button */
+  .btn-cta {
+    @apply font-medium rounded-lg px-4 py-2 transition-colors;
+    background-color: hsl(var(--cta));
+    color: white;
+  }
+
+  .btn-cta:hover {
+    background-color: hsl(142 58% 44%);
+  }
+
+  /* Secondary Button */
+  .btn-secondary {
+    @apply font-medium rounded-lg px-4 py-2 transition-colors;
+    background-color: hsl(var(--primary-light));
+    color: hsl(var(--primary-dark));
+  }
+
+  .btn-secondary:hover {
+    background-color: hsl(142 41% 90%);
   }
 }
