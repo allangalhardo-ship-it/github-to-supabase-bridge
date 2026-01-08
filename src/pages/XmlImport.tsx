@@ -44,6 +44,8 @@ const XmlImport = () => {
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const [accessKey, setAccessKey] = useState('');
   const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [filePreview, setFilePreview] = useState<{ url: string; type: 'image' | 'pdf'; name: string } | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch insumos para mapeamento
@@ -154,10 +156,43 @@ const XmlImport = () => {
     }
   };
 
-  // Process image with AI
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle file selection for preview
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    setSelectedFile(file);
+    const isPdf = file.type === 'application/pdf';
+    
+    if (isPdf) {
+      // For PDFs, create object URL
+      const url = URL.createObjectURL(file);
+      setFilePreview({ url, type: 'pdf', name: file.name });
+    } else {
+      // For images, create data URL for preview
+      const reader = new FileReader();
+      reader.onload = () => {
+        setFilePreview({ url: reader.result as string, type: 'image', name: file.name });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Clear file preview
+  const clearFilePreview = () => {
+    if (filePreview?.type === 'pdf') {
+      URL.revokeObjectURL(filePreview.url);
+    }
+    setFilePreview(null);
+    setSelectedFile(null);
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
+    }
+  };
+
+  // Process image/PDF with AI
+  const processFileWithAI = async () => {
+    if (!selectedFile) return;
 
     setIsProcessingAI(true);
     try {
@@ -165,7 +200,7 @@ const XmlImport = () => {
       const base64 = await new Promise<string>((resolve) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(selectedFile);
       });
 
       const { data, error } = await supabase.functions.invoke('process-nfe', {
@@ -200,19 +235,20 @@ const XmlImport = () => {
           valor_total: nfeData.valorTotal || 0,
           itens,
         });
-        toast({ title: 'Cupom processado!', description: `${itens.length} itens encontrados.` });
+        toast({ title: 'Arquivo processado!', description: `${itens.length} itens encontrados.` });
+        clearFilePreview();
       } else {
         toast({
-          title: 'Erro ao processar imagem',
+          title: 'Erro ao processar arquivo',
           description: data.message || 'Não foi possível extrair dados.',
           variant: 'destructive',
         });
       }
     } catch (error) {
-      console.error('Error processing image:', error);
+      console.error('Error processing file:', error);
       toast({
         title: 'Erro',
-        description: 'Falha ao processar imagem com IA.',
+        description: 'Falha ao processar arquivo com IA.',
         variant: 'destructive',
       });
     } finally {
@@ -503,27 +539,79 @@ const XmlImport = () => {
                 Envie uma foto, imagem ou PDF do cupom fiscal/DANFE. A IA extrai os dados automaticamente.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4">
-                <Input
-                  ref={imageInputRef}
-                  type="file"
-                  accept="image/*,application/pdf"
-                  capture="environment"
-                  onChange={handleImageUpload}
-                  disabled={isProcessingAI}
-                  className="max-w-md"
-                />
-                {isProcessingAI && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    <span>Processando com IA...</span>
+            <CardContent className="space-y-4">
+              {!filePreview ? (
+                <div className="flex items-center gap-4">
+                  <Input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/*,application/pdf"
+                    capture="environment"
+                    onChange={handleFileSelect}
+                    disabled={isProcessingAI}
+                    className="max-w-md"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Formatos aceitos: JPG, PNG, WEBP, PDF
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Preview */}
+                  <div className="border rounded-lg overflow-hidden bg-muted/50 max-w-2xl">
+                    {filePreview.type === 'image' ? (
+                      <img 
+                        src={filePreview.url} 
+                        alt="Preview" 
+                        className="max-h-96 w-auto mx-auto object-contain"
+                      />
+                    ) : (
+                      <div className="relative">
+                        <iframe
+                          src={filePreview.url}
+                          className="w-full h-96"
+                          title="PDF Preview"
+                        />
+                      </div>
+                    )}
+                    <div className="p-2 bg-muted flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground truncate max-w-xs">
+                        {filePreview.name}
+                      </span>
+                      <Badge variant="outline">
+                        {filePreview.type === 'pdf' ? 'PDF' : 'Imagem'}
+                      </Badge>
+                    </div>
                   </div>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Formatos aceitos: JPG, PNG, WEBP, PDF
-              </p>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-3">
+                    <Button
+                      onClick={processFileWithAI}
+                      disabled={isProcessingAI}
+                    >
+                      {isProcessingAI ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Processando com IA...
+                        </>
+                      ) : (
+                        <>
+                          <Camera className="h-4 w-4 mr-2" />
+                          Processar com IA
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={clearFilePreview}
+                      disabled={isProcessingAI}
+                    >
+                      Trocar arquivo
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
