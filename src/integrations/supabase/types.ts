@@ -22,6 +22,7 @@ export type Database = {
           id: string
           imposto_medio_sobre_vendas: number
           margem_desejada_padrao: number
+          taxa_app_delivery: number
           updated_at: string
         }
         Insert: {
@@ -31,6 +32,7 @@ export type Database = {
           id?: string
           imposto_medio_sobre_vendas?: number
           margem_desejada_padrao?: number
+          taxa_app_delivery?: number
           updated_at?: string
         }
         Update: {
@@ -40,6 +42,7 @@ export type Database = {
           id?: string
           imposto_medio_sobre_vendas?: number
           margem_desejada_padrao?: number
+          taxa_app_delivery?: number
           updated_at?: string
         }
         Relationships: [

@@ -18,6 +18,7 @@ const Configuracoes = () => {
     margem_desejada_padrao: '',
     cmv_alvo: '',
     imposto_medio_sobre_vendas: '',
+    taxa_app_delivery: '',
   });
 
   const { data: config, isLoading } = useQuery({
@@ -40,28 +41,30 @@ const Configuracoes = () => {
         margem_desejada_padrao: config.margem_desejada_padrao?.toString() || '30',
         cmv_alvo: config.cmv_alvo?.toString() || '35',
         imposto_medio_sobre_vendas: config.imposto_medio_sobre_vendas?.toString() || '10',
+        taxa_app_delivery: (config as any).taxa_app_delivery?.toString() || '12',
       });
     }
   }, [config]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
+      const configData = {
+        margem_desejada_padrao: parseFloat(data.margem_desejada_padrao) || 30,
+        cmv_alvo: parseFloat(data.cmv_alvo) || 35,
+        imposto_medio_sobre_vendas: parseFloat(data.imposto_medio_sobre_vendas) || 10,
+        taxa_app_delivery: parseFloat(data.taxa_app_delivery) || 12,
+      };
+
       if (config) {
         const { error } = await supabase
           .from('configuracoes')
-          .update({
-            margem_desejada_padrao: parseFloat(data.margem_desejada_padrao) || 30,
-            cmv_alvo: parseFloat(data.cmv_alvo) || 35,
-            imposto_medio_sobre_vendas: parseFloat(data.imposto_medio_sobre_vendas) || 10,
-          })
+          .update(configData)
           .eq('id', config.id);
         if (error) throw error;
       } else {
         const { error } = await supabase.from('configuracoes').insert({
           empresa_id: usuario!.empresa_id,
-          margem_desejada_padrao: parseFloat(data.margem_desejada_padrao) || 30,
-          cmv_alvo: parseFloat(data.cmv_alvo) || 35,
-          imposto_medio_sobre_vendas: parseFloat(data.imposto_medio_sobre_vendas) || 10,
+          ...configData,
         });
         if (error) throw error;
       }
@@ -109,7 +112,7 @@ const Configuracoes = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="margem_desejada_padrao">Margem de Lucro Desejada (%)</Label>
                 <Input
@@ -155,6 +158,22 @@ const Configuracoes = () => {
                 />
                 <p className="text-xs text-muted-foreground">
                   Estimativa de impostos para cálculo do lucro líquido
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="taxa_app_delivery">Taxa do App de Delivery (%)</Label>
+                <Input
+                  id="taxa_app_delivery"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  value={formData.taxa_app_delivery}
+                  onChange={(e) => setFormData({ ...formData, taxa_app_delivery: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Comissão média cobrada pelo iFood, 99, Rappi, etc.
                 </p>
               </div>
             </div>
