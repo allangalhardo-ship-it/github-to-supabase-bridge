@@ -55,6 +55,29 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const AppRoutes = () => {
+  return (
+    <Routes>
+      <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+      <Route path="/cadastro" element={<PublicRoute><Cadastro /></PublicRoute>} />
+      
+      <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="dashboard" element={<Dashboard />} />
+        <Route path="produtos" element={<Produtos />} />
+        <Route path="insumos" element={<Insumos />} />
+        <Route path="estoque" element={<Estoque />} />
+        <Route path="vendas" element={<Vendas />} />
+        <Route path="custos-fixos" element={<CustosFixos />} />
+        <Route path="configuracoes" element={<Configuracoes />} />
+        <Route path="xml-import" element={<XmlImport />} />
+      </Route>
+      
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -62,24 +85,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-            <Route path="/cadastro" element={<PublicRoute><Cadastro /></PublicRoute>} />
-            
-            <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-              <Route index element={<Navigate to="/dashboard" replace />} />
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="produtos" element={<Produtos />} />
-              <Route path="insumos" element={<Insumos />} />
-              <Route path="estoque" element={<Estoque />} />
-              <Route path="vendas" element={<Vendas />} />
-              <Route path="custos-fixos" element={<CustosFixos />} />
-              <Route path="configuracoes" element={<Configuracoes />} />
-              <Route path="xml-import" element={<XmlImport />} />
-            </Route>
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AppRoutes />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

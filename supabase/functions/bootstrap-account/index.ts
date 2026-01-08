@@ -148,10 +148,18 @@ serve(async (req) => {
     }
 
     // Add default admin role (best-effort)
-    await admin.from("user_roles").insert({ user_id: user.id, role: "admin" }).catch(() => null);
+    try {
+      await admin.from("user_roles").insert({ user_id: user.id, role: "admin" });
+    } catch (_) {
+      // ignore
+    }
 
     // Create default configuracoes (best-effort)
-    await admin.from("configuracoes").insert({ empresa_id: empresa.id }).catch(() => null);
+    try {
+      await admin.from("configuracoes").insert({ empresa_id: empresa.id });
+    } catch (_) {
+      // ignore
+    }
 
     return new Response(JSON.stringify({ usuario }), {
       status: 200,
