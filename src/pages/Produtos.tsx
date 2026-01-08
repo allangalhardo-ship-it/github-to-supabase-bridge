@@ -185,7 +185,9 @@ const Produtos = () => {
 
   const calcularPrecoSugerido = (custoInsumos: number) => {
     const margemDesejada = config?.margem_desejada_padrao || 30;
-    return custoInsumos / (1 - margemDesejada / 100);
+    const taxaApp = (config as any)?.taxa_app_delivery || 12;
+    // Preço = Custo / (1 - margem% - taxaApp%)
+    return custoInsumos / (1 - (margemDesejada + taxaApp) / 100);
   };
 
   const formatCurrency = (value: number) => {
