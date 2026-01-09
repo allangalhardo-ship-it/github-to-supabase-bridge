@@ -12,7 +12,8 @@ import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Package, AlertCircle, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package, AlertCircle, Search, Filter, X } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import FichaTecnicaDialog from '@/components/produtos/FichaTecnicaDialog';
 import MarketPriceSearch from '@/components/produtos/MarketPriceSearch';
 
@@ -48,6 +49,8 @@ const Produtos = () => {
     preco_venda: '',
     ativo: true,
   });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoriaFiltro, setCategoriaFiltro] = useState<string>('todas');
 
   // Fetch produtos with ficha técnica
   const { data: produtos, isLoading } = useQuery({
@@ -230,6 +233,25 @@ const Produtos = () => {
     }).format(value);
   };
 
+  // Extrair categorias únicas dos produtos
+  const categorias = React.useMemo(() => {
+    if (!produtos) return [];
+    const cats = produtos
+      .map(p => p.categoria)
+      .filter((c): c is string => c !== null && c !== '');
+    return [...new Set(cats)].sort();
+  }, [produtos]);
+
+  // Filtrar produtos
+  const produtosFiltrados = React.useMemo(() => {
+    if (!produtos) return [];
+    return produtos.filter(produto => {
+      const matchSearch = produto.nome.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchCategoria = categoriaFiltro === 'todas' || produto.categoria === categoriaFiltro;
+      return matchSearch && matchCategoria;
+    });
+  }, [produtos, searchTerm, categoriaFiltro]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -308,15 +330,50 @@ const Produtos = () => {
         </Dialog>
       </div>
 
+      {/* Filtros */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar produto..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+          {searchTerm && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+              onClick={() => setSearchTerm('')}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+        <Select value={categoriaFiltro} onValueChange={setCategoriaFiltro}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Categoria" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todas">Todas categorias</SelectItem>
+            {categorias.map((cat) => (
+              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {isLoading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[...Array(6)].map((_, i) => (
             <Skeleton key={i} className="h-48" />
           ))}
         </div>
-      ) : produtos && produtos.length > 0 ? (
+      ) : produtosFiltrados && produtosFiltrados.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {produtos.map((produto) => {
+          {produtosFiltrados.map((produto) => {
             const custoInsumos = calcularCustoInsumos(produto);
             const precoSugerido = calcularPrecoSugerido(custoInsumos);
             const precoVenda = Number(produto.preco_venda);
