@@ -240,7 +240,7 @@ const Clientes = () => {
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {format(new Date(cliente.created_at), 'dd/MM/yyyy', { locale: ptBR })}
+                      {cliente.created_at ? format(new Date(cliente.created_at), 'dd/MM/yyyy', { locale: ptBR }) : '-'}
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
