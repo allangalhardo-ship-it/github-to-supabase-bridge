@@ -313,6 +313,41 @@ export type Database = {
           },
         ]
       }
+      producoes: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          observacao: string | null
+          produto_id: string
+          quantidade: number
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id?: string
+          observacao?: string | null
+          produto_id: string
+          quantidade?: number
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          observacao?: string | null
+          produto_id?: string
+          quantidade?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "producoes_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       produto_mapeamento: {
         Row: {
           codigo_produto_nota: string | null
@@ -370,6 +405,7 @@ export type Database = {
           categoria: string | null
           created_at: string
           empresa_id: string
+          estoque_acabado: number
           id: string
           nome: string
           preco_venda: number
@@ -381,6 +417,7 @@ export type Database = {
           categoria?: string | null
           created_at?: string
           empresa_id: string
+          estoque_acabado?: number
           id?: string
           nome: string
           preco_venda?: number
@@ -392,6 +429,7 @@ export type Database = {
           categoria?: string | null
           created_at?: string
           empresa_id?: string
+          estoque_acabado?: number
           id?: string
           nome?: string
           preco_venda?: number

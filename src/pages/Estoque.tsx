@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, ArrowUp, ArrowDown, Warehouse, Package, AlertTriangle, Search, Filter, X } from 'lucide-react';
+import { Plus, ArrowUp, ArrowDown, Warehouse, Package, AlertTriangle, Search, Filter, X, Factory } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -36,6 +36,7 @@ const Estoque = () => {
   const [filtroOrigem, setFiltroOrigem] = useState<string>('todos');
   const [filtroPeriodo, setFiltroPeriodo] = useState<string>('mes');
   const [buscaInsumo, setBuscaInsumo] = useState('');
+  const [buscaProduto, setBuscaProduto] = useState('');
 
   // Fetch insumos para o select e lista de saldo
   const { data: insumos, isLoading: loadingInsumos } = useQuery({
@@ -44,6 +45,22 @@ const Estoque = () => {
       const { data, error } = await supabase
         .from('insumos')
         .select('*')
+        .order('nome');
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!usuario?.empresa_id,
+  });
+
+  // Fetch produtos para estoque acabado
+  const { data: produtos, isLoading: loadingProdutos } = useQuery({
+    queryKey: ['produtos-estoque', usuario?.empresa_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('produtos')
+        .select('id, nome, estoque_acabado, preco_venda, categoria')
+        .eq('ativo', true)
         .order('nome');
 
       if (error) throw error;
@@ -78,6 +95,21 @@ const Estoque = () => {
       i.nome.toLowerCase().includes(buscaInsumo.toLowerCase())
     );
   }, [insumos, buscaInsumo]);
+
+  // Filtrar produtos pela busca
+  const produtosFiltrados = useMemo(() => {
+    if (!produtos) return [];
+    if (!buscaProduto.trim()) return produtos;
+    return produtos.filter(p => 
+      p.nome.toLowerCase().includes(buscaProduto.toLowerCase())
+    );
+  }, [produtos, buscaProduto]);
+
+  // Produtos com estoque acabado
+  const produtosEmEstoque = useMemo(() => {
+    if (!produtos) return [];
+    return produtos.filter(p => Number(p.estoque_acabado) > 0);
+  }, [produtos]);
 
   // Insumos com estoque baixo
   const insumosEstoqueBaixo = useMemo(() => {
@@ -313,11 +345,15 @@ const Estoque = () => {
         </Card>
       )}
 
-      <Tabs defaultValue="saldo" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="saldo" className="flex items-center gap-2">
+      <Tabs defaultValue="insumos" className="w-full">
+        <TabsList className="grid w-full max-w-lg grid-cols-3">
+          <TabsTrigger value="insumos" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
-            Saldo Atual
+            Insumos
+          </TabsTrigger>
+          <TabsTrigger value="acabados" className="flex items-center gap-2">
+            <Factory className="h-4 w-4" />
+            Produtos Acabados
           </TabsTrigger>
           <TabsTrigger value="movimentacoes" className="flex items-center gap-2">
             <Warehouse className="h-4 w-4" />
@@ -325,12 +361,12 @@ const Estoque = () => {
           </TabsTrigger>
         </TabsList>
 
-        {/* Aba Saldo Atual */}
-        <TabsContent value="saldo" className="mt-6">
+        {/* Aba Estoque de Insumos */}
+        <TabsContent value="insumos" className="mt-6">
           <Card>
             <CardHeader className="pb-3">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <CardTitle>Saldo de Estoque</CardTitle>
+                <CardTitle>Estoque de Insumos</CardTitle>
                 <div className="relative w-full sm:w-64">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -400,6 +436,96 @@ const Estoque = () => {
                   </h3>
                   <p className="text-muted-foreground">
                     {buscaInsumo ? 'Tente outra busca' : 'Cadastre insumos na página de Insumos'}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Aba Estoque de Produtos Acabados */}
+        <TabsContent value="acabados" className="mt-6">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <CardTitle>Estoque de Produtos Acabados</CardTitle>
+                  {produtosEmEstoque.length > 0 && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {produtosEmEstoque.length} produto(s) em estoque
+                    </p>
+                  )}
+                </div>
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar produto..."
+                    value={buscaProduto}
+                    onChange={(e) => setBuscaProduto(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {loadingProdutos ? (
+                <div className="p-6">
+                  <Skeleton className="h-64" />
+                </div>
+              ) : produtosFiltrados && produtosFiltrados.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Produto</TableHead>
+                      <TableHead>Categoria</TableHead>
+                      <TableHead className="text-right">Estoque Acabado</TableHead>
+                      <TableHead className="text-right">Preço Venda</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {produtosFiltrados.map((produto) => {
+                      const estoque = Number(produto.estoque_acabado);
+                      return (
+                        <TableRow key={produto.id}>
+                          <TableCell className="font-medium">
+                            {produto.nome}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {produto.categoria || '-'}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span className={estoque === 0 ? 'text-muted-foreground' : 'font-semibold text-green-600'}>
+                              {estoque} un
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            R$ {Number(produto.preco_venda).toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {estoque > 0 ? (
+                              <Badge variant="outline" className="text-green-600 border-green-600">
+                                Em estoque
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary">
+                                Sem estoque
+                              </Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="p-12 text-center">
+                  <Factory className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">
+                    {buscaProduto ? 'Nenhum produto encontrado' : 'Nenhum produto cadastrado'}
+                  </h3>
+                  <p className="text-muted-foreground">
+                    {buscaProduto ? 'Tente outra busca' : 'Registre produções para alimentar o estoque acabado'}
                   </p>
                 </div>
               )}

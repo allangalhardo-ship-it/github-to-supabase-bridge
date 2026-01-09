@@ -18,6 +18,7 @@ import {
   LogOut,
   Menu,
   ChefHat,
+  Factory,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -27,6 +28,7 @@ const navItems = [
   { to: '/receitas', icon: ChefHat, label: 'Receitas' },
   { to: '/insumos', icon: Carrot, label: 'Insumos' },
   { to: '/estoque', icon: PackageOpen, label: 'Estoque' },
+  { to: '/producao', icon: Factory, label: 'Produção' },
   { to: '/vendas', icon: ShoppingCart, label: 'Vendas' },
   { to: '/clientes', icon: Users, label: 'Clientes' },
   { to: '/custos-fixos', icon: Calculator, label: 'Custos Fixos' },
