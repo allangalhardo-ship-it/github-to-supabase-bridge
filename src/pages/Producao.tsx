@@ -235,9 +235,6 @@ const Producao = () => {
                     value={formData.shelf_life_dias}
                     onChange={(e) => setFormData({ ...formData, shelf_life_dias: e.target.value })}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Shelf life do produto
-                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="dias_alerta">Alertar antes de</Label>
@@ -246,14 +243,15 @@ const Producao = () => {
                     type="number"
                     step="1"
                     min="1"
+                    placeholder="Ex: 3"
                     value={formData.dias_alerta_vencimento}
                     onChange={(e) => setFormData({ ...formData, dias_alerta_vencimento: e.target.value })}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Dias para notificar
-                  </p>
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground -mt-2">
+                Defina o shelf life do produto e quantos dias antes do vencimento deseja ser notificado
+              </p>
 
               <div className="space-y-2">
                 <Label htmlFor="observacao">Observação (opcional)</Label>
