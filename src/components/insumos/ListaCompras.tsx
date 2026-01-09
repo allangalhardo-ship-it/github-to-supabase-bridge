@@ -166,10 +166,10 @@ const ListaCompras = () => {
       // Consumo até a data da compra + dias de estoque desejados após a compra
       const necessidadeTotal = consumoDiario * (diasAteCompra + diasEstoque);
       
-      // Quanto precisa comprar (necessidade total - estoque atual)
-      const quantidadeComprar = Math.max(0, necessidadeTotal - estoqueAtual);
+      // Quanto precisa comprar (necessidade total - estoque atual) - arredondado para cima
+      const quantidadeComprar = Math.ceil(Math.max(0, necessidadeTotal - estoqueAtual));
       
-      // Custo estimado
+      // Custo estimado (baseado na quantidade arredondada)
       const custoEstimado = quantidadeComprar * Number(insumo.custo_unitario);
       
       // É urgente se estoque está abaixo do mínimo ou dura menos que 3 dias
