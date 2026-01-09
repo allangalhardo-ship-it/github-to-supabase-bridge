@@ -217,4 +217,18 @@
   .btn-secondary:hover {
     background-color: hsl(142 41% 90%);
   }
+
+  /* Safe areas para celulares com notch */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  /* Touch feedback melhorado */
+  .touch-feedback {
+    @apply active:scale-95 transition-transform;
+  }
 }
