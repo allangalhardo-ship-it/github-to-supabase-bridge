@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -51,6 +51,16 @@ interface ReceitaIntermediaria {
   };
 }
 
+// Ingrediente temporário para criação (antes de salvar no banco)
+interface IngredienteTemp {
+  id: string;
+  insumoId: string;
+  nome: string;
+  quantidade: number;
+  unidade: string;
+  custoUnitario: number;
+}
+
 const Insumos = () => {
   const { usuario } = useAuth();
   const { toast } = useToast();
@@ -62,7 +72,7 @@ const Insumos = () => {
   const [activeTab, setActiveTab] = useState<string>("todos");
   const [formData, setFormData] = useState({
     nome: '',
-    unidade_medida: 'un',
+    unidade_medida: 'kg',
     custo_unitario: '',
     estoque_atual: '',
     estoque_minimo: '',
@@ -70,7 +80,11 @@ const Insumos = () => {
     rendimento_receita: '',
   });
 
-  // Estado para receita do intermediário
+  // Estado para ingredientes do formulário de criação/edição
+  const [ingredientesTemp, setIngredientesTemp] = useState<IngredienteTemp[]>([]);
+  const [novoIngredienteForm, setNovoIngredienteForm] = useState({ insumo_id: '', quantidade: '' });
+
+  // Estado para receita do intermediário (dialog separado)
   const [novoIngrediente, setNovoIngrediente] = useState({ insumo_id: '', quantidade: '' });
 
   const { data: insumos, isLoading } = useQuery({
@@ -118,19 +132,83 @@ const Insumos = () => {
   const insumosSimples = insumos?.filter(i => !i.is_intermediario) || [];
   const insumosIntermediarios = insumos?.filter(i => i.is_intermediario) || [];
 
+  // Custo calculado dos ingredientes temporários
+  const custoTotalTemp = useMemo(() => 
+    ingredientesTemp.reduce((sum, ing) => sum + (ing.quantidade * ing.custoUnitario), 0),
+    [ingredientesTemp]
+  );
+
+  const custoUnitarioTemp = useMemo(() => {
+    const rendimento = parseFloat(formData.rendimento_receita) || 1;
+    return rendimento > 0 ? custoTotalTemp / rendimento : 0;
+  }, [custoTotalTemp, formData.rendimento_receita]);
+
+  // Insumos disponíveis para adicionar no form (excluindo os já adicionados)
+  const insumosDisponiveisForm = useMemo(() => 
+    insumosSimples.filter(i => !ingredientesTemp.some(ing => ing.insumoId === i.id)),
+    [insumosSimples, ingredientesTemp]
+  );
+
+  const insumoFormSelecionadoInfo = insumos?.find(i => i.id === novoIngredienteForm.insumo_id);
+
+  const handleAddIngredienteTemp = () => {
+    if (!novoIngredienteForm.insumo_id || !novoIngredienteForm.quantidade) {
+      toast({ title: 'Selecione um insumo e informe a quantidade', variant: 'destructive' });
+      return;
+    }
+
+    const insumo = insumos?.find(i => i.id === novoIngredienteForm.insumo_id);
+    if (!insumo) return;
+
+    const novoIng: IngredienteTemp = {
+      id: crypto.randomUUID(),
+      insumoId: insumo.id,
+      nome: insumo.nome,
+      quantidade: parseFloat(novoIngredienteForm.quantidade),
+      unidade: insumo.unidade_medida,
+      custoUnitario: insumo.custo_unitario,
+    };
+
+    setIngredientesTemp([...ingredientesTemp, novoIng]);
+    setNovoIngredienteForm({ insumo_id: '', quantidade: '' });
+  };
+
+  const handleRemoveIngredienteTemp = (id: string) => {
+    setIngredientesTemp(ingredientesTemp.filter(ing => ing.id !== id));
+  };
+
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      const { error } = await supabase.from('insumos').insert({
+      // Calcular custo baseado nos ingredientes
+      const custoCalculado = data.is_intermediario ? custoUnitarioTemp : (parseFloat(data.custo_unitario) || 0);
+
+      const { data: novoInsumo, error } = await supabase.from('insumos').insert({
         empresa_id: usuario!.empresa_id,
         nome: data.nome,
         unidade_medida: data.unidade_medida,
-        custo_unitario: parseFloat(data.custo_unitario) || 0,
+        custo_unitario: custoCalculado,
         estoque_atual: parseFloat(data.estoque_atual) || 0,
         estoque_minimo: parseFloat(data.estoque_minimo) || 0,
         is_intermediario: data.is_intermediario,
         rendimento_receita: data.rendimento_receita ? parseFloat(data.rendimento_receita) : null,
-      });
+      }).select('id').single();
+      
       if (error) throw error;
+
+      // Se for intermediário e tiver ingredientes, salvar a receita
+      if (data.is_intermediario && ingredientesTemp.length > 0 && novoInsumo) {
+        const receitaData = ingredientesTemp.map(ing => ({
+          insumo_id: novoInsumo.id,
+          insumo_ingrediente_id: ing.insumoId,
+          quantidade: ing.quantidade,
+        }));
+
+        const { error: receitaError } = await supabase
+          .from('receitas_intermediarias')
+          .insert(receitaData);
+
+        if (receitaError) throw receitaError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['insumos'] });
@@ -247,13 +325,15 @@ const Insumos = () => {
   const resetForm = () => {
     setFormData({
       nome: '',
-      unidade_medida: 'un',
+      unidade_medida: 'kg',
       custo_unitario: '',
       estoque_atual: '',
       estoque_minimo: '',
       is_intermediario: false,
       rendimento_receita: '',
     });
+    setIngredientesTemp([]);
+    setNovoIngredienteForm({ insumo_id: '', quantidade: '' });
     setEditingInsumo(null);
     setDialogOpen(false);
   };
@@ -408,7 +488,7 @@ const Insumos = () => {
               Novo Insumo
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingInsumo ? 'Editar Insumo' : 'Novo Insumo'}
@@ -497,20 +577,110 @@ const Insumos = () => {
                 )}
               </div>
 
-              {formData.is_intermediario && (
-                <div className="space-y-2">
-                  <Label htmlFor="custo_intermediario" className="text-muted-foreground">
-                    Custo Unitário (calculado automaticamente)
-                  </Label>
-                  <Input
-                    id="custo_intermediario"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.custo_unitario}
-                    onChange={(e) => setFormData({ ...formData, custo_unitario: e.target.value })}
-                    placeholder="Será calculado pela receita"
-                  />
+              {/* Seção de ingredientes para intermediários */}
+              {formData.is_intermediario && !editingInsumo && (
+                <Card className="border-purple-200 dark:border-purple-800">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <ChefHat className="h-4 w-4 text-purple-500" />
+                      Ingredientes da Receita
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {/* Lista de ingredientes adicionados */}
+                    {ingredientesTemp.length > 0 && (
+                      <div className="space-y-2">
+                        {ingredientesTemp.map((ing) => (
+                          <div key={ing.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg text-sm">
+                            <span className="font-medium">{ing.nome}</span>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline">{ing.quantidade} {ing.unidade}</Badge>
+                              <span className="text-muted-foreground">
+                                {formatCurrency(ing.quantidade * ing.custoUnitario)}
+                              </span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-destructive"
+                                onClick={() => handleRemoveIngredienteTemp(ing.id)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {/* Totais */}
+                        <div className="pt-2 border-t space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span>Custo total da receita:</span>
+                            <span className="font-medium">{formatCurrency(custoTotalTemp)}</span>
+                          </div>
+                          {formData.rendimento_receita && parseFloat(formData.rendimento_receita) > 0 && (
+                            <div className="flex justify-between text-primary font-medium">
+                              <span>Custo por {formData.unidade_medida}:</span>
+                              <span>{formatCurrency(custoUnitarioTemp)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Adicionar ingrediente */}
+                    {insumosDisponiveisForm.length > 0 ? (
+                      <div className="flex gap-2">
+                        <Select
+                          value={novoIngredienteForm.insumo_id}
+                          onValueChange={(value) => setNovoIngredienteForm({ ...novoIngredienteForm, insumo_id: value })}
+                        >
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Selecione um insumo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {insumosDisponiveisForm.map((insumo) => (
+                              <SelectItem key={insumo.id} value={insumo.id}>
+                                {insumo.nome} ({insumo.unidade_medida}) - {formatCurrency(insumo.custo_unitario)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          type="number"
+                          step="0.001"
+                          min="0"
+                          placeholder={insumoFormSelecionadoInfo ? `Qtd (${insumoFormSelecionadoInfo.unidade_medida})` : "Qtd"}
+                          value={novoIngredienteForm.quantidade}
+                          onChange={(e) => setNovoIngredienteForm({ ...novoIngredienteForm, quantidade: e.target.value })}
+                          className="w-24"
+                        />
+                        <Button
+                          type="button"
+                          size="icon"
+                          onClick={handleAddIngredienteTemp}
+                          disabled={!novoIngredienteForm.insumo_id || !novoIngredienteForm.quantidade}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : ingredientesTemp.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-2">
+                        Cadastre insumos simples primeiro para montar a receita.
+                      </p>
+                    ) : null}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Custo calculado para edição de intermediário */}
+              {formData.is_intermediario && editingInsumo && (
+                <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    Para editar os ingredientes, clique no ícone de chapéu de chef na tabela.
+                  </p>
+                  <p className="text-sm mt-1">
+                    Custo atual: <strong>{formatCurrency(Number(formData.custo_unitario))}/{formData.unidade_medida}</strong>
+                  </p>
                 </div>
               )}
 
