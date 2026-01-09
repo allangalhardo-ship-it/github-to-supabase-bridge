@@ -21,7 +21,7 @@ import {
   CheckCircle2,
   Info
 } from 'lucide-react';
-import { format, subDays } from 'date-fns';
+import { format, subDays, differenceInDays, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -150,6 +150,11 @@ const ListaCompras = () => {
     // Montar lista de compras
     const itens: ItemLista[] = [];
 
+    // Calcular dias até a compra
+    const hoje = startOfDay(new Date());
+    const dataCompraParsed = startOfDay(new Date(dataCompra + 'T12:00:00'));
+    const diasAteCompra = Math.max(0, differenceInDays(dataCompraParsed, hoje));
+
     insumos.forEach(insumo => {
       const consumoDiario = consumoDiarioPorInsumo[insumo.id] || 0;
       const estoqueAtual = Number(insumo.estoque_atual);
@@ -157,10 +162,10 @@ const ListaCompras = () => {
       // Dias que o estoque atual dura
       const diasEstoqueAtual = consumoDiario > 0 ? estoqueAtual / consumoDiario : Infinity;
       
-      // Quantidade necessária para os dias de estoque desejados
-      const necessidadeTotal = consumoDiario * diasEstoque;
+      // Consumo até a data da compra + dias de estoque desejados após a compra
+      const necessidadeTotal = consumoDiario * (diasAteCompra + diasEstoque);
       
-      // Quanto precisa comprar (necessidade - estoque atual)
+      // Quanto precisa comprar (necessidade total - estoque atual)
       const quantidadeComprar = Math.max(0, necessidadeTotal - estoqueAtual);
       
       // Custo estimado
@@ -189,7 +194,7 @@ const ListaCompras = () => {
       if (!a.urgente && b.urgente) return 1;
       return b.quantidadeComprar - a.quantidadeComprar;
     });
-  }, [insumos, fichasTecnicas, vendas, periodoGiro, diasEstoque]);
+  }, [insumos, fichasTecnicas, vendas, periodoGiro, diasEstoque, dataCompra]);
 
   // Filtrar apenas itens que precisam comprar
   const itensParaComprar = listaCompras.filter(item => item.quantidadeComprar > 0);
