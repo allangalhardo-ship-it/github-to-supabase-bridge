@@ -225,33 +225,39 @@ const TaxasAppsConfig = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {taxas.map((taxa) => (
-                <TableRow key={taxa.id}>
-                  <TableCell className="font-medium">{taxa.nome_app}</TableCell>
-                  <TableCell className="text-right">{Number(taxa.taxa_percentual).toFixed(1)}%</TableCell>
-                  <TableCell className="text-center">
-                    <Switch
-                      checked={taxa.ativo}
-                      onCheckedChange={(checked) => toggleMutation.mutate({ id: taxa.id, ativo: checked })}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(taxa)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive"
-                        onClick={() => deleteMutation.mutate(taxa.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {taxas.map((taxa) => {
+                if (!taxa.id) {
+                  console.error('Taxa sem ID:', taxa);
+                  return null;
+                }
+                return (
+                  <TableRow key={taxa.id}>
+                    <TableCell className="font-medium">{taxa.nome_app || '-'}</TableCell>
+                    <TableCell className="text-right">{Number(taxa.taxa_percentual).toFixed(1)}%</TableCell>
+                    <TableCell className="text-center">
+                      <Switch
+                        checked={taxa.ativo}
+                        onCheckedChange={(checked) => toggleMutation.mutate({ id: taxa.id, ativo: checked })}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(taxa)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive"
+                          onClick={() => deleteMutation.mutate(taxa.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         ) : (
