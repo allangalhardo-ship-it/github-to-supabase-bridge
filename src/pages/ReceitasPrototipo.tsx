@@ -84,6 +84,14 @@ const receitasIntermediarias = [
   },
 ];
 
+// Produtos mockados para vincular
+const produtosDisponiveis = [
+  { id: "p1", nome: "Brigadeiro Gourmet", categoria: "Doce", precoVenda: 3.50 },
+  { id: "p2", nome: "Trufa de Chocolate", categoria: "Doce", precoVenda: 5.00 },
+  { id: "p3", nome: "Coxinha de Frango", categoria: "Salgado", precoVenda: 4.00 },
+  { id: "p4", nome: "Bolo de Cenoura (fatia)", categoria: "Doce", precoVenda: 8.00 },
+];
+
 interface Ingrediente {
   tipo: "insumo" | "receita";
   id: string;
@@ -104,6 +112,8 @@ export default function ReceitasPrototipo() {
   const [ingredienteSelecionado, setIngredienteSelecionado] = useState("");
   const [quantidadeIngrediente, setQuantidadeIngrediente] = useState("");
   const [busca, setBusca] = useState("");
+  const [produtoVinculado, setProdutoVinculado] = useState("");
+  const [criarNovoProduto, setCriarNovoProduto] = useState(false);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -186,6 +196,8 @@ export default function ReceitasPrototipo() {
     setUnidadeRendimento("unidade");
     setIngredientes([]);
     setTipoReceita("intermediaria");
+    setProdutoVinculado("");
+    setCriarNovoProduto(false);
   };
 
   const receitasFiltradas = receitasIntermediarias.filter(r => 
@@ -253,6 +265,89 @@ export default function ReceitasPrototipo() {
                     (ex: ganache, recheio, massa). Pode ser adicionado como ingrediente em outras receitas.
                   </span>
                 </div>
+              )}
+
+              {tipoReceita === "final" && (
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Package className="h-4 w-4" />
+                      Vincular ao Produto
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-start gap-2 p-3 bg-background rounded-lg text-sm">
+                      <AlertCircle className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                      <span>
+                        <strong>Produto Final:</strong> Esta receita será a ficha técnica do produto selecionado. 
+                        O custo unitário será calculado automaticamente.
+                      </span>
+                    </div>
+
+                    <div className="flex gap-4">
+                      <Button
+                        type="button"
+                        variant={!criarNovoProduto ? "default" : "outline"}
+                        className="flex-1"
+                        onClick={() => setCriarNovoProduto(false)}
+                      >
+                        Vincular a produto existente
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={criarNovoProduto ? "default" : "outline"}
+                        className="flex-1"
+                        onClick={() => setCriarNovoProduto(true)}
+                      >
+                        Criar novo produto
+                      </Button>
+                    </div>
+
+                    {!criarNovoProduto ? (
+                      <div>
+                        <Label>Selecione o Produto</Label>
+                        <Select value={produtoVinculado} onValueChange={setProdutoVinculado}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Escolha um produto para vincular" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {produtosDisponiveis.map((produto) => (
+                              <SelectItem key={produto.id} value={produto.id}>
+                                <div className="flex items-center justify-between gap-4">
+                                  <span>{produto.nome}</span>
+                                  <Badge variant="outline" className="ml-2">
+                                    {produto.categoria}
+                                  </Badge>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {produtoVinculado && (
+                          <p className="text-sm text-muted-foreground mt-2">
+                            A ficha técnica deste produto será atualizada com esta receita.
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                          Um novo produto será criado automaticamente ao salvar a receita.
+                        </p>
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <div>
+                            <Label>Nome do Produto</Label>
+                            <Input placeholder="Ex: Brigadeiro Gourmet" />
+                          </div>
+                          <div>
+                            <Label>Preço de Venda (R$)</Label>
+                            <Input type="number" placeholder="0,00" step="0.01" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               )}
 
               {/* Informações Básicas */}
