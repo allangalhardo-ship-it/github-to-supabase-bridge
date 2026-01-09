@@ -15,9 +15,10 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Receipt, Upload, Trash2, Package, User } from 'lucide-react';
+import { Plus, Receipt, Trash2, Package, User, Upload } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import ImportarVendasDialog from '@/components/vendas/ImportarVendasDialog';
 
 interface Cliente {
   id: string;
@@ -200,6 +201,7 @@ const Vendas = () => {
         </div>
 
         <div className="flex gap-2">
+          <ImportarVendasDialog />
           <Dialog open={dialogOpen} onOpenChange={(open) => {
             setDialogOpen(open);
             if (!open) resetForm();
@@ -434,17 +436,15 @@ const Vendas = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Upload className="h-5 w-5" />
-                Importar Relatório CSV
+                Importar Relatório de Vendas
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">
-                Em breve: importe relatórios do iFood, Rappi e outras plataformas de delivery.
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground">
+                Importe relatórios do iFood, Rappi, 99Food e outras plataformas de delivery.
+                O sistema detecta automaticamente o formato do arquivo.
               </p>
-              <Button disabled>
-                <Upload className="mr-2 h-4 w-4" />
-                Selecionar Arquivo CSV
-              </Button>
+              <ImportarVendasDialog />
             </CardContent>
           </Card>
         </TabsContent>
