@@ -110,7 +110,7 @@ const Caixa = () => {
   const dataInicio = format(startOfMonth(mesAtual), 'yyyy-MM-dd');
   const dataFim = format(endOfMonth(mesAtual), 'yyyy-MM-dd');
 
-  // Buscar movimentos manuais
+  // Buscar movimentos manuais do mês
   const { data: movimentosManuais, isLoading: loadingMovimentos } = useQuery({
     queryKey: ['caixa-movimentos', usuario?.empresa_id, dataInicio, dataFim],
     queryFn: async () => {
@@ -127,7 +127,21 @@ const Caixa = () => {
     enabled: !!usuario?.empresa_id,
   });
 
-  // Buscar vendas (entradas)
+  // Buscar TODOS os movimentos manuais (para saldo total)
+  const { data: todosMovimentosManuais } = useQuery({
+    queryKey: ['caixa-movimentos-total', usuario?.empresa_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('caixa_movimentos')
+        .select('tipo, valor');
+
+      if (error) throw error;
+      return data as { tipo: string; valor: number }[];
+    },
+    enabled: !!usuario?.empresa_id,
+  });
+
+  // Buscar vendas do mês
   const { data: vendas, isLoading: loadingVendas } = useQuery({
     queryKey: ['caixa-vendas', usuario?.empresa_id, dataInicio, dataFim],
     queryFn: async () => {
@@ -144,7 +158,21 @@ const Caixa = () => {
     enabled: !!usuario?.empresa_id,
   });
 
-  // Buscar compras/notas (saídas)
+  // Buscar TODAS as vendas (para saldo total)
+  const { data: todasVendas } = useQuery({
+    queryKey: ['caixa-vendas-total', usuario?.empresa_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('vendas')
+        .select('valor_total');
+
+      if (error) throw error;
+      return data as { valor_total: number }[];
+    },
+    enabled: !!usuario?.empresa_id,
+  });
+
+  // Buscar notas do mês
   const { data: notas, isLoading: loadingNotas } = useQuery({
     queryKey: ['caixa-notas', usuario?.empresa_id, dataInicio, dataFim],
     queryFn: async () => {
@@ -157,6 +185,20 @@ const Caixa = () => {
 
       if (error) throw error;
       return data as XmlNota[];
+    },
+    enabled: !!usuario?.empresa_id,
+  });
+
+  // Buscar TODAS as notas (para saldo total)
+  const { data: todasNotas } = useQuery({
+    queryKey: ['caixa-notas-total', usuario?.empresa_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('xml_notas')
+        .select('valor_total');
+
+      if (error) throw error;
+      return data as { valor_total: number | null }[];
     },
     enabled: !!usuario?.empresa_id,
   });
@@ -279,16 +321,40 @@ const Caixa = () => {
     return todosMovimentos.filter(m => m.tipo === filtroTipo);
   }, [todosMovimentos, filtroTipo]);
 
-  // Totais
-  const totalEntradas = todosMovimentos
+  // Totais do mês
+  const totalEntradasMes = todosMovimentos
     .filter(m => m.tipo === 'entrada')
     .reduce((sum, m) => sum + m.valor, 0);
 
-  const totalSaidas = todosMovimentos
+  const totalSaidasMes = todosMovimentos
     .filter(m => m.tipo === 'saida')
     .reduce((sum, m) => sum + m.valor, 0);
 
-  const saldo = totalEntradas - totalSaidas;
+  const saldoMes = totalEntradasMes - totalSaidasMes;
+
+  // Saldo total (todas as movimentações de todos os tempos)
+  const saldoTotal = useMemo(() => {
+    let entradas = 0;
+    let saidas = 0;
+
+    // Movimentos manuais
+    todosMovimentosManuais?.forEach(m => {
+      if (m.tipo === 'entrada') entradas += m.valor;
+      else saidas += m.valor;
+    });
+
+    // Vendas
+    todasVendas?.forEach(v => {
+      entradas += v.valor_total;
+    });
+
+    // Notas
+    todasNotas?.forEach(n => {
+      if (n.valor_total) saidas += n.valor_total;
+    });
+
+    return entradas - saidas;
+  }, [todosMovimentosManuais, todasVendas, todasNotas]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -435,7 +501,25 @@ const Caixa = () => {
             <Skeleton className="h-32" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Saldo Total */}
+            <Card className={`border-l-4 ${saldoTotal >= 0 ? 'border-l-primary' : 'border-l-red-500'}`}>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className={`p-3 rounded-full ${saldoTotal >= 0 ? 'bg-primary/10' : 'bg-red-100 dark:bg-red-900/30'}`}>
+                    <Wallet className={`h-6 w-6 ${saldoTotal >= 0 ? 'text-primary' : 'text-red-600'}`} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Saldo Atual</p>
+                    <p className={`text-2xl font-bold ${saldoTotal >= 0 ? 'text-primary' : 'text-red-600'}`}>
+                      {formatCurrency(saldoTotal)}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Entradas do mês */}
             <Card className="border-l-4 border-l-green-500">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
@@ -443,13 +527,14 @@ const Caixa = () => {
                     <TrendingUp className="h-6 w-6 text-green-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Entradas</p>
-                    <p className="text-2xl font-bold text-green-600">{formatCurrency(totalEntradas)}</p>
+                    <p className="text-sm text-muted-foreground">Entradas do Mês</p>
+                    <p className="text-2xl font-bold text-green-600">{formatCurrency(totalEntradasMes)}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
+            {/* Saídas do mês */}
             <Card className="border-l-4 border-l-red-500">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
@@ -457,23 +542,24 @@ const Caixa = () => {
                     <TrendingDown className="h-6 w-6 text-red-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Saídas</p>
-                    <p className="text-2xl font-bold text-red-600">{formatCurrency(totalSaidas)}</p>
+                    <p className="text-sm text-muted-foreground">Saídas do Mês</p>
+                    <p className="text-2xl font-bold text-red-600">{formatCurrency(totalSaidasMes)}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className={`border-l-4 ${saldo >= 0 ? 'border-l-primary' : 'border-l-red-500'}`}>
+            {/* Saldo do mês */}
+            <Card className={`border-l-4 ${saldoMes >= 0 ? 'border-l-blue-500' : 'border-l-orange-500'}`}>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-full ${saldo >= 0 ? 'bg-primary/10' : 'bg-red-100 dark:bg-red-900/30'}`}>
-                    <DollarSign className={`h-6 w-6 ${saldo >= 0 ? 'text-primary' : 'text-red-600'}`} />
+                  <div className={`p-3 rounded-full ${saldoMes >= 0 ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-orange-100 dark:bg-orange-900/30'}`}>
+                    <DollarSign className={`h-6 w-6 ${saldoMes >= 0 ? 'text-blue-600' : 'text-orange-600'}`} />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Saldo do Mês</p>
-                    <p className={`text-2xl font-bold ${saldo >= 0 ? 'text-primary' : 'text-red-600'}`}>
-                      {formatCurrency(saldo)}
+                    <p className="text-sm text-muted-foreground">Resultado do Mês</p>
+                    <p className={`text-2xl font-bold ${saldoMes >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                      {formatCurrency(saldoMes)}
                     </p>
                   </div>
                 </div>
