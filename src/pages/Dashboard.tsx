@@ -224,7 +224,7 @@ const Dashboard = () => {
   const margemContribuicao = receitaBruta - cmvTotal;
   
   const custoFixoTotal = custosFixos?.reduce((sum, c) => sum + Number(c.valor_mensal), 0) || 0;
-  const impostoPercent = config?.imposto_medio_sobre_vendas || 10;
+  const impostoPercent = config?.imposto_medio_sobre_vendas ?? 10;
   const impostos = receitaBruta * (impostoPercent / 100);
   
   // Fetch taxas por app
