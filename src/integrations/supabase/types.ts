@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      caixa_movimentos: {
+        Row: {
+          categoria: string
+          created_at: string
+          data_movimento: string
+          descricao: string
+          empresa_id: string
+          id: string
+          origem: string
+          referencia: string | null
+          tipo: string
+          valor: number
+        }
+        Insert: {
+          categoria: string
+          created_at?: string
+          data_movimento?: string
+          descricao: string
+          empresa_id: string
+          id?: string
+          origem?: string
+          referencia?: string | null
+          tipo: string
+          valor?: number
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          data_movimento?: string
+          descricao?: string
+          empresa_id?: string
+          id?: string
+          origem?: string
+          referencia?: string | null
+          tipo?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caixa_movimentos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clientes: {
         Row: {
           created_at: string
