@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Users, Trash2, Pencil, Phone } from 'lucide-react';
 import { format } from 'date-fns';
@@ -27,6 +28,8 @@ const Clientes = () => {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     nome: '',
     whatsapp: '',
@@ -94,11 +97,24 @@ const Clientes = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clientes'] });
       toast({ title: 'Cliente excluído!' });
+      setDeleteConfirmOpen(false);
+      setItemToDelete(null);
     },
     onError: (error) => {
       toast({ title: 'Erro ao excluir', description: error.message, variant: 'destructive' });
     },
   });
+
+  const handleDeleteClick = (id: string) => {
+    setItemToDelete(id);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (itemToDelete) {
+      deleteMutation.mutate(itemToDelete);
+    }
+  };
 
   const resetForm = () => {
     setFormData({ nome: '', whatsapp: '' });
@@ -256,7 +272,7 @@ const Clientes = () => {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-destructive"
-                          onClick={() => deleteMutation.mutate(cliente.id)}
+                          onClick={() => handleDeleteClick(cliente.id)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -281,6 +297,14 @@ const Clientes = () => {
           </Button>
         </Card>
       )}
+
+      <DeleteConfirmationDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        onConfirm={confirmDelete}
+        title="Excluir cliente"
+        description="Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita."
+      />
     </div>
   );
 };

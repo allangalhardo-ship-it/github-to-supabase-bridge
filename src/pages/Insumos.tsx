@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { SearchableSelect, SearchableSelectOption } from '@/components/ui/searchable-select';
+import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, AlertTriangle, ShoppingBasket, FlaskConical, ChefHat, Layers } from 'lucide-react';
 
@@ -71,6 +72,8 @@ const Insumos = () => {
   const [editingInsumo, setEditingInsumo] = useState<Insumo | null>(null);
   const [selectedIntermediario, setSelectedIntermediario] = useState<Insumo | null>(null);
   const [activeTab, setActiveTab] = useState<string>("todos");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     nome: '',
     unidade_medida: 'kg',
@@ -255,11 +258,24 @@ const Insumos = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['insumos'] });
       toast({ title: 'Insumo excluído!' });
+      setDeleteConfirmOpen(false);
+      setItemToDelete(null);
     },
     onError: (error) => {
       toast({ title: 'Erro ao excluir', description: error.message, variant: 'destructive' });
     },
   });
+
+  const handleDeleteClick = (id: string) => {
+    setItemToDelete(id);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (itemToDelete) {
+      deleteMutation.mutate(itemToDelete);
+    }
+  };
 
   // Mutations para receita intermediária
   const addIngredienteMutation = useMutation({
@@ -456,7 +472,7 @@ const Insumos = () => {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-destructive"
-                        onClick={() => deleteMutation.mutate(insumo.id)}
+                        onClick={() => handleDeleteClick(insumo.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -898,6 +914,14 @@ const Insumos = () => {
           </Button>
         </Card>
       )}
+
+      <DeleteConfirmationDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        onConfirm={confirmDelete}
+        title="Excluir insumo"
+        description="Tem certeza que deseja excluir este insumo? Esta ação não pode ser desfeita."
+      />
     </div>
   );
 };
