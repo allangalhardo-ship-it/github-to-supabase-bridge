@@ -38,9 +38,9 @@ const Configuracoes = () => {
   useEffect(() => {
     if (config) {
       setFormData({
-        margem_desejada_padrao: config.margem_desejada_padrao?.toString() || '30',
-        cmv_alvo: config.cmv_alvo?.toString() || '35',
-        imposto_medio_sobre_vendas: config.imposto_medio_sobre_vendas?.toString() || '10',
+        margem_desejada_padrao: String(config.margem_desejada_padrao ?? 30),
+        cmv_alvo: String(config.cmv_alvo ?? 35),
+        imposto_medio_sobre_vendas: String(config.imposto_medio_sobre_vendas ?? 10),
       });
     }
   }, [config]);
@@ -48,9 +48,9 @@ const Configuracoes = () => {
   const updateMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const configData = {
-        margem_desejada_padrao: parseFloat(data.margem_desejada_padrao) || 30,
-        cmv_alvo: parseFloat(data.cmv_alvo) || 35,
-        imposto_medio_sobre_vendas: parseFloat(data.imposto_medio_sobre_vendas) || 10,
+        margem_desejada_padrao: data.margem_desejada_padrao === '' ? 0 : parseFloat(data.margem_desejada_padrao),
+        cmv_alvo: data.cmv_alvo === '' ? 0 : parseFloat(data.cmv_alvo),
+        imposto_medio_sobre_vendas: data.imposto_medio_sobre_vendas === '' ? 0 : parseFloat(data.imposto_medio_sobre_vendas),
       };
 
       if (config) {
