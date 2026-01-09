@@ -16,10 +16,12 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Receipt, Trash2, Package, User, Upload, Filter, DollarSign, ShoppingCart } from 'lucide-react';
+import { Plus, Receipt, Trash2, Package, User, Upload, Filter, DollarSign, ShoppingCart, FileText, Wallet } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import ImportarVendasDialog from '@/components/vendas/ImportarVendasDialog';
+import ComprasTab from '@/components/vendas/ComprasTab';
+import LancamentosManuaisTab from '@/components/vendas/LancamentosManuaisTab';
 
 interface Cliente {
   id: string;
@@ -393,13 +395,27 @@ const Vendas = () => {
         </Dialog>
       </div>
 
-      <Tabs defaultValue="historico">
-        <TabsList>
-          <TabsTrigger value="historico">Histórico</TabsTrigger>
-          <TabsTrigger value="importar">Importar CSV</TabsTrigger>
+      <Tabs defaultValue="vendas">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="vendas" className="flex items-center gap-2">
+            <Receipt className="h-4 w-4" />
+            <span className="hidden sm:inline">Vendas</span>
+          </TabsTrigger>
+          <TabsTrigger value="compras" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            <span className="hidden sm:inline">Compras (NFe)</span>
+          </TabsTrigger>
+          <TabsTrigger value="lancamentos" className="flex items-center gap-2">
+            <Wallet className="h-4 w-4" />
+            <span className="hidden sm:inline">Lançamentos</span>
+          </TabsTrigger>
+          <TabsTrigger value="importar" className="flex items-center gap-2">
+            <Upload className="h-4 w-4" />
+            <span className="hidden sm:inline">Importar CSV</span>
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="historico" className="mt-4 space-y-4">
+        <TabsContent value="vendas" className="mt-4 space-y-4">
           {/* Filtros */}
           <Card>
             <CardContent className="pt-4">
@@ -592,6 +608,14 @@ const Vendas = () => {
               ) : null}
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="compras" className="mt-4">
+          <ComprasTab />
+        </TabsContent>
+
+        <TabsContent value="lancamentos" className="mt-4">
+          <LancamentosManuaisTab />
         </TabsContent>
 
         <TabsContent value="importar" className="mt-4">
