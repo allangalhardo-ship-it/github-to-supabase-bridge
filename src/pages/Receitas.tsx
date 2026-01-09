@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Table,
   TableBody,
@@ -382,29 +383,23 @@ export default function Receitas() {
 
                   {/* Adicionar insumo */}
                   <div className="grid gap-3 md:grid-cols-[1fr,120px,auto]">
-                    <Select
+                    <SearchableSelect
+                      options={(insumos || []).map((insumo) => ({
+                        value: insumo.id,
+                        label: `${insumo.nome} (${insumo.unidade_medida}) - ${formatCurrency(insumo.custo_unitario)}`,
+                        searchTerms: insumo.nome,
+                        icon: insumo.is_intermediario ? (
+                          <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-purple-100 dark:bg-purple-900/30">
+                            <FlaskConical className="h-3 w-3 text-purple-500" />
+                          </span>
+                        ) : undefined,
+                      }))}
                       value={insumoSelecionado}
                       onValueChange={setInsumoSelecionado}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o insumo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {insumos?.map((insumo) => (
-                          <SelectItem key={insumo.id} value={insumo.id}>
-                            <div className="flex items-center gap-2">
-                              {insumo.is_intermediario && (
-                                <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-purple-100 dark:bg-purple-900/30">
-                                  <FlaskConical className="h-3 w-3 text-purple-500" />
-                                </span>
-                              )}
-                              <span>{insumo.nome} ({insumo.unidade_medida})</span>
-                              <span className="text-muted-foreground">- {formatCurrency(insumo.custo_unitario)}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      placeholder="Buscar insumo..."
+                      searchPlaceholder="Digite para buscar..."
+                      emptyMessage="Nenhum insumo encontrado."
+                    />
                     <Input
                       type="number"
                       step="0.001"
