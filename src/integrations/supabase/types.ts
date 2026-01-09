@@ -316,27 +316,36 @@ export type Database = {
       producoes: {
         Row: {
           created_at: string
+          data_vencimento: string | null
+          dias_alerta_vencimento: number | null
           empresa_id: string
           id: string
           observacao: string | null
           produto_id: string
           quantidade: number
+          shelf_life_dias: number | null
         }
         Insert: {
           created_at?: string
+          data_vencimento?: string | null
+          dias_alerta_vencimento?: number | null
           empresa_id: string
           id?: string
           observacao?: string | null
           produto_id: string
           quantidade?: number
+          shelf_life_dias?: number | null
         }
         Update: {
           created_at?: string
+          data_vencimento?: string | null
+          dias_alerta_vencimento?: number | null
           empresa_id?: string
           id?: string
           observacao?: string | null
           produto_id?: string
           quantidade?: number
+          shelf_life_dias?: number | null
         }
         Relationships: [
           {
