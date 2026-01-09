@@ -325,33 +325,16 @@ const Produtos = () => {
             const lucro = precoVenda - custoInsumos;
             const margemPercent = precoVenda > 0 ? (lucro / precoVenda) * 100 : 0;
             const temFichaTecnica = produto.fichas_tecnicas && produto.fichas_tecnicas.length > 0;
-            
-            // Determinar status geral do produto
-            const margemAlvo = config?.margem_desejada_padrao || 30;
-            const getStatusProduto = () => {
-              if (!temFichaTecnica) return { label: 'Sem Ficha', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' };
-              if (margemPercent >= margemAlvo && cmvAtual <= cmvAlvo) {
-                return { label: 'Saudável', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' };
-              }
-              if (margemPercent < 0 || cmvAtual > cmvAlvo * 1.5) {
-                return { label: 'Crítico', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' };
-              }
-              return { label: 'Atenção', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' };
-            };
-            const statusProduto = getStatusProduto();
 
             return (
               <Card key={produto.id} className={!produto.ativo ? 'opacity-60' : ''}>
                 <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Package className="h-5 w-5 text-primary shrink-0" />
-                      <CardTitle className="text-lg truncate">{produto.nome}</CardTitle>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <Package className="h-5 w-5 text-primary" />
+                      <CardTitle className="text-lg">{produto.nome}</CardTitle>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <Badge className={`text-xs font-medium ${statusProduto.color}`}>
-                        {statusProduto.label}
-                      </Badge>
+                    <div className="flex items-center gap-1">
                       <MarketPriceSearch
                         productName={produto.nome}
                         category={produto.categoria}
