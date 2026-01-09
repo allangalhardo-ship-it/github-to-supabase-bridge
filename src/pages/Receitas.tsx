@@ -98,13 +98,13 @@ export default function Receitas() {
     enabled: !!usuario?.empresa_id,
   });
 
-  // Fetch insumos
+  // Fetch insumos (inclui intermediários para poder usar em receitas)
   const { data: insumos, isLoading: loadingInsumos } = useQuery({
     queryKey: ["insumos-receitas", usuario?.empresa_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insumos")
-        .select("id, nome, unidade_medida, custo_unitario")
+        .select("id, nome, unidade_medida, custo_unitario, is_intermediario")
         .order("nome");
 
       if (error) throw error;
@@ -392,8 +392,15 @@ export default function Receitas() {
                       <SelectContent>
                         {insumos?.map((insumo) => (
                           <SelectItem key={insumo.id} value={insumo.id}>
-                            {insumo.nome} ({insumo.unidade_medida}) -{" "}
-                            {formatCurrency(insumo.custo_unitario)}
+                            <div className="flex items-center gap-2">
+                              {insumo.is_intermediario && (
+                                <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-purple-100 dark:bg-purple-900/30">
+                                  <FlaskConical className="h-3 w-3 text-purple-500" />
+                                </span>
+                              )}
+                              <span>{insumo.nome} ({insumo.unidade_medida})</span>
+                              <span className="text-muted-foreground">- {formatCurrency(insumo.custo_unitario)}</span>
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>

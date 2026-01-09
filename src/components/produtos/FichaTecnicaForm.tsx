@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, FlaskConical } from 'lucide-react';
 
 interface FichaTecnicaItem {
   id: string;
@@ -28,13 +28,13 @@ const FichaTecnicaForm: React.FC<FichaTecnicaFormProps> = ({ produtoId, fichaTec
   const queryClient = useQueryClient();
   const [novoInsumo, setNovoInsumo] = useState({ insumo_id: '', quantidade: '' });
 
-  // Fetch todos os insumos disponíveis
+  // Fetch todos os insumos disponíveis (inclui intermediários)
   const { data: insumos } = useQuery({
     queryKey: ['insumos-select'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('insumos')
-        .select('id, nome, unidade_medida, custo_unitario')
+        .select('id, nome, unidade_medida, custo_unitario, is_intermediario')
         .order('nome');
       if (error) throw error;
       return data;
@@ -156,7 +156,12 @@ const FichaTecnicaForm: React.FC<FichaTecnicaFormProps> = ({ produtoId, fichaTec
             <SelectContent>
               {insumosDisponiveis.map((insumo) => (
                 <SelectItem key={insumo.id} value={insumo.id}>
-                  {insumo.nome} ({insumo.unidade_medida})
+                  <div className="flex items-center gap-2">
+                    {insumo.is_intermediario && (
+                      <FlaskConical className="h-3 w-3 text-purple-500" />
+                    )}
+                    {insumo.nome} ({insumo.unidade_medida})
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>

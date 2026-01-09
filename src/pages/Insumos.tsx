@@ -11,8 +11,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, AlertTriangle, ShoppingBasket } from 'lucide-react';
+import { Plus, Pencil, Trash2, AlertTriangle, ShoppingBasket, FlaskConical, ChefHat, Layers } from 'lucide-react';
 
 const unidadesMedida = [
   { value: 'un', label: 'Unidade (un)' },
@@ -32,6 +34,21 @@ interface Insumo {
   custo_unitario: number;
   estoque_atual: number;
   estoque_minimo: number;
+  is_intermediario: boolean;
+  rendimento_receita: number | null;
+}
+
+interface ReceitaIntermediaria {
+  id: string;
+  insumo_id: string;
+  insumo_ingrediente_id: string;
+  quantidade: number;
+  insumo_ingrediente?: {
+    id: string;
+    nome: string;
+    unidade_medida: string;
+    custo_unitario: number;
+  };
 }
 
 const Insumos = () => {
@@ -39,14 +56,22 @@ const Insumos = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [receitaDialogOpen, setReceitaDialogOpen] = useState(false);
   const [editingInsumo, setEditingInsumo] = useState<Insumo | null>(null);
+  const [selectedIntermediario, setSelectedIntermediario] = useState<Insumo | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("todos");
   const [formData, setFormData] = useState({
     nome: '',
     unidade_medida: 'un',
     custo_unitario: '',
     estoque_atual: '',
     estoque_minimo: '',
+    is_intermediario: false,
+    rendimento_receita: '',
   });
+
+  // Estado para receita do intermediário
+  const [novoIngrediente, setNovoIngrediente] = useState({ insumo_id: '', quantidade: '' });
 
   const { data: insumos, isLoading } = useQuery({
     queryKey: ['insumos', usuario?.empresa_id],
@@ -62,6 +87,37 @@ const Insumos = () => {
     enabled: !!usuario?.empresa_id,
   });
 
+  // Fetch receita do intermediário selecionado
+  const { data: receitaIntermediaria } = useQuery({
+    queryKey: ['receita-intermediaria', selectedIntermediario?.id],
+    queryFn: async () => {
+      if (!selectedIntermediario) return [];
+      
+      const { data, error } = await supabase
+        .from('receitas_intermediarias')
+        .select(`
+          id,
+          insumo_id,
+          insumo_ingrediente_id,
+          quantidade,
+          insumo_ingrediente:insumos!receitas_intermediarias_insumo_ingrediente_id_fkey (
+            id,
+            nome,
+            unidade_medida,
+            custo_unitario
+          )
+        `)
+        .eq('insumo_id', selectedIntermediario.id);
+
+      if (error) throw error;
+      return data as ReceitaIntermediaria[];
+    },
+    enabled: !!selectedIntermediario?.id,
+  });
+
+  const insumosSimples = insumos?.filter(i => !i.is_intermediario) || [];
+  const insumosIntermediarios = insumos?.filter(i => i.is_intermediario) || [];
+
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const { error } = await supabase.from('insumos').insert({
@@ -71,6 +127,8 @@ const Insumos = () => {
         custo_unitario: parseFloat(data.custo_unitario) || 0,
         estoque_atual: parseFloat(data.estoque_atual) || 0,
         estoque_minimo: parseFloat(data.estoque_minimo) || 0,
+        is_intermediario: data.is_intermediario,
+        rendimento_receita: data.rendimento_receita ? parseFloat(data.rendimento_receita) : null,
       });
       if (error) throw error;
     },
@@ -94,6 +152,8 @@ const Insumos = () => {
           custo_unitario: parseFloat(data.custo_unitario) || 0,
           estoque_atual: parseFloat(data.estoque_atual) || 0,
           estoque_minimo: parseFloat(data.estoque_minimo) || 0,
+          is_intermediario: data.is_intermediario,
+          rendimento_receita: data.rendimento_receita ? parseFloat(data.rendimento_receita) : null,
         })
         .eq('id', data.id);
       if (error) throw error;
@@ -122,6 +182,68 @@ const Insumos = () => {
     },
   });
 
+  // Mutations para receita intermediária
+  const addIngredienteMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedIntermediario) throw new Error('Nenhum intermediário selecionado');
+      
+      const { error } = await supabase.from('receitas_intermediarias').insert({
+        insumo_id: selectedIntermediario.id,
+        insumo_ingrediente_id: novoIngrediente.insumo_id,
+        quantidade: parseFloat(novoIngrediente.quantidade) || 0,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['receita-intermediaria'] });
+      queryClient.invalidateQueries({ queryKey: ['insumos'] });
+      setNovoIngrediente({ insumo_id: '', quantidade: '' });
+      toast({ title: 'Ingrediente adicionado!' });
+      recalcularCustoIntermediario();
+    },
+    onError: (error) => {
+      toast({ title: 'Erro ao adicionar', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const removeIngredienteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('receitas_intermediarias').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['receita-intermediaria'] });
+      queryClient.invalidateQueries({ queryKey: ['insumos'] });
+      toast({ title: 'Ingrediente removido!' });
+      recalcularCustoIntermediario();
+    },
+    onError: (error) => {
+      toast({ title: 'Erro ao remover', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Recalcular custo do intermediário baseado na receita
+  const recalcularCustoIntermediario = async () => {
+    if (!selectedIntermediario || !receitaIntermediaria) return;
+
+    const custoTotal = receitaIntermediaria.reduce((sum, item) => {
+      const custoIngrediente = item.insumo_ingrediente?.custo_unitario || 0;
+      return sum + (item.quantidade * custoIngrediente);
+    }, 0);
+
+    const rendimento = selectedIntermediario.rendimento_receita || 1;
+    const custoUnitario = custoTotal / rendimento;
+
+    const { error } = await supabase
+      .from('insumos')
+      .update({ custo_unitario: custoUnitario })
+      .eq('id', selectedIntermediario.id);
+
+    if (!error) {
+      queryClient.invalidateQueries({ queryKey: ['insumos'] });
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       nome: '',
@@ -129,6 +251,8 @@ const Insumos = () => {
       custo_unitario: '',
       estoque_atual: '',
       estoque_minimo: '',
+      is_intermediario: false,
+      rendimento_receita: '',
     });
     setEditingInsumo(null);
     setDialogOpen(false);
@@ -142,6 +266,8 @@ const Insumos = () => {
       custo_unitario: insumo.custo_unitario.toString(),
       estoque_atual: insumo.estoque_atual.toString(),
       estoque_minimo: insumo.estoque_minimo.toString(),
+      is_intermediario: insumo.is_intermediario,
+      rendimento_receita: insumo.rendimento_receita?.toString() || '',
     });
     setDialogOpen(true);
   };
@@ -155,6 +281,11 @@ const Insumos = () => {
     }
   };
 
+  const openReceitaDialog = (insumo: Insumo) => {
+    setSelectedIntermediario(insumo);
+    setReceitaDialogOpen(true);
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -162,12 +293,109 @@ const Insumos = () => {
     }).format(value);
   };
 
+  // Insumos disponíveis para adicionar à receita (excluindo o próprio intermediário e os já adicionados)
+  const insumosDisponiveis = insumos?.filter(i => 
+    i.id !== selectedIntermediario?.id && 
+    !receitaIntermediaria?.some(r => r.insumo_ingrediente_id === i.id)
+  ) || [];
+
+  const insumoSelecionadoInfo = insumos?.find(i => i.id === novoIngrediente.insumo_id);
+
+  const renderTable = (items: Insumo[], showIntermediarioBadge = false) => (
+    <Card>
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nome</TableHead>
+              <TableHead className="text-center">Unidade</TableHead>
+              <TableHead className="text-right">Custo Unit.</TableHead>
+              <TableHead className="text-right">Estoque</TableHead>
+              <TableHead className="text-right">Mínimo</TableHead>
+              <TableHead className="w-32"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((insumo) => {
+              const estoqueBaixo = Number(insumo.estoque_atual) <= Number(insumo.estoque_minimo);
+              return (
+                <TableRow key={insumo.id}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {insumo.is_intermediario ? (
+                        <FlaskConical className="h-4 w-4 text-purple-500" />
+                      ) : (
+                        <ShoppingBasket className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      {insumo.nome}
+                      {estoqueBaixo && (
+                        <Badge variant="destructive" className="gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          Baixo
+                        </Badge>
+                      )}
+                      {showIntermediarioBadge && insumo.is_intermediario && (
+                        <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                          <Layers className="h-3 w-3 mr-1" />
+                          Intermediário
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center">{insumo.unidade_medida}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(Number(insumo.custo_unitario))}</TableCell>
+                  <TableCell className={`text-right ${estoqueBaixo ? 'text-destructive font-medium' : ''}`}>
+                    {Number(insumo.estoque_atual).toFixed(2)}
+                  </TableCell>
+                  <TableCell className="text-right text-muted-foreground">
+                    {Number(insumo.estoque_minimo).toFixed(2)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex justify-end gap-1">
+                      {insumo.is_intermediario && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-purple-500 hover:text-purple-600"
+                          onClick={() => openReceitaDialog(insumo)}
+                          title="Editar receita"
+                        >
+                          <ChefHat className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleEdit(insumo)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive"
+                        onClick={() => deleteMutation.mutate(insumo.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Insumos</h1>
-          <p className="text-muted-foreground">Gerencie os insumos do seu negócio</p>
+          <p className="text-muted-foreground">Gerencie os insumos e produtos intermediários</p>
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={(open) => {
@@ -187,16 +415,38 @@ const Insumos = () => {
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Toggle Intermediário */}
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <FlaskConical className="h-4 w-4 text-purple-500" />
+                  <Label htmlFor="is_intermediario" className="cursor-pointer">
+                    Produto Intermediário
+                  </Label>
+                </div>
+                <Switch
+                  id="is_intermediario"
+                  checked={formData.is_intermediario}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_intermediario: checked })}
+                />
+              </div>
+
+              {formData.is_intermediario && (
+                <p className="text-sm text-muted-foreground bg-purple-50 dark:bg-purple-900/20 p-2 rounded">
+                  Produtos intermediários (ex: ganache, recheio) possuem sua própria receita e podem ser usados como ingrediente em outros produtos.
+                </p>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="nome">Nome</Label>
                 <Input
                   id="nome"
                   value={formData.nome}
                   onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                  placeholder="Ex: Carne moída"
+                  placeholder={formData.is_intermediario ? "Ex: Ganache de Chocolate" : "Ex: Carne moída"}
                   required
                 />
               </div>
+              
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="unidade_medida">Unidade</Label>
@@ -216,20 +466,54 @@ const Insumos = () => {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {formData.is_intermediario ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="rendimento_receita">Rendimento da Receita</Label>
+                    <Input
+                      id="rendimento_receita"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.rendimento_receita}
+                      onChange={(e) => setFormData({ ...formData, rendimento_receita: e.target.value })}
+                      placeholder={`Ex: 0.5 ${formData.unidade_medida}`}
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="custo_unitario">Custo Unitário (R$)</Label>
+                    <Input
+                      id="custo_unitario"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.custo_unitario}
+                      onChange={(e) => setFormData({ ...formData, custo_unitario: e.target.value })}
+                      placeholder="0,00"
+                      required={!formData.is_intermediario}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {formData.is_intermediario && (
                 <div className="space-y-2">
-                  <Label htmlFor="custo_unitario">Custo Unitário (R$)</Label>
+                  <Label htmlFor="custo_intermediario" className="text-muted-foreground">
+                    Custo Unitário (calculado automaticamente)
+                  </Label>
                   <Input
-                    id="custo_unitario"
+                    id="custo_intermediario"
                     type="number"
                     step="0.01"
                     min="0"
                     value={formData.custo_unitario}
                     onChange={(e) => setFormData({ ...formData, custo_unitario: e.target.value })}
-                    placeholder="0,00"
-                    required
+                    placeholder="Será calculado pela receita"
                   />
                 </div>
-              </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="estoque_atual">Estoque Atual</Label>
@@ -269,73 +553,173 @@ const Insumos = () => {
         </Dialog>
       </div>
 
+      {/* Dialog para editar receita do intermediário */}
+      <Dialog open={receitaDialogOpen} onOpenChange={(open) => {
+        setReceitaDialogOpen(open);
+        if (!open) {
+          setSelectedIntermediario(null);
+          setNovoIngrediente({ insumo_id: '', quantidade: '' });
+        }
+      }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ChefHat className="h-5 w-5 text-purple-500" />
+              Receita: {selectedIntermediario?.nome}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Info do intermediário */}
+            <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+              <div className="flex justify-between text-sm">
+                <span>Unidade: <strong>{selectedIntermediario?.unidade_medida}</strong></span>
+                <span>Rendimento: <strong>{selectedIntermediario?.rendimento_receita || 1} {selectedIntermediario?.unidade_medida}</strong></span>
+                <span>Custo atual: <strong>{formatCurrency(selectedIntermediario?.custo_unitario || 0)}/{selectedIntermediario?.unidade_medida}</strong></span>
+              </div>
+            </div>
+
+            {/* Lista de ingredientes */}
+            {receitaIntermediaria && receitaIntermediaria.length > 0 ? (
+              <div className="space-y-2">
+                {receitaIntermediaria.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{item.insumo_ingrediente?.nome}</span>
+                      <Badge variant="outline">{item.quantidade} {item.insumo_ingrediente?.unidade_medida}</Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">
+                        {formatCurrency(item.quantidade * (item.insumo_ingrediente?.custo_unitario || 0))}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive"
+                        onClick={() => removeIngredienteMutation.mutate(item.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                
+                {/* Total */}
+                <div className="flex justify-between pt-2 border-t font-medium">
+                  <span>Custo total da receita:</span>
+                  <span>
+                    {formatCurrency(
+                      receitaIntermediaria.reduce((sum, item) => 
+                        sum + (item.quantidade * (item.insumo_ingrediente?.custo_unitario || 0)), 0
+                      )
+                    )}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground py-4">
+                Nenhum ingrediente cadastrado ainda.
+              </p>
+            )}
+
+            {/* Adicionar ingrediente */}
+            {insumosDisponiveis.length > 0 && (
+              <div className="flex gap-2 pt-2 border-t">
+                <Select
+                  value={novoIngrediente.insumo_id}
+                  onValueChange={(value) => setNovoIngrediente({ ...novoIngrediente, insumo_id: value })}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Selecione um ingrediente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {insumosDisponiveis.map((insumo) => (
+                      <SelectItem key={insumo.id} value={insumo.id}>
+                        <div className="flex items-center gap-2">
+                          {insumo.is_intermediario && <FlaskConical className="h-3 w-3 text-purple-500" />}
+                          {insumo.nome} ({insumo.unidade_medida})
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder={insumoSelecionadoInfo ? `Qtd (${insumoSelecionadoInfo.unidade_medida})` : "Qtd"}
+                  value={novoIngrediente.quantidade}
+                  onChange={(e) => setNovoIngrediente({ ...novoIngrediente, quantidade: e.target.value })}
+                  className="w-28"
+                />
+                <Button
+                  onClick={() => addIngredienteMutation.mutate()}
+                  disabled={!novoIngrediente.insumo_id || !novoIngrediente.quantidade || addIngredienteMutation.isPending}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-4">
+              <Button onClick={() => setReceitaDialogOpen(false)}>Fechar</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {isLoading ? (
         <Skeleton className="h-96" />
       ) : insumos && insumos.length > 0 ? (
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead className="text-center">Unidade</TableHead>
-                  <TableHead className="text-right">Custo Unit.</TableHead>
-                  <TableHead className="text-right">Estoque</TableHead>
-                  <TableHead className="text-right">Mínimo</TableHead>
-                  <TableHead className="w-24"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {insumos.map((insumo) => {
-                  const estoqueBaixo = Number(insumo.estoque_atual) <= Number(insumo.estoque_minimo);
-                  return (
-                    <TableRow key={insumo.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          {insumo.nome}
-                          {estoqueBaixo && (
-                            <Badge variant="destructive" className="gap-1">
-                              <AlertTriangle className="h-3 w-3" />
-                              Baixo
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">{insumo.unidade_medida}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(Number(insumo.custo_unitario))}</TableCell>
-                      <TableCell className={`text-right ${estoqueBaixo ? 'text-destructive font-medium' : ''}`}>
-                        {Number(insumo.estoque_atual).toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {Number(insumo.estoque_minimo).toFixed(2)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleEdit(insumo)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive"
-                            onClick={() => deleteMutation.mutate(insumo.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="mb-4">
+            <TabsTrigger value="todos" className="gap-2">
+              Todos
+              <Badge variant="secondary" className="ml-1">{insumos.length}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="simples" className="gap-2">
+              <ShoppingBasket className="h-4 w-4" />
+              Insumos
+              <Badge variant="secondary" className="ml-1">{insumosSimples.length}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="intermediarios" className="gap-2">
+              <FlaskConical className="h-4 w-4 text-purple-500" />
+              Intermediários
+              <Badge variant="secondary" className="ml-1 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                {insumosIntermediarios.length}
+              </Badge>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="todos">
+            {renderTable(insumos, true)}
+          </TabsContent>
+
+          <TabsContent value="simples">
+            {insumosSimples.length > 0 ? (
+              renderTable(insumosSimples)
+            ) : (
+              <Card className="p-8 text-center">
+                <ShoppingBasket className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+                <p className="text-muted-foreground">Nenhum insumo simples cadastrado</p>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="intermediarios">
+            {insumosIntermediarios.length > 0 ? (
+              renderTable(insumosIntermediarios)
+            ) : (
+              <Card className="p-8 text-center">
+                <FlaskConical className="h-10 w-10 mx-auto text-purple-400 mb-2" />
+                <p className="text-muted-foreground">Nenhum produto intermediário cadastrado</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Crie um insumo e marque como "Produto Intermediário"
+                </p>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
       ) : (
         <Card className="p-12 text-center">
           <ShoppingBasket className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
