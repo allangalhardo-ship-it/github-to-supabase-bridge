@@ -501,17 +501,17 @@ const Caixa = () => {
             <Skeleton className="h-32" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Saldo Total */}
             <Card className={`border-l-4 ${saldoTotal >= 0 ? 'border-l-primary' : 'border-l-red-500'}`}>
               <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-full ${saldoTotal >= 0 ? 'bg-primary/10' : 'bg-red-100 dark:bg-red-900/30'}`}>
-                    <Wallet className={`h-6 w-6 ${saldoTotal >= 0 ? 'text-primary' : 'text-red-600'}`} />
+                <div className="flex items-center gap-3">
+                  <div className={`p-2.5 rounded-full shrink-0 ${saldoTotal >= 0 ? 'bg-primary/10' : 'bg-red-100 dark:bg-red-900/30'}`}>
+                    <Wallet className={`h-5 w-5 ${saldoTotal >= 0 ? 'text-primary' : 'text-red-600'}`} />
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Saldo Atual</p>
-                    <p className={`text-2xl font-bold ${saldoTotal >= 0 ? 'text-primary' : 'text-red-600'}`}>
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Saldo Atual</p>
+                    <p className={`text-lg font-bold truncate ${saldoTotal >= 0 ? 'text-primary' : 'text-red-600'}`}>
                       {formatCurrency(saldoTotal)}
                     </p>
                   </div>
@@ -522,13 +522,13 @@ const Caixa = () => {
             {/* Entradas do mês */}
             <Card className="border-l-4 border-l-green-500">
               <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/30">
-                    <TrendingUp className="h-6 w-6 text-green-600" />
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-full bg-green-100 dark:bg-green-900/30 shrink-0">
+                    <TrendingUp className="h-5 w-5 text-green-600" />
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Entradas do Mês</p>
-                    <p className="text-2xl font-bold text-green-600">{formatCurrency(totalEntradasMes)}</p>
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Entradas do Mês</p>
+                    <p className="text-lg font-bold text-green-600 truncate">{formatCurrency(totalEntradasMes)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -537,13 +537,13 @@ const Caixa = () => {
             {/* Saídas do mês */}
             <Card className="border-l-4 border-l-red-500">
               <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-full bg-red-100 dark:bg-red-900/30">
-                    <TrendingDown className="h-6 w-6 text-red-600" />
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-full bg-red-100 dark:bg-red-900/30 shrink-0">
+                    <TrendingDown className="h-5 w-5 text-red-600" />
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Saídas do Mês</p>
-                    <p className="text-2xl font-bold text-red-600">{formatCurrency(totalSaidasMes)}</p>
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Saídas do Mês</p>
+                    <p className="text-lg font-bold text-red-600 truncate">{formatCurrency(totalSaidasMes)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -552,13 +552,13 @@ const Caixa = () => {
             {/* Saldo do mês */}
             <Card className={`border-l-4 ${saldoMes >= 0 ? 'border-l-blue-500' : 'border-l-orange-500'}`}>
               <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-full ${saldoMes >= 0 ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-orange-100 dark:bg-orange-900/30'}`}>
-                    <DollarSign className={`h-6 w-6 ${saldoMes >= 0 ? 'text-blue-600' : 'text-orange-600'}`} />
+                <div className="flex items-center gap-3">
+                  <div className={`p-2.5 rounded-full shrink-0 ${saldoMes >= 0 ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-orange-100 dark:bg-orange-900/30'}`}>
+                    <DollarSign className={`h-5 w-5 ${saldoMes >= 0 ? 'text-blue-600' : 'text-orange-600'}`} />
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Resultado do Mês</p>
-                    <p className={`text-2xl font-bold ${saldoMes >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Resultado do Mês</p>
+                    <p className={`text-lg font-bold truncate ${saldoMes >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
                       {formatCurrency(saldoMes)}
                     </p>
                   </div>
