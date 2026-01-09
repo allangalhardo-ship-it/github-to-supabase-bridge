@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, X } from 'lucide-react';
+import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, X, AlertTriangle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface ParsedRow {
@@ -23,6 +23,7 @@ interface ParsedRow {
   descricao?: string;
   selected: boolean;
   raw: Record<string, unknown>;
+  isDuplicate?: boolean;
 }
 
 interface ColumnMapping {
@@ -83,6 +84,8 @@ const ImportarVendasDialog: React.FC = () => {
   });
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [canalOverride, setCanalOverride] = useState('');
+  const [duplicateCount, setDuplicateCount] = useState(0);
+  const [checkingDuplicates, setCheckingDuplicates] = useState(false);
 
   // Fetch apps cadastrados
   const { data: taxasApps } = useQuery({
@@ -107,6 +110,52 @@ const ImportarVendasDialog: React.FC = () => {
     setMapping({ data: '', valor: '', canal: '', status: '', descricao: '' });
     setParsedRows([]);
     setCanalOverride('');
+    setDuplicateCount(0);
+    setCheckingDuplicates(false);
+  };
+
+  // Verificar duplicatas no banco de dados
+  const checkDuplicates = async (rows: ParsedRow[]) => {
+    if (!usuario?.empresa_id) return rows;
+    
+    setCheckingDuplicates(true);
+    try {
+      // Buscar vendas existentes da empresa
+      const { data: existingVendas, error } = await supabase
+        .from('vendas')
+        .select('data_venda, valor_total, canal, descricao_produto')
+        .eq('empresa_id', usuario.empresa_id);
+      
+      if (error) throw error;
+      
+      // Criar um Set com chaves únicas das vendas existentes
+      const existingKeys = new Set(
+        (existingVendas || []).map(v => 
+          `${v.data_venda}|${v.valor_total}|${(v.canal || '').toLowerCase()}|${(v.descricao_produto || '').toLowerCase()}`
+        )
+      );
+      
+      let dupes = 0;
+      const checkedRows = rows.map(row => {
+        const key = `${row.data}|${row.valor}|${(row.canal || '').toLowerCase()}|${(row.descricao || '').toLowerCase()}`;
+        const isDuplicate = existingKeys.has(key);
+        if (isDuplicate) dupes++;
+        
+        return {
+          ...row,
+          isDuplicate,
+          selected: row.selected && !isDuplicate, // Desmarcar duplicatas
+        };
+      });
+      
+      setDuplicateCount(dupes);
+      return checkedRows;
+    } catch (error) {
+      console.error('Erro ao verificar duplicatas:', error);
+      return rows;
+    } finally {
+      setCheckingDuplicates(false);
+    }
   };
 
   const detectMapping = useCallback((headers: string[]) => {
@@ -254,9 +303,16 @@ const ImportarVendasDialog: React.FC = () => {
         descricao,
         selected: isConcluido && dataStr !== '' && valor > 0,
         raw: row,
+        isDuplicate: false,
       };
     });
     
+    // Verificar duplicatas de forma assíncrona
+    checkDuplicates(rows).then(checkedRows => {
+      setParsedRows(checkedRows);
+    });
+    
+    // Definir rows inicialmente para exibição rápida
     setParsedRows(rows);
   };
 
@@ -277,7 +333,10 @@ const ImportarVendasDialog: React.FC = () => {
   };
 
   const toggleSelectAll = (checked: boolean) => {
-    setParsedRows(prev => prev.map(row => ({ ...row, selected: checked })));
+    setParsedRows(prev => prev.map(row => ({ 
+      ...row, 
+      selected: checked && !row.isDuplicate // Não selecionar duplicatas
+    })));
   };
 
   const toggleRow = (index: number) => {
@@ -461,6 +520,17 @@ const ImportarVendasDialog: React.FC = () => {
                 <span className="text-sm text-muted-foreground">
                   {selectedCount} de {parsedRows.length} linhas selecionadas
                 </span>
+                {duplicateCount > 0 && (
+                  <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    {duplicateCount} duplicata{duplicateCount > 1 ? 's' : ''} encontrada{duplicateCount > 1 ? 's' : ''}
+                  </Badge>
+                )}
+                {checkingDuplicates && (
+                  <span className="text-sm text-muted-foreground animate-pulse">
+                    Verificando duplicatas...
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <Label className="text-sm">Canal para todas:</Label>
@@ -501,13 +571,17 @@ const ImportarVendasDialog: React.FC = () => {
                 <TableBody>
                   {parsedRows.slice(0, 100).map((row, idx) => {
                     const isValid = row.data !== '' && row.valor > 0;
+                    const isDuplicate = row.isDuplicate;
                     return (
-                      <TableRow key={idx} className={!isValid ? 'opacity-50' : ''}>
+                      <TableRow 
+                        key={idx} 
+                        className={`${!isValid ? 'opacity-50' : ''} ${isDuplicate ? 'bg-amber-50/50' : ''}`}
+                      >
                         <TableCell>
                           <Checkbox 
                             checked={row.selected}
                             onCheckedChange={() => toggleRow(idx)}
-                            disabled={!isValid}
+                            disabled={!isValid || isDuplicate}
                           />
                         </TableCell>
                         <TableCell>{row.data || '-'}</TableCell>
@@ -521,7 +595,11 @@ const ImportarVendasDialog: React.FC = () => {
                           {row.status || '-'}
                         </TableCell>
                         <TableCell>
-                          {isValid ? (
+                          {isDuplicate ? (
+                            <Badge variant="outline" className="text-amber-600 border-amber-300 text-xs">
+                              Duplicada
+                            </Badge>
+                          ) : isValid ? (
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
                           ) : (
                             <X className="h-4 w-4 text-destructive" />
