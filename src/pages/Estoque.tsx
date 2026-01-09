@@ -14,8 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, ArrowUp, ArrowDown, Warehouse, Package, AlertTriangle, Search, Filter, X, Factory } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { Plus, ArrowUp, ArrowDown, Warehouse, Package, AlertTriangle, Search, Filter, X, Factory, Clock } from 'lucide-react';
+import { format, startOfMonth, endOfMonth, subMonths, differenceInDays, isBefore } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const Estoque = () => {
@@ -53,18 +53,38 @@ const Estoque = () => {
     enabled: !!usuario?.empresa_id,
   });
 
-  // Fetch produtos para estoque acabado
+  // Fetch produtos para estoque acabado com validades
   const { data: produtos, isLoading: loadingProdutos } = useQuery({
     queryKey: ['produtos-estoque', usuario?.empresa_id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Buscar produtos
+      const { data: produtosData, error: produtosError } = await supabase
         .from('produtos')
         .select('id, nome, estoque_acabado, preco_venda, categoria')
         .eq('ativo', true)
         .order('nome');
 
-      if (error) throw error;
-      return data;
+      if (produtosError) throw produtosError;
+
+      // Buscar produções com validade para cada produto
+      const { data: producoes, error: producoesError } = await supabase
+        .from('producoes')
+        .select('produto_id, data_vencimento, quantidade')
+        .not('data_vencimento', 'is', null)
+        .order('data_vencimento', { ascending: true });
+
+      if (producoesError) throw producoesError;
+
+      // Mapear produtos com a próxima validade
+      return produtosData.map(produto => {
+        const producoesDoProdu = producoes?.filter(p => p.produto_id === produto.id) || [];
+        const proximaValidade = producoesDoProdu.length > 0 ? producoesDoProdu[0].data_vencimento : null;
+        
+        return {
+          ...produto,
+          proxima_validade: proximaValidade,
+        };
+      });
     },
     enabled: !!usuario?.empresa_id,
   });
@@ -478,14 +498,35 @@ const Estoque = () => {
                     <TableRow>
                       <TableHead>Produto</TableHead>
                       <TableHead>Categoria</TableHead>
-                      <TableHead className="text-right">Estoque Acabado</TableHead>
-                      <TableHead className="text-right">Preço Venda</TableHead>
+                      <TableHead className="text-right">Estoque</TableHead>
+                      <TableHead>Validade</TableHead>
+                      <TableHead className="text-right">Preço</TableHead>
                       <TableHead className="text-center">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {produtosFiltrados.map((produto) => {
                       const estoque = Number(produto.estoque_acabado);
+                      const hoje = new Date();
+                      hoje.setHours(0, 0, 0, 0);
+                      
+                      let statusValidade: 'ok' | 'proximo' | 'vencido' | null = null;
+                      let diasRestantes = 0;
+                      
+                      if (produto.proxima_validade) {
+                        const dataVenc = new Date(produto.proxima_validade);
+                        dataVenc.setHours(0, 0, 0, 0);
+                        diasRestantes = differenceInDays(dataVenc, hoje);
+                        
+                        if (isBefore(dataVenc, hoje)) {
+                          statusValidade = 'vencido';
+                        } else if (diasRestantes <= 3) {
+                          statusValidade = 'proximo';
+                        } else {
+                          statusValidade = 'ok';
+                        }
+                      }
+                      
                       return (
                         <TableRow key={produto.id}>
                           <TableCell className="font-medium">
@@ -498,6 +539,29 @@ const Estoque = () => {
                             <span className={estoque === 0 ? 'text-muted-foreground' : 'font-semibold text-green-600'}>
                               {estoque} un
                             </span>
+                          </TableCell>
+                          <TableCell>
+                            {produto.proxima_validade ? (
+                              <div className="flex items-center gap-1.5">
+                                <Clock className={`h-3.5 w-3.5 ${
+                                  statusValidade === 'vencido' ? 'text-destructive' :
+                                  statusValidade === 'proximo' ? 'text-amber-500' :
+                                  'text-muted-foreground'
+                                }`} />
+                                <span className={`text-sm ${
+                                  statusValidade === 'vencido' ? 'text-destructive font-medium' :
+                                  statusValidade === 'proximo' ? 'text-amber-600 font-medium' :
+                                  'text-muted-foreground'
+                                }`}>
+                                  {format(new Date(produto.proxima_validade), 'dd/MM/yy', { locale: ptBR })}
+                                  {statusValidade === 'vencido' && ' (vencido)'}
+                                  {statusValidade === 'proximo' && diasRestantes === 0 && ' (hoje)'}
+                                  {statusValidade === 'proximo' && diasRestantes > 0 && ` (${diasRestantes}d)`}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground/50 text-sm">-</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-right text-muted-foreground">
                             R$ {Number(produto.preco_venda).toFixed(2)}
