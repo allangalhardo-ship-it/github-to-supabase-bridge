@@ -14,9 +14,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Factory, Package, Search, ChefHat, AlertTriangle } from 'lucide-react';
-import { format } from 'date-fns';
+import { Plus, Factory, Package, Search, ChefHat, AlertTriangle, Clock } from 'lucide-react';
+import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { AlertaVencimento } from '@/components/producao/AlertaVencimento';
 
 const Producao = () => {
   const { usuario } = useAuth();
@@ -28,6 +29,8 @@ const Producao = () => {
     produto_id: '',
     quantidade: '1',
     observacao: '',
+    shelf_life_dias: '',
+    dias_alerta_vencimento: '3',
   });
 
   // Fetch produtos com ficha técnica
@@ -105,16 +108,23 @@ const Producao = () => {
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
+      const shelfLife = data.shelf_life_dias ? parseInt(data.shelf_life_dias) : null;
+      const dataVencimento = shelfLife ? addDays(new Date(), shelfLife) : null;
+      
       const { error } = await supabase.from('producoes').insert({
         empresa_id: usuario!.empresa_id,
         produto_id: data.produto_id,
         quantidade: parseFloat(data.quantidade) || 1,
         observacao: data.observacao || null,
+        shelf_life_dias: shelfLife,
+        dias_alerta_vencimento: parseInt(data.dias_alerta_vencimento) || 3,
+        data_vencimento: dataVencimento ? format(dataVencimento, 'yyyy-MM-dd') : null,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['producoes'] });
+      queryClient.invalidateQueries({ queryKey: ['producoes-vencimento'] });
       queryClient.invalidateQueries({ queryKey: ['produtos-estoque-acabado'] });
       queryClient.invalidateQueries({ queryKey: ['insumos'] });
       queryClient.invalidateQueries({ queryKey: ['estoque-movimentos'] });
@@ -131,6 +141,8 @@ const Producao = () => {
       produto_id: '',
       quantidade: '1',
       observacao: '',
+      shelf_life_dias: '',
+      dias_alerta_vencimento: '3',
     });
     setDialogOpen(false);
   };
@@ -207,6 +219,42 @@ const Producao = () => {
                 />
               </div>
 
+              {/* Campos de Shelf Life */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="shelf_life_dias" className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    Validade (dias)
+                  </Label>
+                  <Input
+                    id="shelf_life_dias"
+                    type="number"
+                    step="1"
+                    min="1"
+                    placeholder="Ex: 7"
+                    value={formData.shelf_life_dias}
+                    onChange={(e) => setFormData({ ...formData, shelf_life_dias: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Shelf life do produto
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dias_alerta">Alertar antes de</Label>
+                  <Input
+                    id="dias_alerta"
+                    type="number"
+                    step="1"
+                    min="1"
+                    value={formData.dias_alerta_vencimento}
+                    onChange={(e) => setFormData({ ...formData, dias_alerta_vencimento: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Dias para notificar
+                  </p>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="observacao">Observação (opcional)</Label>
                 <Textarea
@@ -238,6 +286,9 @@ const Producao = () => {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Alertas de Vencimento */}
+      <AlertaVencimento />
 
       {/* Resumo de estoque acabado */}
       {produtosEmEstoque.length > 0 && (
@@ -375,6 +426,7 @@ const Producao = () => {
                       <TableHead>Data</TableHead>
                       <TableHead>Produto</TableHead>
                       <TableHead className="text-right">Quantidade</TableHead>
+                      <TableHead>Validade</TableHead>
                       <TableHead>Observação</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -391,6 +443,15 @@ const Producao = () => {
                           <Badge variant="outline" className="text-green-600 border-green-600">
                             +{Number(prod.quantidade)} un
                           </Badge>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {prod.data_vencimento ? (
+                            <span className="text-muted-foreground text-sm">
+                              {format(new Date(prod.data_vencimento), 'dd/MM/yyyy', { locale: ptBR })}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/50 text-sm">-</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-muted-foreground max-w-48 truncate">
                           {prod.observacao || '-'}
