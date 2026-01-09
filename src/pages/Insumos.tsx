@@ -16,7 +16,8 @@ import { Switch } from '@/components/ui/switch';
 import { SearchableSelect, SearchableSelectOption } from '@/components/ui/searchable-select';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, AlertTriangle, ShoppingBasket, FlaskConical, ChefHat, Layers } from 'lucide-react';
+import { Plus, Pencil, Trash2, AlertTriangle, ShoppingBasket, FlaskConical, ChefHat, Layers, ShoppingCart } from 'lucide-react';
+import ListaCompras from '@/components/insumos/ListaCompras';
 
 const unidadesMedida = [
   { value: 'un', label: 'Unidade (un)' },
@@ -870,6 +871,10 @@ const Insumos = () => {
                 {insumosIntermediarios.length}
               </Badge>
             </TabsTrigger>
+            <TabsTrigger value="lista-compras" className="gap-2">
+              <ShoppingCart className="h-4 w-4 text-green-600" />
+              Lista de Compras
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="todos">
@@ -899,6 +904,10 @@ const Insumos = () => {
                 </p>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="lista-compras">
+            <ListaCompras />
           </TabsContent>
         </Tabs>
       ) : (
