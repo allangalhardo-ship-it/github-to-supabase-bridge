@@ -11,6 +11,7 @@ import Dashboard from "@/pages/Dashboard";
 import Produtos from "@/pages/Produtos";
 import Insumos from "@/pages/Insumos";
 import Estoque from "@/pages/Estoque";
+import Producao from "@/pages/Producao";
 import Vendas from "@/pages/Vendas";
 import Clientes from "@/pages/Clientes";
 import CustosFixos from "@/pages/CustosFixos";
@@ -76,6 +77,7 @@ const AppRoutes = () => {
         <Route path="produtos" element={<Produtos />} />
         <Route path="insumos" element={<Insumos />} />
         <Route path="estoque" element={<Estoque />} />
+        <Route path="producao" element={<Producao />} />
         <Route path="vendas" element={<Vendas />} />
         <Route path="clientes" element={<Clientes />} />
         <Route path="custos-fixos" element={<CustosFixos />} />
