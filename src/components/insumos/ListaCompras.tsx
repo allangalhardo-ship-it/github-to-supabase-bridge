@@ -238,260 +238,312 @@ const ListaCompras = () => {
     return <Skeleton className="h-96" />;
   }
 
+  const dataCompraFormatada = format(new Date(dataCompra + 'T12:00:00'), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+
   return (
-    <div className="space-y-6">
-      {/* Configuração */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calculator className="h-5 w-5 text-primary" />
-            Configurar Lista de Compras
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="periodo">Período para giro médio (dias)</Label>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <Info className="h-4 w-4 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="max-w-xs">Quantos dias de vendas usar para calcular a média de consumo dos insumos.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <Input
-                id="periodo"
-                type="number"
-                min="1"
-                max="365"
-                value={periodoGiro}
-                onChange={(e) => setPeriodoGiro(Number(e.target.value) || 30)}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="dias-estoque">Dias de estoque desejado</Label>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <Info className="h-4 w-4 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="max-w-xs">Para quantos dias você quer ter estoque após esta compra.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <Input
-                id="dias-estoque"
-                type="number"
-                min="1"
-                max="90"
-                value={diasEstoque}
-                onChange={(e) => setDiasEstoque(Number(e.target.value) || 7)}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="data-compra">Data prevista da compra</Label>
-              <Input
-                id="data-compra"
-                type="date"
-                value={dataCompra}
-                onChange={(e) => setDataCompra(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end mt-4">
-            <Button onClick={handleGerarLista} className="gap-2">
-              <ShoppingCart className="h-4 w-4" />
-              Gerar Lista
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Resumo */}
-      {listaGerada && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-primary/10">
-                  <Package className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Itens para comprar</p>
-                  <p className="text-2xl font-bold">{itensParaComprar.length}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-destructive/10">
-                  <AlertTriangle className="h-6 w-6 text-destructive" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Itens urgentes</p>
-                  <p className="text-2xl font-bold text-destructive">{itensUrgentes}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/30">
-                  <TrendingUp className="h-6 w-6 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Custo estimado</p>
-                  <p className="text-2xl font-bold text-green-600">{formatCurrency(totalEstimado)}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/30">
-                  <Calendar className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Data da compra</p>
-                  <p className="text-lg font-bold">
-                    {format(new Date(dataCompra + 'T12:00:00'), "dd 'de' MMM", { locale: ptBR })}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+    <>
+      {/* Área de impressão - Layout limpo para imprimir */}
+      <div className="print-area hidden print:block">
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-bold">Lista de Compras</h1>
+          <p className="text-gray-600">Data prevista: {dataCompraFormatada}</p>
+          <p className="text-sm text-gray-500">
+            {itensParaComprar.length} itens • Custo estimado: {formatCurrency(totalEstimado)}
+          </p>
         </div>
-      )}
+        
+        <table className="w-full text-sm">
+          <thead>
+            <tr>
+              <th className="text-left py-2">Insumo</th>
+              <th className="text-center py-2">Unidade</th>
+              <th className="text-right py-2">Qtd. Comprar</th>
+              <th className="text-right py-2">Custo Unit.</th>
+              <th className="text-right py-2">Custo Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {itensParaComprar.map((item) => (
+              <tr key={item.insumo.id} className={item.urgente ? 'urgente-row' : ''}>
+                <td className="py-2">
+                  {item.insumo.nome}
+                  {item.urgente && ' ⚠️'}
+                </td>
+                <td className="text-center py-2">{item.insumo.unidade_medida}</td>
+                <td className="text-right py-2 font-medium">{formatNumber(item.quantidadeComprar)}</td>
+                <td className="text-right py-2">{formatCurrency(item.insumo.custo_unitario)}</td>
+                <td className="text-right py-2 font-medium">{formatCurrency(item.custoEstimado)}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="font-bold border-t-2">
+              <td colSpan={4} className="text-right py-3">Total:</td>
+              <td className="text-right py-3">{formatCurrency(totalEstimado)}</td>
+            </tr>
+          </tfoot>
+        </table>
 
-      {/* Lista */}
-      {listaGerada && (
+        <div className="mt-8 pt-4 border-t text-center text-xs text-gray-400">
+          <p>Gerado por GastroGestor em {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+        </div>
+      </div>
+
+      {/* Conteúdo da tela - não aparece na impressão */}
+      <div className="space-y-6 no-print">
+        {/* Configuração */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5" />
-              Lista de Compras
-              {itensParaComprar.length > 0 && (
-                <Badge variant="secondary">{itensParaComprar.length} itens</Badge>
-              )}
+              <Calculator className="h-5 w-5 text-primary" />
+              Configurar Lista de Compras
             </CardTitle>
-            {itensParaComprar.length > 0 && (
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleCopiarLista} className="gap-2">
-                  <Copy className="h-4 w-4" />
-                  Copiar
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleImprimir} className="gap-2">
-                  <Printer className="h-4 w-4" />
-                  Imprimir
-                </Button>
-              </div>
-            )}
           </CardHeader>
           <CardContent>
-            {itensParaComprar.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Insumo</TableHead>
-                    <TableHead className="text-center">Unidade</TableHead>
-                    <TableHead className="text-right">Consumo/dia</TableHead>
-                    <TableHead className="text-right">Estoque atual</TableHead>
-                    <TableHead className="text-right">Dias restantes</TableHead>
-                    <TableHead className="text-right">Qtd. comprar</TableHead>
-                    <TableHead className="text-right">Custo unit.</TableHead>
-                    <TableHead className="text-right">Custo total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {itensParaComprar.map((item) => (
-                    <TableRow key={item.insumo.id} className={item.urgente ? 'bg-destructive/5' : ''}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {item.urgente && (
-                            <AlertTriangle className="h-4 w-4 text-destructive" />
-                          )}
-                          <span className="font-medium">{item.insumo.nome}</span>
-                          {item.urgente && (
-                            <Badge variant="destructive" className="text-xs">Urgente</Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">{item.insumo.unidade_medida}</TableCell>
-                      <TableCell className="text-right">
-                        {item.consumoDiario > 0 ? formatNumber(item.consumoDiario) : '-'}
-                      </TableCell>
-                      <TableCell className="text-right">{formatNumber(item.estoqueAtual)}</TableCell>
-                      <TableCell className="text-right">
-                        {item.diasEstoqueAtual === -1 ? (
-                          <span className="text-muted-foreground">∞</span>
-                        ) : item.diasEstoqueAtual < 3 ? (
-                          <span className="text-destructive font-medium">{formatNumber(item.diasEstoqueAtual, 1)}</span>
-                        ) : (
-                          formatNumber(item.diasEstoqueAtual, 1)
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatNumber(item.quantidadeComprar)}
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {formatCurrency(item.insumo.custo_unitario)}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatCurrency(item.custoEstimado)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="text-center py-12">
-                <CheckCircle2 className="h-12 w-12 mx-auto text-green-500 mb-4" />
-                <h3 className="text-lg font-medium mb-2">Estoque em dia!</h3>
-                <p className="text-muted-foreground">
-                  Com base no consumo dos últimos {periodoGiro} dias, seu estoque atual é suficiente para {diasEstoque} dias.
-                </p>
-              </div>
-            )}
-
-            {itensParaComprar.length > 0 && (
-              <div className="mt-4 pt-4 border-t flex justify-end">
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Total estimado da compra</p>
-                  <p className="text-2xl font-bold text-primary">{formatCurrency(totalEstimado)}</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="periodo">Período para giro médio (dias)</Label>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">Quantos dias de vendas usar para calcular a média de consumo dos insumos.</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
+                <Input
+                  id="periodo"
+                  type="number"
+                  min="1"
+                  max="365"
+                  value={periodoGiro}
+                  onChange={(e) => setPeriodoGiro(Number(e.target.value) || 30)}
+                />
               </div>
-            )}
+              
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="dias-estoque">Dias de estoque desejado</Label>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">Para quantos dias você quer ter estoque após esta compra.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <Input
+                  id="dias-estoque"
+                  type="number"
+                  min="1"
+                  max="90"
+                  value={diasEstoque}
+                  onChange={(e) => setDiasEstoque(Number(e.target.value) || 7)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="data-compra">Data prevista da compra</Label>
+                <Input
+                  id="data-compra"
+                  type="date"
+                  value={dataCompra}
+                  onChange={(e) => setDataCompra(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end mt-4">
+              <Button onClick={handleGerarLista} className="gap-2">
+                <ShoppingCart className="h-4 w-4" />
+                Gerar Lista
+              </Button>
+            </div>
           </CardContent>
         </Card>
-      )}
 
-      {/* Estado vazio */}
-      {!listaGerada && (
-        <Card className="p-12 text-center">
-          <ShoppingCart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">Lista de Compras Inteligente</h3>
-          <p className="text-muted-foreground max-w-md mx-auto mb-4">
-            Configure o período de análise, quantos dias de estoque você quer ter, 
-            e a data da compra. O sistema calculará automaticamente o que você precisa comprar 
-            baseado no giro médio dos seus produtos.
-          </p>
-        </Card>
-      )}
-    </div>
+        {/* Resumo */}
+        {listaGerada && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-primary/10">
+                    <Package className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Itens para comprar</p>
+                    <p className="text-2xl font-bold">{itensParaComprar.length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-destructive/10">
+                    <AlertTriangle className="h-6 w-6 text-destructive" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Itens urgentes</p>
+                    <p className="text-2xl font-bold text-destructive">{itensUrgentes}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/30">
+                    <TrendingUp className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Custo estimado</p>
+                    <p className="text-2xl font-bold text-green-600">{formatCurrency(totalEstimado)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/30">
+                    <Calendar className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Data da compra</p>
+                    <p className="text-lg font-bold">
+                      {format(new Date(dataCompra + 'T12:00:00'), "dd 'de' MMM", { locale: ptBR })}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Lista */}
+        {listaGerada && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <ShoppingCart className="h-5 w-5" />
+                Lista de Compras
+                {itensParaComprar.length > 0 && (
+                  <Badge variant="secondary">{itensParaComprar.length} itens</Badge>
+                )}
+              </CardTitle>
+              {itensParaComprar.length > 0 && (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleCopiarLista} className="gap-2">
+                    <Copy className="h-4 w-4" />
+                    Copiar
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleImprimir} className="gap-2">
+                    <Printer className="h-4 w-4" />
+                    Imprimir
+                  </Button>
+                </div>
+              )}
+            </CardHeader>
+            <CardContent>
+              {itensParaComprar.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Insumo</TableHead>
+                      <TableHead className="text-center">Unidade</TableHead>
+                      <TableHead className="text-right">Consumo/dia</TableHead>
+                      <TableHead className="text-right">Estoque atual</TableHead>
+                      <TableHead className="text-right">Dias restantes</TableHead>
+                      <TableHead className="text-right">Qtd. comprar</TableHead>
+                      <TableHead className="text-right">Custo unit.</TableHead>
+                      <TableHead className="text-right">Custo total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {itensParaComprar.map((item) => (
+                      <TableRow key={item.insumo.id} className={item.urgente ? 'bg-destructive/5' : ''}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {item.urgente && (
+                              <AlertTriangle className="h-4 w-4 text-destructive" />
+                            )}
+                            <span className="font-medium">{item.insumo.nome}</span>
+                            {item.urgente && (
+                              <Badge variant="destructive" className="text-xs">Urgente</Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">{item.insumo.unidade_medida}</TableCell>
+                        <TableCell className="text-right">
+                          {item.consumoDiario > 0 ? formatNumber(item.consumoDiario) : '-'}
+                        </TableCell>
+                        <TableCell className="text-right">{formatNumber(item.estoqueAtual)}</TableCell>
+                        <TableCell className="text-right">
+                          {item.diasEstoqueAtual === -1 ? (
+                            <span className="text-muted-foreground">∞</span>
+                          ) : item.diasEstoqueAtual < 3 ? (
+                            <span className="text-destructive font-medium">{formatNumber(item.diasEstoqueAtual, 1)}</span>
+                          ) : (
+                            formatNumber(item.diasEstoqueAtual, 1)
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatNumber(item.quantidadeComprar)}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground">
+                          {formatCurrency(item.insumo.custo_unitario)}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(item.custoEstimado)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-12">
+                  <CheckCircle2 className="h-12 w-12 mx-auto text-green-500 mb-4" />
+                  <h3 className="text-lg font-medium mb-2">Estoque em dia!</h3>
+                  <p className="text-muted-foreground">
+                    Com base no consumo dos últimos {periodoGiro} dias, seu estoque atual é suficiente para {diasEstoque} dias.
+                  </p>
+                </div>
+              )}
+
+              {itensParaComprar.length > 0 && (
+                <div className="mt-4 pt-4 border-t flex justify-end">
+                  <div className="text-right">
+                    <p className="text-sm text-muted-foreground">Total estimado da compra</p>
+                    <p className="text-2xl font-bold text-primary">{formatCurrency(totalEstimado)}</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Estado vazio */}
+        {!listaGerada && (
+          <Card className="p-12 text-center">
+            <ShoppingCart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">Lista de Compras Inteligente</h3>
+            <p className="text-muted-foreground max-w-md mx-auto mb-4">
+              Configure o período de análise, quantos dias de estoque você quer ter, 
+              e a data da compra. O sistema calculará automaticamente o que você precisa comprar 
+              baseado no giro médio dos seus produtos.
+            </p>
+          </Card>
+        )}
+      </div>
+    </>
   );
 };
 
