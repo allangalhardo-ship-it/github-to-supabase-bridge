@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { motion } from 'framer-motion';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -15,6 +16,37 @@ import {
 } from 'lucide-react';
 import { format, subDays, startOfMonth, startOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+
+// Variantes de animação
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const cardVariants = {
+  hidden: { 
+    opacity: 0, 
+    y: 20,
+    scale: 0.95
+  },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    scale: 1,
+    transition: {
+      type: "spring" as const,
+      stiffness: 100,
+      damping: 15
+    }
+  }
+};
+
+const MotionCard = motion.create(Card);
 
 type PeriodoType = 'hoje' | 'semana' | 'mes' | 'ultimos30';
 
@@ -255,8 +287,13 @@ const Dashboard = () => {
       </div>
 
       {/* KPIs - empilhados verticalmente no mobile */}
-      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="p-1">
+      <motion.div 
+        className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <MotionCard className="p-1" variants={cardVariants}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
             <CardTitle className="text-sm sm:text-base font-medium">Receita Bruta</CardTitle>
             <div className="h-10 w-10 sm:h-8 sm:w-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -270,9 +307,9 @@ const Dashboard = () => {
               <div className="text-2xl sm:text-2xl font-bold">{formatCurrency(receitaBruta)}</div>
             )}
           </CardContent>
-        </Card>
+        </MotionCard>
 
-        <Card className="p-1">
+        <MotionCard className="p-1" variants={cardVariants}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
             <CardTitle className="text-sm sm:text-base font-medium">CMV</CardTitle>
             <div className="h-10 w-10 sm:h-8 sm:w-8 rounded-full bg-amber-500/10 flex items-center justify-center">
@@ -291,9 +328,9 @@ const Dashboard = () => {
               </>
             )}
           </CardContent>
-        </Card>
+        </MotionCard>
 
-        <Card className="p-1">
+        <MotionCard className="p-1" variants={cardVariants}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
             <CardTitle className="text-sm sm:text-base font-medium">Margem de Contribuição</CardTitle>
             <div className="h-10 w-10 sm:h-8 sm:w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
@@ -312,9 +349,9 @@ const Dashboard = () => {
               </>
             )}
           </CardContent>
-        </Card>
+        </MotionCard>
 
-        <Card className="p-1">
+        <MotionCard className="p-1" variants={cardVariants}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
             <CardTitle className="text-sm sm:text-base font-medium">Lucro Estimado</CardTitle>
             <div className={`h-10 w-10 sm:h-8 sm:w-8 rounded-full flex items-center justify-center ${lucroEstimado >= 0 ? 'bg-green-500/10' : 'bg-destructive/10'}`}>
@@ -339,12 +376,17 @@ const Dashboard = () => {
               </>
             )}
           </CardContent>
-        </Card>
-      </div>
+        </MotionCard>
+      </motion.div>
 
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+      <motion.div 
+        className="grid gap-4 grid-cols-1 md:grid-cols-2"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         {/* Top 5 Produtos */}
-        <Card>
+        <MotionCard variants={cardVariants}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
@@ -361,9 +403,12 @@ const Dashboard = () => {
             ) : topProdutos && topProdutos.length > 0 ? (
               <div className="space-y-3">
                 {topProdutos.map((produto, index) => (
-                  <div
+                  <motion.div
                     key={index}
                     className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-lg font-bold text-muted-foreground">
@@ -384,7 +429,7 @@ const Dashboard = () => {
                         {formatCurrency(produto.receita)} receita
                       </p>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             ) : (
@@ -393,10 +438,10 @@ const Dashboard = () => {
               </p>
             )}
           </CardContent>
-        </Card>
+        </MotionCard>
 
         {/* Alertas de Estoque */}
-        <Card>
+        <MotionCard variants={cardVariants}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-amber-500" />
@@ -406,10 +451,13 @@ const Dashboard = () => {
           <CardContent>
             {insumosAlerta && insumosAlerta.length > 0 ? (
               <div className="space-y-3">
-                {insumosAlerta.slice(0, 5).map((insumo) => (
-                  <div
+                {insumosAlerta.slice(0, 5).map((insumo, index) => (
+                  <motion.div
                     key={insumo.id}
                     className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
                   >
                     <div>
                       <p className="font-medium">{insumo.nome}</p>
@@ -422,7 +470,7 @@ const Dashboard = () => {
                         {Number(insumo.estoque_atual).toFixed(2)} {insumo.unidade_medida}
                       </p>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             ) : (
@@ -431,8 +479,8 @@ const Dashboard = () => {
               </p>
             )}
           </CardContent>
-        </Card>
-      </div>
+        </MotionCard>
+      </motion.div>
     </div>
   );
 };
