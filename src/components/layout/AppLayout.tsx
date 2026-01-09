@@ -97,30 +97,37 @@ const AppLayout = () => {
 
   return (
     <div className="flex h-screen bg-background">
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-64 flex-col">
+      {/* Desktop Sidebar - só aparece em telas grandes */}
+      <aside className="hidden lg:flex w-64 flex-col flex-shrink-0">
         <SidebarContent />
       </aside>
 
-      {/* Mobile Header & Sidebar */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="lg:hidden flex items-center gap-4 p-4 border-b border-border bg-primary-dark">
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-white hover:bg-primary-dark/80">
-                <Menu className="h-6 w-6" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="p-0 w-64 border-0">
-              <SidebarContent onNavigate={() => setOpen(false)} />
-            </SheetContent>
-          </Sheet>
-          <Logo size="sm" theme="dark" />
+      {/* Mobile & Tablet - sidebar escondida, abre via menu */}
+      <div className="flex-1 flex flex-col overflow-hidden w-full">
+        {/* Header mobile com botão menu */}
+        <header className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-border bg-primary-dark safe-area-top">
+          <div className="flex items-center gap-3">
+            <Sheet open={open} onOpenChange={setOpen}>
+              <SheetTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-white hover:bg-white/10 active:bg-white/20 h-10 w-10"
+                >
+                  <Menu className="h-6 w-6" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="p-0 w-72 border-0">
+                <SidebarContent onNavigate={() => setOpen(false)} />
+              </SheetContent>
+            </Sheet>
+            <Logo size="sm" theme="dark" />
+          </div>
         </header>
 
-        {/* Main Content */}
+        {/* Main Content - área principal */}
         <main className="flex-1 overflow-auto bg-surface-alt">
-          <div className="container mx-auto p-6">
+          <div className="container mx-auto p-4 md:p-6 pb-safe">
             <Outlet />
           </div>
         </main>
