@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, Package, AlertCircle, Search } from 'lucide-react';
 import FichaTecnicaDialog from '@/components/produtos/FichaTecnicaDialog';
@@ -39,6 +40,8 @@ const Produtos = () => {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduto, setEditingProduto] = useState<Produto | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     nome: '',
     categoria: '',
@@ -158,11 +161,24 @@ const Produtos = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['produtos'] });
       toast({ title: 'Produto excluído!' });
+      setDeleteConfirmOpen(false);
+      setItemToDelete(null);
     },
     onError: (error) => {
       toast({ title: 'Erro ao excluir', description: error.message, variant: 'destructive' });
     },
   });
+
+  const handleDeleteClick = (id: string) => {
+    setItemToDelete(id);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (itemToDelete) {
+      deleteMutation.mutate(itemToDelete);
+    }
+  };
 
   const resetForm = () => {
     setFormData({ nome: '', categoria: '', preco_venda: '', ativo: true });
@@ -340,7 +356,7 @@ const Produtos = () => {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-destructive"
-                        onClick={() => deleteMutation.mutate(produto.id)}
+                        onClick={() => handleDeleteClick(produto.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -422,6 +438,14 @@ const Produtos = () => {
           </Button>
         </Card>
       )}
+
+      <DeleteConfirmationDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        onConfirm={confirmDelete}
+        title="Excluir produto"
+        description="Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita."
+      />
     </div>
   );
 };

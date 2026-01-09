@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, Wallet } from 'lucide-react';
 
@@ -41,6 +42,8 @@ const CustosFixos = () => {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCusto, setEditingCusto] = useState<CustoFixo | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     nome: '',
     valor_mensal: '',
@@ -112,11 +115,24 @@ const CustosFixos = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['custos-fixos'] });
       toast({ title: 'Custo fixo excluído!' });
+      setDeleteConfirmOpen(false);
+      setItemToDelete(null);
     },
     onError: (error) => {
       toast({ title: 'Erro ao excluir', description: error.message, variant: 'destructive' });
     },
   });
+
+  const handleDeleteClick = (id: string) => {
+    setItemToDelete(id);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (itemToDelete) {
+      deleteMutation.mutate(itemToDelete);
+    }
+  };
 
   const resetForm = () => {
     setFormData({ nome: '', valor_mensal: '', categoria: '' });
@@ -286,7 +302,7 @@ const CustosFixos = () => {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-destructive"
-                          onClick={() => deleteMutation.mutate(custo.id)}
+                          onClick={() => handleDeleteClick(custo.id)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -311,6 +327,14 @@ const CustosFixos = () => {
           </Button>
         </Card>
       )}
+
+      <DeleteConfirmationDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        onConfirm={confirmDelete}
+        title="Excluir custo fixo"
+        description="Tem certeza que deseja excluir este custo fixo? Esta ação não pode ser desfeita."
+      />
     </div>
   );
 };
