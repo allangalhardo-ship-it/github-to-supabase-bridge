@@ -14,7 +14,7 @@ import {
   Package,
   AlertTriangle,
 } from 'lucide-react';
-import { format, subDays, startOfMonth, startOfWeek } from 'date-fns';
+import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysInMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 // Variantes de animação
@@ -223,7 +223,35 @@ const Dashboard = () => {
   const cmvPercent = receitaBruta > 0 ? (cmvTotal / receitaBruta) * 100 : 0;
   const margemContribuicao = receitaBruta - cmvTotal;
   
-  const custoFixoTotal = custosFixos?.reduce((sum, c) => sum + Number(c.valor_mensal), 0) || 0;
+  const custoFixoMensal = custosFixos?.reduce((sum, c) => sum + Number(c.valor_mensal), 0) || 0;
+  
+  // Calcular custo fixo proporcional ao período
+  const calcularCustoFixoProporcional = () => {
+    const hoje = new Date();
+    const diasNoMes = getDaysInMonth(hoje);
+    const custoDiario = custoFixoMensal / diasNoMes;
+    
+    switch (periodo) {
+      case 'hoje':
+        return custoDiario;
+      case 'semana': {
+        const inicioSemana = startOfWeek(hoje, { locale: ptBR });
+        const diasNaSemana = differenceInDays(hoje, inicioSemana) + 1;
+        return custoDiario * diasNaSemana;
+      }
+      case 'mes': {
+        const inicioMes = startOfMonth(hoje);
+        const diasNoMesAtual = differenceInDays(hoje, inicioMes) + 1;
+        return custoDiario * diasNoMesAtual;
+      }
+      case 'ultimos30':
+        return custoFixoMensal; // 30 dias ≈ 1 mês
+      default:
+        return custoFixoMensal;
+    }
+  };
+  
+  const custoFixoTotal = calcularCustoFixoProporcional();
   const impostoPercent = config?.imposto_medio_sobre_vendas ?? 10;
   const impostos = receitaBruta * (impostoPercent / 100);
   
@@ -371,7 +399,7 @@ const Dashboard = () => {
                   {formatCurrency(lucroEstimado)}
                 </div>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                  Após custos fixos ({formatCurrency(custoFixoTotal)}), impostos ({formatCurrency(impostos)}){taxaAppTotal > 0 ? `, taxas (${formatCurrency(taxaAppTotal)})` : ''}
+                  Custos fixos proporcionais ({formatCurrency(custoFixoTotal)}){impostos > 0 ? `, impostos (${formatCurrency(impostos)})` : ''}{taxaAppTotal > 0 ? `, taxas (${formatCurrency(taxaAppTotal)})` : ''}
                 </p>
               </>
             )}
