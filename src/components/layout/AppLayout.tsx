@@ -19,6 +19,7 @@ import {
   Menu,
   ChefHat,
   Factory,
+  Wallet,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -30,6 +31,7 @@ const navItems = [
   { to: '/estoque', icon: PackageOpen, label: 'Estoque' },
   { to: '/producao', icon: Factory, label: 'Produção' },
   { to: '/vendas', icon: ShoppingCart, label: 'Vendas' },
+  { to: '/caixa', icon: Wallet, label: 'Caixa' },
   { to: '/clientes', icon: Users, label: 'Clientes' },
   { to: '/custos-fixos', icon: Calculator, label: 'Custos Fixos' },
   { to: '/xml-import', icon: FileSpreadsheet, label: 'Importar NF-e' },

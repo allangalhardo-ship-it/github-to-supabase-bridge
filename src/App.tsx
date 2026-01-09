@@ -18,6 +18,7 @@ import CustosFixos from "@/pages/CustosFixos";
 import Configuracoes from "@/pages/Configuracoes";
 import XmlImport from "@/pages/XmlImport";
 import Receitas from "@/pages/Receitas";
+import Caixa from "@/pages/Caixa";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -81,6 +82,7 @@ const AppRoutes = () => {
         <Route path="vendas" element={<Vendas />} />
         <Route path="clientes" element={<Clientes />} />
         <Route path="custos-fixos" element={<CustosFixos />} />
+        <Route path="caixa" element={<Caixa />} />
         <Route path="configuracoes" element={<Configuracoes />} />
         <Route path="xml-import" element={<XmlImport />} />
         <Route path="receitas" element={<Receitas />} />
