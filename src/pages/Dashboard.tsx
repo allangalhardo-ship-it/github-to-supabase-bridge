@@ -214,8 +214,8 @@ const Dashboard = () => {
     if (!venda.canal) return total;
     const canalLower = venda.canal.toLowerCase();
     const taxaApp = taxasApps?.find(t => 
-      canalLower.includes(t.nome_app.toLowerCase()) || 
-      t.nome_app.toLowerCase().includes(canalLower)
+      t.nome_app && (canalLower.includes(t.nome_app.toLowerCase()) || 
+      t.nome_app.toLowerCase().includes(canalLower))
     );
     if (taxaApp) {
       return total + (Number(venda.valor_total) * Number(taxaApp.taxa_percentual) / 100);
