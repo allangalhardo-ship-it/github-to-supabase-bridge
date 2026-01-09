@@ -406,6 +406,26 @@ const Produtos = () => {
                         </div>
                       </div>
 
+                      {/* Indicador visual de Margem */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1">
+                          <div className="flex justify-between text-xs mb-1">
+                            <span>Margem: {margemPercent.toFixed(1)}%</span>
+                            <span className="text-muted-foreground">Alvo: {config?.margem_desejada_padrao || 30}%</span>
+                          </div>
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className={`h-full transition-all ${margemPercent >= (config?.margem_desejada_padrao || 30) ? 'bg-green-500' : margemPercent >= 0 ? 'bg-amber-500' : 'bg-red-500'}`}
+                              style={{ width: `${Math.min(Math.max(margemPercent, 0), 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                        {margemPercent < (config?.margem_desejada_padrao || 30) && (
+                          <AlertCircle className="h-4 w-4 text-amber-500" />
+                        )}
+                      </div>
+
+                      {/* Indicador visual de CMV */}
                       <div className="flex items-center gap-2">
                         <div className="flex-1">
                           <div className="flex justify-between text-xs mb-1">
