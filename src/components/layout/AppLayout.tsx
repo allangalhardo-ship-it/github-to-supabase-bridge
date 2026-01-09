@@ -17,12 +17,14 @@ import {
   SlidersHorizontal,
   LogOut,
   Menu,
+  ChefHat,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/produtos', icon: UtensilsCrossed, label: 'Produtos' },
+  { to: '/receitas', icon: ChefHat, label: 'Receitas' },
   { to: '/insumos', icon: Carrot, label: 'Insumos' },
   { to: '/estoque', icon: PackageOpen, label: 'Estoque' },
   { to: '/vendas', icon: ShoppingCart, label: 'Vendas' },
