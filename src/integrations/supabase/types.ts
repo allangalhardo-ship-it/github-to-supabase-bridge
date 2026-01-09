@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      clientes: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          nome: string
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id?: string
+          nome: string
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nome?: string
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
       configuracoes: {
         Row: {
           cmv_alvo: number
@@ -455,6 +482,7 @@ export type Database = {
       vendas: {
         Row: {
           canal: string | null
+          cliente_id: string | null
           created_at: string
           data_venda: string
           descricao_produto: string | null
@@ -463,10 +491,12 @@ export type Database = {
           origem: string
           produto_id: string | null
           quantidade: number
+          tipo_venda: string
           valor_total: number
         }
         Insert: {
           canal?: string | null
+          cliente_id?: string | null
           created_at?: string
           data_venda?: string
           descricao_produto?: string | null
@@ -475,10 +505,12 @@ export type Database = {
           origem?: string
           produto_id?: string | null
           quantidade?: number
+          tipo_venda?: string
           valor_total?: number
         }
         Update: {
           canal?: string | null
+          cliente_id?: string | null
           created_at?: string
           data_venda?: string
           descricao_produto?: string | null
@@ -487,9 +519,17 @@ export type Database = {
           origem?: string
           produto_id?: string | null
           quantidade?: number
+          tipo_venda?: string
           valor_total?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "vendas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "vendas_empresa_id_fkey"
             columns: ["empresa_id"]
