@@ -11,8 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Package, AlertCircle, ChevronDown, ChevronUp, Search } from 'lucide-react';
-import FichaTecnicaForm from '@/components/produtos/FichaTecnicaForm';
+import { Plus, Pencil, Trash2, Package, AlertCircle, Search } from 'lucide-react';
+import FichaTecnicaDialog from '@/components/produtos/FichaTecnicaDialog';
 import MarketPriceSearch from '@/components/produtos/MarketPriceSearch';
 
 interface Produto {
@@ -39,7 +39,6 @@ const Produtos = () => {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduto, setEditingProduto] = useState<Produto | null>(null);
-  const [expandedProduto, setExpandedProduto] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     nome: '',
     categoria: '',
@@ -308,7 +307,6 @@ const Produtos = () => {
             const cmvAtual = precoVenda > 0 ? (custoInsumos / precoVenda) * 100 : 0;
             const cmvAlvo = config?.cmv_alvo || 35;
             const margemContribuicao = precoVenda - custoInsumos;
-            const isExpanded = expandedProduto === produto.id;
             const temFichaTecnica = produto.fichas_tecnicas && produto.fichas_tecnicas.length > 0;
 
             return (
@@ -401,21 +399,11 @@ const Produtos = () => {
                     </>
                   )}
 
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-between"
-                    onClick={() => setExpandedProduto(isExpanded ? null : produto.id)}
-                  >
-                    <span>Ficha Técnica ({produto.fichas_tecnicas?.length || 0} itens)</span>
-                    {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                  </Button>
-
-                  {isExpanded && (
-                    <FichaTecnicaForm
-                      produtoId={produto.id}
-                      fichaTecnica={produto.fichas_tecnicas || []}
-                    />
-                  )}
+                  <FichaTecnicaDialog
+                    produtoId={produto.id}
+                    produtoNome={produto.nome}
+                    fichaTecnica={produto.fichas_tecnicas || []}
+                  />
                 </CardContent>
               </Card>
             );
