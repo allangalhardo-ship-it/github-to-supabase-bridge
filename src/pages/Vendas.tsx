@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,8 +15,8 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Receipt, Trash2, Package, User, Upload } from 'lucide-react';
-import { format } from 'date-fns';
+import { Plus, Receipt, Trash2, Package, User, Upload, Filter, DollarSign, ShoppingCart } from 'lucide-react';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import ImportarVendasDialog from '@/components/vendas/ImportarVendasDialog';
 
@@ -31,6 +31,14 @@ const Vendas = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  
+  // Filtros
+  const [filtroDataInicio, setFiltroDataInicio] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [filtroDataFim, setFiltroDataFim] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [filtroProduto, setFiltroProduto] = useState<string>('todos');
+  const [filtroCanal, setFiltroCanal] = useState<string>('todos');
+  const [filtroOrigem, setFiltroOrigem] = useState<string>('todos');
+  
   const [formData, setFormData] = useState({
     produto_id: '',
     quantidade: '1',
@@ -89,9 +97,9 @@ const Vendas = () => {
   // Apps de delivery (exclui canais fixos)
   const appsDelivery = taxasApps?.map(t => t.nome_app) || [];
 
-  // Fetch vendas
+  // Fetch vendas com filtro de data
   const { data: vendas, isLoading } = useQuery({
-    queryKey: ['vendas', usuario?.empresa_id],
+    queryKey: ['vendas', usuario?.empresa_id, filtroDataInicio, filtroDataFim],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('vendas')
@@ -99,15 +107,43 @@ const Vendas = () => {
           *,
           produtos (nome)
         `)
+        .gte('data_venda', filtroDataInicio)
+        .lte('data_venda', filtroDataFim)
         .order('data_venda', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(100);
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data;
     },
     enabled: !!usuario?.empresa_id,
   });
+
+  // Filtrar vendas localmente
+  const vendasFiltradas = useMemo(() => {
+    if (!vendas) return [];
+    
+    return vendas.filter(venda => {
+      if (filtroProduto !== 'todos' && venda.produto_id !== filtroProduto) return false;
+      if (filtroCanal !== 'todos' && venda.canal !== filtroCanal) return false;
+      if (filtroOrigem !== 'todos' && venda.origem !== filtroOrigem) return false;
+      return true;
+    });
+  }, [vendas, filtroProduto, filtroCanal, filtroOrigem]);
+
+  // Calcular totalizadores
+  const totais = useMemo(() => {
+    const totalValor = vendasFiltradas.reduce((acc, v) => acc + Number(v.valor_total), 0);
+    const totalQuantidade = vendasFiltradas.reduce((acc, v) => acc + Number(v.quantidade), 0);
+    const totalVendas = vendasFiltradas.length;
+    return { totalValor, totalQuantidade, totalVendas };
+  }, [vendasFiltradas]);
+
+  // Extrair canais únicos para o filtro
+  const canaisUnicos = useMemo(() => {
+    if (!vendas) return [];
+    const canais = new Set(vendas.map(v => v.canal).filter(Boolean));
+    return Array.from(canais) as string[];
+  }, [vendas]);
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -200,159 +236,156 @@ const Vendas = () => {
           <p className="text-muted-foreground">Registre vendas manualmente ou importe relatórios</p>
         </div>
 
-        <div className="flex gap-2">
-          <ImportarVendasDialog />
-          <Dialog open={dialogOpen} onOpenChange={(open) => {
-            setDialogOpen(open);
-            if (!open) resetForm();
-          }}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Nova Venda
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Registrar Venda</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
+        <Dialog open={dialogOpen} onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) resetForm();
+        }}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Venda
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Registrar Venda</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="produto">Produto</Label>
+                <SearchableSelect
+                  options={produtos?.map((produto) => ({
+                    value: produto.id,
+                    label: `${produto.nome} - ${formatCurrency(Number(produto.preco_venda))}`,
+                    searchTerms: produto.nome,
+                    icon: <Package className="h-3 w-3 text-primary" />,
+                  })) || []}
+                  value={formData.produto_id}
+                  onValueChange={handleProdutoChange}
+                  placeholder="Buscar produto..."
+                  searchPlaceholder="Digite para buscar..."
+                  emptyMessage="Nenhum produto encontrado."
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="produto">Produto</Label>
-                  <SearchableSelect
-                    options={produtos?.map((produto) => ({
-                      value: produto.id,
-                      label: `${produto.nome} - ${formatCurrency(Number(produto.preco_venda))}`,
-                      searchTerms: produto.nome,
-                      icon: <Package className="h-3 w-3 text-primary" />,
-                    })) || []}
-                    value={formData.produto_id}
-                    onValueChange={handleProdutoChange}
-                    placeholder="Buscar produto..."
-                    searchPlaceholder="Digite para buscar..."
-                    emptyMessage="Nenhum produto encontrado."
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="quantidade">Quantidade</Label>
-                    <Input
-                      id="quantidade"
-                      type="number"
-                      step="1"
-                      min="1"
-                      value={formData.quantidade}
-                      onChange={(e) => setFormData({ ...formData, quantidade: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="valor_total">Valor Total (R$)</Label>
-                    <Input
-                      id="valor_total"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.valor_total}
-                      onChange={(e) => setFormData({ ...formData, valor_total: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <Label>Tipo de Venda</Label>
-                  <RadioGroup
-                    value={formData.tipo_venda}
-                    onValueChange={(value: 'direto' | 'app') => 
-                      setFormData({ ...formData, tipo_venda: value, canal: value === 'direto' ? 'balcao' : (appsDelivery[0] || 'iFood'), cliente_id: '' })
-                    }
-                    className="flex gap-4"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="direto" id="direto" />
-                      <Label htmlFor="direto" className="font-normal cursor-pointer">Venda Direta</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="app" id="app" />
-                      <Label htmlFor="app" className="font-normal cursor-pointer">App de Delivery</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-
-                {formData.tipo_venda === 'direto' ? (
-                  <div className="space-y-2">
-                    <Label htmlFor="cliente">Cliente (opcional)</Label>
-                    <SearchableSelect
-                      options={[
-                        { value: '', label: 'Sem cliente', searchTerms: 'sem cliente nenhum' },
-                        ...(clientes?.map((cliente) => ({
-                          value: cliente.id,
-                          label: cliente.nome,
-                          searchTerms: `${cliente.nome} ${cliente.whatsapp || ''}`,
-                          icon: <User className="h-3 w-3 text-muted-foreground" />,
-                        })) || []),
-                      ]}
-                      value={formData.cliente_id}
-                      onValueChange={(value) => setFormData({ ...formData, cliente_id: value })}
-                      placeholder="Buscar cliente..."
-                      searchPlaceholder="Digite para buscar..."
-                      emptyMessage="Nenhum cliente encontrado."
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Vendas de balcão, WhatsApp ou encomendas diretas
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Label htmlFor="canal">App de Delivery</Label>
-                    <Select
-                      value={formData.canal}
-                      onValueChange={(value) => setFormData({ ...formData, canal: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o app" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {appsDelivery.length > 0 ? (
-                          appsDelivery.map((app) => (
-                            <SelectItem key={app} value={app}>
-                              {app}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <>
-                            <SelectItem value="iFood">iFood</SelectItem>
-                            <SelectItem value="Rappi">Rappi</SelectItem>
-                            <SelectItem value="99Food">99Food</SelectItem>
-                          </>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="data_venda">Data</Label>
+                  <Label htmlFor="quantidade">Quantidade</Label>
                   <Input
-                    id="data_venda"
-                    type="date"
-                    value={formData.data_venda}
-                    onChange={(e) => setFormData({ ...formData, data_venda: e.target.value })}
+                    id="quantidade"
+                    type="number"
+                    step="1"
+                    min="1"
+                    value={formData.quantidade}
+                    onChange={(e) => setFormData({ ...formData, quantidade: e.target.value })}
                     required
                   />
                 </div>
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" disabled={createMutation.isPending}>
-                    Registrar
-                  </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="valor_total">Valor Total (R$)</Label>
+                  <Input
+                    id="valor_total"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.valor_total}
+                    onChange={(e) => setFormData({ ...formData, valor_total: e.target.value })}
+                    required
+                  />
                 </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
+              </div>
+              <div className="space-y-3">
+                <Label>Tipo de Venda</Label>
+                <RadioGroup
+                  value={formData.tipo_venda}
+                  onValueChange={(value: 'direto' | 'app') => 
+                    setFormData({ ...formData, tipo_venda: value, canal: value === 'direto' ? 'balcao' : (appsDelivery[0] || 'iFood'), cliente_id: '' })
+                  }
+                  className="flex gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="direto" id="direto" />
+                    <Label htmlFor="direto" className="font-normal cursor-pointer">Venda Direta</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="app" id="app" />
+                    <Label htmlFor="app" className="font-normal cursor-pointer">App de Delivery</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {formData.tipo_venda === 'direto' ? (
+                <div className="space-y-2">
+                  <Label htmlFor="cliente">Cliente (opcional)</Label>
+                  <SearchableSelect
+                    options={[
+                      { value: '', label: 'Sem cliente', searchTerms: 'sem cliente nenhum' },
+                      ...(clientes?.map((cliente) => ({
+                        value: cliente.id,
+                        label: cliente.nome,
+                        searchTerms: `${cliente.nome} ${cliente.whatsapp || ''}`,
+                        icon: <User className="h-3 w-3 text-muted-foreground" />,
+                      })) || []),
+                    ]}
+                    value={formData.cliente_id}
+                    onValueChange={(value) => setFormData({ ...formData, cliente_id: value })}
+                    placeholder="Buscar cliente..."
+                    searchPlaceholder="Digite para buscar..."
+                    emptyMessage="Nenhum cliente encontrado."
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Vendas de balcão, WhatsApp ou encomendas diretas
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="canal">App de Delivery</Label>
+                  <Select
+                    value={formData.canal}
+                    onValueChange={(value) => setFormData({ ...formData, canal: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o app" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {appsDelivery.length > 0 ? (
+                        appsDelivery.map((app) => (
+                          <SelectItem key={app} value={app}>
+                            {app}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <>
+                          <SelectItem value="iFood">iFood</SelectItem>
+                          <SelectItem value="Rappi">Rappi</SelectItem>
+                          <SelectItem value="99Food">99Food</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="data_venda">Data</Label>
+                <Input
+                  id="data_venda"
+                  type="date"
+                  value={formData.data_venda}
+                  onChange={(e) => setFormData({ ...formData, data_venda: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={createMutation.isPending}>
+                  Registrar
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Tabs defaultValue="historico">
@@ -361,10 +394,128 @@ const Vendas = () => {
           <TabsTrigger value="importar">Importar CSV</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="historico" className="mt-4">
+        <TabsContent value="historico" className="mt-4 space-y-4">
+          {/* Filtros */}
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Filtros</span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Data Início</Label>
+                  <Input
+                    type="date"
+                    value={filtroDataInicio}
+                    onChange={(e) => setFiltroDataInicio(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Data Fim</Label>
+                  <Input
+                    type="date"
+                    value={filtroDataFim}
+                    onChange={(e) => setFiltroDataFim(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Produto</Label>
+                  <Select value={filtroProduto} onValueChange={setFiltroProduto}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos os produtos</SelectItem>
+                      {produtos?.map((produto) => (
+                        <SelectItem key={produto.id} value={produto.id}>
+                          {produto.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Canal</Label>
+                  <Select value={filtroCanal} onValueChange={setFiltroCanal}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos os canais</SelectItem>
+                      {canaisUnicos.map((canal) => (
+                        <SelectItem key={canal} value={canal}>
+                          {canal}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Origem</Label>
+                  <Select value={filtroOrigem} onValueChange={setFiltroOrigem}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Todas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todas as origens</SelectItem>
+                      <SelectItem value="manual">Manual</SelectItem>
+                      <SelectItem value="importacao">Importação</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Totalizadores */}
+          <div className="grid grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <DollarSign className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total em Vendas</p>
+                    <p className="text-xl font-bold">{formatCurrency(totais.totalValor)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <ShoppingCart className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Qtd. Vendas</p>
+                    <p className="text-xl font-bold">{totais.totalVendas}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Package className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Itens Vendidos</p>
+                    <p className="text-xl font-bold">{totais.totalQuantidade}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           {isLoading ? (
             <Skeleton className="h-96" />
-          ) : vendas && vendas.length > 0 ? (
+          ) : vendasFiltradas && vendasFiltradas.length > 0 ? (
             <Card>
               <CardContent className="p-0">
                 <Table>
@@ -380,7 +531,7 @@ const Vendas = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {vendas.map((venda) => (
+                    {vendasFiltradas.map((venda) => (
                       <TableRow key={venda.id}>
                         <TableCell className="text-muted-foreground">
                           {format(new Date(venda.data_venda), 'dd/MM/yyyy', { locale: ptBR })}
@@ -419,14 +570,18 @@ const Vendas = () => {
           ) : (
             <Card className="p-12 text-center">
               <Receipt className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">Nenhuma venda registrada</h3>
+              <h3 className="text-lg font-medium mb-2">Nenhuma venda encontrada</h3>
               <p className="text-muted-foreground mb-4">
-                Registre vendas manualmente ou importe do iFood.
+                {vendas && vendas.length > 0 
+                  ? 'Nenhuma venda corresponde aos filtros selecionados.'
+                  : 'Registre vendas manualmente ou importe do iFood.'}
               </p>
-              <Button onClick={() => setDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Nova Venda
-              </Button>
+              {!vendas || vendas.length === 0 ? (
+                <Button onClick={() => setDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nova Venda
+                </Button>
+              ) : null}
             </Card>
           )}
         </TabsContent>
