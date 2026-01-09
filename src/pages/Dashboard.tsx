@@ -256,32 +256,36 @@ const Dashboard = () => {
 
       {/* KPIs - empilhados verticalmente no mobile */}
       <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Receita Bruta</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+        <Card className="p-1">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
+            <CardTitle className="text-sm sm:text-base font-medium">Receita Bruta</CardTitle>
+            <div className="h-10 w-10 sm:h-8 sm:w-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <DollarSign className="h-5 w-5 sm:h-4 sm:w-4 text-primary" />
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
             {isLoading ? (
               <Skeleton className="h-8 w-24" />
             ) : (
-              <div className="text-2xl font-bold">{formatCurrency(receitaBruta)}</div>
+              <div className="text-2xl sm:text-2xl font-bold">{formatCurrency(receitaBruta)}</div>
             )}
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">CMV</CardTitle>
-            <Percent className="h-4 w-4 text-muted-foreground" />
+        <Card className="p-1">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
+            <CardTitle className="text-sm sm:text-base font-medium">CMV</CardTitle>
+            <div className="h-10 w-10 sm:h-8 sm:w-8 rounded-full bg-amber-500/10 flex items-center justify-center">
+              <Percent className="h-5 w-5 sm:h-4 sm:w-4 text-amber-600" />
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
             {isLoading ? (
               <Skeleton className="h-8 w-24" />
             ) : (
               <>
-                <div className="text-2xl font-bold">{cmvPercent.toFixed(1)}%</div>
-                <p className="text-xs text-muted-foreground">
+                <div className="text-2xl sm:text-2xl font-bold">{cmvPercent.toFixed(1)}%</div>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                   {formatCurrency(cmvTotal)} em insumos
                 </p>
               </>
@@ -289,18 +293,20 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Margem de Contribuição</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+        <Card className="p-1">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
+            <CardTitle className="text-sm sm:text-base font-medium">Margem de Contribuição</CardTitle>
+            <div className="h-10 w-10 sm:h-8 sm:w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+              <TrendingUp className="h-5 w-5 sm:h-4 sm:w-4 text-blue-600" />
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
             {isLoading ? (
               <Skeleton className="h-8 w-24" />
             ) : (
               <>
-                <div className="text-2xl font-bold">{formatCurrency(margemContribuicao)}</div>
-                <p className="text-xs text-muted-foreground">
+                <div className="text-2xl sm:text-2xl font-bold">{formatCurrency(margemContribuicao)}</div>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                   {receitaBruta > 0 ? ((margemContribuicao / receitaBruta) * 100).toFixed(1) : 0}% da receita
                 </p>
               </>
@@ -308,25 +314,27 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Lucro Estimado</CardTitle>
-            {lucroEstimado >= 0 ? (
-              <TrendingUp className="h-4 w-4 text-green-500" />
-            ) : (
-              <TrendingDown className="h-4 w-4 text-destructive" />
-            )}
+        <Card className="p-1">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
+            <CardTitle className="text-sm sm:text-base font-medium">Lucro Estimado</CardTitle>
+            <div className={`h-10 w-10 sm:h-8 sm:w-8 rounded-full flex items-center justify-center ${lucroEstimado >= 0 ? 'bg-green-500/10' : 'bg-destructive/10'}`}>
+              {lucroEstimado >= 0 ? (
+                <TrendingUp className="h-5 w-5 sm:h-4 sm:w-4 text-green-600" />
+              ) : (
+                <TrendingDown className="h-5 w-5 sm:h-4 sm:w-4 text-destructive" />
+              )}
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
             {isLoading ? (
               <Skeleton className="h-8 w-24" />
             ) : (
               <>
-                <div className={`text-2xl font-bold ${lucroEstimado >= 0 ? 'text-green-600' : 'text-destructive'}`}>
+                <div className={`text-2xl sm:text-2xl font-bold ${lucroEstimado >= 0 ? 'text-green-600' : 'text-destructive'}`}>
                   {formatCurrency(lucroEstimado)}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Após custos fixos, impostos{taxaAppTotal > 0 ? ` e taxas app (${formatCurrency(taxaAppTotal)})` : ''}
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                  Após custos fixos, impostos{taxaAppTotal > 0 ? ` e taxas` : ''}
                 </p>
               </>
             )}
