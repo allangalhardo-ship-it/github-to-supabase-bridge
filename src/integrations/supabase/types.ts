@@ -271,7 +271,9 @@ export type Database = {
           estoque_atual: number
           estoque_minimo: number
           id: string
+          is_intermediario: boolean
           nome: string
+          rendimento_receita: number | null
           unidade_medida: string
           updated_at: string
         }
@@ -282,7 +284,9 @@ export type Database = {
           estoque_atual?: number
           estoque_minimo?: number
           id?: string
+          is_intermediario?: boolean
           nome: string
+          rendimento_receita?: number | null
           unidade_medida?: string
           updated_at?: string
         }
@@ -293,7 +297,9 @@ export type Database = {
           estoque_atual?: number
           estoque_minimo?: number
           id?: string
+          is_intermediario?: boolean
           nome?: string
+          rendimento_receita?: number | null
           unidade_medida?: string
           updated_at?: string
         }
@@ -398,6 +404,45 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      receitas_intermediarias: {
+        Row: {
+          created_at: string
+          id: string
+          insumo_id: string
+          insumo_ingrediente_id: string
+          quantidade: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          insumo_id: string
+          insumo_ingrediente_id: string
+          quantidade?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          insumo_id?: string
+          insumo_ingrediente_id?: string
+          quantidade?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receitas_intermediarias_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receitas_intermediarias_insumo_ingrediente_id_fkey"
+            columns: ["insumo_ingrediente_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
             referencedColumns: ["id"]
           },
         ]
