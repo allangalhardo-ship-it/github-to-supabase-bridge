@@ -88,6 +88,20 @@ const Produtos = () => {
     enabled: !!usuario?.empresa_id,
   });
 
+  // Fetch taxas dos apps para calcular taxa média
+  const { data: taxasApps } = useQuery({
+    queryKey: ['taxas_apps', usuario?.empresa_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('taxas_apps')
+        .select('taxa_percentual')
+        .eq('ativo', true);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!usuario?.empresa_id,
+  });
+
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       if (!usuario?.empresa_id) {
@@ -185,9 +199,12 @@ const Produtos = () => {
 
   const calcularPrecoSugerido = (custoInsumos: number) => {
     const margemDesejada = config?.margem_desejada_padrao || 30;
-    const taxaApp = (config as any)?.taxa_app_delivery || 12;
+    // Calcula taxa média dos apps cadastrados
+    const taxaMedia = taxasApps && taxasApps.length > 0
+      ? taxasApps.reduce((sum, t) => sum + Number(t.taxa_percentual), 0) / taxasApps.length
+      : 0;
     // Preço = Custo / (1 - margem% - taxaApp%)
-    return custoInsumos / (1 - (margemDesejada + taxaApp) / 100);
+    return custoInsumos / (1 - (margemDesejada + taxaMedia) / 100);
   };
 
   const formatCurrency = (value: number) => {

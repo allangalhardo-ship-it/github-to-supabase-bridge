@@ -17,7 +17,7 @@ import { Plus, Receipt, Upload, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-const canais = ['balcao', 'iFood', 'Rappi', '99Food', 'Aiqfome', 'WhatsApp', 'Outro'];
+const canaisFixos = ['balcao', 'WhatsApp', 'Outro'];
 
 const Vendas = () => {
   const { usuario } = useAuth();
@@ -47,6 +47,28 @@ const Vendas = () => {
     },
     enabled: !!usuario?.empresa_id,
   });
+
+  // Fetch apps de delivery cadastrados
+  const { data: taxasApps } = useQuery({
+    queryKey: ['taxas_apps', usuario?.empresa_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('taxas_apps')
+        .select('nome_app')
+        .eq('ativo', true)
+        .order('nome_app');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!usuario?.empresa_id,
+  });
+
+  // Combina canais fixos com apps cadastrados
+  const canais = [
+    ...canaisFixos.slice(0, 1), // balcao primeiro
+    ...(taxasApps?.map(t => t.nome_app) || []),
+    ...canaisFixos.slice(1), // WhatsApp e Outro por último
+  ];
 
   // Fetch vendas
   const { data: vendas, isLoading } = useQuery({
