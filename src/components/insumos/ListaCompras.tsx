@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LogoMark } from '@/components/brand/Logo';
 import { 
   ShoppingCart, 
   Calendar, 
@@ -244,48 +245,74 @@ const ListaCompras = () => {
     <>
       {/* Área de impressão - Layout limpo para imprimir */}
       <div className="print-area hidden print:block">
+        {/* Header com logo */}
+        <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-gray-300">
+          <div className="flex items-center gap-3">
+            <LogoMark size={48} />
+            <div>
+              <h1 className="text-xl font-bold text-gray-800">
+                Gastro<span className="text-green-600">Gestor</span>
+              </h1>
+              <p className="text-xs text-gray-500">Gestão Food Delivery</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-gray-600">Data prevista da compra:</p>
+            <p className="font-bold text-gray-800">{dataCompraFormatada}</p>
+          </div>
+        </div>
+
+        {/* Título e resumo */}
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold">Lista de Compras</h1>
-          <p className="text-gray-600">Data prevista: {dataCompraFormatada}</p>
-          <p className="text-sm text-gray-500">
-            {itensParaComprar.length} itens • Custo estimado: {formatCurrency(totalEstimado)}
-          </p>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Lista de Compras</h2>
+          <div className="flex justify-center gap-6 text-sm">
+            <span className="text-gray-600">
+              <strong>{itensParaComprar.length}</strong> itens
+            </span>
+            <span className="text-gray-600">
+              <strong>{itensParaComprar.filter(i => i.urgente).length}</strong> urgentes
+            </span>
+            <span className="text-green-700 font-medium">
+              Total: <strong>{formatCurrency(totalEstimado)}</strong>
+            </span>
+          </div>
         </div>
         
         <table className="w-full text-sm">
           <thead>
-            <tr>
-              <th className="text-left py-2">Insumo</th>
-              <th className="text-center py-2">Unidade</th>
-              <th className="text-right py-2">Qtd. Comprar</th>
-              <th className="text-right py-2">Custo Unit.</th>
-              <th className="text-right py-2">Custo Total</th>
+            <tr className="bg-gray-100">
+              <th className="text-left py-2 px-2">Insumo</th>
+              <th className="text-center py-2 px-2">Unidade</th>
+              <th className="text-right py-2 px-2">Qtd. Comprar</th>
+              <th className="text-right py-2 px-2">Custo Unit.</th>
+              <th className="text-right py-2 px-2">Custo Total</th>
             </tr>
           </thead>
           <tbody>
             {itensParaComprar.map((item) => (
               <tr key={item.insumo.id} className={item.urgente ? 'urgente-row' : ''}>
-                <td className="py-2">
+                <td className="py-2 px-2">
                   {item.insumo.nome}
                   {item.urgente && ' ⚠️'}
                 </td>
-                <td className="text-center py-2">{item.insumo.unidade_medida}</td>
-                <td className="text-right py-2 font-medium">{formatNumber(item.quantidadeComprar)}</td>
-                <td className="text-right py-2">{formatCurrency(item.insumo.custo_unitario)}</td>
-                <td className="text-right py-2 font-medium">{formatCurrency(item.custoEstimado)}</td>
+                <td className="text-center py-2 px-2">{item.insumo.unidade_medida}</td>
+                <td className="text-right py-2 px-2 font-medium">{formatNumber(item.quantidadeComprar)}</td>
+                <td className="text-right py-2 px-2">{formatCurrency(item.insumo.custo_unitario)}</td>
+                <td className="text-right py-2 px-2 font-medium">{formatCurrency(item.custoEstimado)}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
-            <tr className="font-bold border-t-2">
-              <td colSpan={4} className="text-right py-3">Total:</td>
-              <td className="text-right py-3">{formatCurrency(totalEstimado)}</td>
+            <tr className="font-bold border-t-2 border-gray-400">
+              <td colSpan={4} className="text-right py-3 px-2">Total:</td>
+              <td className="text-right py-3 px-2">{formatCurrency(totalEstimado)}</td>
             </tr>
           </tfoot>
         </table>
 
-        <div className="mt-8 pt-4 border-t text-center text-xs text-gray-400">
+        <div className="mt-8 pt-4 border-t border-gray-300 flex justify-between items-center text-xs text-gray-400">
           <p>Gerado por GastroGestor em {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+          <p>www.gastrogestor.com.br</p>
         </div>
       </div>
 
