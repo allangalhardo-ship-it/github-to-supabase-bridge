@@ -17,13 +17,14 @@ import {
 import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysInMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-// Variantes de animação
+// Variantes de animação com fallback de visibilidade
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1
+      staggerChildren: 0.1,
+      delayChildren: 0.05
     }
   }
 };
@@ -41,7 +42,8 @@ const cardVariants = {
     transition: {
       type: "spring" as const,
       stiffness: 100,
-      damping: 15
+      damping: 15,
+      duration: 0.3
     }
   }
 };
@@ -316,10 +318,12 @@ const Dashboard = () => {
 
       {/* KPIs - empilhados verticalmente no mobile */}
       <motion.div 
+        key={`dashboard-kpis-${periodo}`}
         className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
+        style={{ opacity: 1 }}
       >
         <MotionCard className="p-1" variants={cardVariants}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
@@ -408,10 +412,12 @@ const Dashboard = () => {
       </motion.div>
 
       <motion.div 
+        key={`dashboard-bottom-${periodo}`}
         className="grid gap-4 grid-cols-1 md:grid-cols-2"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
+        style={{ opacity: 1 }}
       >
         {/* Top 5 Produtos */}
         <MotionCard variants={cardVariants}>
