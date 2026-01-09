@@ -1,4 +1,4 @@
 project_id = "krpvggbewyqamldhvmyk"
 
 [functions.search-market-price]
-verify_jwt = true
+verify_jwt = false
