@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
+import { SearchableSelect, SearchableSelectOption } from '@/components/ui/searchable-select';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, AlertTriangle, ShoppingBasket, FlaskConical, ChefHat, Layers } from 'lucide-react';
 
@@ -630,21 +631,19 @@ const Insumos = () => {
                     {/* Adicionar ingrediente */}
                     {insumosDisponiveisForm.length > 0 ? (
                       <div className="flex gap-2">
-                        <Select
+                        <SearchableSelect
+                          options={insumosDisponiveisForm.map((insumo) => ({
+                            value: insumo.id,
+                            label: `${insumo.nome} (${insumo.unidade_medida}) - ${formatCurrency(insumo.custo_unitario)}`,
+                            searchTerms: insumo.nome,
+                          }))}
                           value={novoIngredienteForm.insumo_id}
                           onValueChange={(value) => setNovoIngredienteForm({ ...novoIngredienteForm, insumo_id: value })}
-                        >
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder="Selecione um insumo" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {insumosDisponiveisForm.map((insumo) => (
-                              <SelectItem key={insumo.id} value={insumo.id}>
-                                {insumo.nome} ({insumo.unidade_medida}) - {formatCurrency(insumo.custo_unitario)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          placeholder="Buscar insumo..."
+                          searchPlaceholder="Digite para buscar..."
+                          emptyMessage="Nenhum insumo encontrado."
+                          className="flex-1"
+                        />
                         <Input
                           type="number"
                           step="0.001"
@@ -795,24 +794,20 @@ const Insumos = () => {
             {/* Adicionar ingrediente */}
             {insumosDisponiveis.length > 0 && (
               <div className="flex gap-2 pt-2 border-t">
-                <Select
+                <SearchableSelect
+                  options={insumosDisponiveis.map((insumo) => ({
+                    value: insumo.id,
+                    label: `${insumo.nome} (${insumo.unidade_medida})`,
+                    searchTerms: insumo.nome,
+                    icon: insumo.is_intermediario ? <FlaskConical className="h-3 w-3 text-purple-500" /> : undefined,
+                  }))}
                   value={novoIngrediente.insumo_id}
                   onValueChange={(value) => setNovoIngrediente({ ...novoIngrediente, insumo_id: value })}
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Selecione um ingrediente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {insumosDisponiveis.map((insumo) => (
-                      <SelectItem key={insumo.id} value={insumo.id}>
-                        <div className="flex items-center gap-2">
-                          {insumo.is_intermediario && <FlaskConical className="h-3 w-3 text-purple-500" />}
-                          {insumo.nome} ({insumo.unidade_medida})
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  placeholder="Buscar ingrediente..."
+                  searchPlaceholder="Digite para buscar..."
+                  emptyMessage="Nenhum ingrediente encontrado."
+                  className="flex-1"
+                />
                 <Input
                   type="number"
                   step="0.01"
