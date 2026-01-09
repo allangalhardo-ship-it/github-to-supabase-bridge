@@ -260,7 +260,11 @@ export default function ReceitasPrototipo() {
                     </Select>
                     <Input
                       type="number"
-                      placeholder={insumoSelecionado && insumosDisponiveis.find(i => i.id === insumoSelecionado)?.unidade.includes("kg") ? "Qtd (g)" : "Qtd"}
+                      placeholder={
+                        insumoSelecionado 
+                          ? `Qtd (${insumosDisponiveis.find(i => i.id === insumoSelecionado)?.unidade.split(" ")[0] || "un"})`
+                          : "Qtd"
+                      }
                       value={quantidadeInsumo}
                       onChange={(e) => setQuantidadeInsumo(e.target.value)}
                     />
