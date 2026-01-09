@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +39,8 @@ const Vendas = () => {
   const [filtroProduto, setFiltroProduto] = useState<string>('todos');
   const [filtroCanal, setFiltroCanal] = useState<string>('todos');
   const [filtroOrigem, setFiltroOrigem] = useState<string>('todos');
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [vendaToDelete, setVendaToDelete] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     produto_id: '',
@@ -188,6 +191,8 @@ const Vendas = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vendas'] });
       toast({ title: 'Venda excluída!' });
+      setDeleteConfirmOpen(false);
+      setVendaToDelete(null);
     },
     onError: (error) => {
       toast({ title: 'Erro ao excluir', description: error.message, variant: 'destructive' });
@@ -556,7 +561,10 @@ const Vendas = () => {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-destructive"
-                            onClick={() => deleteMutation.mutate(venda.id)}
+                            onClick={() => {
+                              setVendaToDelete(venda.id);
+                              setDeleteConfirmOpen(true);
+                            }}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -604,6 +612,27 @@ const Vendas = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Dialog de confirmação de exclusão */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta venda? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setVendaToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => vendaToDelete && deleteMutation.mutate(vendaToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
