@@ -322,7 +322,8 @@ const Produtos = () => {
             const precoVenda = Number(produto.preco_venda);
             const cmvAtual = precoVenda > 0 ? (custoInsumos / precoVenda) * 100 : 0;
             const cmvAlvo = config?.cmv_alvo || 35;
-            const margemContribuicao = precoVenda - custoInsumos;
+            const lucro = precoVenda - custoInsumos;
+            const margemPercent = precoVenda > 0 ? (lucro / precoVenda) * 100 : 0;
             const temFichaTecnica = produto.fichas_tecnicas && produto.fichas_tecnicas.length > 0;
 
             return (
@@ -391,7 +392,17 @@ const Produtos = () => {
                         </div>
                         <div>
                           <p className="text-muted-foreground">Margem</p>
-                          <p className="font-medium">{formatCurrency(margemContribuicao)}</p>
+                          <p className={`font-medium ${margemPercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {margemPercent.toFixed(1)}%
+                          </p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <p className="text-muted-foreground">Lucro</p>
+                          <p className={`font-medium ${lucro >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatCurrency(lucro)}
+                          </p>
                         </div>
                       </div>
 
