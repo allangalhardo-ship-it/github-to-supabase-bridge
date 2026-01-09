@@ -11,10 +11,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Receipt, Upload, Trash2 } from 'lucide-react';
+import { Plus, Receipt, Upload, Trash2, Package, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -216,21 +217,19 @@ const Vendas = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="produto">Produto</Label>
-                  <Select
+                  <SearchableSelect
+                    options={produtos?.map((produto) => ({
+                      value: produto.id,
+                      label: `${produto.nome} - ${formatCurrency(Number(produto.preco_venda))}`,
+                      searchTerms: produto.nome,
+                      icon: <Package className="h-3 w-3 text-primary" />,
+                    })) || []}
                     value={formData.produto_id}
                     onValueChange={handleProdutoChange}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um produto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {produtos?.map((produto) => (
-                        <SelectItem key={produto.id} value={produto.id}>
-                          {produto.nome} - {formatCurrency(Number(produto.preco_venda))}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="Buscar produto..."
+                    searchPlaceholder="Digite para buscar..."
+                    emptyMessage="Nenhum produto encontrado."
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -281,22 +280,22 @@ const Vendas = () => {
                 {formData.tipo_venda === 'direto' ? (
                   <div className="space-y-2">
                     <Label htmlFor="cliente">Cliente (opcional)</Label>
-                    <Select
+                    <SearchableSelect
+                      options={[
+                        { value: '', label: 'Sem cliente', searchTerms: 'sem cliente nenhum' },
+                        ...(clientes?.map((cliente) => ({
+                          value: cliente.id,
+                          label: cliente.nome,
+                          searchTerms: `${cliente.nome} ${cliente.whatsapp || ''}`,
+                          icon: <User className="h-3 w-3 text-muted-foreground" />,
+                        })) || []),
+                      ]}
                       value={formData.cliente_id}
                       onValueChange={(value) => setFormData({ ...formData, cliente_id: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um cliente" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Sem cliente</SelectItem>
-                        {clientes?.map((cliente) => (
-                          <SelectItem key={cliente.id} value={cliente.id}>
-                            {cliente.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      placeholder="Buscar cliente..."
+                      searchPlaceholder="Digite para buscar..."
+                      emptyMessage="Nenhum cliente encontrado."
+                    />
                     <p className="text-xs text-muted-foreground">
                       Vendas de balcão, WhatsApp ou encomendas diretas
                     </p>
