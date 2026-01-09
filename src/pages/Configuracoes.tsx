@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Settings, Save, Loader2 } from 'lucide-react';
+import TaxasAppsConfig from '@/components/configuracoes/TaxasAppsConfig';
 
 const Configuracoes = () => {
   const { usuario } = useAuth();
@@ -18,7 +19,6 @@ const Configuracoes = () => {
     margem_desejada_padrao: '',
     cmv_alvo: '',
     imposto_medio_sobre_vendas: '',
-    taxa_app_delivery: '',
   });
 
   const { data: config, isLoading } = useQuery({
@@ -41,7 +41,6 @@ const Configuracoes = () => {
         margem_desejada_padrao: config.margem_desejada_padrao?.toString() || '30',
         cmv_alvo: config.cmv_alvo?.toString() || '35',
         imposto_medio_sobre_vendas: config.imposto_medio_sobre_vendas?.toString() || '10',
-        taxa_app_delivery: (config as any).taxa_app_delivery?.toString() || '12',
       });
     }
   }, [config]);
@@ -52,7 +51,6 @@ const Configuracoes = () => {
         margem_desejada_padrao: parseFloat(data.margem_desejada_padrao) || 30,
         cmv_alvo: parseFloat(data.cmv_alvo) || 35,
         imposto_medio_sobre_vendas: parseFloat(data.imposto_medio_sobre_vendas) || 10,
-        taxa_app_delivery: parseFloat(data.taxa_app_delivery) || 12,
       };
 
       if (config) {
@@ -161,21 +159,6 @@ const Configuracoes = () => {
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="taxa_app_delivery">Taxa do App de Delivery (%)</Label>
-                <Input
-                  id="taxa_app_delivery"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="100"
-                  value={formData.taxa_app_delivery}
-                  onChange={(e) => setFormData({ ...formData, taxa_app_delivery: e.target.value })}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Comissão média cobrada pelo iFood, 99, Rappi, etc.
-                </p>
-              </div>
             </div>
 
             <div className="flex justify-end pt-4">
@@ -191,6 +174,8 @@ const Configuracoes = () => {
           </CardContent>
         </Card>
       </form>
+
+      <TaxasAppsConfig />
 
       <Card>
         <CardHeader>

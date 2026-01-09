@@ -195,15 +195,33 @@ const Dashboard = () => {
   const impostoPercent = config?.imposto_medio_sobre_vendas || 10;
   const impostos = receitaBruta * (impostoPercent / 100);
   
-  // Taxa do app de delivery (aplicada nas vendas via delivery)
-  const taxaAppPercent = (config as any)?.taxa_app_delivery || 12;
-  const vendasDelivery = vendas?.filter(v => 
-    v.canal && ['ifood', 'rappi', '99food', 'delivery', 'app'].some(c => 
-      v.canal!.toLowerCase().includes(c)
-    )
-  ) || [];
-  const receitaDelivery = vendasDelivery.reduce((sum, v) => sum + Number(v.valor_total), 0);
-  const taxaAppTotal = receitaDelivery * (taxaAppPercent / 100);
+  // Fetch taxas por app
+  const { data: taxasApps } = useQuery({
+    queryKey: ['taxas_apps', usuario?.empresa_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('taxas_apps')
+        .select('nome_app, taxa_percentual')
+        .eq('ativo', true);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!usuario?.empresa_id,
+  });
+
+  // Taxa do app de delivery (aplicada por canal)
+  const taxaAppTotal = vendas?.reduce((total, venda) => {
+    if (!venda.canal) return total;
+    const canalLower = venda.canal.toLowerCase();
+    const taxaApp = taxasApps?.find(t => 
+      canalLower.includes(t.nome_app.toLowerCase()) || 
+      t.nome_app.toLowerCase().includes(canalLower)
+    );
+    if (taxaApp) {
+      return total + (Number(venda.valor_total) * Number(taxaApp.taxa_percentual) / 100);
+    }
+    return total;
+  }, 0) || 0;
   
   const lucroEstimado = margemContribuicao - custoFixoTotal - impostos - taxaAppTotal;
 
