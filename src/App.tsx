@@ -12,6 +12,7 @@ import Produtos from "@/pages/Produtos";
 import Insumos from "@/pages/Insumos";
 import Estoque from "@/pages/Estoque";
 import Vendas from "@/pages/Vendas";
+import Clientes from "@/pages/Clientes";
 import CustosFixos from "@/pages/CustosFixos";
 import Configuracoes from "@/pages/Configuracoes";
 import XmlImport from "@/pages/XmlImport";
@@ -68,6 +69,7 @@ const AppRoutes = () => {
         <Route path="insumos" element={<Insumos />} />
         <Route path="estoque" element={<Estoque />} />
         <Route path="vendas" element={<Vendas />} />
+        <Route path="clientes" element={<Clientes />} />
         <Route path="custos-fixos" element={<CustosFixos />} />
         <Route path="configuracoes" element={<Configuracoes />} />
         <Route path="xml-import" element={<XmlImport />} />

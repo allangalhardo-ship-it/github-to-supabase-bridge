@@ -12,12 +12,17 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Receipt, Upload, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-const canaisFixos = ['balcao', 'WhatsApp', 'Outro'];
+interface Cliente {
+  id: string;
+  nome: string;
+  whatsapp: string | null;
+}
 
 const Vendas = () => {
   const { usuario } = useAuth();
@@ -30,6 +35,8 @@ const Vendas = () => {
     valor_total: '',
     canal: 'balcao',
     data_venda: format(new Date(), 'yyyy-MM-dd'),
+    tipo_venda: 'direto' as 'direto' | 'app',
+    cliente_id: '',
   });
 
   // Fetch produtos para o select
@@ -63,12 +70,22 @@ const Vendas = () => {
     enabled: !!usuario?.empresa_id,
   });
 
-  // Combina canais fixos com apps cadastrados
-  const canais = [
-    ...canaisFixos.slice(0, 1), // balcao primeiro
-    ...(taxasApps?.map(t => t.nome_app) || []),
-    ...canaisFixos.slice(1), // WhatsApp e Outro por último
-  ];
+  // Fetch clientes para vendas diretas
+  const { data: clientes } = useQuery({
+    queryKey: ['clientes', usuario?.empresa_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('clientes')
+        .select('id, nome, whatsapp')
+        .order('nome');
+      if (error) throw error;
+      return data as Cliente[];
+    },
+    enabled: !!usuario?.empresa_id,
+  });
+
+  // Apps de delivery (exclui canais fixos)
+  const appsDelivery = taxasApps?.map(t => t.nome_app) || [];
 
   // Fetch vendas
   const { data: vendas, isLoading } = useQuery({
@@ -93,15 +110,25 @@ const Vendas = () => {
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const produto = produtos?.find(p => p.id === data.produto_id);
+      const cliente = clientes?.find(c => c.id === data.cliente_id);
+      
+      // Define canal baseado no tipo de venda
+      let canal = data.canal;
+      if (data.tipo_venda === 'direto' && cliente) {
+        canal = `Cliente: ${cliente.nome}`;
+      }
+
       const { error } = await supabase.from('vendas').insert({
         empresa_id: usuario!.empresa_id,
         produto_id: data.produto_id || null,
         descricao_produto: produto?.nome || null,
         quantidade: parseFloat(data.quantidade) || 1,
         valor_total: parseFloat(data.valor_total) || 0,
-        canal: data.canal,
+        canal: canal,
         data_venda: data.data_venda,
         origem: 'manual',
+        tipo_venda: data.tipo_venda,
+        cliente_id: data.tipo_venda === 'direto' ? (data.cliente_id || null) : null,
       });
       if (error) throw error;
     },
@@ -136,6 +163,8 @@ const Vendas = () => {
       valor_total: '',
       canal: 'balcao',
       data_venda: format(new Date(), 'yyyy-MM-dd'),
+      tipo_venda: 'direto',
+      cliente_id: '',
     });
     setDialogOpen(false);
   };
@@ -229,35 +258,87 @@ const Vendas = () => {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <Label>Tipo de Venda</Label>
+                  <RadioGroup
+                    value={formData.tipo_venda}
+                    onValueChange={(value: 'direto' | 'app') => 
+                      setFormData({ ...formData, tipo_venda: value, canal: value === 'direto' ? 'balcao' : (appsDelivery[0] || 'iFood'), cliente_id: '' })
+                    }
+                    className="flex gap-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="direto" id="direto" />
+                      <Label htmlFor="direto" className="font-normal cursor-pointer">Venda Direta</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="app" id="app" />
+                      <Label htmlFor="app" className="font-normal cursor-pointer">App de Delivery</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                {formData.tipo_venda === 'direto' ? (
                   <div className="space-y-2">
-                    <Label htmlFor="canal">Canal</Label>
+                    <Label htmlFor="cliente">Cliente (opcional)</Label>
+                    <Select
+                      value={formData.cliente_id}
+                      onValueChange={(value) => setFormData({ ...formData, cliente_id: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um cliente" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Sem cliente</SelectItem>
+                        {clientes?.map((cliente) => (
+                          <SelectItem key={cliente.id} value={cliente.id}>
+                            {cliente.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Vendas de balcão, WhatsApp ou encomendas diretas
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="canal">App de Delivery</Label>
                     <Select
                       value={formData.canal}
                       onValueChange={(value) => setFormData({ ...formData, canal: value })}
                     >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Selecione o app" />
                       </SelectTrigger>
                       <SelectContent>
-                        {canais.map((canal) => (
-                          <SelectItem key={canal} value={canal}>
-                            {canal}
-                          </SelectItem>
-                        ))}
+                        {appsDelivery.length > 0 ? (
+                          appsDelivery.map((app) => (
+                            <SelectItem key={app} value={app}>
+                              {app}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <>
+                            <SelectItem value="iFood">iFood</SelectItem>
+                            <SelectItem value="Rappi">Rappi</SelectItem>
+                            <SelectItem value="99Food">99Food</SelectItem>
+                          </>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="data_venda">Data</Label>
-                    <Input
-                      id="data_venda"
-                      type="date"
-                      value={formData.data_venda}
-                      onChange={(e) => setFormData({ ...formData, data_venda: e.target.value })}
-                      required
-                    />
-                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="data_venda">Data</Label>
+                  <Input
+                    id="data_venda"
+                    type="date"
+                    value={formData.data_venda}
+                    onChange={(e) => setFormData({ ...formData, data_venda: e.target.value })}
+                    required
+                  />
                 </div>
                 <div className="flex justify-end gap-2 pt-4">
                   <Button type="button" variant="outline" onClick={resetForm}>
