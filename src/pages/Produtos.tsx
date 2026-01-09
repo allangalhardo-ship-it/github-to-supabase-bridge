@@ -11,8 +11,9 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Package, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package, AlertCircle, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import FichaTecnicaForm from '@/components/produtos/FichaTecnicaForm';
+import MarketPriceSearch from '@/components/produtos/MarketPriceSearch';
 
 interface Produto {
   id: string;
@@ -319,6 +320,16 @@ const Produtos = () => {
                       <CardTitle className="text-lg">{produto.nome}</CardTitle>
                     </div>
                     <div className="flex items-center gap-1">
+                      <MarketPriceSearch
+                        productName={produto.nome}
+                        category={produto.categoria}
+                        currentPrice={precoVenda}
+                        trigger={
+                          <Button variant="ghost" size="icon" className="h-8 w-8" title="Pesquisar preço de mercado">
+                            <Search className="h-4 w-4" />
+                          </Button>
+                        }
+                      />
                       <Button
                         variant="ghost"
                         size="icon"
