@@ -30,7 +30,7 @@ const navItems = [
   { to: '/insumos', icon: Carrot, label: 'Insumos' },
   { to: '/estoque', icon: PackageOpen, label: 'Estoque' },
   { to: '/producao', icon: Factory, label: 'Produção' },
-  { to: '/vendas', icon: ShoppingCart, label: 'Vendas' },
+  { to: '/movimentacoes', icon: ShoppingCart, label: 'Movimentações' },
   { to: '/caixa', icon: Wallet, label: 'Caixa' },
   { to: '/clientes', icon: Users, label: 'Clientes' },
   { to: '/custos-fixos', icon: Calculator, label: 'Custos Fixos' },
