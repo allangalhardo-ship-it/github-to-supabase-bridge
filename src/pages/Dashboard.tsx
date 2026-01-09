@@ -371,7 +371,7 @@ const Dashboard = () => {
                   {formatCurrency(lucroEstimado)}
                 </div>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                  Após custos fixos, impostos{taxaAppTotal > 0 ? ` e taxas` : ''}
+                  Após custos fixos ({formatCurrency(custoFixoTotal)}), impostos ({formatCurrency(impostos)}){taxaAppTotal > 0 ? `, taxas (${formatCurrency(taxaAppTotal)})` : ''}
                 </p>
               </>
             )}
