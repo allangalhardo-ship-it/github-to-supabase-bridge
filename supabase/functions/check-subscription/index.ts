@@ -12,6 +12,18 @@ const logStep = (step: string, details?: Record<string, unknown>) => {
   console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
 };
 
+const safeUnixToIso = (value: unknown): string | null => {
+  const seconds = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(seconds) || seconds <= 0) return null;
+
+  try {
+    const d = new Date(seconds * 1000);
+    return Number.isFinite(d.getTime()) ? d.toISOString() : null;
+  } catch {
+    return null;
+  }
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -91,43 +103,41 @@ serve(async (req) => {
     );
 
     if (activeSubscription) {
-      // Defensive parsing: Stripe fields can be null depending on status
-      const cpe = typeof activeSubscription.current_period_end === "number"
-        ? activeSubscription.current_period_end
-        : Number(activeSubscription.current_period_end);
-
-      const subscriptionEnd = Number.isFinite(cpe) ? new Date(cpe * 1000).toISOString() : null;
-
-      const te = activeSubscription.trial_end == null
-        ? null
-        : (typeof activeSubscription.trial_end === "number" ? activeSubscription.trial_end : Number(activeSubscription.trial_end));
-
-      const trialEnd = te != null && Number.isFinite(te)
-        ? new Date(te * 1000).toISOString()
-        : null;
+      const subscriptionEnd = safeUnixToIso((activeSubscription as any).current_period_end);
+      const trialEnd = safeUnixToIso((activeSubscription as any).trial_end);
 
       let trialDaysRemaining = 0;
-      if (activeSubscription.status === "trialing" && te != null && Number.isFinite(te)) {
-        const trialEndDate = new Date(te * 1000);
-        trialDaysRemaining = Math.max(0, Math.ceil((trialEndDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+      if (activeSubscription.status === "trialing" && trialEnd) {
+        const trialEndMs = Date.parse(trialEnd);
+        if (Number.isFinite(trialEndMs)) {
+          trialDaysRemaining = Math.max(
+            0,
+            Math.ceil((trialEndMs - Date.now()) / (1000 * 60 * 60 * 24))
+          );
+        }
       }
 
-      logStep("Active subscription found", { 
-        subscriptionId: activeSubscription.id, 
-        status: activeSubscription.status,
-        trialDaysRemaining 
+      logStep("Active subscription found", {
+        subscriptionId: (activeSubscription as any).id,
+        status: (activeSubscription as any).status,
+        subscriptionEnd,
+        trialEnd,
+        trialDaysRemaining,
       });
 
-      return new Response(JSON.stringify({
-        subscribed: true,
-        status: activeSubscription.status,
-        subscription_end: subscriptionEnd,
-        trial_end: trialEnd,
-        trial_days_remaining: trialDaysRemaining,
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      });
+      return new Response(
+        JSON.stringify({
+          subscribed: true,
+          status: (activeSubscription as any).status,
+          subscription_end: subscriptionEnd,
+          trial_end: trialEnd,
+          trial_days_remaining: trialDaysRemaining,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
     }
 
     // No active subscription - check if in free trial period (7 days from account creation)
