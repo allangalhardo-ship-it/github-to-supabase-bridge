@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Logo, LogoMark } from '@/components/brand/Logo';
+import TrialBanner from '@/components/subscription/TrialBanner';
 import {
   LayoutDashboard,
   UtensilsCrossed,
@@ -110,6 +111,9 @@ const AppLayout = () => {
 
       {/* Mobile & Tablet - sidebar escondida, abre via menu */}
       <div className="flex-1 flex flex-col overflow-hidden w-full">
+        {/* Trial Banner - mostra em todas as telas */}
+        <TrialBanner />
+        
         {/* Header mobile com botão menu */}
         <header className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-border bg-primary-dark safe-area-top">
           <div className="flex items-center gap-3">

@@ -4,9 +4,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import AppLayout from "@/components/layout/AppLayout";
+import PaywallGuard from "@/components/subscription/PaywallGuard";
 import Login from "@/pages/Login";
 import Cadastro from "@/pages/Cadastro";
+import Assinatura from "@/pages/Assinatura";
 import Dashboard from "@/pages/Dashboard";
 import Produtos from "@/pages/Produtos";
 import Insumos from "@/pages/Insumos";
@@ -72,7 +75,17 @@ const AppRoutes = () => {
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/cadastro" element={<PublicRoute><Cadastro /></PublicRoute>} />
       
-      <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+      {/* Página de assinatura - acessível para usuários logados, mesmo sem assinatura */}
+      <Route path="/assinatura" element={<ProtectedRoute><Assinatura /></ProtectedRoute>} />
+      
+      {/* Rotas protegidas por paywall */}
+      <Route path="/" element={
+        <ProtectedRoute>
+          <PaywallGuard>
+            <AppLayout />
+          </PaywallGuard>
+        </ProtectedRoute>
+      }>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="produtos" element={<Produtos />} />
@@ -101,7 +114,9 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <AppRoutes />
+          <SubscriptionProvider>
+            <AppRoutes />
+          </SubscriptionProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
