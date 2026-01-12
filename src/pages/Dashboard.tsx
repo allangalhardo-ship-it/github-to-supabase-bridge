@@ -12,6 +12,7 @@ import {
   Percent,
   Package,
   AlertTriangle,
+  Receipt,
 } from 'lucide-react';
 import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysInMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -179,6 +180,8 @@ const Dashboard = () => {
 
   // Cálculos
   const receitaBruta = vendas?.reduce((sum, v) => sum + Number(v.valor_total), 0) || 0;
+  const totalVendas = vendas?.length || 0;
+  const ticketMedio = totalVendas > 0 ? receitaBruta / totalVendas : 0;
   
   const cmvTotal = vendas?.reduce((sum, venda) => {
     if (!venda.produtos?.fichas_tecnicas) return sum;
@@ -283,7 +286,7 @@ const Dashboard = () => {
       </div>
 
       {/* KPIs - empilhados verticalmente no mobile */}
-      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 animate-fade-in">
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 animate-fade-in">
         <Card className="p-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
             <CardTitle className="text-sm sm:text-base font-medium">Receita Bruta</CardTitle>
@@ -296,6 +299,27 @@ const Dashboard = () => {
               <Skeleton className="h-8 w-24" />
             ) : (
               <div className="text-2xl sm:text-2xl font-bold">{formatCurrency(receitaBruta)}</div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="p-1">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
+            <CardTitle className="text-sm sm:text-base font-medium">Ticket Médio</CardTitle>
+            <div className="h-10 w-10 sm:h-8 sm:w-8 rounded-full bg-purple-500/10 flex items-center justify-center">
+              <Receipt className="h-5 w-5 sm:h-4 sm:w-4 text-purple-600" />
+            </div>
+          </CardHeader>
+          <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
+            {isLoading ? (
+              <Skeleton className="h-8 w-24" />
+            ) : (
+              <>
+                <div className="text-2xl sm:text-2xl font-bold">{formatCurrency(ticketMedio)}</div>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                  {totalVendas} {totalVendas === 1 ? 'venda' : 'vendas'} no período
+                </p>
+              </>
             )}
           </CardContent>
         </Card>
