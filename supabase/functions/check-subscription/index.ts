@@ -114,11 +114,19 @@ serve(async (req) => {
     }
 
     // No active subscription - check if in free trial period (7 days from account creation)
-    const createdAt = new Date(user.created_at);
-    const now = new Date();
-    const daysSinceCreation = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
-    const trialDaysRemaining = Math.max(0, 7 - daysSinceCreation);
-    const isInTrial = trialDaysRemaining > 0;
+    let daysSinceCreation = 0;
+    let trialDaysRemaining = 7;
+    let isInTrial = true;
+
+    if (user.created_at) {
+      const createdAt = new Date(user.created_at);
+      if (!isNaN(createdAt.getTime())) {
+        const now = new Date();
+        daysSinceCreation = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+        trialDaysRemaining = Math.max(0, 7 - daysSinceCreation);
+        isInTrial = trialDaysRemaining > 0;
+      }
+    }
 
     logStep("No active subscription", { daysSinceCreation, trialDaysRemaining, isInTrial });
 
