@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 const logStep = (step: string, details?: Record<string, unknown>) => {
-  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
+  const detailsStr = details ? ` - ${JSON.stringify(details)}` : "";
   console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
 };
 
@@ -32,7 +32,7 @@ serve(async (req) => {
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    { auth: { persistSession: false } }
+    { auth: { persistSession: false } },
   );
 
   try {
@@ -46,22 +46,22 @@ serve(async (req) => {
 
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    
+
     if (userError) throw new Error(`Authentication error: ${userError.message}`);
-    
+
     const user = userData.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
-    
+
     logStep("User authenticated", { userId: user.id, email: user.email });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-    
+
     // Check for existing customer
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-    
+
     if (customers.data.length === 0) {
       logStep("No customer found - user is in trial period based on account creation");
-      
+
       // Check if user is still in trial based on account creation date
       let daysSinceCreation = 0;
       let trialDaysRemaining = 7;
@@ -71,20 +71,26 @@ serve(async (req) => {
         const createdAt = new Date(user.created_at);
         if (!isNaN(createdAt.getTime())) {
           const now = new Date();
-          daysSinceCreation = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+          daysSinceCreation = Math.floor(
+            (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24),
+          );
           trialDaysRemaining = Math.max(0, 7 - daysSinceCreation);
           isInTrial = trialDaysRemaining > 0;
         }
       }
-      return new Response(JSON.stringify({
-        subscribed: false,
-        status: isInTrial ? "trialing" : "expired",
-        trial_days_remaining: trialDaysRemaining,
-        subscription_end: null,
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      });
+
+      return new Response(
+        JSON.stringify({
+          subscribed: false,
+          status: isInTrial ? "trialing" : "expired",
+          trial_days_remaining: trialDaysRemaining,
+          subscription_end: null,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        },
+      );
     }
 
     const customerId = customers.data[0].id;
@@ -98,8 +104,8 @@ serve(async (req) => {
     });
 
     // Find active or trialing subscription
-    const activeSubscription = subscriptions.data.find(
-      (sub: { status: string }) => sub.status === "active" || sub.status === "trialing"
+    const activeSubscription = subscriptions.data.find((sub: { status: string }) =>
+      sub.status === "active" || sub.status === "trialing"
     );
 
     if (activeSubscription) {
@@ -107,12 +113,12 @@ serve(async (req) => {
       const trialEnd = safeUnixToIso((activeSubscription as any).trial_end);
 
       let trialDaysRemaining = 0;
-      if (activeSubscription.status === "trialing" && trialEnd) {
+      if ((activeSubscription as any).status === "trialing" && trialEnd) {
         const trialEndMs = Date.parse(trialEnd);
         if (Number.isFinite(trialEndMs)) {
           trialDaysRemaining = Math.max(
             0,
-            Math.ceil((trialEndMs - Date.now()) / (1000 * 60 * 60 * 24))
+            Math.ceil((trialEndMs - Date.now()) / (1000 * 60 * 60 * 24)),
           );
         }
       }
@@ -127,7 +133,10 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({
-          subscribed: ((activeSubscription as any).status === "active"),
+          // Importante: trialing aqui significa que o usuário JÁ assinou, só que a cobrança começa no fim do teste.
+          subscribed:
+            (activeSubscription as any).status === "active" ||
+            (activeSubscription as any).status === "trialing",
           status: (activeSubscription as any).status,
           subscription_end: subscriptionEnd,
           trial_end: trialEnd,
@@ -136,7 +145,7 @@ serve(async (req) => {
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 200,
-        }
+        },
       );
     }
 
@@ -149,7 +158,9 @@ serve(async (req) => {
       const createdAt = new Date(user.created_at);
       if (!isNaN(createdAt.getTime())) {
         const now = new Date();
-        daysSinceCreation = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+        daysSinceCreation = Math.floor(
+          (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24),
+        );
         trialDaysRemaining = Math.max(0, 7 - daysSinceCreation);
         isInTrial = trialDaysRemaining > 0;
       }
@@ -157,15 +168,18 @@ serve(async (req) => {
 
     logStep("No active subscription", { daysSinceCreation, trialDaysRemaining, isInTrial });
 
-    return new Response(JSON.stringify({
-      subscribed: false,
-      status: isInTrial ? "trialing" : "expired",
-      trial_days_remaining: trialDaysRemaining,
-      subscription_end: null,
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
+    return new Response(
+      JSON.stringify({
+        subscribed: false,
+        status: isInTrial ? "trialing" : "expired",
+        trial_days_remaining: trialDaysRemaining,
+        subscription_end: null,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      },
+    );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR", { message: errorMessage });

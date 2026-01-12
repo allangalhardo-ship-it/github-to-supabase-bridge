@@ -75,11 +75,25 @@ const Assinatura = () => {
                 <div className="flex items-center gap-3">
                   <AlertTriangle className="h-5 w-5 text-primary" />
                   <div>
-                    <p className="font-medium text-primary">Período de teste gratuito</p>
+                    <p className="font-medium text-primary">
+                      {subscription.subscribed ? 'Assinatura confirmada (em teste)' : 'Período de teste gratuito'}
+                    </p>
                     <p className="text-sm text-muted-foreground">
-                      Você tem{' '}
-                      <strong className="text-primary">{subscription.trialDaysRemaining} dias</strong>{' '}
-                      restantes para testar gratuitamente!
+                      {subscription.subscribed && subscription.trialEnd ? (
+                        <>
+                          Seu teste vai até{' '}
+                          <strong className="text-primary">
+                            {new Date(subscription.trialEnd).toLocaleDateString('pt-BR')}
+                          </strong>
+                          . Você já tem acesso ao sistema.
+                        </>
+                      ) : (
+                        <>
+                          Você tem{' '}
+                          <strong className="text-primary">{subscription.trialDaysRemaining} dias</strong>{' '}
+                          restantes para testar gratuitamente!
+                        </>
+                      )}
                     </p>
                   </div>
                 </div>
