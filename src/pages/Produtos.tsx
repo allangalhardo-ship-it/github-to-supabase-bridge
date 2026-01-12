@@ -214,20 +214,25 @@ const Produtos = () => {
   };
 
   const calcularCustoInsumos = (produto: Produto) => {
-    if (!produto.fichas_tecnicas) return 0;
+    if (!produto.fichas_tecnicas || produto.fichas_tecnicas.length === 0) return 0;
     return produto.fichas_tecnicas.reduce((sum, ft) => {
-      return sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0));
+      const quantidade = Number(ft.quantidade) || 0;
+      const custoUnitario = Number(ft.insumos?.custo_unitario) || 0;
+      return sum + (quantidade * custoUnitario);
     }, 0);
   };
 
   const calcularPrecoSugerido = (custoInsumos: number) => {
+    if (custoInsumos <= 0) return 0;
     const margemDesejada = config?.margem_desejada_padrao || 30;
     // Calcula taxa média dos apps cadastrados
     const taxaMedia = taxasApps && taxasApps.length > 0
-      ? taxasApps.reduce((sum, t) => sum + Number(t.taxa_percentual), 0) / taxasApps.length
+      ? taxasApps.reduce((sum, t) => sum + Number(t.taxa_percentual || 0), 0) / taxasApps.length
       : 0;
     // Preço = Custo / (1 - margem% - taxaApp%)
-    return custoInsumos / (1 - (margemDesejada + taxaMedia) / 100);
+    const divisor = 1 - (margemDesejada + taxaMedia) / 100;
+    if (divisor <= 0) return custoInsumos * 2; // Fallback se margem >= 100%
+    return custoInsumos / divisor;
   };
 
   const formatCurrency = (value: number) => {
@@ -389,8 +394,8 @@ const Produtos = () => {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {produtosFiltrados.map((produto) => {
             const custoInsumos = calcularCustoInsumos(produto);
+            const precoVenda = Number(produto.preco_venda) || 0;
             const precoSugerido = calcularPrecoSugerido(custoInsumos);
-            const precoVenda = Number(produto.preco_venda);
             const cmvAtual = precoVenda > 0 ? (custoInsumos / precoVenda) * 100 : 0;
             const cmvAlvo = config?.cmv_alvo || 35;
             const lucro = precoVenda - custoInsumos;
