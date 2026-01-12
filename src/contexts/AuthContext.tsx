@@ -7,6 +7,14 @@ interface Usuario {
   empresa_id: string;
   nome: string;
   email: string;
+  telefone?: string;
+  cpf_cnpj?: string;
+}
+
+interface ExtraSignUpData {
+  telefone?: string;
+  cpfCnpj?: string;
+  segmento?: string;
 }
 
 interface AuthContextType {
@@ -14,7 +22,7 @@ interface AuthContextType {
   usuario: Usuario | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string, nome: string, nomeEmpresa: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, nome: string, nomeEmpresa: string, extra?: ExtraSignUpData) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
@@ -114,7 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, nome: string, nomeEmpresa: string) => {
+  const signUp = async (email: string, password: string, nome: string, nomeEmpresa: string, extra?: ExtraSignUpData) => {
     try {
       // 1. Create auth user (store extra data in user metadata)
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -125,6 +133,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           data: {
             nome,
             nomeEmpresa,
+            telefone: extra?.telefone,
+            cpfCnpj: extra?.cpfCnpj,
+            segmento: extra?.segmento,
           },
         },
       });
@@ -136,7 +147,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data: bootstrapData, error: bootstrapError } = await supabase.functions.invoke(
         'bootstrap-account',
         {
-          body: { nome, nomeEmpresa },
+          body: { 
+            nome, 
+            nomeEmpresa,
+            telefone: extra?.telefone,
+            cpfCnpj: extra?.cpfCnpj,
+            segmento: extra?.segmento,
+          },
         }
       );
 
