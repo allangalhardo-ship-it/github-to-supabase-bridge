@@ -44,7 +44,9 @@ const Login = () => {
               <ChefHat className="h-8 w-8 text-primary-foreground" />
             </div>
           </div>
-          <CardTitle className="text-2xl">GastroGestor</CardTitle>
+          <CardTitle className="text-2xl">
+            GastroGestor <span className="text-xs font-normal text-muted-foreground align-middle">(beta)</span>
+          </CardTitle>
           <CardDescription>
             Entre para gerenciar seu negócio alimentício
           </CardDescription>
