@@ -183,6 +183,30 @@ const Dashboard = () => {
   const totalVendas = vendas?.length || 0;
   const ticketMedio = totalVendas > 0 ? receitaBruta / totalVendas : 0;
   
+  // Ticket médio por canal
+  const ticketPorCanal = React.useMemo(() => {
+    if (!vendas || vendas.length === 0) return [];
+    
+    const porCanal: Record<string, { total: number; quantidade: number }> = {};
+    
+    vendas.forEach((venda) => {
+      const canal = venda.canal || 'Direto';
+      if (!porCanal[canal]) {
+        porCanal[canal] = { total: 0, quantidade: 0 };
+      }
+      porCanal[canal].total += Number(venda.valor_total);
+      porCanal[canal].quantidade += 1;
+    });
+    
+    return Object.entries(porCanal)
+      .map(([canal, dados]) => ({
+        canal: canal.charAt(0).toUpperCase() + canal.slice(1),
+        ticketMedio: dados.quantidade > 0 ? dados.total / dados.quantidade : 0,
+        quantidade: dados.quantidade,
+      }))
+      .sort((a, b) => b.quantidade - a.quantidade);
+  }, [vendas]);
+  
   const cmvTotal = vendas?.reduce((sum, venda) => {
     if (!venda.produtos?.fichas_tecnicas) return sum;
     const custoUnitario = venda.produtos.fichas_tecnicas.reduce((s, ft) => {
@@ -316,9 +340,21 @@ const Dashboard = () => {
             ) : (
               <>
                 <div className="text-2xl sm:text-2xl font-bold">{formatCurrency(ticketMedio)}</div>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground mt-1 mb-2">
                   {totalVendas} {totalVendas === 1 ? 'venda' : 'vendas'} no período
                 </p>
+                {ticketPorCanal.length > 0 && (
+                  <div className="space-y-1 pt-2 border-t">
+                    {ticketPorCanal.map((item) => (
+                      <div key={item.canal} className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">{item.canal}</span>
+                        <span className="font-medium">
+                          {formatCurrency(item.ticketMedio)} <span className="text-muted-foreground">({item.quantidade})</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </>
             )}
           </CardContent>
