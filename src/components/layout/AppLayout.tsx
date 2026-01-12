@@ -7,6 +7,8 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Logo, LogoMark } from '@/components/brand/Logo';
 import TrialBanner from '@/components/subscription/TrialBanner';
 import OfflineIndicator from '@/components/layout/OfflineIndicator';
+import NotificationSettings from '@/components/layout/NotificationSettings';
+import { useAlertNotifications } from '@/hooks/useAlertNotifications';
 import {
   LayoutDashboard,
   UtensilsCrossed,
@@ -102,6 +104,9 @@ const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => {
 
 const AppLayout = () => {
   const [open, setOpen] = useState(false);
+  
+  // Initialize alert notifications
+  useAlertNotifications();
 
   return (
     <div className="flex h-screen bg-background">
@@ -134,6 +139,9 @@ const AppLayout = () => {
             </Sheet>
             <Logo size="sm" theme="dark" />
           </div>
+          
+          {/* Notification button */}
+          <NotificationSettings className="text-white hover:bg-white/10" />
         </header>
 
         {/* Main Content - área principal */}
