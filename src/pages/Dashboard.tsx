@@ -344,15 +344,18 @@ const Dashboard = () => {
                   {totalVendas} {totalVendas === 1 ? 'venda' : 'vendas'} no período
                 </p>
                 {ticketPorCanal.length > 0 && (
-                  <div className="space-y-1 pt-2 border-t">
-                    {ticketPorCanal.map((item) => (
-                      <div key={item.canal} className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">{item.canal}</span>
-                        <span className="font-medium">
-                          {formatCurrency(item.ticketMedio)} <span className="text-muted-foreground">({item.quantidade})</span>
-                        </span>
-                      </div>
-                    ))}
+                  <div className="pt-2 border-t">
+                    <table className="w-full text-xs">
+                      <tbody>
+                        {ticketPorCanal.map((item) => (
+                          <tr key={item.canal}>
+                            <td className="text-muted-foreground py-0.5 truncate max-w-[80px]">{item.canal}</td>
+                            <td className="text-right font-medium py-0.5">{formatCurrency(item.ticketMedio)}</td>
+                            <td className="text-right text-muted-foreground py-0.5 w-8">({item.quantidade})</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </>
