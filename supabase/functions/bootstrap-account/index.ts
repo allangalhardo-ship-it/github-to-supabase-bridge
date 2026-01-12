@@ -95,7 +95,7 @@ serve(async (req) => {
     // If profile already exists, return it (idempotent)
     const { data: existingUsuario, error: existingErr } = await admin
       .from("usuarios")
-      .select("*")
+      .select("*, empresas(*)")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -139,21 +139,40 @@ serve(async (req) => {
       });
     }
 
-    // Create usuario with new fields
+    // Create usuario with new fields - use upsert to handle race conditions
     const { data: usuario, error: usuarioErr } = await admin
       .from("usuarios")
-      .insert({
+      .upsert({
         id: user.id,
         empresa_id: empresa.id,
         nome,
         email: email || `${user.id}@user.local`,
         telefone: telefone || null,
         cpf_cnpj: cpfCnpj || null,
-      })
+      }, { onConflict: 'id', ignoreDuplicates: false })
       .select("*")
       .single();
 
     if (usuarioErr) {
+      // If duplicate key error, try to fetch existing user
+      if (usuarioErr.message?.includes('duplicate key')) {
+        const { data: retryUsuario } = await admin
+          .from("usuarios")
+          .select("*")
+          .eq("id", user.id)
+          .maybeSingle();
+        
+        if (retryUsuario) {
+          return new Response(JSON.stringify({ usuario: retryUsuario }), {
+            status: 200,
+            headers: {
+              "Content-Type": "application/json",
+              "Access-Control-Allow-Origin": "*",
+            },
+          });
+        }
+      }
+      
       return new Response(JSON.stringify({ error: usuarioErr.message }), {
         status: 500,
         headers: {
