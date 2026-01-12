@@ -109,7 +109,7 @@ const AppLayout = () => {
   useAlertNotifications();
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-full flex-1 bg-background overflow-hidden">
       {/* Desktop Sidebar - só aparece em telas grandes */}
       <aside className="hidden lg:flex w-64 flex-col flex-shrink-0">
         <SidebarContent />
