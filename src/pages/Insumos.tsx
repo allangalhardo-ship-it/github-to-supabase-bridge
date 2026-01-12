@@ -16,8 +16,9 @@ import { Switch } from '@/components/ui/switch';
 import { SearchableSelect, SearchableSelectOption } from '@/components/ui/searchable-select';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, AlertTriangle, ShoppingBasket, FlaskConical, ChefHat, Layers, ShoppingCart } from 'lucide-react';
+import { Plus, Pencil, Trash2, AlertTriangle, ShoppingBasket, FlaskConical, ChefHat, Layers, ShoppingCart, Upload } from 'lucide-react';
 import ListaCompras from '@/components/insumos/ListaCompras';
+import ImportInsumosDialog from '@/components/import/ImportInsumosDialog';
 
 const unidadesMedida = [
   { value: 'un', label: 'Unidade (un)' },
@@ -70,6 +71,7 @@ const Insumos = () => {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [receitaDialogOpen, setReceitaDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [editingInsumo, setEditingInsumo] = useState<Insumo | null>(null);
   const [selectedIntermediario, setSelectedIntermediario] = useState<Insumo | null>(null);
   const [activeTab, setActiveTab] = useState<string>("todos");
@@ -500,12 +502,18 @@ const Insumos = () => {
           setDialogOpen(open);
           if (!open) resetForm();
         }}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Insumo
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+              <Upload className="mr-2 h-4 w-4" />
+              Importar
             </Button>
-          </DialogTrigger>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Insumo
+              </Button>
+            </DialogTrigger>
+          </div>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
@@ -930,6 +938,12 @@ const Insumos = () => {
         onConfirm={confirmDelete}
         title="Excluir insumo"
         description="Tem certeza que deseja excluir este insumo? Esta ação não pode ser desfeita."
+      />
+
+      <ImportInsumosDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        existingInsumos={insumos || []}
       />
     </div>
   );
