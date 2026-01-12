@@ -12,10 +12,12 @@ import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Package, AlertCircle, Search, Filter, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package, AlertCircle, Search, Filter, X, Upload } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import FichaTecnicaDialog from '@/components/produtos/FichaTecnicaDialog';
 import MarketPriceSearch from '@/components/produtos/MarketPriceSearch';
+import ImportProdutosDialog from '@/components/import/ImportProdutosDialog';
+import ImportFichaTecnicaDialog from '@/components/import/ImportFichaTecnicaDialog';
 
 interface Produto {
   id: string;
@@ -40,6 +42,8 @@ const Produtos = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [importProdutosOpen, setImportProdutosOpen] = useState(false);
+  const [importFichasOpen, setImportFichasOpen] = useState(false);
   const [editingProduto, setEditingProduto] = useState<Produto | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
@@ -264,12 +268,22 @@ const Produtos = () => {
           setDialogOpen(open);
           if (!open) resetForm();
         }}>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setImportProdutosOpen(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Importar Produtos
+          </Button>
+          <Button variant="outline" onClick={() => setImportFichasOpen(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Importar Fichas
+          </Button>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               Novo Produto
             </Button>
           </DialogTrigger>
+        </div>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
@@ -533,6 +547,19 @@ const Produtos = () => {
         onConfirm={confirmDelete}
         title="Excluir produto"
         description="Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita."
+      />
+
+      <ImportProdutosDialog
+        open={importProdutosOpen}
+        onOpenChange={setImportProdutosOpen}
+        existingProdutos={produtos || []}
+      />
+
+      <ImportFichaTecnicaDialog
+        open={importFichasOpen}
+        onOpenChange={setImportFichasOpen}
+        existingProdutos={produtos?.map(p => ({ id: p.id, nome: p.nome })) || []}
+        existingInsumos={[]}
       />
     </div>
   );
