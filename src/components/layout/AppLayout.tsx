@@ -109,45 +109,52 @@ const AppLayout = () => {
   useAlertNotifications();
 
   return (
-    <div className="flex h-full flex-1 bg-background overflow-hidden">
+    <div className="fixed inset-0 flex bg-background">
       {/* Desktop Sidebar - só aparece em telas grandes */}
       <aside className="hidden lg:flex w-64 flex-col flex-shrink-0">
         <SidebarContent />
       </aside>
 
       {/* Mobile & Tablet - sidebar escondida, abre via menu */}
-      <div className="flex-1 flex flex-col overflow-hidden w-full">
-        {/* Trial Banner - mostra em todas as telas */}
-        <div className="bg-primary-dark" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+      <div className="flex-1 flex flex-col min-h-0">
+        {/* Header fixo - Trial Banner + Navigation */}
+        <div className="flex-shrink-0 bg-primary-dark" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+          {/* Trial Banner */}
           <TrialBanner />
-        </div>
-        
-        {/* Header mobile com botão menu */}
-        <header className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-border bg-primary-dark flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <Sheet open={open} onOpenChange={setOpen}>
-              <SheetTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="text-white hover:bg-white/10 active:bg-white/20 h-10 w-10"
-                >
-                  <Menu className="h-6 w-6" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="p-0 w-72 border-0">
-                <SidebarContent onNavigate={() => setOpen(false)} />
-              </SheetContent>
-            </Sheet>
-            <Logo size="sm" theme="dark" />
-          </div>
           
-          {/* Notification button */}
-          <NotificationSettings className="text-white hover:bg-white/10" />
-        </header>
+          {/* Header mobile com botão menu */}
+          <header className="lg:hidden flex items-center justify-between px-4 py-3">
+            <div className="flex items-center gap-3">
+              <Sheet open={open} onOpenChange={setOpen}>
+                <SheetTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="text-white hover:bg-white/10 active:bg-white/20 h-10 w-10"
+                  >
+                    <Menu className="h-6 w-6" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="p-0 w-72 border-0">
+                  <SidebarContent onNavigate={() => setOpen(false)} />
+                </SheetContent>
+              </Sheet>
+              <Logo size="sm" theme="dark" />
+            </div>
+            
+            {/* Notification button */}
+            <NotificationSettings className="text-white hover:bg-white/10" />
+          </header>
+        </div>
 
-        {/* Main Content - área principal */}
-        <main className="flex-1 overflow-auto bg-surface-alt" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        {/* Main Content - área com scroll */}
+        <main 
+          className="flex-1 overflow-y-auto overflow-x-hidden bg-surface-alt overscroll-contain"
+          style={{ 
+            paddingBottom: 'env(safe-area-inset-bottom)',
+            WebkitOverflowScrolling: 'touch'
+          }}
+        >
           <div className="container mx-auto p-4 md:p-6">
             <Outlet />
           </div>
