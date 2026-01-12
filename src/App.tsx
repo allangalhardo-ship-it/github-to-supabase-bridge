@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
+import { useOfflineSync } from "@/hooks/useOfflineSync";
 import AppLayout from "@/components/layout/AppLayout";
 import PaywallGuard from "@/components/subscription/PaywallGuard";
 import Login from "@/pages/Login";
@@ -23,6 +24,12 @@ import XmlImport from "@/pages/XmlImport";
 import Receitas from "@/pages/Receitas";
 import Caixa from "@/pages/Caixa";
 import NotFound from "@/pages/NotFound";
+
+// Component to initialize offline sync
+const OfflineSyncProvider = ({ children }: { children: React.ReactNode }) => {
+  useOfflineSync();
+  return <>{children}</>;
+};
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -115,7 +122,9 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <SubscriptionProvider>
-            <AppRoutes />
+            <OfflineSyncProvider>
+              <AppRoutes />
+            </OfflineSyncProvider>
           </SubscriptionProvider>
         </AuthProvider>
       </BrowserRouter>
