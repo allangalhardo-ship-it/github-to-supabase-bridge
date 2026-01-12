@@ -121,7 +121,7 @@ const AppLayout = () => {
         <TrialBanner />
         
         {/* Header mobile com botão menu */}
-        <header className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-border bg-primary-dark safe-area-top">
+        <header className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-border bg-primary-dark flex-shrink-0">
           <div className="flex items-center gap-3">
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger asChild>
