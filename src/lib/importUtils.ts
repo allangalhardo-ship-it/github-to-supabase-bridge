@@ -29,7 +29,7 @@ export const FICHA_TECNICA_TEMPLATE: TemplateColumn[] = [
   { header: 'Unidade', key: 'unidade', example: 'kg', required: false },
 ];
 
-// Generate and download template
+// Generate and download template (works on web and mobile/Capacitor)
 export function downloadTemplate(
   templateColumns: TemplateColumn[],
   filename: string,
@@ -46,7 +46,22 @@ export function downloadTemplate(
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, sheetName);
   
-  XLSX.writeFile(wb, `${filename}.xlsx`);
+  // Use blob approach for better compatibility with WebView/Capacitor
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${filename}.xlsx`;
+  document.body.appendChild(link);
+  link.click();
+  
+  // Cleanup
+  setTimeout(() => {
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, 100);
 }
 
 // Parse uploaded file
