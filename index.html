@@ -36,13 +36,22 @@
       input, select, textarea {
         font-size: 16px !important;
       }
-      /* Safe area insets for notched devices */
-      body {
-        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      /* Full screen for Capacitor apps */
+      html, body, #root {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+      #root {
+        display: flex;
+        flex-direction: column;
       }
       /* Prevent pull-to-refresh on mobile */
       html, body {
         overscroll-behavior-y: contain;
+        -webkit-overflow-scrolling: touch;
       }
     </style>
   </head>

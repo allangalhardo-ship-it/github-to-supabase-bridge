@@ -9,9 +9,10 @@ const config: CapacitorConfig = {
     allowMixedContent: true,
   },
   ios: {
-    backgroundColor: '#0D773B',
-    contentInset: 'automatic',
+    backgroundColor: '#FFFFFF',
+    contentInset: 'always',
     preferredContentMode: 'mobile',
+    scrollEnabled: true,
   },
   plugins: {
     SplashScreen: {
