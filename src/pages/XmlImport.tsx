@@ -479,29 +479,29 @@ const XmlImport = () => {
   const totalItens = parsedNota?.itens.length || 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Importar Nota Fiscal</h1>
-        <p className="text-muted-foreground">Importe via XML, foto, chave de acesso ou QR Code</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Importar Nota Fiscal</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">Importe via XML, foto, chave de acesso ou QR Code</p>
       </div>
 
       {/* Tabs for different import methods */}
-      <Tabs defaultValue="xml" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="xml" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
+      <Tabs defaultValue="xml" className="space-y-3 sm:space-y-4">
+        <TabsList className="grid w-full grid-cols-4 h-auto p-1">
+          <TabsTrigger value="xml" className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 text-xs sm:text-sm">
+            <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">XML</span>
           </TabsTrigger>
-          <TabsTrigger value="foto" className="flex items-center gap-2">
-            <Camera className="h-4 w-4" />
+          <TabsTrigger value="foto" className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 text-xs sm:text-sm">
+            <Camera className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Foto</span>
           </TabsTrigger>
-          <TabsTrigger value="chave" className="flex items-center gap-2">
-            <Key className="h-4 w-4" />
+          <TabsTrigger value="chave" className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 text-xs sm:text-sm">
+            <Key className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Chave</span>
           </TabsTrigger>
-          <TabsTrigger value="qrcode" className="flex items-center gap-2">
-            <QrCode className="h-4 w-4" />
+          <TabsTrigger value="qrcode" className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 text-xs sm:text-sm">
+            <QrCode className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">QR Code</span>
           </TabsTrigger>
         </TabsList>

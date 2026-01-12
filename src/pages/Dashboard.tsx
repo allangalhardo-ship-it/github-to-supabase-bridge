@@ -263,14 +263,14 @@ const Dashboard = () => {
   const isLoading = loadingVendas || loadingCustos;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">Visão geral do seu negócio</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Visão geral do seu negócio</p>
         </div>
         <Select value={periodo} onValueChange={(v) => setPeriodo(v as PeriodoType)}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10">
             <SelectValue placeholder="Selecione o período" />
           </SelectTrigger>
           <SelectContent>

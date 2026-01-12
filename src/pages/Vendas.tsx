@@ -236,11 +236,11 @@ const Vendas = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Movimentações</h1>
-          <p className="text-muted-foreground">Vendas, compras e lançamentos financeiros</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Movimentações</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Vendas, compras e lançamentos financeiros</p>
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={(open) => {
@@ -396,34 +396,34 @@ const Vendas = () => {
       </div>
 
       <Tabs defaultValue="vendas">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="vendas" className="flex items-center gap-2">
-            <Receipt className="h-4 w-4" />
+        <TabsList className="grid w-full grid-cols-4 h-auto p-1">
+          <TabsTrigger value="vendas" className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 text-xs sm:text-sm">
+            <Receipt className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Vendas</span>
           </TabsTrigger>
-          <TabsTrigger value="compras" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            <span className="hidden sm:inline">Compras (NFe)</span>
+          <TabsTrigger value="compras" className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 text-xs sm:text-sm">
+            <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Compras</span>
           </TabsTrigger>
-          <TabsTrigger value="lancamentos" className="flex items-center gap-2">
-            <Wallet className="h-4 w-4" />
+          <TabsTrigger value="lancamentos" className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 text-xs sm:text-sm">
+            <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Lançamentos</span>
           </TabsTrigger>
-          <TabsTrigger value="importar" className="flex items-center gap-2">
-            <Upload className="h-4 w-4" />
-            <span className="hidden sm:inline">Importar CSV</span>
+          <TabsTrigger value="importar" className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 text-xs sm:text-sm">
+            <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">CSV</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="vendas" className="mt-4 space-y-4">
+        <TabsContent value="vendas" className="mt-3 sm:mt-4 space-y-3 sm:space-y-4">
           {/* Filtros */}
           <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Filtros</span>
+            <CardContent className="pt-3 sm:pt-4 px-3 sm:px-6">
+              <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+                <span className="text-xs sm:text-sm font-medium">Filtros</span>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-5">
                 <div className="space-y-1">
                   <Label className="text-xs">Data Início</Label>
                   <Input

@@ -242,11 +242,11 @@ const Estoque = () => {
   const temFiltrosAtivos = filtroInsumo !== 'todos' || filtroTipo !== 'todos' || filtroOrigem !== 'todos' || filtroPeriodo !== 'mes';
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Estoque</h1>
-          <p className="text-muted-foreground">Gerencie o estoque de insumos</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Estoque</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Gerencie o estoque de insumos</p>
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={(open) => {
@@ -366,18 +366,18 @@ const Estoque = () => {
       )}
 
       <Tabs defaultValue="insumos" className="w-full">
-        <TabsList className="grid w-full max-w-lg grid-cols-3">
-          <TabsTrigger value="insumos" className="flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Insumos
+        <TabsList className="grid w-full grid-cols-3 h-auto p-1">
+          <TabsTrigger value="insumos" className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 text-xs sm:text-sm">
+            <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Insumos</span>
           </TabsTrigger>
-          <TabsTrigger value="acabados" className="flex items-center gap-2">
-            <Factory className="h-4 w-4" />
-            Produtos Acabados
+          <TabsTrigger value="acabados" className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 text-xs sm:text-sm">
+            <Factory className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Acabados</span>
           </TabsTrigger>
-          <TabsTrigger value="movimentacoes" className="flex items-center gap-2">
-            <Warehouse className="h-4 w-4" />
-            Movimentações
+          <TabsTrigger value="movimentacoes" className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 text-xs sm:text-sm">
+            <Warehouse className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Movim.</span>
           </TabsTrigger>
         </TabsList>
 

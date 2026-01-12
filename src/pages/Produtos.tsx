@@ -253,11 +253,11 @@ const Produtos = () => {
   }, [produtos, searchTerm, categoriaFiltro]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Produtos</h1>
-          <p className="text-muted-foreground">Gerencie seus produtos e fichas técnicas</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Produtos</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Gerencie seus produtos e fichas técnicas</p>
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={(open) => {
