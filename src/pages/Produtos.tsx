@@ -558,8 +558,6 @@ const Produtos = () => {
       <ImportFichaTecnicaDialog
         open={importFichasOpen}
         onOpenChange={setImportFichasOpen}
-        existingProdutos={produtos?.map(p => ({ id: p.id, nome: p.nome })) || []}
-        existingInsumos={[]}
       />
     </div>
   );
