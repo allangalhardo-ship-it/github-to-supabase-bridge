@@ -32,7 +32,6 @@ const TrialBanner: React.FC = () => {
             : 'bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-200'
         }
       `}
-      style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))' }}
     >
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <AlertTriangle className="h-4 w-4 flex-shrink-0" />
