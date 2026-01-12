@@ -217,7 +217,7 @@ const Cadastro = () => {
               <ChefHat className="h-8 w-8 text-primary-foreground" />
             </div>
           </div>
-          <CardTitle className="text-2xl">Criar Conta</CardTitle>
+          <CardTitle className="text-2xl">Criar Conta <span className="text-xs font-normal text-muted-foreground align-middle">(beta)</span></CardTitle>
           <CardDescription>
             Comece a gerenciar seu negócio hoje
           </CardDescription>
