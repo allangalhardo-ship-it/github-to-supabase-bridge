@@ -51,12 +51,19 @@ serve(async (req) => {
       logStep("No customer found - user is in trial period based on account creation");
       
       // Check if user is still in trial based on account creation date
-      const createdAt = new Date(user.created_at);
-      const now = new Date();
-      const daysSinceCreation = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
-      const trialDaysRemaining = Math.max(0, 7 - daysSinceCreation);
-      const isInTrial = trialDaysRemaining > 0;
-      
+      let daysSinceCreation = 0;
+      let trialDaysRemaining = 7;
+      let isInTrial = true;
+
+      if (user.created_at) {
+        const createdAt = new Date(user.created_at);
+        if (!isNaN(createdAt.getTime())) {
+          const now = new Date();
+          daysSinceCreation = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+          trialDaysRemaining = Math.max(0, 7 - daysSinceCreation);
+          isInTrial = trialDaysRemaining > 0;
+        }
+      }
       return new Response(JSON.stringify({
         subscribed: false,
         status: isInTrial ? "trialing" : "expired",
@@ -84,14 +91,24 @@ serve(async (req) => {
     );
 
     if (activeSubscription) {
-      const subscriptionEnd = new Date(activeSubscription.current_period_end * 1000).toISOString();
-      const trialEnd = activeSubscription.trial_end 
-        ? new Date(activeSubscription.trial_end * 1000).toISOString()
+      // Defensive parsing: Stripe fields can be null depending on status
+      const cpe = typeof activeSubscription.current_period_end === "number"
+        ? activeSubscription.current_period_end
+        : Number(activeSubscription.current_period_end);
+
+      const subscriptionEnd = Number.isFinite(cpe) ? new Date(cpe * 1000).toISOString() : null;
+
+      const te = activeSubscription.trial_end == null
+        ? null
+        : (typeof activeSubscription.trial_end === "number" ? activeSubscription.trial_end : Number(activeSubscription.trial_end));
+
+      const trialEnd = te != null && Number.isFinite(te)
+        ? new Date(te * 1000).toISOString()
         : null;
-      
+
       let trialDaysRemaining = 0;
-      if (activeSubscription.status === "trialing" && activeSubscription.trial_end) {
-        const trialEndDate = new Date(activeSubscription.trial_end * 1000);
+      if (activeSubscription.status === "trialing" && te != null && Number.isFinite(te)) {
+        const trialEndDate = new Date(te * 1000);
         trialDaysRemaining = Math.max(0, Math.ceil((trialEndDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
       }
 
