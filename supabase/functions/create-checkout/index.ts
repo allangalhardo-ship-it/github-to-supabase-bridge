@@ -50,8 +50,25 @@ serve(async (req) => {
 
     const origin = req.headers.get("origin") || "https://lovable.dev";
 
-    // Create checkout session with 7-day trial
-    const session = await stripe.checkout.sessions.create({
+    // Regras de teste: 7 dias no total desde a criação da conta.
+    // Se o usuário já passou do período, não cria trial no Stripe (assinatura fica ativa imediatamente).
+    const createdAtStr = (user as any)?.created_at as string | undefined;
+    let trialDaysRemaining = 7;
+
+    if (createdAtStr) {
+      const createdAt = new Date(createdAtStr);
+      if (!isNaN(createdAt.getTime())) {
+        const daysSinceCreation = Math.floor(
+          (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        trialDaysRemaining = Math.max(0, 7 - daysSinceCreation);
+      }
+    }
+
+    logStep("Trial days remaining computed", { trialDaysRemaining });
+
+    // Create checkout session
+    const sessionParams: Record<string, unknown> = {
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
       line_items: [
@@ -61,15 +78,18 @@ serve(async (req) => {
         },
       ],
       mode: "subscription",
-      subscription_data: {
-        trial_period_days: 7,
-      },
       success_url: `${origin}/dashboard?checkout=success`,
       cancel_url: `${origin}/assinatura?checkout=canceled`,
       allow_promotion_codes: true,
       billing_address_collection: "required",
       locale: "pt-BR",
-    });
+    };
+
+    if (trialDaysRemaining > 0) {
+      sessionParams.subscription_data = { trial_period_days: trialDaysRemaining };
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams as any);
 
     logStep("Checkout session created", { sessionId: session.id });
 
