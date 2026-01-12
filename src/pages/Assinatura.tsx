@@ -1,12 +1,14 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, Crown, Loader2, AlertTriangle } from 'lucide-react';
+import { Check, Crown, Loader2, AlertTriangle, ArrowRight } from 'lucide-react';
 import { Logo } from '@/components/brand/Logo';
 
 const Assinatura = () => {
+  const navigate = useNavigate();
   const { subscription, loading, openCheckout, openCustomerPortal, hasAccess } = useSubscription();
   const [checkoutLoading, setCheckoutLoading] = React.useState(false);
   const [portalLoading, setPortalLoading] = React.useState(false);
@@ -67,19 +69,28 @@ const Assinatura = () => {
 
         {/* Status atual */}
         {subscription.status === 'trialing' && !subscription.subscribed && (
-          <Card className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
+          <Card className="border-primary/50 bg-primary/5">
             <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="h-5 w-5 text-amber-600" />
-                <div>
-                  <p className="font-medium text-amber-800 dark:text-amber-200">
-                    Período de teste gratuito
-                  </p>
-                  <p className="text-sm text-amber-700 dark:text-amber-300">
-                    Você tem <strong>{subscription.trialDaysRemaining} dias</strong> restantes. 
-                    Assine agora para não perder o acesso!
-                  </p>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="font-medium text-primary">
+                      Período de teste gratuito
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Você tem <strong className="text-primary">{subscription.trialDaysRemaining} dias</strong> restantes para testar gratuitamente!
+                    </p>
+                  </div>
                 </div>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/dashboard')}
+                  className="whitespace-nowrap"
+                >
+                  Continuar testando
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
               </div>
             </CardContent>
           </Card>
