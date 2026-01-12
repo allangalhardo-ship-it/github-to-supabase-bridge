@@ -147,8 +147,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     return () => clearInterval(interval);
   }, [user, checkSubscription]);
 
-  // User has access if subscribed OR in trial period
-  const hasAccess = subscription.subscribed || subscription.status === 'trialing';
+  // User has access if subscribed OR in trial period OR still loading (prevent flicker redirect)
+  const hasAccess = loading || subscription.subscribed || subscription.status === 'trialing';
 
   return (
     <SubscriptionContext.Provider
