@@ -88,6 +88,7 @@ export const Logo: React.FC<LogoProps> = ({
         <div className="flex flex-col">
           <span className={cn('font-bold leading-tight', textSize, textColor)}>
             Gastro<span className="text-cta">Gestor</span>
+            <span className="text-[10px] font-normal opacity-60 ml-1">(beta)</span>
           </span>
           <span className={cn(
             'text-xs font-medium opacity-70',
