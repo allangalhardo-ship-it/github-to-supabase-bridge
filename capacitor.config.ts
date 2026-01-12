@@ -9,7 +9,7 @@ const config: CapacitorConfig = {
     allowMixedContent: true,
   },
   ios: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0D773B',
     contentInset: 'automatic',
     preferredContentMode: 'mobile',
     allowsLinkPreview: false,

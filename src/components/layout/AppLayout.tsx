@@ -118,7 +118,9 @@ const AppLayout = () => {
       {/* Mobile & Tablet - sidebar escondida, abre via menu */}
       <div className="flex-1 flex flex-col overflow-hidden w-full">
         {/* Trial Banner - mostra em todas as telas */}
-        <TrialBanner />
+        <div className="bg-primary-dark" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+          <TrialBanner />
+        </div>
         
         {/* Header mobile com botão menu */}
         <header className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-border bg-primary-dark flex-shrink-0">
@@ -145,8 +147,8 @@ const AppLayout = () => {
         </header>
 
         {/* Main Content - área principal */}
-        <main className="flex-1 overflow-auto bg-surface-alt">
-          <div className="container mx-auto p-4 md:p-6 pb-safe">
+        <main className="flex-1 overflow-auto bg-surface-alt" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+          <div className="container mx-auto p-4 md:p-6">
             <Outlet />
           </div>
         </main>
