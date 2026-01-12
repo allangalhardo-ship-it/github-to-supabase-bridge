@@ -492,42 +492,42 @@ const Vendas = () => {
           </Card>
 
           {/* Totalizadores */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             <Card>
-              <CardContent className="pt-4 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <DollarSign className="h-5 w-5 text-primary" />
+              <CardContent className="pt-3 pb-3 px-3 sm:pt-4 sm:pb-4 sm:px-6">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 flex-shrink-0">
+                    <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Total em Vendas</p>
-                    <p className="text-xl font-bold">{formatCurrency(totais.totalValor)}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Total em Vendas</p>
+                    <p className="text-sm sm:text-xl font-bold truncate">{formatCurrency(totais.totalValor)}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="pt-4 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <ShoppingCart className="h-5 w-5 text-primary" />
+              <CardContent className="pt-3 pb-3 px-3 sm:pt-4 sm:pb-4 sm:px-6">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 flex-shrink-0">
+                    <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Qtd. Vendas</p>
-                    <p className="text-xl font-bold">{totais.totalVendas}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Qtd. Vendas</p>
+                    <p className="text-sm sm:text-xl font-bold">{totais.totalVendas}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="pt-4 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Package className="h-5 w-5 text-primary" />
+              <CardContent className="pt-3 pb-3 px-3 sm:pt-4 sm:pb-4 sm:px-6">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 flex-shrink-0">
+                    <Package className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Itens Vendidos</p>
-                    <p className="text-xl font-bold">{totais.totalQuantidade}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Itens Vendidos</p>
+                    <p className="text-sm sm:text-xl font-bold">{totais.totalQuantidade}</p>
                   </div>
                 </div>
               </CardContent>
