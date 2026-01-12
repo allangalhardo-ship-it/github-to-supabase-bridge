@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.1b22b8b3f189400c9378ff3dd025a939',
+  appId: 'com.gastrogestor.app',
   appName: 'GastroGestor',
   webDir: 'dist',
   server: {
