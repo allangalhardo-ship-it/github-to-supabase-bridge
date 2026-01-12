@@ -11,7 +11,7 @@ import { Download, Upload, FileSpreadsheet, CheckCircle2, XCircle, AlertTriangle
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   downloadTemplate,
   parseExcelFile,
@@ -52,20 +52,47 @@ interface ParsedFichaTecnica extends ImportFichaTecnicaData {
 interface ImportFichaTecnicaDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  existingProdutos: Produto[];
-  existingInsumos: Insumo[];
 }
 
 const ImportFichaTecnicaDialog = ({ 
   open, 
   onOpenChange, 
-  existingProdutos,
-  existingInsumos 
 }: ImportFichaTecnicaDialogProps) => {
   const { usuario } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
+  // Fetch existing produtos
+  const { data: existingProdutos = [] } = useQuery({
+    queryKey: ['produtos', usuario?.empresa_id],
+    queryFn: async () => {
+      if (!usuario?.empresa_id) return [];
+      const { data, error } = await supabase
+        .from('produtos')
+        .select('id, nome')
+        .eq('empresa_id', usuario.empresa_id)
+        .order('nome');
+      if (error) throw error;
+      return data as Produto[];
+    },
+    enabled: !!usuario?.empresa_id && open,
+  });
+
+  // Fetch existing insumos
+  const { data: existingInsumos = [] } = useQuery({
+    queryKey: ['insumos', usuario?.empresa_id],
+    queryFn: async () => {
+      if (!usuario?.empresa_id) return [];
+      const { data, error } = await supabase
+        .from('insumos')
+        .select('id, nome, unidade_medida')
+        .eq('empresa_id', usuario.empresa_id)
+        .order('nome');
+      if (error) throw error;
+      return data as Insumo[];
+    },
+    enabled: !!usuario?.empresa_id && open,
+  });
   const [step, setStep] = useState<'upload' | 'review' | 'importing'>('upload');
   const [parsedData, setParsedData] = useState<ParsedFichaTecnica[]>([]);
   const [parseErrors, setParseErrors] = useState<string[]>([]);
