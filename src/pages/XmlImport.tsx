@@ -12,7 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Key, QrCode, Loader2 } from 'lucide-react';
+import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Key, QrCode, Loader2, ImageIcon } from 'lucide-react';
+import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
 
 interface XmlItem {
   produto_descricao: string;
@@ -545,56 +546,123 @@ const XmlImport = () => {
                   <div className="flex flex-col sm:flex-row gap-3">
                     {/* Botão de Tirar Foto (Câmera) */}
                     <div className="flex-1">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        onChange={handleFileSelect}
-                        disabled={isProcessingAI}
-                        className="hidden"
-                        id="camera-input"
-                      />
-                      <label htmlFor="camera-input">
+                      {isNativePlatform() ? (
                         <Button
                           type="button"
                           variant="outline"
-                          className="w-full cursor-pointer"
+                          className="w-full"
                           disabled={isProcessingAI}
-                          asChild
+                          onClick={async () => {
+                            try {
+                              const base64 = await takePictureNative();
+                              if (base64) {
+                                setFilePreview({ url: base64, type: 'image', name: 'camera-photo.jpg' });
+                                // Create a mock file for processing
+                                const blob = await fetch(base64).then(r => r.blob());
+                                const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+                                setSelectedFile(file);
+                              }
+                            } catch (error: any) {
+                              if (error.message !== 'User cancelled photos app') {
+                                toast({
+                                  title: 'Erro',
+                                  description: 'Não foi possível acessar a câmera.',
+                                  variant: 'destructive',
+                                });
+                              }
+                            }
+                          }}
                         >
-                          <span>
-                            <Camera className="h-4 w-4 mr-2" />
-                            Tirar Foto
-                          </span>
+                          <Camera className="h-4 w-4 mr-2" />
+                          Tirar Foto
                         </Button>
-                      </label>
+                      ) : (
+                        <>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            onChange={handleFileSelect}
+                            disabled={isProcessingAI}
+                            className="hidden"
+                            id="camera-input"
+                          />
+                          <label htmlFor="camera-input">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="w-full cursor-pointer"
+                              disabled={isProcessingAI}
+                              asChild
+                            >
+                              <span>
+                                <Camera className="h-4 w-4 mr-2" />
+                                Tirar Foto
+                              </span>
+                            </Button>
+                          </label>
+                        </>
+                      )}
                     </div>
                     
                     {/* Botão de Escolher Arquivo */}
                     <div className="flex-1">
-                      <input
-                        ref={imageInputRef}
-                        type="file"
-                        accept="image/*,application/pdf"
-                        onChange={handleFileSelect}
-                        disabled={isProcessingAI}
-                        className="hidden"
-                        id="file-input"
-                      />
-                      <label htmlFor="file-input">
+                      {isNativePlatform() ? (
                         <Button
                           type="button"
                           variant="outline"
-                          className="w-full cursor-pointer"
+                          className="w-full"
                           disabled={isProcessingAI}
-                          asChild
+                          onClick={async () => {
+                            try {
+                              const base64 = await pickImageNative();
+                              if (base64) {
+                                setFilePreview({ url: base64, type: 'image', name: 'gallery-photo.jpg' });
+                                const blob = await fetch(base64).then(r => r.blob());
+                                const file = new File([blob], 'gallery-photo.jpg', { type: 'image/jpeg' });
+                                setSelectedFile(file);
+                              }
+                            } catch (error: any) {
+                              if (error.message !== 'User cancelled photos app') {
+                                toast({
+                                  title: 'Erro',
+                                  description: 'Não foi possível acessar a galeria.',
+                                  variant: 'destructive',
+                                });
+                              }
+                            }
+                          }}
                         >
-                          <span>
-                            <Upload className="h-4 w-4 mr-2" />
-                            Escolher Arquivo
-                          </span>
+                          <ImageIcon className="h-4 w-4 mr-2" />
+                          Escolher da Galeria
                         </Button>
-                      </label>
+                      ) : (
+                        <>
+                          <input
+                            ref={imageInputRef}
+                            type="file"
+                            accept="image/*,application/pdf"
+                            onChange={handleFileSelect}
+                            disabled={isProcessingAI}
+                            className="hidden"
+                            id="file-input"
+                          />
+                          <label htmlFor="file-input">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="w-full cursor-pointer"
+                              disabled={isProcessingAI}
+                              asChild
+                            >
+                              <span>
+                                <Upload className="h-4 w-4 mr-2" />
+                                Escolher Arquivo
+                              </span>
+                            </Button>
+                          </label>
+                        </>
+                      )}
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
