@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Logo, LogoMark } from '@/components/brand/Logo';
 import TrialBanner from '@/components/subscription/TrialBanner';
+import OfflineIndicator from '@/components/layout/OfflineIndicator';
 import {
   LayoutDashboard,
   UtensilsCrossed,
@@ -142,6 +143,9 @@ const AppLayout = () => {
           </div>
         </main>
       </div>
+
+      {/* Offline Indicator */}
+      <OfflineIndicator />
     </div>
   );
 };
