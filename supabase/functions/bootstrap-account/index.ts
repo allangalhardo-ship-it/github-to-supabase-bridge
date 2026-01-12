@@ -7,6 +7,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 type BootstrapRequest = {
   nome?: string;
   nomeEmpresa?: string;
+  telefone?: string;
+  cpfCnpj?: string;
+  segmento?: string;
 };
 
 serve(async (req) => {
@@ -75,11 +78,19 @@ serve(async (req) => {
 
     const body: BootstrapRequest = await req.json().catch(() => ({}));
     const email = user.email ?? "";
+    
+    // Get data from body or user metadata
     const nomeFromMeta = (user.user_metadata?.nome as string | undefined) ?? undefined;
     const nomeEmpresaFromMeta = (user.user_metadata?.nomeEmpresa as string | undefined) ?? undefined;
+    const telefoneFromMeta = (user.user_metadata?.telefone as string | undefined) ?? undefined;
+    const cpfCnpjFromMeta = (user.user_metadata?.cpfCnpj as string | undefined) ?? undefined;
+    const segmentoFromMeta = (user.user_metadata?.segmento as string | undefined) ?? undefined;
 
     const nome = (body.nome ?? nomeFromMeta ?? email.split("@")[0] ?? "Usuário").trim();
     const nomeEmpresa = (body.nomeEmpresa ?? nomeEmpresaFromMeta ?? "Minha Empresa").trim();
+    const telefone = (body.telefone ?? telefoneFromMeta ?? "").trim();
+    const cpfCnpj = (body.cpfCnpj ?? cpfCnpjFromMeta ?? "").trim();
+    const segmento = (body.segmento ?? segmentoFromMeta ?? "").trim();
 
     // If profile already exists, return it (idempotent)
     const { data: existingUsuario, error: existingErr } = await admin
@@ -108,10 +119,13 @@ serve(async (req) => {
       });
     }
 
-    // Create empresa
+    // Create empresa with segmento
     const { data: empresa, error: empresaErr } = await admin
       .from("empresas")
-      .insert({ nome: nomeEmpresa })
+      .insert({ 
+        nome: nomeEmpresa,
+        segmento: segmento || null,
+      })
       .select("*")
       .single();
 
@@ -125,7 +139,7 @@ serve(async (req) => {
       });
     }
 
-    // Create usuario
+    // Create usuario with new fields
     const { data: usuario, error: usuarioErr } = await admin
       .from("usuarios")
       .insert({
@@ -133,6 +147,8 @@ serve(async (req) => {
         empresa_id: empresa.id,
         nome,
         email: email || `${user.id}@user.local`,
+        telefone: telefone || null,
+        cpf_cnpj: cpfCnpj || null,
       })
       .select("*")
       .single();

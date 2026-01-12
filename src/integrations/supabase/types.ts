@@ -172,16 +172,19 @@ export type Database = {
           created_at: string
           id: string
           nome: string
+          segmento: string | null
         }
         Insert: {
           created_at?: string
           id?: string
           nome: string
+          segmento?: string | null
         }
         Update: {
           created_at?: string
           id?: string
           nome?: string
+          segmento?: string | null
         }
         Relationships: []
       }
@@ -591,25 +594,31 @@ export type Database = {
       }
       usuarios: {
         Row: {
+          cpf_cnpj: string | null
           created_at: string
           email: string
           empresa_id: string
           id: string
           nome: string
+          telefone: string | null
         }
         Insert: {
+          cpf_cnpj?: string | null
           created_at?: string
           email: string
           empresa_id: string
           id: string
           nome: string
+          telefone?: string | null
         }
         Update: {
+          cpf_cnpj?: string | null
           created_at?: string
           email?: string
           empresa_id?: string
           id?: string
           nome?: string
+          telefone?: string | null
         }
         Relationships: [
           {
