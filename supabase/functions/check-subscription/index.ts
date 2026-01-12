@@ -127,7 +127,7 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({
-          subscribed: true,
+          subscribed: ((activeSubscription as any).status === "active"),
           status: (activeSubscription as any).status,
           subscription_end: subscriptionEnd,
           trial_end: trialEnd,

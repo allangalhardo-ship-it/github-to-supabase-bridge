@@ -41,7 +41,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   });
 
   const checkSubscription = useCallback(async () => {
-    if (!session?.access_token) {
+    // If user isn't available yet, we can't determine access.
+    if (!user) {
       setSubscription({
         subscribed: false,
         status: 'expired',
@@ -53,32 +54,57 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       return;
     }
 
-    try {
-      const { data, error } = await supabase.functions.invoke('check-subscription');
+    // Session can lag behind user during auth state changes.
+    // In that case, keep loading so the paywall doesn't incorrectly redirect.
+    if (!session?.access_token) {
+      setSubscription((prev) => ({ ...prev, status: 'loading' }));
+      setLoading(true);
+      return;
+    }
 
-      if (error) {
-        console.error('Error checking subscription:', error);
-        // Fallback: calculate trial based on user creation date
-        if (user?.created_at) {
-          const createdAt = new Date(user.created_at);
+    const computeTrialFallback = (): SubscriptionStatus => {
+      const createdAtStr = (user as any)?.created_at as string | undefined;
+      if (createdAtStr) {
+        const createdAt = new Date(createdAtStr);
+        if (!isNaN(createdAt.getTime())) {
           const now = new Date();
-          const daysSinceCreation = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+          const daysSinceCreation = Math.floor(
+            (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
+          );
           const trialDaysRemaining = Math.max(0, 7 - daysSinceCreation);
-          
-          setSubscription({
+          return {
             subscribed: false,
             status: trialDaysRemaining > 0 ? 'trialing' : 'expired',
             trialDaysRemaining,
             subscriptionEnd: null,
             trialEnd: null,
-          });
+          };
         }
-        setLoading(false);
+      }
+
+      // If we can't read created_at for some reason, default to allowing the trial.
+      return {
+        subscribed: false,
+        status: 'trialing',
+        trialDaysRemaining: 7,
+        subscriptionEnd: null,
+        trialEnd: null,
+      };
+    };
+
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('check-subscription');
+
+      if (error) {
+        console.error('Error checking subscription:', error);
+        setSubscription(computeTrialFallback());
         return;
       }
 
       setSubscription({
-        subscribed: data.subscribed,
+        subscribed: Boolean(data.subscribed),
         status: data.status,
         trialDaysRemaining: data.trial_days_remaining || 0,
         subscriptionEnd: data.subscription_end,
@@ -86,10 +112,11 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       });
     } catch (err) {
       console.error('Error checking subscription:', err);
+      setSubscription(computeTrialFallback());
     } finally {
       setLoading(false);
     }
-  }, [session?.access_token, user?.created_at]);
+  }, [session?.access_token, user]);
 
   const openCheckout = async () => {
     try {

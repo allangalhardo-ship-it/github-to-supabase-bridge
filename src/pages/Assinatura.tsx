@@ -68,18 +68,18 @@ const Assinatura = () => {
         </div>
 
         {/* Status atual */}
-        {subscription.status === 'trialing' && !subscription.subscribed && (
+        {subscription.status === 'trialing' && subscription.trialDaysRemaining > 0 && (
           <Card className="border-primary/50 bg-primary/5">
             <CardContent className="pt-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <AlertTriangle className="h-5 w-5 text-primary" />
                   <div>
-                    <p className="font-medium text-primary">
-                      Período de teste gratuito
-                    </p>
+                    <p className="font-medium text-primary">Período de teste gratuito</p>
                     <p className="text-sm text-muted-foreground">
-                      Você tem <strong className="text-primary">{subscription.trialDaysRemaining} dias</strong> restantes para testar gratuitamente!
+                      Você tem{' '}
+                      <strong className="text-primary">{subscription.trialDaysRemaining} dias</strong>{' '}
+                      restantes para testar gratuitamente!
                     </p>
                   </div>
                 </div>
@@ -88,7 +88,7 @@ const Assinatura = () => {
                   onClick={() => navigate('/dashboard')}
                   className="whitespace-nowrap"
                 >
-                  Continuar testando
+                  Ir para o sistema
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
@@ -127,7 +127,7 @@ const Assinatura = () => {
                   <CardDescription>Plano completo para seu negócio</CardDescription>
                 </div>
               </div>
-              {subscription.subscribed && (
+              {(subscription.status === 'trialing' || subscription.status === 'active') && (
                 <Badge variant="default" className="bg-primary">
                   {subscription.status === 'trialing' ? 'Em teste' : 'Ativo'}
                 </Badge>
