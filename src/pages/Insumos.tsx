@@ -489,11 +489,11 @@ const Insumos = () => {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Insumos</h1>
-          <p className="text-muted-foreground">Gerencie os insumos e produtos intermediários</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Insumos</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Gerencie os insumos e produtos intermediários</p>
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={(open) => {
@@ -854,26 +854,26 @@ const Insumos = () => {
         <Skeleton className="h-96" />
       ) : insumos && insumos.length > 0 ? (
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4">
-            <TabsTrigger value="todos" className="gap-2">
+          <TabsList className="mb-4 flex flex-wrap h-auto gap-1 p-1">
+            <TabsTrigger value="todos" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
               Todos
-              <Badge variant="secondary" className="ml-1">{insumos.length}</Badge>
+              <Badge variant="secondary" className="ml-0.5 sm:ml-1 text-[10px] sm:text-xs">{insumos.length}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="simples" className="gap-2">
-              <ShoppingBasket className="h-4 w-4" />
-              Insumos
-              <Badge variant="secondary" className="ml-1">{insumosSimples.length}</Badge>
+            <TabsTrigger value="simples" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+              <ShoppingBasket className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Insumos</span>
+              <Badge variant="secondary" className="ml-0.5 sm:ml-1 text-[10px] sm:text-xs">{insumosSimples.length}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="intermediarios" className="gap-2">
-              <FlaskConical className="h-4 w-4 text-purple-500" />
-              Intermediários
-              <Badge variant="secondary" className="ml-1 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+            <TabsTrigger value="intermediarios" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+              <FlaskConical className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-purple-500" />
+              <span className="hidden sm:inline">Intermediários</span>
+              <Badge variant="secondary" className="ml-0.5 sm:ml-1 text-[10px] sm:text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
                 {insumosIntermediarios.length}
               </Badge>
             </TabsTrigger>
-            <TabsTrigger value="lista-compras" className="gap-2">
-              <ShoppingCart className="h-4 w-4 text-green-600" />
-              Lista de Compras
+            <TabsTrigger value="lista-compras" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
+              <ShoppingCart className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600" />
+              <span className="hidden sm:inline">Lista Compras</span>
             </TabsTrigger>
           </TabsList>
 
