@@ -541,16 +541,62 @@ const XmlImport = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               {!filePreview ? (
-                <div className="flex items-center gap-4">
-                  <Input
-                    ref={imageInputRef}
-                    type="file"
-                    accept="image/*,application/pdf"
-                    capture="environment"
-                    onChange={handleFileSelect}
-                    disabled={isProcessingAI}
-                    className="max-w-md"
-                  />
+                <div className="space-y-4">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    {/* Botão de Tirar Foto (Câmera) */}
+                    <div className="flex-1">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handleFileSelect}
+                        disabled={isProcessingAI}
+                        className="hidden"
+                        id="camera-input"
+                      />
+                      <label htmlFor="camera-input">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full cursor-pointer"
+                          disabled={isProcessingAI}
+                          asChild
+                        >
+                          <span>
+                            <Camera className="h-4 w-4 mr-2" />
+                            Tirar Foto
+                          </span>
+                        </Button>
+                      </label>
+                    </div>
+                    
+                    {/* Botão de Escolher Arquivo */}
+                    <div className="flex-1">
+                      <input
+                        ref={imageInputRef}
+                        type="file"
+                        accept="image/*,application/pdf"
+                        onChange={handleFileSelect}
+                        disabled={isProcessingAI}
+                        className="hidden"
+                        id="file-input"
+                      />
+                      <label htmlFor="file-input">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full cursor-pointer"
+                          disabled={isProcessingAI}
+                          asChild
+                        >
+                          <span>
+                            <Upload className="h-4 w-4 mr-2" />
+                            Escolher Arquivo
+                          </span>
+                        </Button>
+                      </label>
+                    </div>
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     Formatos aceitos: JPG, PNG, WEBP, PDF
                   </p>
