@@ -10,6 +10,7 @@ import TrialBanner from '@/components/subscription/TrialBanner';
 import OfflineIndicator from '@/components/layout/OfflineIndicator';
 import NotificationSettings from '@/components/layout/NotificationSettings';
 import { useAlertNotifications } from '@/hooks/useAlertNotifications';
+import { useSessionTracker } from '@/hooks/useSessionTracker';
 import {
   LayoutDashboard,
   UtensilsCrossed,
