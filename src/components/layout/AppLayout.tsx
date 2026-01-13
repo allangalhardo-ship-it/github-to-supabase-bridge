@@ -114,6 +114,9 @@ const AppLayout = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const { user } = useAuth();
   
+  // Track user session
+  useSessionTracker();
+  
   // Check if user is admin
   useEffect(() => {
     const checkAdmin = async () => {
