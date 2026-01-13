@@ -9,6 +9,7 @@ interface Usuario {
   email: string;
   telefone?: string;
   cpf_cnpj?: string;
+  is_test_user?: boolean;
 }
 
 interface ExtraSignUpData {

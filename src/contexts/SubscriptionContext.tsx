@@ -174,8 +174,12 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     return () => clearInterval(interval);
   }, [user, checkSubscription]);
 
-  // User has access if subscribed OR in trial period OR still loading (prevent flicker redirect)
-  const hasAccess = loading || subscription.subscribed || subscription.status === 'trialing';
+  // Check if user is a test user (bypass subscription check)
+  const { usuario } = useAuth();
+  const isTestUser = usuario?.is_test_user === true;
+
+  // User has access if: test user OR subscribed OR in trial period OR still loading (prevent flicker redirect)
+  const hasAccess = isTestUser || loading || subscription.subscribed || subscription.status === 'trialing';
 
   return (
     <SubscriptionContext.Provider

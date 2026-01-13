@@ -599,6 +599,7 @@ export type Database = {
           email: string
           empresa_id: string
           id: string
+          is_test_user: boolean | null
           nome: string
           telefone: string | null
         }
@@ -608,6 +609,7 @@ export type Database = {
           email: string
           empresa_id: string
           id: string
+          is_test_user?: boolean | null
           nome: string
           telefone?: string | null
         }
@@ -617,6 +619,7 @@ export type Database = {
           email?: string
           empresa_id?: string
           id?: string
+          is_test_user?: boolean | null
           nome?: string
           telefone?: string | null
         }
