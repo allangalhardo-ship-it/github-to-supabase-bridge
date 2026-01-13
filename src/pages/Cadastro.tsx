@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { ChefHat, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import logoImage from '@/assets/logo.png';
 
 const SEGMENTOS = [
   'Restaurante',
@@ -213,9 +214,7 @@ const Cadastro = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="bg-primary p-3 rounded-xl">
-              <ChefHat className="h-8 w-8 text-primary-foreground" />
-            </div>
+            <img src={logoImage} alt="GastroGestor" className="h-20 w-20 object-contain" />
           </div>
           <CardTitle className="text-2xl">Criar Conta <span className="text-xs font-normal text-muted-foreground align-middle">(beta)</span></CardTitle>
           <CardDescription>
