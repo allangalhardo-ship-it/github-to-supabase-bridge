@@ -92,6 +92,19 @@ serve(async (req) => {
         )
       `);
 
+    // Fetch all user sessions
+    const { data: userSessions } = await supabaseAdmin
+      .from("user_sessions")
+      .select("*")
+      .order("started_at", { ascending: false });
+
+    // Fetch recent access logs
+    const { data: accessLogs } = await supabaseAdmin
+      .from("access_logs")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(500);
+
     // Fetch all user roles
     const { data: userRoles } = await supabaseAdmin
       .from("user_roles")
@@ -137,10 +150,35 @@ serve(async (req) => {
 
     logStep("Fetched Stripe subscriptions", { count: Object.keys(subscriptionsMap).length });
 
+    // Build sessions map per user
+    type SessionType = NonNullable<typeof userSessions>[number];
+    const sessionsMap: Record<string, SessionType[]> = {};
+    const activeSessionsMap: Record<string, number> = {};
+    
+    userSessions?.forEach(session => {
+      if (!sessionsMap[session.user_id]) {
+        sessionsMap[session.user_id] = [];
+      }
+      sessionsMap[session.user_id]!.push(session);
+      
+      if (session.is_active) {
+        activeSessionsMap[session.user_id] = (activeSessionsMap[session.user_id] || 0) + 1;
+      }
+    });
+
+    // Build access logs map per user
+    const accessLogsMap: Record<string, number> = {};
+    accessLogs?.forEach(log => {
+      accessLogsMap[log.user_id] = (accessLogsMap[log.user_id] || 0) + 1;
+    });
+
     // Combine all data
     const enrichedUsers = authUsers.users.map(authUser => {
       const usuario = usuarios?.find(u => u.id === authUser.id);
       const subscription = subscriptionsMap[authUser.email?.toLowerCase() || ""];
+      const sessions = sessionsMap[authUser.id] || [];
+      const activeSessions = activeSessionsMap[authUser.id] || 0;
+      const totalPageViews = accessLogsMap[authUser.id] || 0;
       
       // Calculate trial status
       let trialStatus = "expired";
@@ -153,6 +191,35 @@ serve(async (req) => {
         trialDaysRemaining = Math.max(0, 7 - daysSinceCreation);
         trialStatus = trialDaysRemaining > 0 ? "trialing" : "expired";
       }
+
+      // Calculate total time logged (sum of session durations)
+      let totalTimeMinutes = 0;
+      sessions.forEach(s => {
+        const start = new Date(s.started_at);
+        const end = s.ended_at ? new Date(s.ended_at) : new Date(s.last_activity_at);
+        totalTimeMinutes += Math.round((end.getTime() - start.getTime()) / (1000 * 60));
+      });
+
+      // Get unique IPs and devices
+      const uniqueIPs = [...new Set(sessions.map(s => s.ip_address).filter(Boolean))];
+      const uniqueDevices = [...new Set(sessions.map(s => `${s.device_type} - ${s.browser} - ${s.os}`).filter(d => d !== ' -  - '))];
+
+      // Get last 5 sessions for details
+      const recentSessions = sessions.slice(0, 5).map(s => ({
+        id: s.id,
+        ip: s.ip_address,
+        device: s.device_type,
+        browser: s.browser,
+        os: s.os,
+        started_at: s.started_at,
+        last_activity: s.last_activity_at,
+        ended_at: s.ended_at,
+        is_active: s.is_active,
+        pages_visited: s.pages_visited,
+        duration_minutes: Math.round(
+          ((s.ended_at ? new Date(s.ended_at) : new Date(s.last_activity_at)).getTime() - new Date(s.started_at).getTime()) / (1000 * 60)
+        ),
+      }));
 
       return {
         id: authUser.id,
@@ -171,6 +238,16 @@ serve(async (req) => {
           status: trialStatus,
           daysRemaining: trialDaysRemaining,
         },
+        // Session tracking data
+        session_stats: {
+          active_sessions: activeSessions,
+          total_sessions: sessions.length,
+          total_page_views: totalPageViews,
+          total_time_minutes: totalTimeMinutes,
+          unique_ips: uniqueIPs,
+          unique_devices: uniqueDevices,
+        },
+        recent_sessions: recentSessions,
         // Session/IP info from identities
         identities: authUser.identities?.map(i => ({
           provider: i.provider,
@@ -188,6 +265,9 @@ serve(async (req) => {
     });
 
     // Summary stats
+    const totalActiveSessions = Object.values(activeSessionsMap).reduce((a, b) => a + b, 0);
+    const usersWithMultipleSessions = Object.values(activeSessionsMap).filter(count => count > 1).length;
+    
     const stats = {
       totalUsers: enrichedUsers.length,
       activeSubscribers: enrichedUsers.filter(u => u.subscription?.subscribed).length,
@@ -207,6 +287,10 @@ serve(async (req) => {
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         return lastSign >= sevenDaysAgo;
       }).length,
+      // New session stats
+      totalActiveSessions,
+      usersWithMultipleSessions,
+      totalPageViews: accessLogs?.length || 0,
     };
 
     logStep("Response ready", { userCount: enrichedUsers.length });
