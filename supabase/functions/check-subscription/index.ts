@@ -29,12 +29,6 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const supabaseClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    { auth: { persistSession: false } },
-  );
-
   try {
     logStep("Function started");
 
@@ -42,22 +36,46 @@ serve(async (req) => {
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
 
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header provided");
+    if (!authHeader?.startsWith("Bearer ")) {
+      throw new Error("No authorization header provided");
+    }
 
+    // Create Supabase client with auth header
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    // Use getClaims to validate JWT
     const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
 
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
+    if (claimsError || !claimsData?.claims) {
+      throw new Error("Token inválido ou expirado");
+    }
 
-    const user = userData.user;
-    if (!user?.email) throw new Error("User not authenticated or email not available");
+    const userId = claimsData.claims.sub;
+    const userEmail = claimsData.claims.email as string;
+    
+    if (!userEmail) throw new Error("User email not available in token");
 
-    logStep("User authenticated", { userId: user.id, email: user.email });
+    // Get user creation date from service role client
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { persistSession: false } }
+    );
+    
+    const { data: userData } = await supabaseAdmin.auth.admin.getUserById(userId);
+    const userCreatedAt = userData?.user?.created_at;
+
+    logStep("User authenticated", { userId, email: userEmail });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
     // Check for existing customer
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+    const customers = await stripe.customers.list({ email: userEmail, limit: 1 });
 
     if (customers.data.length === 0) {
       logStep("No customer found - user is in trial period based on account creation");
@@ -67,8 +85,8 @@ serve(async (req) => {
       let trialDaysRemaining = 7;
       let isInTrial = true;
 
-      if (user.created_at) {
-        const createdAt = new Date(user.created_at);
+      if (userCreatedAt) {
+        const createdAt = new Date(userCreatedAt);
         if (!isNaN(createdAt.getTime())) {
           const now = new Date();
           daysSinceCreation = Math.floor(
@@ -154,8 +172,8 @@ serve(async (req) => {
     let trialDaysRemaining = 7;
     let isInTrial = true;
 
-    if (user.created_at) {
-      const createdAt = new Date(user.created_at);
+    if (userCreatedAt) {
+      const createdAt = new Date(userCreatedAt);
       if (!isNaN(createdAt.getTime())) {
         const now = new Date();
         daysSinceCreation = Math.floor(
