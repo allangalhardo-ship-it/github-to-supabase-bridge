@@ -15,17 +15,23 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "icon-512.png"],
+      includeAssets: ["favicon.png", "icon-512.png"],
       manifest: {
-        name: "Custos Gourmet",
-        short_name: "Custos",
-        description: "Gestão de custos e produção para food service",
-        theme_color: "#1e3a5f",
+        name: "GastroGestor",
+        short_name: "GastroGestor",
+        description: "Gestão para Gastronomia - Food Delivery",
+        theme_color: "#22C55E",
         background_color: "#ffffff",
         display: "standalone",
         orientation: "portrait",
         start_url: "/",
         icons: [
+          {
+            src: "/favicon.png",
+            sizes: "192x192",
+            type: "image/png",
+            purpose: "any",
+          },
           {
             src: "/icon-512.png",
             sizes: "512x512",
