@@ -23,6 +23,7 @@ import Configuracoes from "@/pages/Configuracoes";
 import XmlImport from "@/pages/XmlImport";
 import Receitas from "@/pages/Receitas";
 import Caixa from "@/pages/Caixa";
+import Admin from "@/pages/Admin";
 import NotFound from "@/pages/NotFound";
 
 // Component to initialize offline sync
@@ -107,6 +108,7 @@ const AppRoutes = () => {
         <Route path="configuracoes" element={<Configuracoes />} />
         <Route path="xml-import" element={<XmlImport />} />
         <Route path="receitas" element={<Receitas />} />
+        <Route path="admin" element={<Admin />} />
       </Route>
       
       <Route path="*" element={<NotFound />} />
