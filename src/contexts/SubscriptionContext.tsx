@@ -154,25 +154,27 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
-  // Check subscription on mount and when user changes
+  // Check subscription on mount and when user/session changes
   useEffect(() => {
-    if (user) {
+    if (user && session?.access_token) {
       checkSubscription();
-    } else {
+    } else if (!user) {
       setLoading(false);
     }
-  }, [user, checkSubscription]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, session?.access_token]);
 
-  // Auto-refresh subscription status every 60 seconds
+  // Auto-refresh subscription status every 5 minutes (not 60 seconds)
   useEffect(() => {
-    if (!user) return;
+    if (!user || !session?.access_token) return;
 
     const interval = setInterval(() => {
       checkSubscription();
-    }, 60000);
+    }, 300000); // 5 minutes
 
     return () => clearInterval(interval);
-  }, [user, checkSubscription]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, session?.access_token]);
 
   // Check if user is a test user (bypass subscription check)
   const { usuario } = useAuth();

@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
+import logoImage from '@/assets/logo.png';
 
 interface LogoProps {
   className?: string;
@@ -26,62 +27,14 @@ export const Logo: React.FC<LogoProps> = ({
 
   return (
     <div className={cn('flex items-center gap-3', className)}>
-      {/* Custom SVG Logo Icon */}
-      <svg
+      {/* Logo Image */}
+      <img
+        src={logoImage}
+        alt="GastroGestor"
         width={iconSize}
         height={iconSize}
-        viewBox="0 0 64 64"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className="flex-shrink-0"
-      >
-        {/* Background circle */}
-        <circle cx="32" cy="32" r="30" fill="#34C759" />
-        
-        {/* Inner gradient overlay */}
-        <circle cx="32" cy="32" r="26" fill="#3BAF63" />
-        
-        {/* Chef hat - top */}
-        <ellipse cx="32" cy="20" rx="14" ry="8" fill="white" />
-        <rect x="20" y="18" width="24" height="12" rx="2" fill="white" />
-        
-        {/* Chef hat - band */}
-        <rect x="18" y="28" width="28" height="6" rx="1" fill="#0D773B" />
-        
-        {/* Plate */}
-        <ellipse cx="32" cy="46" rx="18" ry="6" fill="white" opacity="0.95" />
-        <ellipse cx="32" cy="44" rx="14" ry="4" fill="#E8F6ED" />
-        
-        {/* Steam lines */}
-        <path
-          d="M26 38 C26 36, 28 36, 28 38 C28 40, 26 40, 26 38"
-          stroke="white"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          fill="none"
-          opacity="0.8"
-        />
-        <path
-          d="M32 36 C32 34, 34 34, 34 36 C34 38, 32 38, 32 36"
-          stroke="white"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          fill="none"
-          opacity="0.8"
-        />
-        <path
-          d="M38 38 C38 36, 40 36, 40 38 C40 40, 38 40, 38 38"
-          stroke="white"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          fill="none"
-          opacity="0.8"
-        />
-        
-        {/* Decorative dots */}
-        <circle cx="22" cy="14" r="2" fill="white" opacity="0.6" />
-        <circle cx="42" cy="14" r="2" fill="white" opacity="0.6" />
-      </svg>
+        className="flex-shrink-0 object-contain"
+      />
 
       {/* Text logo */}
       {variant === 'full' && (
@@ -107,61 +60,13 @@ export const LogoMark: React.FC<{ size?: number; className?: string }> = ({
   className,
 }) => {
   return (
-    <svg
+    <img
+      src={logoImage}
+      alt="GastroGestor"
       width={size}
       height={size}
-      viewBox="0 0 64 64"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-    >
-      {/* Background circle */}
-      <circle cx="32" cy="32" r="30" fill="#34C759" />
-      
-      {/* Inner gradient overlay */}
-      <circle cx="32" cy="32" r="26" fill="#3BAF63" />
-      
-      {/* Chef hat - top */}
-      <ellipse cx="32" cy="20" rx="14" ry="8" fill="white" />
-      <rect x="20" y="18" width="24" height="12" rx="2" fill="white" />
-      
-      {/* Chef hat - band */}
-      <rect x="18" y="28" width="28" height="6" rx="1" fill="#0D773B" />
-      
-      {/* Plate */}
-      <ellipse cx="32" cy="46" rx="18" ry="6" fill="white" opacity="0.95" />
-      <ellipse cx="32" cy="44" rx="14" ry="4" fill="#E8F6ED" />
-      
-      {/* Steam lines */}
-      <path
-        d="M26 38 C26 36, 28 36, 28 38 C28 40, 26 40, 26 38"
-        stroke="white"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        fill="none"
-        opacity="0.8"
-      />
-      <path
-        d="M32 36 C32 34, 34 34, 34 36 C34 38, 32 38, 32 36"
-        stroke="white"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        fill="none"
-        opacity="0.8"
-      />
-      <path
-        d="M38 38 C38 36, 40 36, 40 38 C40 40, 38 40, 38 38"
-        stroke="white"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        fill="none"
-        opacity="0.8"
-      />
-      
-      {/* Decorative dots */}
-      <circle cx="22" cy="14" r="2" fill="white" opacity="0.6" />
-      <circle cx="42" cy="14" r="2" fill="white" opacity="0.6" />
-    </svg>
+      className={cn('object-contain', className)}
+    />
   );
 };
 
