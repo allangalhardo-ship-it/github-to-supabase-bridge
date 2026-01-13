@@ -10,9 +10,9 @@ interface LogoProps {
 }
 
 const sizeMap = {
-  sm: { icon: 40, text: 'text-lg' },
-  md: { icon: 52, text: 'text-xl' },
-  lg: { icon: 64, text: 'text-2xl' },
+  sm: { icon: 48, text: 'text-lg' },
+  md: { icon: 56, text: 'text-xl' },
+  lg: { icon: 72, text: 'text-2xl' },
 };
 
 export const Logo: React.FC<LogoProps> = ({
@@ -27,14 +27,16 @@ export const Logo: React.FC<LogoProps> = ({
 
   return (
     <div className={cn('flex items-center gap-3', className)}>
-      {/* Logo Image */}
-      <img
-        src={logoImage}
-        alt="GastroGestor"
-        width={iconSize}
-        height={iconSize}
-        className="flex-shrink-0 object-contain"
-      />
+      {/* Logo Image with white background */}
+      <div className="bg-white rounded-xl p-1.5 shadow-sm flex-shrink-0">
+        <img
+          src={logoImage}
+          alt="GastroGestor"
+          width={iconSize}
+          height={iconSize}
+          className="object-contain"
+        />
+      </div>
 
       {/* Text logo */}
       {variant === 'full' && (
