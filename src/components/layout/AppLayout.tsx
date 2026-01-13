@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -24,6 +25,7 @@ import {
   ChefHat,
   Factory,
   Wallet,
+  Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -42,7 +44,7 @@ const navItems = [
   { to: '/configuracoes', icon: SlidersHorizontal, label: 'Configurações' },
 ];
 
-const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => {
+const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAdmin: boolean }) => {
   const { usuario, signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -50,6 +52,10 @@ const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => {
     await signOut();
     navigate('/login');
   };
+
+  const allNavItems = isAdmin 
+    ? [...navItems, { to: '/admin', icon: Shield, label: 'Admin' }]
+    : navItems;
 
   return (
     <div className="flex flex-col h-full bg-sidebar text-sidebar-foreground">
@@ -66,7 +72,7 @@ const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => {
       {/* Navigation */}
       <ScrollArea className="flex-1 py-4">
         <nav className="px-3 space-y-1">
-          {navItems.map((item) => (
+          {allNavItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -104,6 +110,23 @@ const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => {
 
 const AppLayout = () => {
   const [open, setOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const { user } = useAuth();
+  
+  // Check if user is admin
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+      setIsAdmin(!!data);
+    };
+    checkAdmin();
+  }, [user]);
   
   // Initialize alert notifications
   useAlertNotifications();
@@ -112,7 +135,7 @@ const AppLayout = () => {
     <div className="fixed inset-0 flex bg-background">
       {/* Desktop Sidebar - só aparece em telas grandes */}
       <aside className="hidden lg:flex w-64 flex-col flex-shrink-0">
-        <SidebarContent />
+        <SidebarContent isAdmin={isAdmin} />
       </aside>
 
       {/* Mobile & Tablet - sidebar escondida, abre via menu */}
@@ -136,7 +159,7 @@ const AppLayout = () => {
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="p-0 w-72 border-0">
-                  <SidebarContent onNavigate={() => setOpen(false)} />
+                  <SidebarContent onNavigate={() => setOpen(false)} isAdmin={isAdmin} />
                 </SheetContent>
               </Sheet>
               <Logo size="sm" theme="dark" />
