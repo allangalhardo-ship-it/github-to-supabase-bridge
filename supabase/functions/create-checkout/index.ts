@@ -73,7 +73,7 @@ serve(async (req) => {
       customer_email: customerId ? undefined : user.email,
       line_items: [
         {
-          price: "price_1SojkNJl8awRmYaEOgBhgghF", // GastroGestor R$ 39,90/mês
+          price: "price_1SpYGQJJFSKyfswgoBtbkbxN", // GastroGestor R$ 39,90/mês
           quantity: 1,
         },
       ],
