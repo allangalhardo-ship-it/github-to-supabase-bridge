@@ -77,16 +77,20 @@ serve(async (req) => {
       );
     }
 
-    // Validate user token
+    // Validate user token using getClaims (recommended approach)
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+    const { data: claimsData, error: claimsError } = await supabaseAdmin.auth.getClaims(token);
 
-    if (userError || !user) {
+    if (claimsError || !claimsData?.claims) {
+      console.error("Token validation error:", claimsError);
       return new Response(
         JSON.stringify({ error: "Invalid token" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Get user ID from claims
+    const user = { id: claimsData.claims.sub as string };
 
     // Get IP address from various headers
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
