@@ -26,29 +26,33 @@ const Configuracoes = () => {
   const handleForceUpdate = async () => {
     setForceUpdateLoading(true);
     try {
-      // Limpa caches do Service Worker
+      // 1. Limpa TODOS os caches do Service Worker
       if ('caches' in window) {
         const cacheNames = await caches.keys();
         await Promise.all(cacheNames.map((name) => caches.delete(name)));
       }
 
-      // Força atualização do Service Worker
+      // 2. Remove e reinstala o Service Worker
       if ('serviceWorker' in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations();
         for (const registration of registrations) {
-          await registration.update();
-          if (registration.waiting) {
-            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-          }
+          // Desregistra completamente o SW
+          await registration.unregister();
         }
       }
 
-      toast({ title: 'Cache limpo!', description: 'O app será recarregado com a versão mais recente.' });
+      toast({ title: 'Cache e Service Worker removidos!', description: 'O app será recarregado...' });
       
-      // Aguarda um pouco para o toast aparecer e recarrega
+      // 3. Limpa localStorage de flags de reload para evitar loops
+      sessionStorage.removeItem('gg_sw_reloaded');
+      
+      // 4. Recarrega com bypass de cache (hard reload)
       setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+        // Adiciona timestamp para forçar bypass de cache do navegador
+        const url = new URL(window.location.href);
+        url.searchParams.set('_refresh', Date.now().toString());
+        window.location.href = url.toString();
+      }, 500);
     } catch (error) {
       console.error('Erro ao forçar atualização:', error);
       toast({ title: 'Erro', description: 'Não foi possível limpar o cache. Tente novamente.', variant: 'destructive' });
@@ -331,7 +335,7 @@ const Configuracoes = () => {
             Opções para resolver problemas técnicos do aplicativo
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="space-y-1">
               <p className="font-medium">Forçar Atualização do App</p>
@@ -352,6 +356,16 @@ const Configuracoes = () => {
               )}
               Forçar Atualização
             </Button>
+          </div>
+          
+          {/* Versão do App para diagnóstico */}
+          <div className="pt-4 border-t">
+            <p className="text-xs text-muted-foreground">
+              Versão do App: <code className="bg-muted px-1 py-0.5 rounded">2025.01.15.1</code>
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Se dois usuários virem versões diferentes aqui, um deles precisa limpar o cache do navegador ou usar o botão acima.
+            </p>
           </div>
         </CardContent>
       </Card>
