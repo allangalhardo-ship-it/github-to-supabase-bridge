@@ -12,7 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Loader2, ImageIcon, Filter, Calendar, Package, Search } from 'lucide-react';
+import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Loader2, ImageIcon, Filter, Calendar, Package, Search, Trash2, Wand2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -888,11 +889,74 @@ const Compras = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Actions for unmapped items */}
+                  {parsedNota.itens.some(i => !i.mapeado) && (
+                    <div className="flex flex-wrap gap-2 p-3 bg-muted/50 rounded-lg">
+                      <p className="text-sm text-muted-foreground w-full mb-1">
+                        {parsedNota.itens.filter(i => !i.mapeado).length} item(ns) não mapeado(s)
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const unmappedItems = parsedNota.itens.filter(i => !i.mapeado);
+                          unmappedItems.forEach(async (item) => {
+                            const { data: newInsumo, error } = await supabase
+                              .from('insumos')
+                              .insert({
+                                empresa_id: usuario!.empresa_id,
+                                nome: item.produto_descricao,
+                                unidade_medida: item.unidade || 'un',
+                                custo_unitario: item.custo_unitario || 0,
+                              })
+                              .select()
+                              .single();
+                            
+                            if (!error && newInsumo) {
+                              await supabase.from('produto_mapeamento').upsert({
+                                empresa_id: usuario!.empresa_id,
+                                ean_gtin: item.ean || null,
+                                descricao_nota: item.produto_descricao,
+                                insumo_id: newInsumo.id,
+                                fornecedor_cnpj: null,
+                                codigo_produto_nota: null,
+                              }, {
+                                onConflict: 'empresa_id,fornecedor_cnpj,codigo_produto_nota',
+                              });
+                            }
+                          });
+                          
+                          // Update local state after all operations
+                          setTimeout(() => {
+                            queryClient.invalidateQueries({ queryKey: ['insumos'] });
+                            queryClient.invalidateQueries({ queryKey: ['mapeamentos'] });
+                            setParsedNota({
+                              ...parsedNota,
+                              itens: parsedNota.itens.map(item => ({
+                                ...item,
+                                mapeado: true,
+                              })),
+                            });
+                            toast({ 
+                              title: 'Insumos criados!', 
+                              description: `${unmappedItems.length} insumo(s) cadastrado(s) automaticamente.` 
+                            });
+                          }, 500);
+                        }}
+                        className="gap-1"
+                      >
+                        <Wand2 className="h-3.5 w-3.5" />
+                        Cadastrar todos como insumos
+                      </Button>
+                    </div>
+                  )}
+
                   {parsedNota.itens.length > 0 ? (
                     <div className="max-h-64 overflow-y-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
+                            <TableHead className="w-10"></TableHead>
                             <TableHead>Produto</TableHead>
                             <TableHead className="text-right">Qtd</TableHead>
                             <TableHead className="text-right">Total</TableHead>
@@ -903,6 +967,25 @@ const Compras = () => {
                         <TableBody>
                           {parsedNota.itens.map((item, index) => (
                             <TableRow key={index}>
+                              <TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => {
+                                    const newItens = parsedNota.itens.filter((_, i) => i !== index);
+                                    const newValorTotal = newItens.reduce((acc, i) => acc + i.valor_total, 0);
+                                    setParsedNota({
+                                      ...parsedNota,
+                                      itens: newItens,
+                                      valor_total: newValorTotal,
+                                    });
+                                    toast({ title: 'Item removido da importação' });
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
                               <TableCell className="font-medium max-w-[200px] truncate">{item.produto_descricao}</TableCell>
                               <TableCell className="text-right whitespace-nowrap">
                                 {item.quantidade} {item.unidade}
@@ -923,17 +1006,66 @@ const Compras = () => {
                               </TableCell>
                               <TableCell>
                                 {!item.mapeado && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      setSelectedItem(item);
-                                      setMappingDialogOpen(true);
-                                    }}
-                                  >
-                                    <Link2 className="h-4 w-4 mr-1" />
-                                    Mapear
-                                  </Button>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedItem(item);
+                                        setMappingDialogOpen(true);
+                                      }}
+                                    >
+                                      <Link2 className="h-4 w-4 mr-1" />
+                                      Mapear
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      title="Cadastrar como insumo"
+                                      onClick={async () => {
+                                        const { data: newInsumo, error } = await supabase
+                                          .from('insumos')
+                                          .insert({
+                                            empresa_id: usuario!.empresa_id,
+                                            nome: item.produto_descricao,
+                                            unidade_medida: item.unidade || 'un',
+                                            custo_unitario: item.custo_unitario || 0,
+                                          })
+                                          .select()
+                                          .single();
+                                        
+                                        if (error) {
+                                          toast({ title: 'Erro ao criar insumo', variant: 'destructive' });
+                                          return;
+                                        }
+
+                                        await supabase.from('produto_mapeamento').upsert({
+                                          empresa_id: usuario!.empresa_id,
+                                          ean_gtin: item.ean || null,
+                                          descricao_nota: item.produto_descricao,
+                                          insumo_id: newInsumo.id,
+                                          fornecedor_cnpj: null,
+                                          codigo_produto_nota: null,
+                                        }, {
+                                          onConflict: 'empresa_id,fornecedor_cnpj,codigo_produto_nota',
+                                        });
+
+                                        setParsedNota({
+                                          ...parsedNota,
+                                          itens: parsedNota.itens.map((i, idx) => 
+                                            idx === index 
+                                              ? { ...i, insumo_id: newInsumo.id, mapeado: true }
+                                              : i
+                                          ),
+                                        });
+                                        queryClient.invalidateQueries({ queryKey: ['insumos'] });
+                                        queryClient.invalidateQueries({ queryKey: ['mapeamentos'] });
+                                        toast({ title: 'Insumo criado!', description: `"${item.produto_descricao}" cadastrado.` });
+                                      }}
+                                    >
+                                      <Plus className="h-4 w-4" />
+                                    </Button>
+                                  </div>
                                 )}
                               </TableCell>
                             </TableRow>
