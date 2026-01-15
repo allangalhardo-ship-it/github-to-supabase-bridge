@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Factory, Package, Search, ChefHat, AlertTriangle, Clock } from 'lucide-react';
-import { ScrollableTableWrapper } from '@/components/ui/scrollable-table-wrapper';
+import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { AlertaVencimento } from '@/components/producao/AlertaVencimento';
@@ -344,53 +343,34 @@ const Producao = () => {
                   <Skeleton className="h-64" />
                 </div>
               ) : produtosComEstoque && produtosComEstoque.length > 0 ? (
-              <ScrollableTableWrapper>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="min-w-[150px]">Produto</TableHead>
-                        <TableHead className="min-w-[100px]">Categoria</TableHead>
-                        <TableHead className="text-right min-w-[120px]">Estoque Acabado</TableHead>
-                        <TableHead className="text-right min-w-[100px]">Preço Venda</TableHead>
-                        <TableHead className="text-center min-w-[100px]">Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {produtosComEstoque.map((produto) => {
-                        const estoque = Number(produto.estoque_acabado);
-                        return (
-                          <TableRow key={produto.id}>
-                            <TableCell className="font-medium">
-                              {produto.nome}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {produto.categoria || '-'}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <span className={estoque === 0 ? 'text-muted-foreground' : 'font-semibold text-green-600'}>
-                                {estoque} un
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-right text-muted-foreground">
-                              {formatCurrency(Number(produto.preco_venda))}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              {estoque > 0 ? (
-                                <Badge variant="outline" className="text-green-600 border-green-600">
-                                  Em estoque
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary">
-                                  Sem estoque
-                                </Badge>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </ScrollableTableWrapper>
+                <MobileDataView
+                  data={produtosComEstoque}
+                  keyExtractor={(produto) => produto.id}
+                  columns={[
+                    { key: 'nome', header: 'Produto', mobilePriority: 1, render: (p) => <span className="font-medium">{p.nome}</span> },
+                    { key: 'categoria', header: 'Categoria', mobilePriority: 4, render: (p) => <span className="text-muted-foreground">{p.categoria || '-'}</span> },
+                    { key: 'estoque', header: 'Estoque Acabado', align: 'right', mobilePriority: 2, render: (p) => {
+                      const estoque = Number(p.estoque_acabado);
+                      return <span className={estoque === 0 ? 'text-muted-foreground' : 'font-semibold text-green-600'}>{estoque} un</span>;
+                    }},
+                    { key: 'preco', header: 'Preço Venda', align: 'right', mobilePriority: 5, render: (p) => <span className="text-muted-foreground">{formatCurrency(Number(p.preco_venda))}</span> },
+                    { key: 'status', header: 'Status', align: 'center', mobilePriority: 3, render: (p) => {
+                      const estoque = Number(p.estoque_acabado);
+                      return estoque > 0 ? (
+                        <Badge variant="outline" className="text-green-600 border-green-600">Em estoque</Badge>
+                      ) : (
+                        <Badge variant="secondary">Sem estoque</Badge>
+                      );
+                    }},
+                  ]}
+                  renderMobileHeader={(p) => p.nome}
+                  renderMobileSubtitle={(p) => p.categoria || 'Sem categoria'}
+                  renderMobileHighlight={(p) => {
+                    const estoque = Number(p.estoque_acabado);
+                    return <span className={estoque === 0 ? 'text-muted-foreground' : 'font-semibold text-green-600'}>{estoque} un</span>;
+                  }}
+                  emptyMessage={buscaProduto ? 'Nenhum produto encontrado' : 'Nenhum produto cadastrado'}
+                />
               ) : (
                 <div className="p-12 text-center">
                   <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -421,48 +401,33 @@ const Producao = () => {
                   <Skeleton className="h-64" />
                 </div>
               ) : producoes && producoes.length > 0 ? (
-              <ScrollableTableWrapper>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="min-w-[130px]">Data</TableHead>
-                        <TableHead className="min-w-[120px]">Produto</TableHead>
-                        <TableHead className="text-right min-w-[100px]">Quantidade</TableHead>
-                        <TableHead className="min-w-[100px]">Validade</TableHead>
-                        <TableHead className="min-w-[120px]">Observação</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {producoes.map((prod) => (
-                        <TableRow key={prod.id}>
-                          <TableCell className="text-muted-foreground whitespace-nowrap">
-                            {format(new Date(prod.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {prod.produtos?.nome}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Badge variant="outline" className="text-green-600 border-green-600">
-                              +{Number(prod.quantidade)} un
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            {prod.data_vencimento ? (
-                              <span className="text-muted-foreground text-sm">
-                                {format(new Date(prod.data_vencimento), 'dd/MM/yyyy', { locale: ptBR })}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground/50 text-sm">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground max-w-48 truncate">
-                            {prod.observacao || '-'}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </ScrollableTableWrapper>
+                <MobileDataView
+                  data={producoes}
+                  keyExtractor={(prod) => prod.id}
+                  columns={[
+                    { key: 'data', header: 'Data', mobilePriority: 3, render: (p) => <span className="text-muted-foreground whitespace-nowrap">{format(new Date(p.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span> },
+                    { key: 'produto', header: 'Produto', mobilePriority: 1, render: (p) => <span className="font-medium">{p.produtos?.nome}</span> },
+                    { key: 'quantidade', header: 'Quantidade', align: 'right', mobilePriority: 2, render: (p) => (
+                      <Badge variant="outline" className="text-green-600 border-green-600">+{Number(p.quantidade)} un</Badge>
+                    )},
+                    { key: 'validade', header: 'Validade', mobilePriority: 4, render: (p) => p.data_vencimento ? (
+                      <span className="text-muted-foreground text-sm">{format(new Date(p.data_vencimento), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                    ) : <span className="text-muted-foreground/50 text-sm">-</span> },
+                    { key: 'obs', header: 'Observação', mobilePriority: 5, render: (p) => <span className="text-muted-foreground">{p.observacao || '-'}</span> },
+                  ]}
+                  renderMobileHeader={(p) => p.produtos?.nome}
+                  renderMobileSubtitle={(p) => format(new Date(p.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                  renderMobileHighlight={(p) => (
+                    <Badge variant="outline" className="text-green-600 border-green-600">+{Number(p.quantidade)} un</Badge>
+                  )}
+                  emptyMessage="Nenhuma produção registrada"
+                  emptyAction={
+                    <Button onClick={() => setDialogOpen(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Nova Produção
+                    </Button>
+                  }
+                />
               ) : (
                 <div className="p-12 text-center">
                   <Factory className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

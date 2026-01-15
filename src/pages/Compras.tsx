@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Loader2, ImageIcon, Filter, Calendar, Package, Search, Trash2, Wand2, Pencil, Eye } from 'lucide-react';
-import { ScrollableTableWrapper } from '@/components/ui/scrollable-table-wrapper';
+import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { Checkbox } from '@/components/ui/checkbox';
 import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
 import { format } from 'date-fns';
@@ -1013,58 +1013,31 @@ const Compras = () => {
                   <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
               ) : filteredNotas && filteredNotas.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Número</TableHead>
-                      <TableHead>Fornecedor</TableHead>
-                      <TableHead>Data Emissão</TableHead>
-                      <TableHead className="text-right">Valor Total</TableHead>
-                      <TableHead className="w-20"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredNotas.map((nota) => (
-                      <TableRow 
-                        key={nota.id} 
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => setViewNotaId(nota.id)}
-                      >
-                        <TableCell className="font-medium">{nota.numero || '-'}</TableCell>
-                        <TableCell>{nota.fornecedor || '-'}</TableCell>
-                        <TableCell>{formatDate(nota.data_emissao)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(nota.valor_total || 0)}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setViewNotaId(nota.id);
-                              }}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeleteNotaId(nota.id);
-                              }}
-                              disabled={deleteNotaMutation.isPending}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <MobileDataView
+                  data={filteredNotas}
+                  keyExtractor={(nota) => nota.id}
+                  columns={[
+                    { key: 'numero', header: 'Número', mobilePriority: 1, render: (n) => <span className="font-medium">{n.numero || '-'}</span> },
+                    { key: 'fornecedor', header: 'Fornecedor', mobilePriority: 2, render: (n) => n.fornecedor || '-' },
+                    { key: 'data', header: 'Data Emissão', mobilePriority: 3, render: (n) => formatDate(n.data_emissao) },
+                    { key: 'valor', header: 'Valor Total', align: 'right', mobilePriority: 4, render: (n) => formatCurrency(n.valor_total || 0) },
+                  ]}
+                  onItemClick={(nota) => setViewNotaId(nota.id)}
+                  renderMobileHeader={(n) => n.fornecedor || 'Sem fornecedor'}
+                  renderMobileSubtitle={(n) => `NF ${n.numero || '-'} • ${formatDate(n.data_emissao)}`}
+                  renderMobileHighlight={(n) => <span className="font-bold">{formatCurrency(n.valor_total || 0)}</span>}
+                  renderActions={(nota) => (
+                    <>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setViewNotaId(nota.id); }}>
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); setDeleteNotaId(nota.id); }} disabled={deleteNotaMutation.isPending}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
+                  emptyMessage="Nenhuma nota fiscal encontrada"
+                />
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -1088,53 +1061,33 @@ const Compras = () => {
                   <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
               ) : comprasManuais && comprasManuais.length > 0 ? (
-              <ScrollableTableWrapper>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="min-w-[100px]">Data</TableHead>
-                        <TableHead className="min-w-[120px]">Insumo</TableHead>
-                        <TableHead className="text-right min-w-[100px]">Quantidade</TableHead>
-                        <TableHead className="text-right min-w-[100px]">Custo Unit.</TableHead>
-                        <TableHead className="text-right min-w-[90px]">Total</TableHead>
-                        <TableHead className="min-w-[120px]">Observação</TableHead>
-                        <TableHead className="w-16"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {comprasManuais.map((compra) => {
-                        const insumoData = compra.insumos as any;
-                        const custoUnit = insumoData?.custo_unitario || 0;
-                        const total = Number(compra.quantidade) * custoUnit;
-                        return (
-                          <TableRow key={compra.id}>
-                            <TableCell className="whitespace-nowrap">{formatDate(compra.created_at)}</TableCell>
-                            <TableCell className="font-medium">{insumoData?.nome || '-'}</TableCell>
-                            <TableCell className="text-right whitespace-nowrap">
-                              {compra.quantidade} {insumoData?.unidade_medida || 'un'}
-                            </TableCell>
-                            <TableCell className="text-right whitespace-nowrap">{formatCurrency(custoUnit)}</TableCell>
-                            <TableCell className="text-right whitespace-nowrap">{formatCurrency(total)}</TableCell>
-                            <TableCell className="text-muted-foreground max-w-[200px] truncate">
-                              {compra.observacao || '-'}
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={() => setDeleteManualId(compra.id)}
-                                disabled={deleteManualMutation.isPending}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </ScrollableTableWrapper>
+                <MobileDataView
+                  data={comprasManuais}
+                  keyExtractor={(compra) => compra.id}
+                  columns={[
+                    { key: 'data', header: 'Data', mobilePriority: 3, render: (c) => <span className="whitespace-nowrap">{formatDate(c.created_at)}</span> },
+                    { key: 'insumo', header: 'Insumo', mobilePriority: 1, render: (c) => <span className="font-medium">{(c.insumos as any)?.nome || '-'}</span> },
+                    { key: 'quantidade', header: 'Quantidade', align: 'right', mobilePriority: 2, render: (c) => <span className="whitespace-nowrap">{c.quantidade} {(c.insumos as any)?.unidade_medida || 'un'}</span> },
+                    { key: 'custoUnit', header: 'Custo Unit.', align: 'right', mobilePriority: 4, render: (c) => <span className="whitespace-nowrap">{formatCurrency((c.insumos as any)?.custo_unitario || 0)}</span> },
+                    { key: 'total', header: 'Total', align: 'right', mobilePriority: 5, render: (c) => {
+                      const custoUnit = (c.insumos as any)?.custo_unitario || 0;
+                      return <span className="whitespace-nowrap">{formatCurrency(Number(c.quantidade) * custoUnit)}</span>;
+                    }},
+                    { key: 'obs', header: 'Observação', mobilePriority: 6, render: (c) => <span className="text-muted-foreground">{c.observacao || '-'}</span> },
+                  ]}
+                  renderMobileHeader={(c) => (c.insumos as any)?.nome || 'Insumo'}
+                  renderMobileSubtitle={(c) => `${formatDate(c.created_at)} • ${c.quantidade} ${(c.insumos as any)?.unidade_medida || 'un'}`}
+                  renderMobileHighlight={(c) => {
+                    const custoUnit = (c.insumos as any)?.custo_unitario || 0;
+                    return <span className="font-bold">{formatCurrency(Number(c.quantidade) * custoUnit)}</span>;
+                  }}
+                  renderActions={(compra) => (
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteManualId(compra.id)} disabled={deleteManualMutation.isPending}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                  emptyMessage="Nenhuma compra manual registrada"
+                />
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <Plus className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -1158,41 +1111,24 @@ const Compras = () => {
                   <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
               ) : filteredItens && filteredItens.length > 0 ? (
-              <ScrollableTableWrapper>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Produto</TableHead>
-                        <TableHead>Fornecedor</TableHead>
-                        <TableHead className="text-right">Qtd</TableHead>
-                        <TableHead className="text-right">Custo Unit.</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
-                        <TableHead>Insumo</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredItens.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium max-w-[200px] truncate">{item.produto_descricao}</TableCell>
-                          <TableCell className="text-muted-foreground">{item.xml_notas?.fornecedor || '-'}</TableCell>
-                          <TableCell className="text-right">{item.quantidade} {item.unidade}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(item.custo_unitario || 0)}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(item.valor_total || 0)}</TableCell>
-                          <TableCell>
-                            {item.insumos ? (
-                              <Badge variant="default" className="gap-1">
-                                <Check className="h-3 w-3" />
-                                {item.insumos.nome}
-                              </Badge>
-                            ) : (
-                              <Badge variant="secondary">Não mapeado</Badge>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </ScrollableTableWrapper>
+                <MobileDataView
+                  data={filteredItens}
+                  keyExtractor={(item) => item.id}
+                  columns={[
+                    { key: 'produto', header: 'Produto', mobilePriority: 1, render: (i) => <span className="font-medium max-w-[200px] truncate">{i.produto_descricao}</span> },
+                    { key: 'fornecedor', header: 'Fornecedor', mobilePriority: 4, render: (i) => <span className="text-muted-foreground">{i.xml_notas?.fornecedor || '-'}</span> },
+                    { key: 'qtd', header: 'Qtd', align: 'right', mobilePriority: 2, render: (i) => `${i.quantidade} ${i.unidade}` },
+                    { key: 'custoUnit', header: 'Custo Unit.', align: 'right', mobilePriority: 5, render: (i) => formatCurrency(i.custo_unitario || 0) },
+                    { key: 'total', header: 'Total', align: 'right', mobilePriority: 3, render: (i) => formatCurrency(i.valor_total || 0) },
+                    { key: 'insumo', header: 'Insumo', mobilePriority: 6, render: (i) => i.insumos ? (
+                      <Badge variant="default" className="gap-1"><Check className="h-3 w-3" />{i.insumos.nome}</Badge>
+                    ) : <Badge variant="secondary">Não mapeado</Badge> },
+                  ]}
+                  renderMobileHeader={(i) => i.produto_descricao}
+                  renderMobileSubtitle={(i) => `${i.xml_notas?.fornecedor || '-'} • ${i.quantidade} ${i.unidade}`}
+                  renderMobileHighlight={(i) => <span className="font-bold">{formatCurrency(i.valor_total || 0)}</span>}
+                  emptyMessage="Nenhum item encontrado"
+                />
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />

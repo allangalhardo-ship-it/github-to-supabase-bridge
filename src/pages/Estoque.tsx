@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -15,10 +14,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, ArrowUp, ArrowDown, Warehouse, Package, AlertTriangle, Search, Filter, X, Factory, Clock } from 'lucide-react';
-import { ScrollableTableWrapper } from '@/components/ui/scrollable-table-wrapper';
+import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { format, startOfMonth, endOfMonth, subMonths, differenceInDays, isBefore } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-
 const Estoque = () => {
   const { usuario } = useAuth();
   const { toast } = useToast();
@@ -335,52 +333,61 @@ const Estoque = () => {
                   <Skeleton className="h-64" />
                 </div>
               ) : insumosFiltrados && insumosFiltrados.length > 0 ? (
-              <ScrollableTableWrapper>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="min-w-[150px]">Insumo</TableHead>
-                        <TableHead className="text-right min-w-[120px]">Estoque Atual</TableHead>
-                        <TableHead className="text-right min-w-[120px]">Estoque Mínimo</TableHead>
-                        <TableHead className="text-right min-w-[100px]">Custo Unit.</TableHead>
-                        <TableHead className="text-center min-w-[80px]">Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {insumosFiltrados.map((insumo) => {
-                        const estoqueBaixo = Number(insumo.estoque_atual) <= Number(insumo.estoque_minimo);
-                        const estoqueZerado = Number(insumo.estoque_atual) <= 0;
-                        return (
-                          <TableRow key={insumo.id}>
-                            <TableCell className="font-medium">
-                              {insumo.nome}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <span className={estoqueZerado ? 'text-red-600 font-semibold' : estoqueBaixo ? 'text-amber-600 font-semibold' : ''}>
-                                {Number(insumo.estoque_atual).toFixed(2)} {insumo.unidade_medida}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-right text-muted-foreground">
-                              {Number(insumo.estoque_minimo).toFixed(2)} {insumo.unidade_medida}
-                            </TableCell>
-                            <TableCell className="text-right text-muted-foreground">
-                              R$ {Number(insumo.custo_unitario).toFixed(2)}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              {estoqueZerado ? (
-                                <Badge variant="destructive">Zerado</Badge>
-                              ) : estoqueBaixo ? (
-                                <Badge variant="outline" className="text-amber-600 border-amber-600">Baixo</Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-green-600 border-green-600">OK</Badge>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </ScrollableTableWrapper>
+                <MobileDataView
+                  data={insumosFiltrados}
+                  keyExtractor={(insumo) => insumo.id}
+                  columns={[
+                    { key: 'nome', header: 'Insumo', mobilePriority: 1, render: (i) => <span className="font-medium">{i.nome}</span> },
+                    { key: 'estoque', header: 'Estoque Atual', align: 'right', mobilePriority: 2, render: (i) => {
+                      const estoqueBaixo = Number(i.estoque_atual) <= Number(i.estoque_minimo);
+                      const estoqueZerado = Number(i.estoque_atual) <= 0;
+                      return (
+                        <span className={estoqueZerado ? 'text-red-600 font-semibold' : estoqueBaixo ? 'text-amber-600 font-semibold' : ''}>
+                          {Number(i.estoque_atual).toFixed(2)} {i.unidade_medida}
+                        </span>
+                      );
+                    }},
+                    { key: 'minimo', header: 'Estoque Mínimo', align: 'right', mobilePriority: 4, render: (i) => (
+                      <span className="text-muted-foreground">{Number(i.estoque_minimo).toFixed(2)} {i.unidade_medida}</span>
+                    )},
+                    { key: 'custo', header: 'Custo Unit.', align: 'right', mobilePriority: 5, render: (i) => (
+                      <span className="text-muted-foreground">R$ {Number(i.custo_unitario).toFixed(2)}</span>
+                    )},
+                    { key: 'status', header: 'Status', align: 'center', mobilePriority: 3, render: (i) => {
+                      const estoqueBaixo = Number(i.estoque_atual) <= Number(i.estoque_minimo);
+                      const estoqueZerado = Number(i.estoque_atual) <= 0;
+                      return estoqueZerado ? (
+                        <Badge variant="destructive">Zerado</Badge>
+                      ) : estoqueBaixo ? (
+                        <Badge variant="outline" className="text-amber-600 border-amber-600">Baixo</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-green-600 border-green-600">OK</Badge>
+                      );
+                    }},
+                  ]}
+                  renderMobileHeader={(i) => i.nome}
+                  renderMobileSubtitle={(i) => {
+                    const estoqueBaixo = Number(i.estoque_atual) <= Number(i.estoque_minimo);
+                    const estoqueZerado = Number(i.estoque_atual) <= 0;
+                    return (
+                      <span className={estoqueZerado ? 'text-red-600 font-semibold' : estoqueBaixo ? 'text-amber-600 font-semibold' : ''}>
+                        {Number(i.estoque_atual).toFixed(2)} {i.unidade_medida}
+                      </span>
+                    );
+                  }}
+                  renderMobileHighlight={(i) => {
+                    const estoqueBaixo = Number(i.estoque_atual) <= Number(i.estoque_minimo);
+                    const estoqueZerado = Number(i.estoque_atual) <= 0;
+                    return estoqueZerado ? (
+                      <Badge variant="destructive">Zerado</Badge>
+                    ) : estoqueBaixo ? (
+                      <Badge variant="outline" className="text-amber-600 border-amber-600">Baixo</Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-green-600 border-green-600">OK</Badge>
+                    );
+                  }}
+                  emptyMessage={buscaInsumo ? 'Nenhum insumo encontrado' : 'Nenhum insumo cadastrado'}
+                />
               ) : (
                 <div className="p-12 text-center">
                   <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -426,97 +433,52 @@ const Estoque = () => {
                   <Skeleton className="h-64" />
                 </div>
               ) : produtosFiltrados && produtosFiltrados.length > 0 ? (
-              <ScrollableTableWrapper>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="min-w-[150px]">Produto</TableHead>
-                        <TableHead className="min-w-[100px]">Categoria</TableHead>
-                        <TableHead className="text-right min-w-[80px]">Estoque</TableHead>
-                        <TableHead className="min-w-[110px]">Validade</TableHead>
-                        <TableHead className="text-right min-w-[80px]">Preço</TableHead>
-                        <TableHead className="text-center min-w-[100px]">Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {produtosFiltrados.map((produto) => {
-                        const estoque = Number(produto.estoque_acabado);
-                        const hoje = new Date();
-                        hoje.setHours(0, 0, 0, 0);
-                        
-                        let statusValidade: 'ok' | 'proximo' | 'vencido' | null = null;
-                        let diasRestantes = 0;
-                        
-                        if (produto.proxima_validade) {
-                          const dataVenc = new Date(produto.proxima_validade);
-                          dataVenc.setHours(0, 0, 0, 0);
-                          diasRestantes = differenceInDays(dataVenc, hoje);
-                          
-                          if (isBefore(dataVenc, hoje)) {
-                            statusValidade = 'vencido';
-                          } else if (diasRestantes <= 3) {
-                            statusValidade = 'proximo';
-                          } else {
-                            statusValidade = 'ok';
-                          }
-                        }
-                        
-                        return (
-                          <TableRow key={produto.id}>
-                            <TableCell className="font-medium">
-                              {produto.nome}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {produto.categoria || '-'}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <span className={estoque === 0 ? 'text-muted-foreground' : 'font-semibold text-green-600'}>
-                                {estoque} un
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              {produto.proxima_validade ? (
-                                <div className="flex items-center gap-1.5">
-                                  <Clock className={`h-3.5 w-3.5 ${
-                                    statusValidade === 'vencido' ? 'text-destructive' :
-                                    statusValidade === 'proximo' ? 'text-amber-500' :
-                                    'text-muted-foreground'
-                                  }`} />
-                                  <span className={`text-sm whitespace-nowrap ${
-                                    statusValidade === 'vencido' ? 'text-destructive font-medium' :
-                                    statusValidade === 'proximo' ? 'text-amber-600 font-medium' :
-                                    'text-muted-foreground'
-                                  }`}>
-                                    {format(new Date(produto.proxima_validade), 'dd/MM/yy', { locale: ptBR })}
-                                    {statusValidade === 'vencido' && ' (vencido)'}
-                                    {statusValidade === 'proximo' && diasRestantes === 0 && ' (hoje)'}
-                                    {statusValidade === 'proximo' && diasRestantes > 0 && ` (${diasRestantes}d)`}
-                                  </span>
-                                </div>
-                              ) : (
-                                <span className="text-muted-foreground/50 text-sm">-</span>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right text-muted-foreground">
-                              R$ {Number(produto.preco_venda).toFixed(2)}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              {estoque > 0 ? (
-                                <Badge variant="outline" className="text-green-600 border-green-600">
-                                  Em estoque
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary">
-                                  Sem estoque
-                                </Badge>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </ScrollableTableWrapper>
+                <MobileDataView
+                  data={produtosFiltrados}
+                  keyExtractor={(produto) => produto.id}
+                  columns={[
+                    { key: 'nome', header: 'Produto', mobilePriority: 1, render: (p) => <span className="font-medium">{p.nome}</span> },
+                    { key: 'categoria', header: 'Categoria', mobilePriority: 4, render: (p) => <span className="text-muted-foreground">{p.categoria || '-'}</span> },
+                    { key: 'estoque', header: 'Estoque', align: 'right', mobilePriority: 2, render: (p) => {
+                      const estoque = Number(p.estoque_acabado);
+                      return <span className={estoque === 0 ? 'text-muted-foreground' : 'font-semibold text-green-600'}>{estoque} un</span>;
+                    }},
+                    { key: 'validade', header: 'Validade', mobilePriority: 3, render: (p) => {
+                      if (!p.proxima_validade) return <span className="text-muted-foreground/50 text-sm">-</span>;
+                      const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+                      const dataVenc = new Date(p.proxima_validade); dataVenc.setHours(0, 0, 0, 0);
+                      const diasRestantes = differenceInDays(dataVenc, hoje);
+                      const statusValidade = isBefore(dataVenc, hoje) ? 'vencido' : diasRestantes <= 3 ? 'proximo' : 'ok';
+                      return (
+                        <div className="flex items-center gap-1.5">
+                          <Clock className={`h-3.5 w-3.5 ${statusValidade === 'vencido' ? 'text-destructive' : statusValidade === 'proximo' ? 'text-amber-500' : 'text-muted-foreground'}`} />
+                          <span className={`text-sm whitespace-nowrap ${statusValidade === 'vencido' ? 'text-destructive font-medium' : statusValidade === 'proximo' ? 'text-amber-600 font-medium' : 'text-muted-foreground'}`}>
+                            {format(new Date(p.proxima_validade), 'dd/MM/yy', { locale: ptBR })}
+                            {statusValidade === 'vencido' && ' (vencido)'}
+                            {statusValidade === 'proximo' && diasRestantes === 0 && ' (hoje)'}
+                            {statusValidade === 'proximo' && diasRestantes > 0 && ` (${diasRestantes}d)`}
+                          </span>
+                        </div>
+                      );
+                    }},
+                    { key: 'preco', header: 'Preço', align: 'right', mobilePriority: 5, render: (p) => <span className="text-muted-foreground">R$ {Number(p.preco_venda).toFixed(2)}</span> },
+                    { key: 'status', header: 'Status', align: 'center', mobilePriority: 6, render: (p) => {
+                      const estoque = Number(p.estoque_acabado);
+                      return estoque > 0 ? (
+                        <Badge variant="outline" className="text-green-600 border-green-600">Em estoque</Badge>
+                      ) : (
+                        <Badge variant="secondary">Sem estoque</Badge>
+                      );
+                    }},
+                  ]}
+                  renderMobileHeader={(p) => p.nome}
+                  renderMobileSubtitle={(p) => p.categoria || 'Sem categoria'}
+                  renderMobileHighlight={(p) => {
+                    const estoque = Number(p.estoque_acabado);
+                    return <span className={estoque === 0 ? 'text-muted-foreground' : 'font-semibold text-green-600'}>{estoque} un</span>;
+                  }}
+                  emptyMessage={buscaProduto ? 'Nenhum produto encontrado' : 'Nenhum produto cadastrado'}
+                />
               ) : (
                 <div className="p-12 text-center">
                   <Factory className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -632,54 +594,40 @@ const Estoque = () => {
                   <Skeleton className="h-64" />
                 </div>
               ) : movimentosFiltrados && movimentosFiltrados.length > 0 ? (
-              <ScrollableTableWrapper>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="min-w-[130px]">Data</TableHead>
-                        <TableHead className="min-w-[120px]">Insumo</TableHead>
-                        <TableHead className="text-center min-w-[90px]">Tipo</TableHead>
-                        <TableHead className="text-right min-w-[100px]">Quantidade</TableHead>
-                        <TableHead className="min-w-[80px]">Origem</TableHead>
-                        <TableHead className="min-w-[120px]">Observação</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {movimentosFiltrados.map((mov) => (
-                        <TableRow key={mov.id}>
-                          <TableCell className="text-muted-foreground whitespace-nowrap">
-                            {format(new Date(mov.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {mov.insumos?.nome}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {mov.tipo === 'entrada' ? (
-                              <Badge variant="outline" className="text-green-600 border-green-600">
-                                <ArrowUp className="h-3 w-3 mr-1" />
-                                Entrada
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-red-600 border-red-600">
-                                <ArrowDown className="h-3 w-3 mr-1" />
-                                Saída
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right whitespace-nowrap">
-                            {Number(mov.quantidade).toFixed(2)} {mov.insumos?.unidade_medida}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">{mov.origem}</Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground max-w-48 truncate">
-                            {mov.observacao || '-'}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </ScrollableTableWrapper>
+                <MobileDataView
+                  data={movimentosFiltrados}
+                  keyExtractor={(mov) => mov.id}
+                  columns={[
+                    { key: 'data', header: 'Data', mobilePriority: 3, render: (m) => (
+                      <span className="text-muted-foreground whitespace-nowrap">{format(new Date(m.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
+                    )},
+                    { key: 'insumo', header: 'Insumo', mobilePriority: 1, render: (m) => <span className="font-medium">{m.insumos?.nome}</span> },
+                    { key: 'tipo', header: 'Tipo', align: 'center', mobilePriority: 2, render: (m) => m.tipo === 'entrada' ? (
+                      <Badge variant="outline" className="text-green-600 border-green-600"><ArrowUp className="h-3 w-3 mr-1" />Entrada</Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-red-600 border-red-600"><ArrowDown className="h-3 w-3 mr-1" />Saída</Badge>
+                    )},
+                    { key: 'quantidade', header: 'Quantidade', align: 'right', mobilePriority: 4, render: (m) => (
+                      <span className="whitespace-nowrap">{Number(m.quantidade).toFixed(2)} {m.insumos?.unidade_medida}</span>
+                    )},
+                    { key: 'origem', header: 'Origem', mobilePriority: 5, render: (m) => <Badge variant="secondary">{m.origem}</Badge> },
+                    { key: 'obs', header: 'Observação', mobilePriority: 6, render: (m) => <span className="text-muted-foreground">{m.observacao || '-'}</span> },
+                  ]}
+                  renderMobileHeader={(m) => m.insumos?.nome}
+                  renderMobileSubtitle={(m) => format(new Date(m.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                  renderMobileHighlight={(m) => m.tipo === 'entrada' ? (
+                    <Badge variant="outline" className="text-green-600 border-green-600"><ArrowUp className="h-3 w-3 mr-1" />+{Number(m.quantidade).toFixed(2)}</Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-red-600 border-red-600"><ArrowDown className="h-3 w-3 mr-1" />-{Number(m.quantidade).toFixed(2)}</Badge>
+                  )}
+                  emptyMessage={temFiltrosAtivos ? 'Nenhuma movimentação encontrada. Tente ajustar os filtros.' : 'Nenhuma movimentação registrada.'}
+                  emptyAction={!temFiltrosAtivos ? (
+                    <Button onClick={() => setDialogOpen(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Nova Movimentação
+                    </Button>
+                  ) : undefined}
+                />
               ) : (
                 <div className="p-12 text-center">
                   <Warehouse className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
