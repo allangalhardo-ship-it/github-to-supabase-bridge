@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Settings, Save, Loader2, Crown, ArrowRight, CreditCard } from 'lucide-react';
+import { Settings, Save, Loader2, Crown, ArrowRight, CreditCard, RefreshCw } from 'lucide-react';
 import TaxasAppsConfig from '@/components/configuracoes/TaxasAppsConfig';
 
 const Configuracoes = () => {
@@ -21,6 +21,40 @@ const Configuracoes = () => {
   const queryClient = useQueryClient();
   const { subscription, openCustomerPortal } = useSubscription();
   const [portalLoading, setPortalLoading] = useState(false);
+  const [forceUpdateLoading, setForceUpdateLoading] = useState(false);
+
+  const handleForceUpdate = async () => {
+    setForceUpdateLoading(true);
+    try {
+      // Limpa caches do Service Worker
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map((name) => caches.delete(name)));
+      }
+
+      // Força atualização do Service Worker
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const registration of registrations) {
+          await registration.update();
+          if (registration.waiting) {
+            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+          }
+        }
+      }
+
+      toast({ title: 'Cache limpo!', description: 'O app será recarregado com a versão mais recente.' });
+      
+      // Aguarda um pouco para o toast aparecer e recarrega
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (error) {
+      console.error('Erro ao forçar atualização:', error);
+      toast({ title: 'Erro', description: 'Não foi possível limpar o cache. Tente novamente.', variant: 'destructive' });
+      setForceUpdateLoading(false);
+    }
+  };
 
   const handleManageSubscription = async () => {
     setPortalLoading(true);
@@ -282,6 +316,42 @@ const Configuracoes = () => {
             <h4 className="font-medium text-foreground">Lucro Estimado</h4>
             <p>Receita - CMV - Custos Fixos - Impostos</p>
             <p className="text-xs">Visão completa considerando todos os custos do negócio</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Card de Suporte / Atualização */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <RefreshCw className="h-5 w-5" />
+            Suporte Técnico
+          </CardTitle>
+          <CardDescription>
+            Opções para resolver problemas técnicos do aplicativo
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="space-y-1">
+              <p className="font-medium">Forçar Atualização do App</p>
+              <p className="text-sm text-muted-foreground">
+                Use se o app estiver mostrando versão desatualizada ou com problemas de cache
+              </p>
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={handleForceUpdate} 
+              disabled={forceUpdateLoading}
+              className="shrink-0"
+            >
+              {forceUpdateLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              Forçar Atualização
+            </Button>
           </div>
         </CardContent>
       </Card>
