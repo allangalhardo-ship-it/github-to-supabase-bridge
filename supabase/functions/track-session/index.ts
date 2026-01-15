@@ -46,7 +46,29 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    // Get auth header
+    // Get request body first to check action
+    const body = await req.json();
+    const { action, page_path, session_token } = body;
+
+    // For end_session via sendBeacon, we can't send auth headers
+    // So we handle it differently - just end the session by session_token
+    if (action === "end_session" && session_token) {
+      await supabaseAdmin
+        .from("user_sessions")
+        .update({ 
+          is_active: false, 
+          ended_at: new Date().toISOString() 
+        })
+        .eq("session_id", session_token)
+        .eq("is_active", true);
+
+      return new Response(
+        JSON.stringify({ ended: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get auth header for other actions
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(
@@ -65,10 +87,6 @@ serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    // Get request body
-    const body = await req.json();
-    const { action, page_path, session_token } = body;
 
     // Get IP address from various headers
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -188,23 +206,6 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ logged: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (action === "end_session") {
-      await supabaseAdmin
-        .from("user_sessions")
-        .update({ 
-          is_active: false, 
-          ended_at: new Date().toISOString() 
-        })
-        .eq("user_id", user.id)
-        .eq("session_id", session_token)
-        .eq("is_active", true);
-
-      return new Response(
-        JSON.stringify({ ended: true }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
