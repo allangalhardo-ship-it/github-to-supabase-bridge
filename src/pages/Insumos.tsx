@@ -16,9 +16,10 @@ import { Switch } from '@/components/ui/switch';
 import { SearchableSelect, SearchableSelectOption } from '@/components/ui/searchable-select';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, AlertTriangle, ShoppingBasket, FlaskConical, ChefHat, Layers, ShoppingCart, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, AlertTriangle, ShoppingBasket, FlaskConical, ChefHat, Layers, ShoppingCart, Upload, TrendingUp } from 'lucide-react';
 import ListaCompras from '@/components/insumos/ListaCompras';
 import ImportInsumosDialog from '@/components/import/ImportInsumosDialog';
+import HistoricoPrecos from '@/components/insumos/HistoricoPrecos';
 
 const unidadesMedida = [
   { value: 'un', label: 'Unidade (un)' },
@@ -77,6 +78,8 @@ const Insumos = () => {
   const [activeTab, setActiveTab] = useState<string>("todos");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [historicoDialogOpen, setHistoricoDialogOpen] = useState(false);
+  const [historicoInsumo, setHistoricoInsumo] = useState<{ id: string; nome: string; custo: number } | null>(null);
   const [formData, setFormData] = useState({
     nome: '',
     unidade_medida: 'kg',
@@ -452,6 +455,22 @@ const Insumos = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-blue-500 hover:text-blue-600"
+                        onClick={() => {
+                          setHistoricoInsumo({
+                            id: insumo.id,
+                            nome: insumo.nome,
+                            custo: Number(insumo.custo_unitario),
+                          });
+                          setHistoricoDialogOpen(true);
+                        }}
+                        title="Histórico de preços"
+                      >
+                        <TrendingUp className="h-4 w-4" />
+                      </Button>
                       {insumo.is_intermediario && (
                         <Button
                           variant="ghost"
@@ -945,6 +964,16 @@ const Insumos = () => {
         onOpenChange={setImportDialogOpen}
         existingInsumos={insumos || []}
       />
+
+      {historicoInsumo && (
+        <HistoricoPrecos
+          open={historicoDialogOpen}
+          onOpenChange={setHistoricoDialogOpen}
+          insumoId={historicoInsumo.id}
+          insumoNome={historicoInsumo.nome}
+          custoAtual={historicoInsumo.custo}
+        />
+      )}
     </div>
   );
 };
