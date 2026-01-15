@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
@@ -54,6 +55,7 @@ const Compras = () => {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [importTab, setImportTab] = useState('xml');
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
+  const [deleteNotaId, setDeleteNotaId] = useState<string | null>(null);
   
   // Filters state
   const [searchTerm, setSearchTerm] = useState('');
@@ -578,11 +580,7 @@ const Compras = () => {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => {
-                              if (confirm('Tem certeza que deseja excluir esta nota fiscal?')) {
-                                deleteNotaMutation.mutate(nota.id);
-                              }
-                            }}
+                            onClick={() => setDeleteNotaId(nota.id)}
                             disabled={deleteNotaMutation.isPending}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -1276,6 +1274,35 @@ const Compras = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteNotaId} onOpenChange={(open) => !open && setDeleteNotaId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Nota Fiscal</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta nota fiscal? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteNotaId) {
+                  deleteNotaMutation.mutate(deleteNotaId);
+                  setDeleteNotaId(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteNotaMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
