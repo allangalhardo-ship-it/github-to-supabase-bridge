@@ -404,34 +404,34 @@ const LancamentosManuaisTab = () => {
         <Skeleton className="h-96" />
       ) : movimentosFiltrados && movimentosFiltrados.length > 0 ? (
         <Card>
-          <CardContent className="p-0">
-            <Table>
+          <CardContent className="p-0 overflow-x-auto">
+            <Table className="min-w-[500px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Categoria</TableHead>
+                  <TableHead className="w-[70px]">Data</TableHead>
+                  <TableHead className="w-[80px]">Tipo</TableHead>
+                  <TableHead className="w-[90px]">Categoria</TableHead>
                   <TableHead>Descrição</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
-                  <TableHead className="w-24"></TableHead>
+                  <TableHead className="text-right w-[100px]">Valor</TableHead>
+                  <TableHead className="w-[70px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {movimentosFiltrados.map((movimento) => (
                   <TableRow key={movimento.id}>
-                    <TableCell className="text-muted-foreground">
-                      {format(new Date(movimento.data_movimento), 'dd/MM/yyyy', { locale: ptBR })}
+                    <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                      {format(new Date(movimento.data_movimento), 'dd/MM/yy', { locale: ptBR })}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={movimento.tipo === 'entrada' ? 'default' : 'destructive'}>
-                        {movimento.tipo === 'entrada' ? '↑ Entrada' : '↓ Saída'}
+                      <Badge variant={movimento.tipo === 'entrada' ? 'default' : 'destructive'} className="text-[10px] px-1.5 py-0">
+                        {movimento.tipo === 'entrada' ? '↑' : '↓'}
                       </Badge>
                     </TableCell>
-                    <TableCell>{movimento.categoria}</TableCell>
-                    <TableCell className="font-medium max-w-[200px] truncate">
+                    <TableCell className="text-xs truncate max-w-[80px]">{movimento.categoria}</TableCell>
+                    <TableCell className="font-medium max-w-[120px] truncate text-sm">
                       {movimento.descricao}
                     </TableCell>
-                    <TableCell className={`text-right font-medium ${movimento.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
+                    <TableCell className={`text-right font-medium whitespace-nowrap text-sm ${movimento.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
                       {movimento.tipo === 'entrada' ? '+' : '-'} {formatCurrency(movimento.valor)}
                     </TableCell>
                     <TableCell>

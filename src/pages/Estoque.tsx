@@ -337,7 +337,7 @@ const Estoque = () => {
                   data={insumosFiltrados}
                   keyExtractor={(insumo) => insumo.id}
                   columns={[
-                    { key: 'nome', header: 'Insumo', mobilePriority: 1, render: (i) => <span className="font-medium">{i.nome}</span> },
+                    { key: 'nome', header: 'Insumo', mobilePriority: 1, render: (i) => <span className="font-medium truncate block max-w-[120px] sm:max-w-none">{i.nome}</span> },
                     { key: 'estoque', header: 'Estoque Atual', align: 'right', mobilePriority: 2, render: (i) => {
                       const estoqueBaixo = Number(i.estoque_atual) <= Number(i.estoque_minimo);
                       const estoqueZerado = Number(i.estoque_atual) <= 0;
@@ -347,10 +347,10 @@ const Estoque = () => {
                         </span>
                       );
                     }},
-                    { key: 'minimo', header: 'Estoque Mínimo', align: 'right', mobilePriority: 4, render: (i) => (
-                      <span className="text-muted-foreground">{Number(i.estoque_minimo).toFixed(2)} {i.unidade_medida}</span>
+                    { key: 'minimo', header: 'Estoque Mínimo', align: 'right', mobilePriority: 4, hideOnMobile: true, render: (i) => (
+                      <span className="text-muted-foreground text-xs whitespace-nowrap">{Number(i.estoque_minimo).toFixed(2)} {i.unidade_medida}</span>
                     )},
-                    { key: 'custo', header: 'Custo Unit.', align: 'right', mobilePriority: 5, render: (i) => (
+                    { key: 'custo', header: 'Custo Unit.', align: 'right', mobilePriority: 5, hideOnMobile: true, render: (i) => (
                       <span className="text-muted-foreground">R$ {Number(i.custo_unitario).toFixed(2)}</span>
                     )},
                     { key: 'status', header: 'Status', align: 'center', mobilePriority: 3, render: (i) => {
@@ -365,12 +365,12 @@ const Estoque = () => {
                       );
                     }},
                   ]}
-                  renderMobileHeader={(i) => i.nome}
+                  renderMobileHeader={(i) => <span className="truncate block max-w-[180px]">{i.nome}</span>}
                   renderMobileSubtitle={(i) => {
                     const estoqueBaixo = Number(i.estoque_atual) <= Number(i.estoque_minimo);
                     const estoqueZerado = Number(i.estoque_atual) <= 0;
                     return (
-                      <span className={estoqueZerado ? 'text-red-600 font-semibold' : estoqueBaixo ? 'text-amber-600 font-semibold' : ''}>
+                      <span className={`whitespace-nowrap ${estoqueZerado ? 'text-red-600 font-semibold' : estoqueBaixo ? 'text-amber-600 font-semibold' : ''}`}>
                         {Number(i.estoque_atual).toFixed(2)} {i.unidade_medida}
                       </span>
                     );

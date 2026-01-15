@@ -155,32 +155,32 @@ const ComprasTab = () => {
         <Skeleton className="h-96" />
       ) : notas && notas.length > 0 ? (
         <Card>
-          <CardContent className="p-0">
-            <Table>
+          <CardContent className="p-0 overflow-x-auto">
+            <Table className="min-w-[400px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Número</TableHead>
+                  <TableHead className="w-[80px]">Data</TableHead>
+                  <TableHead className="w-[80px]">Número</TableHead>
                   <TableHead>Fornecedor</TableHead>
-                  <TableHead className="text-right">Valor Total</TableHead>
-                  <TableHead className="w-16"></TableHead>
+                  <TableHead className="text-right w-[100px]">Valor</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {notas.map((nota) => (
                   <TableRow key={nota.id}>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
                       {nota.data_emissao 
-                        ? format(new Date(nota.data_emissao), 'dd/MM/yyyy', { locale: ptBR })
+                        ? format(new Date(nota.data_emissao), 'dd/MM/yy', { locale: ptBR })
                         : '-'}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{nota.numero || '-'}</Badge>
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">{nota.numero || '-'}</Badge>
                     </TableCell>
-                    <TableCell className="font-medium">
+                    <TableCell className="font-medium max-w-[120px] truncate">
                       {nota.fornecedor || '-'}
                     </TableCell>
-                    <TableCell className="text-right font-medium text-red-600">
+                    <TableCell className="text-right font-medium text-red-600 whitespace-nowrap text-sm">
                       {formatCurrency(nota.valor_total)}
                     </TableCell>
                     <TableCell>

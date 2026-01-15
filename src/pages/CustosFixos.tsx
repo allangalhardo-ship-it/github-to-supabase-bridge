@@ -272,14 +272,14 @@ const CustosFixos = () => {
               key: 'nome',
               header: 'Nome',
               mobilePriority: 1,
-              render: (custo) => <span className="font-medium">{custo.nome}</span>,
+              render: (custo) => <span className="font-medium truncate block max-w-[150px] sm:max-w-none">{custo.nome}</span>,
             },
             {
               key: 'categoria',
               header: 'Categoria',
               mobilePriority: 3,
               render: (custo) => custo.categoria ? (
-                <Badge variant="secondary">{custo.categoria}</Badge>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 truncate max-w-[80px]">{custo.categoria}</Badge>
               ) : <span className="text-muted-foreground">-</span>,
             },
             {
@@ -313,9 +313,11 @@ const CustosFixos = () => {
               </Button>
             </>
           )}
-          renderMobileHeader={(custo) => custo.nome}
+          renderMobileHeader={(custo) => (
+            <span className="truncate block max-w-[180px]">{custo.nome}</span>
+          )}
           renderMobileSubtitle={(custo) => custo.categoria ? (
-            <Badge variant="secondary" className="text-xs">{custo.categoria}</Badge>
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 max-w-[80px] truncate">{custo.categoria}</Badge>
           ) : null}
           renderMobileHighlight={(custo) => (
             <span className="font-bold text-foreground">
