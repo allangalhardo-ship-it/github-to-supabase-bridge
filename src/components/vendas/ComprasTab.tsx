@@ -122,29 +122,29 @@ const ComprasTab = () => {
       </Card>
 
       {/* Totalizadores */}
-      <div className="grid grid-cols-2 gap-4">
-        <Card>
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
-                <DollarSign className="h-5 w-5 text-red-600" />
+      <div className="grid grid-cols-2 gap-2 sm:gap-4">
+        <Card className="overflow-hidden">
+          <CardContent className="p-3 sm:pt-4 sm:pb-4">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div className="p-1.5 sm:p-2 rounded-lg bg-red-100 dark:bg-red-900/30 shrink-0">
+                <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Total em Compras</p>
-                <p className="text-xl font-bold text-red-600">{formatCurrency(totalCompras)}</p>
+              <div className="min-w-0 overflow-hidden">
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Total Compras</p>
+                <p className="text-base sm:text-xl font-bold text-red-600 truncate">{formatCurrency(totalCompras)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Package className="h-5 w-5 text-primary" />
+        <Card className="overflow-hidden">
+          <CardContent className="p-3 sm:pt-4 sm:pb-4">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 shrink-0">
+                <Package className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Qtd. Notas</p>
-                <p className="text-xl font-bold">{qtdNotas}</p>
+              <div className="min-w-0 overflow-hidden">
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Qtd. Notas</p>
+                <p className="text-base sm:text-xl font-bold">{qtdNotas}</p>
               </div>
             </div>
           </CardContent>
