@@ -8,8 +8,16 @@ import { setUpdateCallback, triggerUpdateBanner } from "./components/pwa/UpdateB
 const updateSW = registerSW({
   immediate: true,
   onNeedRefresh() {
-    // Quando uma nova versão estiver disponível, mostra o banner
+    // Mostra banner, mas também aplica a atualização automaticamente
+    // (evita usuários presos em cache em alguns dispositivos/PWA instalado).
     triggerUpdateBanner();
+    setTimeout(() => {
+      try {
+        updateSW(true);
+      } catch {
+        // silencioso
+      }
+    }, 800);
   },
   onOfflineReady() {
     console.log("App pronto para uso offline");

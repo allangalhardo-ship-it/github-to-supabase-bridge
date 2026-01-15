@@ -23,39 +23,53 @@ const Configuracoes = () => {
   const [portalLoading, setPortalLoading] = useState(false);
   const [forceUpdateLoading, setForceUpdateLoading] = useState(false);
 
+  const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev';
+
   const handleForceUpdate = async () => {
     setForceUpdateLoading(true);
     try {
-      // 1. Limpa TODOS os caches do Service Worker
+      // Tenta adiantar a ativação caso exista SW "waiting" (alguns browsers ficam presos nessa etapa)
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration();
+        reg?.waiting?.postMessage({ type: 'SKIP_WAITING' });
+      }
+
+      // 1. Limpa TODOS os caches
       if ('caches' in window) {
         const cacheNames = await caches.keys();
         await Promise.all(cacheNames.map((name) => caches.delete(name)));
       }
 
-      // 2. Remove e reinstala o Service Worker
+      // 2. Remove completamente o Service Worker
       if ('serviceWorker' in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations();
-        for (const registration of registrations) {
-          // Desregistra completamente o SW
-          await registration.unregister();
-        }
+        await Promise.all(registrations.map((r) => r.unregister()));
       }
 
-      toast({ title: 'Cache e Service Worker removidos!', description: 'O app será recarregado...' });
-      
-      // 3. Limpa localStorage de flags de reload para evitar loops
+      // 3. Limpa flag de reload para evitar loops
       sessionStorage.removeItem('gg_sw_reloaded');
-      
-      // 4. Recarrega com bypass de cache (hard reload)
+
+      toast({
+        title: 'Atualização forçada',
+        description: 'Limpamos cache e reiniciaremos o app agora…',
+      });
+
+      // 4. Recarrega com bypass do cache HTTP do navegador
       setTimeout(() => {
-        // Adiciona timestamp para forçar bypass de cache do navegador
         const url = new URL(window.location.href);
         url.searchParams.set('_refresh', Date.now().toString());
-        window.location.href = url.toString();
-      }, 500);
+        window.location.replace(url.toString());
+      }, 400);
+
+      // Caso o reload seja bloqueado (alguns PWAs), pelo menos libera o botão
+      setTimeout(() => setForceUpdateLoading(false), 1500);
     } catch (error) {
       console.error('Erro ao forçar atualização:', error);
-      toast({ title: 'Erro', description: 'Não foi possível limpar o cache. Tente novamente.', variant: 'destructive' });
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível limpar o cache. Tente novamente.',
+        variant: 'destructive',
+      });
       setForceUpdateLoading(false);
     }
   };
@@ -361,10 +375,12 @@ const Configuracoes = () => {
           {/* Versão do App para diagnóstico */}
           <div className="pt-4 border-t">
             <p className="text-xs text-muted-foreground">
-              Versão do App: <code className="bg-muted px-1 py-0.5 rounded">2025.01.15.1</code>
+              Versão do App:{' '}
+              <code className="bg-muted px-1 py-0.5 rounded">{appVersion}</code>
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Se dois usuários virem versões diferentes aqui, um deles precisa limpar o cache do navegador ou usar o botão acima.
+              Se dois usuários virem versões diferentes aqui, um deles está preso em cache; com esta versão o app também
+              tenta se auto-atualizar ao detectar build novo.
             </p>
           </div>
         </CardContent>
