@@ -10,6 +10,7 @@ interface Usuario {
   telefone?: string;
   cpf_cnpj?: string;
   is_test_user?: boolean;
+  avatar_url?: string;
 }
 
 interface ExtraSignUpData {
@@ -26,6 +27,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, nome: string, nomeEmpresa: string, extra?: ExtraSignUpData) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  refreshUsuario: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -186,6 +188,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSession(null);
   };
 
+  const refreshUsuario = async () => {
+    if (user) {
+      const updatedUsuario = await fetchUsuario(user.id);
+      setUsuario(updatedUsuario);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -196,6 +205,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signUp,
         signIn,
         signOut,
+        refreshUsuario,
       }}
     >
       {children}
