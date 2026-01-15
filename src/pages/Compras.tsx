@@ -101,6 +101,22 @@ const Compras = () => {
     enabled: !!usuario?.empresa_id,
   });
 
+  // Fetch manual purchases (stock movements with origin 'manual')
+  const { data: comprasManuais, isLoading: comprasManuaisLoading } = useQuery({
+    queryKey: ['compras-manuais', usuario?.empresa_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('estoque_movimentos')
+        .select('*, insumos(nome, unidade_medida, custo_unitario)')
+        .eq('tipo', 'entrada')
+        .eq('origem', 'manual')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!usuario?.empresa_id,
+  });
+
   // Fetch insumos para mapeamento
   const { data: insumos } = useQuery({
     queryKey: ['insumos', usuario?.empresa_id],
@@ -607,8 +623,14 @@ const Compras = () => {
   const totalItens = parsedNota?.itens.length || 0;
 
   // Calculate totals
-  const totalCompras = notas?.reduce((acc, nota) => acc + (nota.valor_total || 0), 0) || 0;
+  const totalNotasCompras = notas?.reduce((acc, nota) => acc + (nota.valor_total || 0), 0) || 0;
+  const totalManuaisCompras = comprasManuais?.reduce((acc, c) => {
+    const custo = (c.insumos as any)?.custo_unitario || 0;
+    return acc + (Number(c.quantidade) * custo);
+  }, 0) || 0;
+  const totalCompras = totalNotasCompras + totalManuaisCompras;
   const totalNotasCount = notas?.length || 0;
+  const totalManuaisCount = comprasManuais?.length || 0;
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -716,7 +738,7 @@ const Compras = () => {
       </Dialog>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 grid-cols-2">
+      <div className="grid gap-4 grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total em Compras</CardTitle>
@@ -731,6 +753,14 @@ const Compras = () => {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{totalNotasCount}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Compras Manuais</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{totalManuaisCount}</p>
           </CardContent>
         </Card>
       </div>
@@ -777,6 +807,10 @@ const Compras = () => {
           <TabsTrigger value="notas" className="gap-2">
             <FileText className="h-4 w-4" />
             Notas Fiscais
+          </TabsTrigger>
+          <TabsTrigger value="manuais" className="gap-2">
+            <Plus className="h-4 w-4" />
+            Compras Manuais
           </TabsTrigger>
           <TabsTrigger value="itens" className="gap-2">
             <Package className="h-4 w-4" />
@@ -853,6 +887,62 @@ const Compras = () => {
                   <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>Nenhuma nota fiscal encontrada</p>
                   <p className="text-sm">Clique em "Importar NF-e" para adicionar</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="manuais">
+          <Card>
+            <CardHeader>
+              <CardTitle>Compras Manuais</CardTitle>
+              <CardDescription>Entradas de estoque registradas manualmente</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {comprasManuaisLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : comprasManuais && comprasManuais.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Insumo</TableHead>
+                      <TableHead className="text-right">Quantidade</TableHead>
+                      <TableHead className="text-right">Custo Unit.</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead>Observação</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {comprasManuais.map((compra) => {
+                      const insumoData = compra.insumos as any;
+                      const custoUnit = insumoData?.custo_unitario || 0;
+                      const total = Number(compra.quantidade) * custoUnit;
+                      return (
+                        <TableRow key={compra.id}>
+                          <TableCell>{formatDate(compra.created_at)}</TableCell>
+                          <TableCell className="font-medium">{insumoData?.nome || '-'}</TableCell>
+                          <TableCell className="text-right">
+                            {compra.quantidade} {insumoData?.unidade_medida || 'un'}
+                          </TableCell>
+                          <TableCell className="text-right">{formatCurrency(custoUnit)}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(total)}</TableCell>
+                          <TableCell className="text-muted-foreground max-w-[200px] truncate">
+                            {compra.observacao || '-'}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Plus className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Nenhuma compra manual registrada</p>
+                  <p className="text-sm">Clique em "Compra Manual" para adicionar</p>
                 </div>
               )}
             </CardContent>
