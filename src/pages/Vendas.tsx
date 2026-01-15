@@ -440,80 +440,66 @@ const Vendas = () => {
             </Card>
           </div>
 
-          {/* Filtros - Compactos */}
-          <Card>
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs font-medium">Filtros</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3">
-                <div>
-                  <Label className="text-[10px] sm:text-xs text-muted-foreground">Início</Label>
-                  <Input
-                    type="date"
-                    value={filtroDataInicio}
-                    onChange={(e) => setFiltroDataInicio(e.target.value)}
-                    className="h-8 sm:h-9 text-xs sm:text-sm"
-                  />
-                </div>
-                <div>
-                  <Label className="text-[10px] sm:text-xs text-muted-foreground">Fim</Label>
-                  <Input
-                    type="date"
-                    value={filtroDataFim}
-                    onChange={(e) => setFiltroDataFim(e.target.value)}
-                    className="h-8 sm:h-9 text-xs sm:text-sm"
-                  />
-                </div>
-                <div>
-                  <Label className="text-[10px] sm:text-xs text-muted-foreground">Produto</Label>
-                  <Select value={filtroProduto} onValueChange={setFiltroProduto}>
-                    <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm">
-                      <SelectValue placeholder="Todos" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todos">Todos</SelectItem>
-                      {produtos?.map((produto) => (
-                        <SelectItem key={produto.id} value={produto.id}>
-                          {produto.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-[10px] sm:text-xs text-muted-foreground">Canal</Label>
-                  <Select value={filtroCanal} onValueChange={setFiltroCanal}>
-                    <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm">
-                      <SelectValue placeholder="Todos" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todos">Todos</SelectItem>
-                      {canaisUnicos.map((canal) => (
-                        <SelectItem key={canal} value={canal}>
-                          {canal}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="col-span-2 sm:col-span-1">
-                  <Label className="text-[10px] sm:text-xs text-muted-foreground">Origem</Label>
-                  <Select value={filtroOrigem} onValueChange={setFiltroOrigem}>
-                    <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm">
-                      <SelectValue placeholder="Todas" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todos">Todas</SelectItem>
-                      <SelectItem value="manual">Manual</SelectItem>
-                      <SelectItem value="importacao">Importação</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Filtros - Ultra Compactos */}
+          <div className="flex flex-wrap items-end gap-1.5 sm:gap-2 p-2 sm:p-3 bg-muted/30 rounded-lg">
+            <div className="flex items-center gap-1.5 mr-1">
+              <Filter className="h-3 w-3 text-muted-foreground" />
+              <span className="text-[10px] font-medium text-muted-foreground hidden sm:inline">Filtros:</span>
+            </div>
+            <div className="flex-1 min-w-[90px] max-w-[120px]">
+              <Input
+                type="date"
+                value={filtroDataInicio}
+                onChange={(e) => setFiltroDataInicio(e.target.value)}
+                className="h-7 text-[11px] px-1.5"
+              />
+            </div>
+            <span className="text-muted-foreground text-xs">-</span>
+            <div className="flex-1 min-w-[90px] max-w-[120px]">
+              <Input
+                type="date"
+                value={filtroDataFim}
+                onChange={(e) => setFiltroDataFim(e.target.value)}
+                className="h-7 text-[11px] px-1.5"
+              />
+            </div>
+            <Select value={filtroProduto} onValueChange={setFiltroProduto}>
+              <SelectTrigger className="h-7 text-[11px] w-[80px] sm:w-[100px] px-2">
+                <SelectValue placeholder="Produto" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                {produtos?.map((produto) => (
+                  <SelectItem key={produto.id} value={produto.id}>
+                    {produto.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filtroCanal} onValueChange={setFiltroCanal}>
+              <SelectTrigger className="h-7 text-[11px] w-[70px] sm:w-[90px] px-2">
+                <SelectValue placeholder="Canal" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                {canaisUnicos.map((canal) => (
+                  <SelectItem key={canal} value={canal}>
+                    {canal}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filtroOrigem} onValueChange={setFiltroOrigem}>
+              <SelectTrigger className="h-7 text-[11px] w-[70px] sm:w-[85px] px-2">
+                <SelectValue placeholder="Origem" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todas</SelectItem>
+                <SelectItem value="manual">Manual</SelectItem>
+                <SelectItem value="importacao">Import</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           {isLoading ? (
             <Skeleton className="h-96" />
