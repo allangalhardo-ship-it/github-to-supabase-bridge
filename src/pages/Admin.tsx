@@ -31,6 +31,7 @@ import {
   Eye,
   Timer
 } from 'lucide-react';
+import { ScrollableTableWrapper } from '@/components/ui/scrollable-table-wrapper';
 import { useToast } from '@/hooks/use-toast';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -385,7 +386,7 @@ const Admin = () => {
               <TabsTrigger value="test">Teste ({stats?.testUsers || 0})</TabsTrigger>
             </TabsList>
 
-            <div className="rounded-md border overflow-x-auto">
+            <ScrollableTableWrapper className="rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -586,7 +587,7 @@ const Admin = () => {
                   )}
                 </TableBody>
               </Table>
-            </div>
+            </ScrollableTableWrapper>
           </Tabs>
         </CardContent>
       </Card>
