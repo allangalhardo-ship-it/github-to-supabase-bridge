@@ -1018,14 +1018,18 @@ const Compras = () => {
                   keyExtractor={(nota) => nota.id}
                   columns={[
                     { key: 'numero', header: 'Número', mobilePriority: 1, render: (n) => <span className="font-medium">{n.numero || '-'}</span> },
-                    { key: 'fornecedor', header: 'Fornecedor', mobilePriority: 2, render: (n) => n.fornecedor || '-' },
+                    { key: 'fornecedor', header: 'Fornecedor', mobilePriority: 2, render: (n) => <span className="break-words">{n.fornecedor || '-'}</span> },
                     { key: 'data', header: 'Data Emissão', mobilePriority: 3, render: (n) => formatDate(n.data_emissao) },
                     { key: 'valor', header: 'Valor Total', align: 'right', mobilePriority: 4, render: (n) => formatCurrency(n.valor_total || 0) },
                   ]}
                   onItemClick={(nota) => setViewNotaId(nota.id)}
-                  renderMobileHeader={(n) => n.fornecedor || 'Sem fornecedor'}
+                  renderMobileHeader={(n) => (
+                    <span className="min-w-0 whitespace-normal break-words leading-snug">
+                      {n.fornecedor || 'Sem fornecedor'}
+                    </span>
+                  )}
                   renderMobileSubtitle={(n) => `NF ${n.numero || '-'} • ${formatDate(n.data_emissao)}`}
-                  renderMobileHighlight={(n) => <span className="font-bold">{formatCurrency(n.valor_total || 0)}</span>}
+                  renderMobileHighlight={(n) => <span className="font-bold whitespace-nowrap">{formatCurrency(n.valor_total || 0)}</span>}
                   renderActions={(nota) => (
                     <>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setViewNotaId(nota.id); }}>
@@ -1066,20 +1070,24 @@ const Compras = () => {
                   keyExtractor={(compra) => compra.id}
                   columns={[
                     { key: 'data', header: 'Data', mobilePriority: 3, render: (c) => <span className="whitespace-nowrap">{formatDate(c.created_at)}</span> },
-                    { key: 'insumo', header: 'Insumo', mobilePriority: 1, render: (c) => <span className="font-medium">{(c.insumos as any)?.nome || '-'}</span> },
+                    { key: 'insumo', header: 'Insumo', mobilePriority: 1, render: (c) => <span className="font-medium break-words">{(c.insumos as any)?.nome || '-'}</span> },
                     { key: 'quantidade', header: 'Quantidade', align: 'right', mobilePriority: 2, render: (c) => <span className="whitespace-nowrap">{c.quantidade} {(c.insumos as any)?.unidade_medida || 'un'}</span> },
                     { key: 'custoUnit', header: 'Custo Unit.', align: 'right', mobilePriority: 4, render: (c) => <span className="whitespace-nowrap">{formatCurrency((c.insumos as any)?.custo_unitario || 0)}</span> },
                     { key: 'total', header: 'Total', align: 'right', mobilePriority: 5, render: (c) => {
                       const custoUnit = (c.insumos as any)?.custo_unitario || 0;
                       return <span className="whitespace-nowrap">{formatCurrency(Number(c.quantidade) * custoUnit)}</span>;
                     }},
-                    { key: 'obs', header: 'Observação', mobilePriority: 6, render: (c) => <span className="text-muted-foreground">{c.observacao || '-'}</span> },
+                    { key: 'obs', header: 'Observação', mobilePriority: 6, render: (c) => <span className="text-muted-foreground break-words">{c.observacao || '-'}</span> },
                   ]}
-                  renderMobileHeader={(c) => (c.insumos as any)?.nome || 'Insumo'}
+                  renderMobileHeader={(c) => (
+                    <span className="min-w-0 whitespace-normal break-words leading-snug">
+                      {(c.insumos as any)?.nome || 'Insumo'}
+                    </span>
+                  )}
                   renderMobileSubtitle={(c) => `${formatDate(c.created_at)} • ${c.quantidade} ${(c.insumos as any)?.unidade_medida || 'un'}`}
                   renderMobileHighlight={(c) => {
                     const custoUnit = (c.insumos as any)?.custo_unitario || 0;
-                    return <span className="font-bold">{formatCurrency(Number(c.quantidade) * custoUnit)}</span>;
+                    return <span className="font-bold whitespace-nowrap">{formatCurrency(Number(c.quantidade) * custoUnit)}</span>;
                   }}
                   renderActions={(compra) => (
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteManualId(compra.id)} disabled={deleteManualMutation.isPending}>
@@ -1115,18 +1123,26 @@ const Compras = () => {
                   data={filteredItens}
                   keyExtractor={(item) => item.id}
                   columns={[
-                    { key: 'produto', header: 'Produto', mobilePriority: 1, render: (i) => <span className="font-medium max-w-[200px] truncate">{i.produto_descricao}</span> },
-                    { key: 'fornecedor', header: 'Fornecedor', mobilePriority: 4, render: (i) => <span className="text-muted-foreground">{i.xml_notas?.fornecedor || '-'}</span> },
+                    { key: 'produto', header: 'Produto', mobilePriority: 1, render: (i) => <span className="font-medium break-words">{i.produto_descricao}</span> },
+                    { key: 'fornecedor', header: 'Fornecedor', mobilePriority: 4, render: (i) => <span className="text-muted-foreground break-words">{i.xml_notas?.fornecedor || '-'}</span> },
                     { key: 'qtd', header: 'Qtd', align: 'right', mobilePriority: 2, render: (i) => `${i.quantidade} ${i.unidade}` },
                     { key: 'custoUnit', header: 'Custo Unit.', align: 'right', mobilePriority: 5, render: (i) => formatCurrency(i.custo_unitario || 0) },
                     { key: 'total', header: 'Total', align: 'right', mobilePriority: 3, render: (i) => formatCurrency(i.valor_total || 0) },
                     { key: 'insumo', header: 'Insumo', mobilePriority: 6, render: (i) => i.insumos ? (
-                      <Badge variant="default" className="gap-1"><Check className="h-3 w-3" />{i.insumos.nome}</Badge>
+                      <Badge variant="default" className="gap-1 whitespace-nowrap"><Check className="h-3 w-3" />{i.insumos.nome}</Badge>
                     ) : <Badge variant="secondary">Não mapeado</Badge> },
                   ]}
-                  renderMobileHeader={(i) => i.produto_descricao}
-                  renderMobileSubtitle={(i) => `${i.xml_notas?.fornecedor || '-'} • ${i.quantidade} ${i.unidade}`}
-                  renderMobileHighlight={(i) => <span className="font-bold">{formatCurrency(i.valor_total || 0)}</span>}
+                  renderMobileHeader={(i) => (
+                    <span className="min-w-0 whitespace-normal break-words leading-snug">
+                      {i.produto_descricao}
+                    </span>
+                  )}
+                  renderMobileSubtitle={(i) => (
+                    <span className="min-w-0 whitespace-normal break-words">
+                      {i.xml_notas?.fornecedor || '-'} • {i.quantidade} {i.unidade}
+                    </span>
+                  )}
+                  renderMobileHighlight={(i) => <span className="font-bold whitespace-nowrap">{formatCurrency(i.valor_total || 0)}</span>}
                   emptyMessage="Nenhum item encontrado"
                 />
               ) : (
