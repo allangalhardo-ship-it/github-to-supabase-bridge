@@ -30,7 +30,6 @@ const MeusDados = () => {
   const [formData, setFormData] = useState({
     nome: usuario?.nome || '',
     telefone: usuario?.telefone || '',
-    cpf_cnpj: usuario?.cpf_cnpj || '',
   });
 
   const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev';
@@ -41,7 +40,6 @@ const MeusDados = () => {
       setFormData({
         nome: usuario.nome || '',
         telefone: usuario.telefone || '',
-        cpf_cnpj: usuario.cpf_cnpj || '',
       });
     }
   }, [usuario]);
@@ -146,7 +144,6 @@ const MeusDados = () => {
         .update({
           nome: formData.nome.trim(),
           telefone: formData.telefone.trim() || null,
-          cpf_cnpj: formData.cpf_cnpj.trim() || null,
         })
         .eq('id', user.id);
 
@@ -177,7 +174,6 @@ const MeusDados = () => {
     setFormData({
       nome: usuario?.nome || '',
       telefone: usuario?.telefone || '',
-      cpf_cnpj: usuario?.cpf_cnpj || '',
     });
     setIsEditing(false);
   };
@@ -382,19 +378,11 @@ const MeusDados = () => {
 
             <div className="space-y-2">
               <Label htmlFor="cpf_cnpj">CPF/CNPJ</Label>
-              {isEditing ? (
-                <Input
-                  id="cpf_cnpj"
-                  value={formData.cpf_cnpj}
-                  onChange={(e) => setFormData({ ...formData, cpf_cnpj: e.target.value })}
-                  placeholder="000.000.000-00"
-                />
-              ) : (
-                <div className="flex items-start gap-3 p-2 rounded-md bg-muted/50">
-                  <FileText className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
-                  <p className="font-medium">{usuario?.cpf_cnpj || '-'}</p>
-                </div>
-              )}
+              <div className="flex items-start gap-3 p-2 rounded-md bg-muted/50">
+                <FileText className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
+                <p className="font-medium">{usuario?.cpf_cnpj || '-'}</p>
+              </div>
+              <p className="text-xs text-muted-foreground">O CPF/CNPJ não pode ser alterado</p>
             </div>
           </div>
         </CardContent>
