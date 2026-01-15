@@ -13,7 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Loader2, ImageIcon, Filter, Calendar, Package, Search, Trash2, Wand2, Pencil } from 'lucide-react';
+import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Loader2, ImageIcon, Filter, Calendar, Package, Search, Trash2, Wand2, Pencil, Eye } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
 import { format } from 'date-fns';
@@ -56,6 +56,7 @@ const Compras = () => {
   const [importTab, setImportTab] = useState('xml');
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
   const [deleteNotaId, setDeleteNotaId] = useState<string | null>(null);
+  const [viewNotaId, setViewNotaId] = useState<string | null>(null);
   
   // Filters state
   const [searchTerm, setSearchTerm] = useState('');
@@ -422,9 +423,72 @@ const Compras = () => {
     },
   });
 
-  // Delete nota mutation
+  // Fetch items for selected nota (for viewing details)
+  const { data: viewNotaItens, isLoading: viewNotaItensLoading } = useQuery({
+    queryKey: ['xml-itens-nota', viewNotaId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('xml_itens')
+        .select('*, insumos(nome)')
+        .eq('xml_id', viewNotaId)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!viewNotaId,
+  });
+
+  // Get the nota being viewed
+  const viewingNota = notas?.find(n => n.id === viewNotaId);
+
+  // Delete nota mutation - also reverses stock movements
   const deleteNotaMutation = useMutation({
     mutationFn: async (notaId: string) => {
+      // First, get all items from this nota that are mapped to insumos
+      const { data: notaItens, error: itensError } = await supabase
+        .from('xml_itens')
+        .select('*')
+        .eq('xml_id', notaId)
+        .eq('mapeado', true);
+      
+      if (itensError) throw itensError;
+
+      // For each mapped item, create a reverse stock movement (saida)
+      for (const item of notaItens || []) {
+        if (item.insumo_id && item.quantidade) {
+          // Create exit movement to reverse the entry
+          const { error: movError } = await supabase
+            .from('estoque_movimentos')
+            .insert({
+              empresa_id: usuario?.empresa_id,
+              insumo_id: item.insumo_id,
+              tipo: 'saida',
+              quantidade: item.quantidade,
+              origem: 'nfe_exclusao',
+              referencia: notaId,
+              observacao: `Reversão - Exclusão da NF-e`,
+            });
+          
+          if (movError) throw movError;
+
+          // Update insumo stock
+          const { data: insumo, error: insumoError } = await supabase
+            .from('insumos')
+            .select('estoque_atual')
+            .eq('id', item.insumo_id)
+            .single();
+          
+          if (!insumoError && insumo) {
+            const novoEstoque = Math.max(0, (insumo.estoque_atual || 0) - item.quantidade);
+            await supabase
+              .from('insumos')
+              .update({ estoque_atual: novoEstoque })
+              .eq('id', item.insumo_id);
+          }
+        }
+      }
+
+      // Now delete the nota (this will cascade delete xml_itens due to FK)
       const { error } = await supabase
         .from('xml_notas')
         .delete()
@@ -434,7 +498,9 @@ const Compras = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['xml-notas'] });
       queryClient.invalidateQueries({ queryKey: ['xml-itens-all'] });
-      toast({ title: 'Nota excluída com sucesso!' });
+      queryClient.invalidateQueries({ queryKey: ['insumos'] });
+      queryClient.invalidateQueries({ queryKey: ['estoque-movimentos'] });
+      toast({ title: 'Nota excluída com sucesso!', description: 'Estoque revertido.' });
     },
     onError: (error) => {
       toast({ title: 'Erro ao excluir nota', description: error.message, variant: 'destructive' });
@@ -565,26 +631,46 @@ const Compras = () => {
                       <TableHead>Fornecedor</TableHead>
                       <TableHead>Data Emissão</TableHead>
                       <TableHead className="text-right">Valor Total</TableHead>
-                      <TableHead className="w-10"></TableHead>
+                      <TableHead className="w-20"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredNotas.map((nota) => (
-                      <TableRow key={nota.id}>
+                      <TableRow 
+                        key={nota.id} 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => setViewNotaId(nota.id)}
+                      >
                         <TableCell className="font-medium">{nota.numero || '-'}</TableCell>
                         <TableCell>{nota.fornecedor || '-'}</TableCell>
                         <TableCell>{formatDate(nota.data_emissao)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(nota.valor_total || 0)}</TableCell>
                         <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => setDeleteNotaId(nota.id)}
-                            disabled={deleteNotaMutation.isPending}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setViewNotaId(nota.id);
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteNotaId(nota.id);
+                              }}
+                              disabled={deleteNotaMutation.isPending}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1275,13 +1361,119 @@ const Compras = () => {
         </DialogContent>
       </Dialog>
 
+      {/* View Nota Details Dialog */}
+      <Dialog open={!!viewNotaId} onOpenChange={(open) => !open && setViewNotaId(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Detalhes da Nota Fiscal
+            </DialogTitle>
+          </DialogHeader>
+          
+          {viewingNota && (
+            <div className="space-y-4">
+              {/* Nota Header Info */}
+              <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+                <div>
+                  <p className="text-sm text-muted-foreground">Número</p>
+                  <p className="font-medium">{viewingNota.numero || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Fornecedor</p>
+                  <p className="font-medium">{viewingNota.fornecedor || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Data Emissão</p>
+                  <p className="font-medium">{formatDate(viewingNota.data_emissao)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Valor Total</p>
+                  <p className="font-medium text-primary">{formatCurrency(viewingNota.valor_total || 0)}</p>
+                </div>
+              </div>
+
+              {/* Items Table */}
+              <div>
+                <h4 className="font-medium mb-2">Itens da Nota ({viewNotaItens?.length || 0})</h4>
+                {viewNotaItensLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : viewNotaItens && viewNotaItens.length > 0 ? (
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Produto</TableHead>
+                          <TableHead className="text-right">Qtd</TableHead>
+                          <TableHead className="text-right">Vlr Unit.</TableHead>
+                          <TableHead className="text-right">Total</TableHead>
+                          <TableHead>Insumo</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {viewNotaItens.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-medium max-w-[200px]">
+                              <span className="line-clamp-2">{item.produto_descricao}</span>
+                              {item.ean && (
+                                <span className="block text-xs text-muted-foreground">EAN: {item.ean}</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right whitespace-nowrap">
+                              {item.quantidade} {item.unidade}
+                            </TableCell>
+                            <TableCell className="text-right">{formatCurrency(item.custo_unitario || 0)}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(item.valor_total || 0)}</TableCell>
+                            <TableCell>
+                              {item.mapeado && item.insumos ? (
+                                <Badge variant="default" className="gap-1">
+                                  <Check className="h-3 w-3" />
+                                  {item.insumos.nome}
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary">Não mapeado</Badge>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <p className="text-center py-4 text-muted-foreground">Nenhum item encontrado</p>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setViewNotaId(null)}>
+                  Fechar
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    setViewNotaId(null);
+                    setDeleteNotaId(viewingNota.id);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir Nota
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteNotaId} onOpenChange={(open) => !open && setDeleteNotaId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Nota Fiscal</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir esta nota fiscal? Esta ação não pode ser desfeita.
+              Tem certeza que deseja excluir esta nota fiscal? Esta ação não pode ser desfeita e o estoque será revertido.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
