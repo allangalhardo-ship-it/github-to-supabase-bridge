@@ -24,7 +24,7 @@ const TrialBanner: React.FC = () => {
   return (
     <div 
       className={`
-        px-4 py-2 flex items-center justify-between gap-4 text-sm flex-shrink-0
+        px-3 py-2 flex items-center justify-between gap-2 text-sm flex-shrink-0 w-full max-w-full overflow-hidden box-border
         ${isExpired 
           ? 'bg-destructive text-destructive-foreground' 
           : isUrgent 
@@ -33,20 +33,20 @@ const TrialBanner: React.FC = () => {
         }
       `}
     >
-      <div className="flex items-center gap-2 flex-1 min-w-0">
+      <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
         <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-        <span className="truncate">
+        <span className="truncate min-w-0">
           {isExpired 
             ? 'Teste expirou. Assine agora!' 
             : `${daysRemaining} dia${daysRemaining !== 1 ? 's' : ''} de teste`
           }
         </span>
       </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
+      <div className="flex items-center gap-1 flex-shrink-0">
         <Button 
           size="sm" 
           variant={isExpired ? "secondary" : "default"}
-          className="h-7 text-xs whitespace-nowrap"
+          className="h-7 text-xs whitespace-nowrap px-2"
           onClick={() => navigate('/assinatura')}
         >
           {isExpired ? 'Assinar' : 'Ver Planos'}
@@ -55,7 +55,7 @@ const TrialBanner: React.FC = () => {
           <Button
             size="icon"
             variant="ghost"
-            className="h-6 w-6"
+            className="h-6 w-6 flex-shrink-0"
             onClick={() => setDismissed(true)}
           >
             <X className="h-4 w-4" />
