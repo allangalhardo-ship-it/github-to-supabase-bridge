@@ -58,6 +58,16 @@ const Compras = () => {
   const [deleteNotaId, setDeleteNotaId] = useState<string | null>(null);
   const [viewNotaId, setViewNotaId] = useState<string | null>(null);
   
+  // Manual purchase dialog state
+  const [manualDialogOpen, setManualDialogOpen] = useState(false);
+  const [manualFormData, setManualFormData] = useState({
+    insumo_id: '',
+    quantidade: '',
+    custo_unitario: '',
+    fornecedor: '',
+    observacao: '',
+  });
+  
   // Filters state
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('');
@@ -507,6 +517,76 @@ const Compras = () => {
     },
   });
 
+  // Manual purchase mutation
+  const manualPurchaseMutation = useMutation({
+    mutationFn: async (data: typeof manualFormData) => {
+      const quantidade = parseFloat(data.quantidade) || 0;
+      const custoUnitario = parseFloat(data.custo_unitario) || 0;
+      const valorTotal = quantidade * custoUnitario;
+      
+      // Insert stock movement
+      const { error: movError } = await supabase.from('estoque_movimentos').insert({
+        empresa_id: usuario!.empresa_id,
+        insumo_id: data.insumo_id,
+        tipo: 'entrada',
+        quantidade: quantidade,
+        origem: 'manual',
+        observacao: data.fornecedor ? `Compra - ${data.fornecedor}` : data.observacao || 'Compra manual',
+      });
+      if (movError) throw movError;
+
+      // Get current stock
+      const { data: insumo, error: insumoError } = await supabase
+        .from('insumos')
+        .select('estoque_atual')
+        .eq('id', data.insumo_id)
+        .maybeSingle();
+      
+      if (insumoError) throw insumoError;
+      if (!insumo) throw new Error('Insumo não encontrado');
+
+      // Calculate new stock
+      const estoqueAtual = Number(insumo.estoque_atual) || 0;
+      const novoEstoque = estoqueAtual + quantidade;
+
+      // Update the insumo stock and cost
+      const { error: updateError } = await supabase
+        .from('insumos')
+        .update({ 
+          estoque_atual: novoEstoque,
+          custo_unitario: custoUnitario 
+        })
+        .eq('id', data.insumo_id);
+      
+      if (updateError) throw updateError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['insumos'] });
+      queryClient.invalidateQueries({ queryKey: ['estoque-movimentos'] });
+      toast({ title: 'Compra registrada!', description: 'Estoque atualizado.' });
+      resetManualForm();
+    },
+    onError: (error) => {
+      toast({ title: 'Erro ao registrar compra', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const resetManualForm = () => {
+    setManualFormData({
+      insumo_id: '',
+      quantidade: '',
+      custo_unitario: '',
+      fornecedor: '',
+      observacao: '',
+    });
+    setManualDialogOpen(false);
+  };
+
+  const handleManualSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    manualPurchaseMutation.mutate(manualFormData);
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -537,11 +617,103 @@ const Compras = () => {
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Compras</h1>
           <p className="text-sm sm:text-base text-muted-foreground">Gerencie suas notas fiscais e itens comprados</p>
         </div>
-        <Button onClick={() => setImportDialogOpen(true)} className="gap-2">
-          <Upload className="h-4 w-4" />
-          Importar NF-e
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setManualDialogOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Compra Manual
+          </Button>
+          <Button onClick={() => setImportDialogOpen(true)} className="gap-2">
+            <Upload className="h-4 w-4" />
+            Importar NF-e
+          </Button>
+        </div>
       </div>
+
+      {/* Manual Purchase Dialog */}
+      <Dialog open={manualDialogOpen} onOpenChange={(open) => {
+        setManualDialogOpen(open);
+        if (!open) resetManualForm();
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Registrar Compra Manual</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleManualSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="insumo">Insumo</Label>
+              <Select
+                value={manualFormData.insumo_id}
+                onValueChange={(value) => setManualFormData({ ...manualFormData, insumo_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um insumo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {insumos?.map((insumo) => (
+                    <SelectItem key={insumo.id} value={insumo.id}>
+                      {insumo.nome} ({insumo.unidade_medida})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="quantidade">Quantidade</Label>
+                <Input
+                  id="quantidade"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={manualFormData.quantidade}
+                  onChange={(e) => setManualFormData({ ...manualFormData, quantidade: e.target.value })}
+                  placeholder="0"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="custo_unitario">Custo Unitário (R$)</Label>
+                <Input
+                  id="custo_unitario"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={manualFormData.custo_unitario}
+                  onChange={(e) => setManualFormData({ ...manualFormData, custo_unitario: e.target.value })}
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="fornecedor">Fornecedor (opcional)</Label>
+              <Input
+                id="fornecedor"
+                value={manualFormData.fornecedor}
+                onChange={(e) => setManualFormData({ ...manualFormData, fornecedor: e.target.value })}
+                placeholder="Nome do fornecedor"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="observacao">Observação (opcional)</Label>
+              <Input
+                id="observacao"
+                value={manualFormData.observacao}
+                onChange={(e) => setManualFormData({ ...manualFormData, observacao: e.target.value })}
+                placeholder="Ex: Compra emergencial"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={resetManualForm}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={manualPurchaseMutation.isPending}>
+                Registrar
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Summary Cards */}
       <div className="grid gap-4 grid-cols-2">
