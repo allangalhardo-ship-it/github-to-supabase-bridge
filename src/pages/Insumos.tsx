@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -15,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { SearchableSelect, SearchableSelectOption } from '@/components/ui/searchable-select';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
+import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, AlertTriangle, ShoppingBasket, FlaskConical, ChefHat, Layers, ShoppingCart, Upload, TrendingUp } from 'lucide-react';
 import ListaCompras from '@/components/insumos/ListaCompras';
@@ -404,109 +404,180 @@ const Insumos = () => {
 
   const insumoSelecionadoInfo = insumos?.find(i => i.id === novoIngrediente.insumo_id);
 
-  const renderTable = (items: Insumo[], showIntermediarioBadge = false) => (
-    <Card>
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead className="text-center">Unidade</TableHead>
-              <TableHead className="text-right">Custo Unit.</TableHead>
-              <TableHead className="text-right">Estoque</TableHead>
-              <TableHead className="text-right">Mínimo</TableHead>
-              <TableHead className="w-32"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.map((insumo) => {
-              const estoqueBaixo = Number(insumo.estoque_atual) <= Number(insumo.estoque_minimo);
-              return (
-                <TableRow key={insumo.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      {insumo.is_intermediario ? (
-                        <FlaskConical className="h-4 w-4 text-purple-500" />
-                      ) : (
-                        <ShoppingBasket className="h-4 w-4 text-muted-foreground" />
-                      )}
-                      {insumo.nome}
-                      {estoqueBaixo && (
-                        <Badge variant="destructive" className="gap-1">
-                          <AlertTriangle className="h-3 w-3" />
-                          Baixo
-                        </Badge>
-                      )}
-                      {showIntermediarioBadge && insumo.is_intermediario && (
-                        <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-                          <Layers className="h-3 w-3 mr-1" />
-                          Intermediário
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center">{insumo.unidade_medida}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(Number(insumo.custo_unitario))}</TableCell>
-                  <TableCell className={`text-right ${estoqueBaixo ? 'text-destructive font-medium' : ''}`}>
-                    {Number(insumo.estoque_atual).toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {Number(insumo.estoque_minimo).toFixed(2)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-blue-500 hover:text-blue-600"
-                        onClick={() => {
-                          setHistoricoInsumo({
-                            id: insumo.id,
-                            nome: insumo.nome,
-                            custo: Number(insumo.custo_unitario),
-                          });
-                          setHistoricoDialogOpen(true);
-                        }}
-                        title="Histórico de preços"
-                      >
-                        <TrendingUp className="h-4 w-4" />
-                      </Button>
-                      {insumo.is_intermediario && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-purple-500 hover:text-purple-600"
-                          onClick={() => openReceitaDialog(insumo)}
-                          title="Editar receita"
-                        >
-                          <ChefHat className="h-4 w-4" />
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleEdit(insumo)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive"
-                        onClick={() => handleDeleteClick(insumo.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+  const insumoColumns: Column<Insumo>[] = useMemo(() => [
+    {
+      key: 'nome',
+      header: 'Nome',
+      mobilePriority: 1,
+      render: (insumo) => {
+        const estoqueBaixo = Number(insumo.estoque_atual) <= Number(insumo.estoque_minimo);
+        return (
+          <div className="flex items-center gap-2 flex-wrap">
+            {insumo.is_intermediario ? (
+              <FlaskConical className="h-4 w-4 text-purple-500" />
+            ) : (
+              <ShoppingBasket className="h-4 w-4 text-muted-foreground" />
+            )}
+            <span className="font-medium">{insumo.nome}</span>
+            {estoqueBaixo && (
+              <Badge variant="destructive" className="gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                Baixo
+              </Badge>
+            )}
+            {insumo.is_intermediario && (
+              <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                <Layers className="h-3 w-3 mr-1" />
+                Intermediário
+              </Badge>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: 'unidade',
+      header: 'Unidade',
+      align: 'center',
+      mobilePriority: 3,
+      render: (insumo) => insumo.unidade_medida,
+    },
+    {
+      key: 'custo',
+      header: 'Custo Unit.',
+      align: 'right',
+      mobilePriority: 2,
+      render: (insumo) => formatCurrency(Number(insumo.custo_unitario)),
+    },
+    {
+      key: 'estoque',
+      header: 'Estoque',
+      align: 'right',
+      mobilePriority: 4,
+      render: (insumo) => {
+        const estoqueBaixo = Number(insumo.estoque_atual) <= Number(insumo.estoque_minimo);
+        return (
+          <span className={estoqueBaixo ? 'text-destructive font-medium' : ''}>
+            {Number(insumo.estoque_atual).toFixed(2)}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'minimo',
+      header: 'Mínimo',
+      align: 'right',
+      mobilePriority: 5,
+      render: (insumo) => (
+        <span className="text-muted-foreground">
+          {Number(insumo.estoque_minimo).toFixed(2)}
+        </span>
+      ),
+    },
+  ], []);
+
+  const renderInsumoActions = (insumo: Insumo) => (
+    <>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 text-blue-500 hover:text-blue-600"
+        onClick={() => {
+          setHistoricoInsumo({
+            id: insumo.id,
+            nome: insumo.nome,
+            custo: Number(insumo.custo_unitario),
+          });
+          setHistoricoDialogOpen(true);
+        }}
+        title="Histórico de preços"
+      >
+        <TrendingUp className="h-4 w-4" />
+      </Button>
+      {insumo.is_intermediario && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-purple-500 hover:text-purple-600"
+          onClick={() => openReceitaDialog(insumo)}
+          title="Editar receita"
+        >
+          <ChefHat className="h-4 w-4" />
+        </Button>
+      )}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        onClick={() => handleEdit(insumo)}
+      >
+        <Pencil className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 text-destructive"
+        onClick={() => handleDeleteClick(insumo.id)}
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </>
+  );
+
+  const renderTable = (items: Insumo[]) => (
+    <MobileDataView
+      data={items}
+      columns={insumoColumns}
+      keyExtractor={(insumo) => insumo.id}
+      renderActions={renderInsumoActions}
+      renderMobileHeader={(insumo) => (
+        <div className="flex items-center gap-2">
+          {insumo.is_intermediario ? (
+            <FlaskConical className="h-4 w-4 text-purple-500" />
+          ) : (
+            <ShoppingBasket className="h-4 w-4 text-muted-foreground" />
+          )}
+          <span>{insumo.nome}</span>
+        </div>
+      )}
+      renderMobileSubtitle={(insumo) => {
+        const estoqueBaixo = Number(insumo.estoque_atual) <= Number(insumo.estoque_minimo);
+        return (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span>{insumo.unidade_medida}</span>
+            {estoqueBaixo && (
+              <Badge variant="destructive" className="gap-1 text-xs">
+                <AlertTriangle className="h-3 w-3" />
+                Estoque baixo
+              </Badge>
+            )}
+            {insumo.is_intermediario && (
+              <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 text-xs">
+                Intermediário
+              </Badge>
+            )}
+          </div>
+        );
+      }}
+      renderMobileHighlight={(insumo) => (
+        <div className="text-right">
+          <p className="font-bold text-foreground">{formatCurrency(Number(insumo.custo_unitario))}</p>
+          <p className="text-xs text-muted-foreground">
+            Estoque: {Number(insumo.estoque_atual).toFixed(2)}
+          </p>
+        </div>
+      )}
+      getRowClassName={(insumo) => 
+        Number(insumo.estoque_atual) <= Number(insumo.estoque_minimo) ? 'border-l-4 border-l-destructive' : ''
+      }
+      emptyMessage="Nenhum insumo cadastrado"
+      emptyAction={
+        <Button onClick={() => setDialogOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Novo Insumo
+        </Button>
+      }
+    />
   );
 
   return (
@@ -905,7 +976,7 @@ const Insumos = () => {
           </TabsList>
 
           <TabsContent value="todos">
-            {renderTable(insumos, true)}
+            {renderTable(insumos)}
           </TabsContent>
 
           <TabsContent value="simples">

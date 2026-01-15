@@ -8,13 +8,13 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Receipt, Trash2, Package, User, Upload, Filter, DollarSign, ShoppingCart, FileText, Wallet } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
@@ -536,77 +536,100 @@ const Vendas = () => {
 
           {isLoading ? (
             <Skeleton className="h-96" />
-          ) : vendasFiltradas && vendasFiltradas.length > 0 ? (
-            <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Produto</TableHead>
-                      <TableHead className="text-center">Qtd</TableHead>
-                      <TableHead className="text-right">Valor</TableHead>
-                      <TableHead>Canal</TableHead>
-                      <TableHead>Origem</TableHead>
-                      <TableHead className="w-16"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {vendasFiltradas.map((venda) => (
-                      <TableRow key={venda.id}>
-                        <TableCell className="text-muted-foreground">
-                          {format(new Date(venda.data_venda), 'dd/MM/yyyy', { locale: ptBR })}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {venda.produtos?.nome || venda.descricao_produto || '-'}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {Number(venda.quantidade)}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(Number(venda.valor_total))}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{venda.canal}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{venda.origem}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive"
-                            onClick={() => {
-                              setVendaToDelete(venda.id);
-                              setDeleteConfirmOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
           ) : (
-            <Card className="p-12 text-center">
-              <Receipt className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">Nenhuma venda encontrada</h3>
-              <p className="text-muted-foreground mb-4">
-                {vendas && vendas.length > 0 
-                  ? 'Nenhuma venda corresponde aos filtros selecionados.'
-                  : 'Registre vendas manualmente ou importe do iFood.'}
-              </p>
-              {!vendas || vendas.length === 0 ? (
-                <Button onClick={() => setDialogOpen(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Nova Venda
+            <MobileDataView
+              data={vendasFiltradas}
+              columns={[
+                {
+                  key: 'data',
+                  header: 'Data',
+                  mobilePriority: 2,
+                  render: (venda) => (
+                    <span className="text-muted-foreground">
+                      {format(new Date(venda.data_venda), 'dd/MM/yyyy', { locale: ptBR })}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'produto',
+                  header: 'Produto',
+                  mobilePriority: 1,
+                  render: (venda) => (
+                    <span className="font-medium">
+                      {venda.produtos?.nome || venda.descricao_produto || '-'}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'quantidade',
+                  header: 'Qtd',
+                  align: 'center',
+                  mobilePriority: 4,
+                  render: (venda) => Number(venda.quantidade),
+                },
+                {
+                  key: 'valor',
+                  header: 'Valor',
+                  align: 'right',
+                  mobilePriority: 3,
+                  render: (venda) => (
+                    <span className="font-medium">{formatCurrency(Number(venda.valor_total))}</span>
+                  ),
+                },
+                {
+                  key: 'canal',
+                  header: 'Canal',
+                  mobilePriority: 5,
+                  render: (venda) => <Badge variant="secondary">{venda.canal}</Badge>,
+                },
+                {
+                  key: 'origem',
+                  header: 'Origem',
+                  mobilePriority: 6,
+                  render: (venda) => <Badge variant="outline">{venda.origem}</Badge>,
+                },
+              ]}
+              keyExtractor={(venda) => venda.id}
+              renderActions={(venda) => (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-destructive"
+                  onClick={() => {
+                    setVendaToDelete(venda.id);
+                    setDeleteConfirmOpen(true);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
                 </Button>
-              ) : null}
-            </Card>
+              )}
+              renderMobileHeader={(venda) => venda.produtos?.nome || venda.descricao_produto || 'Venda'}
+              renderMobileSubtitle={(venda) => (
+                <div className="flex items-center gap-2">
+                  <span>{format(new Date(venda.data_venda), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                  <Badge variant="secondary" className="text-xs">{venda.canal}</Badge>
+                </div>
+              )}
+              renderMobileHighlight={(venda) => (
+                <div className="text-right">
+                  <p className="font-bold text-foreground">{formatCurrency(Number(venda.valor_total))}</p>
+                  <p className="text-xs text-muted-foreground">Qtd: {Number(venda.quantidade)}</p>
+                </div>
+              )}
+              emptyMessage={
+                vendas && vendas.length > 0 
+                  ? 'Nenhuma venda corresponde aos filtros selecionados.'
+                  : 'Registre vendas manualmente ou importe do iFood.'
+              }
+              emptyAction={
+                !vendas || vendas.length === 0 ? (
+                  <Button onClick={() => setDialogOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nova Venda
+                  </Button>
+                ) : undefined
+              }
+            />
           )}
         </TabsContent>
 

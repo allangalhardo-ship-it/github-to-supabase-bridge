@@ -7,9 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
+import { MobileDataView } from '@/components/ui/mobile-data-view';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Users, Trash2, Pencil, Phone } from 'lucide-react';
 import { format } from 'date-fns';
@@ -224,78 +224,101 @@ const Clientes = () => {
 
       {isLoading ? (
         <Skeleton className="h-96" />
-      ) : clientes && clientes.length > 0 ? (
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>WhatsApp</TableHead>
-                  <TableHead>Cadastrado em</TableHead>
-                  <TableHead className="w-24"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {clientes.map((cliente) => (
-                  <TableRow key={cliente.id}>
-                    <TableCell className="font-medium">{cliente.nome}</TableCell>
-                    <TableCell>
-                      {cliente.whatsapp ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-green-600 hover:text-green-700 p-0 h-auto"
-                          onClick={() => openWhatsApp(cliente.whatsapp!)}
-                        >
-                          <Phone className="h-4 w-4 mr-1" />
-                          {cliente.whatsapp}
-                        </Button>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {cliente.created_at ? format(new Date(cliente.created_at), 'dd/MM/yyyy', { locale: ptBR }) : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleEdit(cliente)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive"
-                          onClick={() => handleDeleteClick(cliente.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
       ) : (
-        <Card className="p-12 text-center">
-          <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">Nenhum cliente cadastrado</h3>
-          <p className="text-muted-foreground mb-4">
-            Cadastre clientes para registrar vendas diretas.
-          </p>
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Cliente
-          </Button>
-        </Card>
+        <MobileDataView
+          data={clientes || []}
+          columns={[
+            {
+              key: 'nome',
+              header: 'Nome',
+              mobilePriority: 1,
+              render: (cliente) => <span className="font-medium">{cliente.nome}</span>,
+            },
+            {
+              key: 'whatsapp',
+              header: 'WhatsApp',
+              mobilePriority: 2,
+              render: (cliente) => cliente.whatsapp ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-green-600 hover:text-green-700 p-0 h-auto"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openWhatsApp(cliente.whatsapp!);
+                  }}
+                >
+                  <Phone className="h-4 w-4 mr-1" />
+                  {cliente.whatsapp}
+                </Button>
+              ) : (
+                <span className="text-muted-foreground">-</span>
+              ),
+            },
+            {
+              key: 'created_at',
+              header: 'Cadastrado em',
+              mobilePriority: 3,
+              render: (cliente) => (
+                <span className="text-muted-foreground">
+                  {cliente.created_at ? format(new Date(cliente.created_at), 'dd/MM/yyyy', { locale: ptBR }) : '-'}
+                </span>
+              ),
+            },
+          ]}
+          keyExtractor={(cliente) => cliente.id}
+          renderActions={(cliente) => (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => handleEdit(cliente)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive"
+                onClick={() => handleDeleteClick(cliente.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+          renderMobileHeader={(cliente) => cliente.nome}
+          renderMobileSubtitle={(cliente) => (
+            cliente.whatsapp ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-green-600 hover:text-green-700 p-0 h-auto text-xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openWhatsApp(cliente.whatsapp!);
+                }}
+              >
+                <Phone className="h-3 w-3 mr-1" />
+                {cliente.whatsapp}
+              </Button>
+            ) : (
+              <span className="text-muted-foreground text-xs">Sem WhatsApp</span>
+            )
+          )}
+          renderMobileHighlight={(cliente) => (
+            <span className="text-xs text-muted-foreground">
+              {cliente.created_at ? format(new Date(cliente.created_at), 'dd/MM/yy', { locale: ptBR }) : ''}
+            </span>
+          )}
+          emptyMessage="Nenhum cliente cadastrado"
+          emptyAction={
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Cliente
+            </Button>
+          }
+        />
       )}
 
       <DeleteConfirmationDialog

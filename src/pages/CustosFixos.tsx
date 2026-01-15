@@ -7,11 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
+import { MobileDataView } from '@/components/ui/mobile-data-view';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, Wallet } from 'lucide-react';
 
@@ -264,68 +264,72 @@ const CustosFixos = () => {
 
       {isLoading ? (
         <Skeleton className="h-64" />
-      ) : custos && custos.length > 0 ? (
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead className="text-right">Valor Mensal</TableHead>
-                  <TableHead className="w-24"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {custos.map((custo) => (
-                  <TableRow key={custo.id}>
-                    <TableCell className="font-medium">{custo.nome}</TableCell>
-                    <TableCell>
-                      {custo.categoria && (
-                        <Badge variant="secondary">{custo.categoria}</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(Number(custo.valor_mensal))}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleEdit(custo)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive"
-                          onClick={() => handleDeleteClick(custo.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
       ) : (
-        <Card className="p-12 text-center">
-          <Wallet className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">Nenhum custo fixo cadastrado</h3>
-          <p className="text-muted-foreground mb-4">
-            Adicione seus custos fixos mensais para ter uma visão completa do negócio.
-          </p>
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Custo Fixo
-          </Button>
-        </Card>
+        <MobileDataView
+          data={custos || []}
+          columns={[
+            {
+              key: 'nome',
+              header: 'Nome',
+              mobilePriority: 1,
+              render: (custo) => <span className="font-medium">{custo.nome}</span>,
+            },
+            {
+              key: 'categoria',
+              header: 'Categoria',
+              mobilePriority: 3,
+              render: (custo) => custo.categoria ? (
+                <Badge variant="secondary">{custo.categoria}</Badge>
+              ) : <span className="text-muted-foreground">-</span>,
+            },
+            {
+              key: 'valor',
+              header: 'Valor Mensal',
+              align: 'right',
+              mobilePriority: 2,
+              render: (custo) => (
+                <span className="font-medium">{formatCurrency(Number(custo.valor_mensal))}</span>
+              ),
+            },
+          ]}
+          keyExtractor={(custo) => custo.id}
+          renderActions={(custo) => (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => handleEdit(custo)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive"
+                onClick={() => handleDeleteClick(custo.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+          renderMobileHeader={(custo) => custo.nome}
+          renderMobileSubtitle={(custo) => custo.categoria ? (
+            <Badge variant="secondary" className="text-xs">{custo.categoria}</Badge>
+          ) : null}
+          renderMobileHighlight={(custo) => (
+            <span className="font-bold text-foreground">
+              {formatCurrency(Number(custo.valor_mensal))}
+            </span>
+          )}
+          emptyMessage="Nenhum custo fixo cadastrado"
+          emptyAction={
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Custo Fixo
+            </Button>
+          }
+        />
       )}
 
       <DeleteConfirmationDialog
