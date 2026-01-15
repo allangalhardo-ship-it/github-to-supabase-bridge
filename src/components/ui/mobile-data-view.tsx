@@ -114,7 +114,7 @@ export function MobileDataView<T>({
                   <div className="flex-1 min-w-0 overflow-hidden">
                     {/* Custom or Auto Header */}
                     {renderMobileHeader ? (
-                      <div className="font-medium text-foreground truncate max-w-full">
+                      <div className="font-medium text-foreground min-w-0 max-w-full">
                         {renderMobileHeader(item)}
                       </div>
                     ) : mobileColumns[0]?.render ? (
@@ -125,7 +125,7 @@ export function MobileDataView<T>({
 
                     {/* Subtitle */}
                     {renderMobileSubtitle ? (
-                      <div className="text-sm text-muted-foreground mt-0.5 truncate max-w-full">
+                      <div className="text-sm text-muted-foreground mt-0.5 min-w-0 max-w-full">
                         {renderMobileSubtitle(item)}
                       </div>
                     ) : mobileColumns[1]?.render ? (

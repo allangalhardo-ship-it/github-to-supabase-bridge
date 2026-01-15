@@ -531,13 +531,17 @@ const Insumos = () => {
       keyExtractor={(insumo) => insumo.id}
       renderActions={renderInsumoActions}
       renderMobileHeader={(insumo) => (
-        <div className="flex items-center gap-2">
-          {insumo.is_intermediario ? (
-            <FlaskConical className="h-4 w-4 text-purple-500" />
-          ) : (
-            <ShoppingBasket className="h-4 w-4 text-muted-foreground" />
-          )}
-          <span>{insumo.nome}</span>
+        <div className="flex items-start gap-2 min-w-0">
+          <span className="shrink-0 mt-0.5">
+            {insumo.is_intermediario ? (
+              <FlaskConical className="h-4 w-4 text-purple-500" />
+            ) : (
+              <ShoppingBasket className="h-4 w-4 text-muted-foreground" />
+            )}
+          </span>
+          <span className="min-w-0 whitespace-normal break-words leading-snug">
+            {insumo.nome}
+          </span>
         </div>
       )}
       renderMobileSubtitle={(insumo) => {
