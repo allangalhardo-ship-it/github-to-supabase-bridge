@@ -428,6 +428,16 @@ const Compras = () => {
         });
 
         if (item.insumo_id && item.mapeado) {
+          // Get current insumo cost for history
+          const { data: insumoAtual } = await supabase
+            .from('insumos')
+            .select('custo_unitario')
+            .eq('id', item.insumo_id)
+            .single();
+          
+          const custoAnterior = insumoAtual?.custo_unitario || 0;
+          const variacao = custoAnterior > 0 ? ((item.custo_unitario - custoAnterior) / custoAnterior) * 100 : 0;
+
           await supabase.from('estoque_movimentos').insert({
             empresa_id: usuario!.empresa_id,
             insumo_id: item.insumo_id,
@@ -435,6 +445,17 @@ const Compras = () => {
             quantidade: item.quantidade,
             origem: 'xml',
             referencia: nota.id,
+            observacao: `NF-e ${parsedNota.numero} - ${parsedNota.fornecedor}`,
+          });
+
+          // Record price history
+          await supabase.from('historico_precos').insert({
+            empresa_id: usuario!.empresa_id,
+            insumo_id: item.insumo_id,
+            preco_anterior: custoAnterior,
+            preco_novo: item.custo_unitario,
+            variacao_percentual: variacao,
+            origem: 'xml',
             observacao: `NF-e ${parsedNota.numero} - ${parsedNota.fornecedor}`,
           });
 
@@ -450,6 +471,7 @@ const Compras = () => {
       queryClient.invalidateQueries({ queryKey: ['estoque-movimentos'] });
       queryClient.invalidateQueries({ queryKey: ['xml-notas'] });
       queryClient.invalidateQueries({ queryKey: ['xml-itens-all'] });
+      queryClient.invalidateQueries({ queryKey: ['historico-precos'] });
       toast({ title: 'Nota importada com sucesso!', description: 'Estoque atualizado.' });
       setParsedNota(null);
       setImportDialogOpen(false);
@@ -550,6 +572,16 @@ const Compras = () => {
       const custoUnitario = parseFloat(data.custo_unitario) || 0;
       const valorTotal = quantidade * custoUnitario;
       
+      // Get current insumo cost for history
+      const { data: insumoAtual, error: insumoError } = await supabase
+        .from('insumos')
+        .select('custo_unitario')
+        .eq('id', data.insumo_id)
+        .single();
+      
+      const custoAnterior = insumoAtual?.custo_unitario || 0;
+      const variacao = custoAnterior > 0 ? ((custoUnitario - custoAnterior) / custoAnterior) * 100 : 0;
+      
       // Insert stock movement
       const { error: movError } = await supabase.from('estoque_movimentos').insert({
         empresa_id: usuario!.empresa_id,
@@ -560,6 +592,17 @@ const Compras = () => {
         observacao: data.fornecedor ? `Compra - ${data.fornecedor}` : data.observacao || 'Compra manual',
       });
       if (movError) throw movError;
+
+      // Record price history
+      await supabase.from('historico_precos').insert({
+        empresa_id: usuario!.empresa_id,
+        insumo_id: data.insumo_id,
+        preco_anterior: custoAnterior,
+        preco_novo: custoUnitario,
+        variacao_percentual: variacao,
+        origem: 'manual',
+        observacao: data.fornecedor || 'Compra manual',
+      });
 
       // Calculate stock from all movements (source of truth)
       const { data: movimentos, error: movimentosError } = await supabase
@@ -589,6 +632,7 @@ const Compras = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['insumos'] });
       queryClient.invalidateQueries({ queryKey: ['estoque-movimentos'] });
+      queryClient.invalidateQueries({ queryKey: ['historico-precos'] });
       toast({ title: 'Compra registrada!', description: 'Estoque atualizado.' });
       resetManualForm();
     },

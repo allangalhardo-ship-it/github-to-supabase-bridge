@@ -316,6 +316,50 @@ export type Database = {
           },
         ]
       }
+      historico_precos: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          insumo_id: string
+          observacao: string | null
+          origem: string
+          preco_anterior: number | null
+          preco_novo: number
+          variacao_percentual: number | null
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id?: string
+          insumo_id: string
+          observacao?: string | null
+          origem?: string
+          preco_anterior?: number | null
+          preco_novo: number
+          variacao_percentual?: number | null
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          insumo_id?: string
+          observacao?: string | null
+          origem?: string
+          preco_anterior?: number | null
+          preco_novo?: number
+          variacao_percentual?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historico_precos_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_templates: {
         Row: {
           created_at: string
