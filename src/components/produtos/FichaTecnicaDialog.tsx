@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { SearchableSelect } from '@/components/ui/searchable-select';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Trash2, FlaskConical, FileText } from 'lucide-react';
+import { Trash2, FileText, Search } from 'lucide-react';
+import BuscarInsumoDialog from './BuscarInsumoDialog';
 
 interface FichaTecnicaItem {
   id: string;
@@ -25,38 +25,35 @@ interface FichaTecnicaDialogProps {
   fichaTecnica: FichaTecnicaItem[];
 }
 
+interface InsumoSelecionado {
+  id: string;
+  nome: string;
+  unidade_medida: string;
+  custo_unitario: number;
+}
+
 const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({ produtoId, produtoNome, fichaTecnica }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [novoInsumo, setNovoInsumo] = useState({ insumo_id: '', quantidade: '' });
-
-  // Fetch todos os insumos disponíveis (inclui intermediários)
-  const { data: insumos } = useQuery({
-    queryKey: ['insumos-select'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('insumos')
-        .select('id, nome, unidade_medida, custo_unitario, is_intermediario')
-        .order('nome');
-      if (error) throw error;
-      return data;
-    },
-    enabled: open,
-  });
+  const [buscaOpen, setBuscaOpen] = useState(false);
+  const [insumoSelecionado, setInsumoSelecionado] = useState<InsumoSelecionado | null>(null);
+  const [quantidade, setQuantidade] = useState('');
 
   const addMutation = useMutation({
     mutationFn: async () => {
+      if (!insumoSelecionado) return;
       const { error } = await supabase.from('fichas_tecnicas').insert({
         produto_id: produtoId,
-        insumo_id: novoInsumo.insumo_id,
-        quantidade: parseFloat(novoInsumo.quantidade) || 0,
+        insumo_id: insumoSelecionado.id,
+        quantidade: parseFloat(quantidade) || 0,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['produtos'] });
-      setNovoInsumo({ insumo_id: '', quantidade: '' });
+      setInsumoSelecionado(null);
+      setQuantidade('');
       toast({ title: 'Insumo adicionado à ficha técnica!' });
     },
     onError: (error) => {
@@ -91,9 +88,7 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({ produtoId, prod
     },
   });
 
-  // Insumos que já estão na ficha técnica
   const insumosNaFicha = fichaTecnica.map(ft => ft.insumos.id);
-  const insumosDisponiveis = insumos?.filter(i => !insumosNaFicha.includes(i.id)) || [];
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -106,86 +101,83 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({ produtoId, prod
     return sum + (Number(item.quantidade) * Number(item.insumos.custo_unitario));
   }, 0);
 
+  const handleInsumoSelect = (insumo: InsumoSelecionado) => {
+    setInsumoSelecionado(insumo);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="secondary" size="sm" className="w-full justify-center gap-2">
-          <FileText className="h-4 w-4" />
-          Ficha Técnica ({fichaTecnica.length} itens)
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Ficha Técnica - {produtoNome}
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button variant="secondary" size="sm" className="w-full justify-center gap-2">
+            <FileText className="h-4 w-4" />
+            Ficha Técnica ({fichaTecnica.length})
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="p-4 pb-3 border-b flex-shrink-0">
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <FileText className="h-4 w-4" />
+              {produtoNome}
+            </DialogTitle>
+          </DialogHeader>
 
-        <div className="space-y-4 mt-4">
-          {/* Adicionar novo insumo */}
-          <div className="p-4 border rounded-lg bg-muted/30">
-            <p className="text-sm font-medium mb-3">Adicionar Insumo</p>
-            <div className="flex gap-2">
-              <SearchableSelect
-                options={insumosDisponiveis.map((insumo) => ({
-                  value: insumo.id,
-                  label: `${insumo.nome} (${insumo.unidade_medida})`,
-                  searchTerms: insumo.nome,
-                  icon: insumo.is_intermediario ? <FlaskConical className="h-3 w-3 text-purple-500" /> : undefined,
-                }))}
-                value={novoInsumo.insumo_id}
-                onValueChange={(value) => setNovoInsumo({ ...novoInsumo, insumo_id: value })}
-                placeholder="Buscar insumo..."
-                searchPlaceholder="Digite para buscar..."
-                emptyMessage="Nenhum insumo encontrado."
-                className="flex-1"
-              />
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="Qtd"
-                value={novoInsumo.quantidade}
-                onChange={(e) => setNovoInsumo({ ...novoInsumo, quantidade: e.target.value })}
-                className="w-24"
-              />
-              <Button
-                onClick={() => addMutation.mutate()}
-                disabled={!novoInsumo.insumo_id || !novoInsumo.quantidade || addMutation.isPending}
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Adicionar
-              </Button>
-            </div>
-          </div>
-
-          {/* Lista de insumos */}
-          {fichaTecnica.length > 0 ? (
-            <div className="space-y-2">
-              <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs font-medium text-muted-foreground border-b">
-                <div className="col-span-5">Insumo</div>
-                <div className="col-span-2 text-center">Quantidade</div>
-                <div className="col-span-2 text-center">Unidade</div>
-                <div className="col-span-2 text-right">Custo</div>
-                <div className="col-span-1"></div>
-              </div>
-              
-              {fichaTecnica.map((item) => (
-                <div
-                  key={item.id}
-                  className="grid grid-cols-12 gap-2 items-center p-3 bg-muted/50 rounded-lg"
+          <div className="flex-1 overflow-y-auto">
+            {/* Adicionar novo insumo - Compacto */}
+            <div className="p-3 border-b bg-muted/30">
+              <p className="text-xs font-medium text-muted-foreground mb-2">Adicionar Insumo</p>
+              <div className="flex gap-2 items-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setBuscaOpen(true)}
+                  className="flex-1 justify-start gap-2 h-9 text-sm font-normal"
                 >
-                  <div className="col-span-5 font-medium text-sm">
-                    {item.insumos.nome}
-                  </div>
-                  <div className="col-span-2">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <span className="truncate text-muted-foreground">
+                    {insumoSelecionado ? insumoSelecionado.nome : 'Buscar insumo...'}
+                  </span>
+                </Button>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="Qtd"
+                  value={quantidade}
+                  onChange={(e) => setQuantidade(e.target.value)}
+                  className="w-16 h-9 text-center text-sm"
+                />
+                <Button
+                  size="sm"
+                  onClick={() => addMutation.mutate()}
+                  disabled={!insumoSelecionado || !quantidade || addMutation.isPending}
+                  className="h-9 px-3"
+                >
+                  +
+                </Button>
+              </div>
+            </div>
+
+            {/* Lista de insumos */}
+            {fichaTecnica.length > 0 ? (
+              <div className="divide-y">
+                {fichaTecnica.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-2 p-3"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{item.insumos.nome}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.insumos.unidade_medida} • {formatCurrency(item.insumos.custo_unitario)}/un
+                      </p>
+                    </div>
                     <Input
                       type="number"
                       step="0.01"
                       min="0"
                       defaultValue={item.quantidade}
-                      className="h-8 text-center"
+                      className="w-16 h-8 text-center text-sm"
                       onBlur={(e) => {
                         const newQty = parseFloat(e.target.value);
                         if (newQty !== item.quantidade) {
@@ -193,42 +185,46 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({ produtoId, prod
                         }
                       }}
                     />
-                  </div>
-                  <div className="col-span-2 text-center text-sm text-muted-foreground">
-                    {item.insumos.unidade_medida}
-                  </div>
-                  <div className="col-span-2 text-right text-sm font-medium">
-                    {formatCurrency(Number(item.quantidade) * Number(item.insumos.custo_unitario))}
-                  </div>
-                  <div className="col-span-1 flex justify-end">
+                    <span className="w-20 text-right text-sm font-medium">
+                      {formatCurrency(Number(item.quantidade) * Number(item.insumos.custo_unitario))}
+                    </span>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      className="h-8 w-8 text-destructive hover:text-destructive flex-shrink-0"
                       onClick={() => removeMutation.mutate(item.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                </div>
-              ))}
-
-              {/* Total */}
-              <div className="flex justify-between items-center p-3 bg-primary/10 rounded-lg border border-primary/20">
-                <span className="font-medium">Custo Total</span>
-                <span className="font-bold text-lg">{formatCurrency(custoTotal)}</span>
+                ))}
               </div>
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p>Nenhum insumo na ficha técnica.</p>
-              <p className="text-sm">Adicione insumos para calcular o custo do produto.</p>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <FileText className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Nenhum insumo na ficha técnica.</p>
+                <p className="text-xs">Clique em buscar para adicionar.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Total fixo no rodapé */}
+          {fichaTecnica.length > 0 && (
+            <div className="flex justify-between items-center p-4 bg-primary/10 border-t flex-shrink-0">
+              <span className="font-medium text-sm">Custo Total</span>
+              <span className="font-bold text-lg">{formatCurrency(custoTotal)}</span>
             </div>
           )}
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      <BuscarInsumoDialog
+        open={buscaOpen}
+        onOpenChange={setBuscaOpen}
+        onSelect={handleInsumoSelect}
+        insumosExcluidos={insumosNaFicha}
+      />
+    </>
   );
 };
 
