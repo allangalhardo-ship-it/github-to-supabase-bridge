@@ -176,13 +176,13 @@ const AppLayout = () => {
 
         {/* Main Content - área com scroll */}
         <main 
-          className="flex-1 overflow-y-auto overflow-x-hidden bg-surface-alt overscroll-contain"
+          className="flex-1 overflow-y-auto overflow-x-auto bg-surface-alt overscroll-contain min-w-0"
           style={{ 
             paddingBottom: 'env(safe-area-inset-bottom)',
             WebkitOverflowScrolling: 'touch'
           }}
         >
-          <div className="container mx-auto p-4 md:p-6">
+          <div className="w-full min-w-0 p-4 md:p-6 max-w-7xl mx-auto">
             <Outlet />
           </div>
         </main>
