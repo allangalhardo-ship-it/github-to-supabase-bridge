@@ -416,40 +416,83 @@ const Vendas = () => {
         </TabsList>
 
         <TabsContent value="vendas" className="mt-3 sm:mt-4 space-y-3 sm:space-y-4">
-          {/* Filtros */}
+          {/* Totalizadores - Primeiro no mobile para dar destaque */}
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <Card className="bg-primary/5 border-primary/20">
+              <CardContent className="p-2.5 sm:p-4">
+                <div className="flex flex-col items-center text-center gap-1">
+                  <div className="p-1.5 sm:p-2 rounded-full bg-primary/10">
+                    <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Total</p>
+                    <p className="text-xs sm:text-lg font-bold text-primary truncate max-w-full">{formatCurrency(totais.totalValor)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-2.5 sm:p-4">
+                <div className="flex flex-col items-center text-center gap-1">
+                  <div className="p-1.5 sm:p-2 rounded-full bg-muted">
+                    <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Vendas</p>
+                    <p className="text-sm sm:text-lg font-bold">{totais.totalVendas}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-2.5 sm:p-4">
+                <div className="flex flex-col items-center text-center gap-1">
+                  <div className="p-1.5 sm:p-2 rounded-full bg-muted">
+                    <Package className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Itens</p>
+                    <p className="text-sm sm:text-lg font-bold">{totais.totalQuantidade}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Filtros - Compactos */}
           <Card>
-            <CardContent className="pt-3 sm:pt-4 px-3 sm:px-6">
-              <div className="flex items-center gap-2 mb-2 sm:mb-3">
-                <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-                <span className="text-xs sm:text-sm font-medium">Filtros</span>
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs font-medium">Filtros</span>
               </div>
-              <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-5">
-                <div className="space-y-1">
-                  <Label className="text-xs">Data Início</Label>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3">
+                <div>
+                  <Label className="text-[10px] sm:text-xs text-muted-foreground">Início</Label>
                   <Input
                     type="date"
                     value={filtroDataInicio}
                     onChange={(e) => setFiltroDataInicio(e.target.value)}
-                    className="h-9"
+                    className="h-8 sm:h-9 text-xs sm:text-sm"
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Data Fim</Label>
+                <div>
+                  <Label className="text-[10px] sm:text-xs text-muted-foreground">Fim</Label>
                   <Input
                     type="date"
                     value={filtroDataFim}
                     onChange={(e) => setFiltroDataFim(e.target.value)}
-                    className="h-9"
+                    className="h-8 sm:h-9 text-xs sm:text-sm"
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Produto</Label>
+                <div>
+                  <Label className="text-[10px] sm:text-xs text-muted-foreground">Produto</Label>
                   <Select value={filtroProduto} onValueChange={setFiltroProduto}>
-                    <SelectTrigger className="h-9">
+                    <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm">
                       <SelectValue placeholder="Todos" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="todos">Todos os produtos</SelectItem>
+                      <SelectItem value="todos">Todos</SelectItem>
                       {produtos?.map((produto) => (
                         <SelectItem key={produto.id} value={produto.id}>
                           {produto.nome}
@@ -458,14 +501,14 @@ const Vendas = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Canal</Label>
+                <div>
+                  <Label className="text-[10px] sm:text-xs text-muted-foreground">Canal</Label>
                   <Select value={filtroCanal} onValueChange={setFiltroCanal}>
-                    <SelectTrigger className="h-9">
+                    <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm">
                       <SelectValue placeholder="Todos" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="todos">Todos os canais</SelectItem>
+                      <SelectItem value="todos">Todos</SelectItem>
                       {canaisUnicos.map((canal) => (
                         <SelectItem key={canal} value={canal}>
                           {canal}
@@ -474,14 +517,14 @@ const Vendas = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Origem</Label>
+                <div className="col-span-2 sm:col-span-1">
+                  <Label className="text-[10px] sm:text-xs text-muted-foreground">Origem</Label>
                   <Select value={filtroOrigem} onValueChange={setFiltroOrigem}>
-                    <SelectTrigger className="h-9">
+                    <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm">
                       <SelectValue placeholder="Todas" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="todos">Todas as origens</SelectItem>
+                      <SelectItem value="todos">Todas</SelectItem>
                       <SelectItem value="manual">Manual</SelectItem>
                       <SelectItem value="importacao">Importação</SelectItem>
                     </SelectContent>
@@ -490,49 +533,6 @@ const Vendas = () => {
               </div>
             </CardContent>
           </Card>
-
-          {/* Totalizadores */}
-          <div className="grid grid-cols-3 gap-2 sm:gap-4">
-            <Card>
-              <CardContent className="pt-3 pb-3 px-3 sm:pt-4 sm:pb-4 sm:px-6">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 flex-shrink-0">
-                    <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Total em Vendas</p>
-                    <p className="text-sm sm:text-xl font-bold truncate">{formatCurrency(totais.totalValor)}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-3 pb-3 px-3 sm:pt-4 sm:pb-4 sm:px-6">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 flex-shrink-0">
-                    <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Qtd. Vendas</p>
-                    <p className="text-sm sm:text-xl font-bold">{totais.totalVendas}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-3 pb-3 px-3 sm:pt-4 sm:pb-4 sm:px-6">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 flex-shrink-0">
-                    <Package className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Itens Vendidos</p>
-                    <p className="text-sm sm:text-xl font-bold">{totais.totalQuantidade}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
 
           {isLoading ? (
             <Skeleton className="h-96" />
