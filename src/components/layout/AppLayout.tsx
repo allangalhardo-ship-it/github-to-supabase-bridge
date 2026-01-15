@@ -149,28 +149,28 @@ const AppLayout = () => {
           {/* Trial Banner */}
           <TrialBanner />
           
-          {/* Header mobile com botão menu */}
-          <header className="lg:hidden flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-3">
+          {/* Header mobile com botão menu - compacto */}
+          <header className="lg:hidden flex items-center justify-between px-3 py-2">
+            <div className="flex items-center gap-2">
               <Sheet open={open} onOpenChange={setOpen}>
                 <SheetTrigger asChild>
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="text-white hover:bg-white/10 active:bg-white/20 h-10 w-10"
+                    className="text-white hover:bg-white/10 active:bg-white/20 h-8 w-8"
                   >
-                    <Menu className="h-6 w-6" />
+                    <Menu className="h-5 w-5" />
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="p-0 w-72 border-0">
                   <SidebarContent onNavigate={() => setOpen(false)} isAdmin={isAdmin} />
                 </SheetContent>
               </Sheet>
-              <Logo size="sm" theme="dark" />
+              <Logo size="xs" theme="dark" />
             </div>
             
             {/* Notification button */}
-            <NotificationSettings className="text-white hover:bg-white/10" />
+            <NotificationSettings className="text-white hover:bg-white/10 h-8 w-8" />
           </header>
         </div>
 

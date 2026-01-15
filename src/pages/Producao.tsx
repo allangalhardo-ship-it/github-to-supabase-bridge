@@ -343,51 +343,53 @@ const Producao = () => {
                   <Skeleton className="h-64" />
                 </div>
               ) : produtosComEstoque && produtosComEstoque.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Produto</TableHead>
-                      <TableHead>Categoria</TableHead>
-                      <TableHead className="text-right">Estoque Acabado</TableHead>
-                      <TableHead className="text-right">Preço Venda</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {produtosComEstoque.map((produto) => {
-                      const estoque = Number(produto.estoque_acabado);
-                      return (
-                        <TableRow key={produto.id}>
-                          <TableCell className="font-medium">
-                            {produto.nome}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {produto.categoria || '-'}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <span className={estoque === 0 ? 'text-muted-foreground' : 'font-semibold text-green-600'}>
-                              {estoque} un
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right text-muted-foreground">
-                            {formatCurrency(Number(produto.preco_venda))}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {estoque > 0 ? (
-                              <Badge variant="outline" className="text-green-600 border-green-600">
-                                Em estoque
-                              </Badge>
-                            ) : (
-                              <Badge variant="secondary">
-                                Sem estoque
-                              </Badge>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[150px]">Produto</TableHead>
+                        <TableHead className="min-w-[100px]">Categoria</TableHead>
+                        <TableHead className="text-right min-w-[120px]">Estoque Acabado</TableHead>
+                        <TableHead className="text-right min-w-[100px]">Preço Venda</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {produtosComEstoque.map((produto) => {
+                        const estoque = Number(produto.estoque_acabado);
+                        return (
+                          <TableRow key={produto.id}>
+                            <TableCell className="font-medium">
+                              {produto.nome}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {produto.categoria || '-'}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <span className={estoque === 0 ? 'text-muted-foreground' : 'font-semibold text-green-600'}>
+                                {estoque} un
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right text-muted-foreground">
+                              {formatCurrency(Number(produto.preco_venda))}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {estoque > 0 ? (
+                                <Badge variant="outline" className="text-green-600 border-green-600">
+                                  Em estoque
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary">
+                                  Sem estoque
+                                </Badge>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               ) : (
                 <div className="p-12 text-center">
                   <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -418,46 +420,48 @@ const Producao = () => {
                   <Skeleton className="h-64" />
                 </div>
               ) : producoes && producoes.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Produto</TableHead>
-                      <TableHead className="text-right">Quantidade</TableHead>
-                      <TableHead>Validade</TableHead>
-                      <TableHead>Observação</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {producoes.map((prod) => (
-                      <TableRow key={prod.id}>
-                        <TableCell className="text-muted-foreground whitespace-nowrap">
-                          {format(new Date(prod.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {prod.produtos?.nome}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant="outline" className="text-green-600 border-green-600">
-                            +{Number(prod.quantidade)} un
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {prod.data_vencimento ? (
-                            <span className="text-muted-foreground text-sm">
-                              {format(new Date(prod.data_vencimento), 'dd/MM/yyyy', { locale: ptBR })}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground/50 text-sm">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground max-w-48 truncate">
-                          {prod.observacao || '-'}
-                        </TableCell>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[130px]">Data</TableHead>
+                        <TableHead className="min-w-[120px]">Produto</TableHead>
+                        <TableHead className="text-right min-w-[100px]">Quantidade</TableHead>
+                        <TableHead className="min-w-[100px]">Validade</TableHead>
+                        <TableHead className="min-w-[120px]">Observação</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {producoes.map((prod) => (
+                        <TableRow key={prod.id}>
+                          <TableCell className="text-muted-foreground whitespace-nowrap">
+                            {format(new Date(prod.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {prod.produtos?.nome}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Badge variant="outline" className="text-green-600 border-green-600">
+                              +{Number(prod.quantidade)} un
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {prod.data_vencimento ? (
+                              <span className="text-muted-foreground text-sm">
+                                {format(new Date(prod.data_vencimento), 'dd/MM/yyyy', { locale: ptBR })}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground/50 text-sm">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground max-w-48 truncate">
+                            {prod.observacao || '-'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               ) : (
                 <div className="p-12 text-center">
                   <Factory className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
