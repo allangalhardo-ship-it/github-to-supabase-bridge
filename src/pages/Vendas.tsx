@@ -5,23 +5,19 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SearchableSelect } from '@/components/ui/searchable-select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
+import { MobileDataView } from '@/components/ui/mobile-data-view';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Receipt, Trash2, Package, User, Upload, Filter, DollarSign, ShoppingCart, FileText, Wallet } from 'lucide-react';
+import { Plus, Trash2, Package, User, Filter, DollarSign, ShoppingCart } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import ImportarVendasDialog from '@/components/vendas/ImportarVendasDialog';
-import ComprasTab from '@/components/vendas/ComprasTab';
-import LancamentosManuaisTab from '@/components/vendas/LancamentosManuaisTab';
 
 interface Cliente {
   id: string;
@@ -239,8 +235,8 @@ const Vendas = () => {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Movimentações</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">Vendas, compras e lançamentos financeiros</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Vendas</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Registre e acompanhe suas vendas</p>
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={(open) => {
@@ -395,27 +391,7 @@ const Vendas = () => {
         </Dialog>
       </div>
 
-      <Tabs defaultValue="vendas">
-        <TabsList className="grid w-full grid-cols-4 h-auto p-1">
-          <TabsTrigger value="vendas" className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 text-xs sm:text-sm">
-            <Receipt className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Vendas</span>
-          </TabsTrigger>
-          <TabsTrigger value="compras" className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 text-xs sm:text-sm">
-            <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Compras</span>
-          </TabsTrigger>
-          <TabsTrigger value="lancamentos" className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 text-xs sm:text-sm">
-            <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Lançamentos</span>
-          </TabsTrigger>
-          <TabsTrigger value="importar" className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 text-xs sm:text-sm">
-            <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">CSV</span>
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="vendas" className="mt-3 sm:mt-4 space-y-3 sm:space-y-4">
+      <div className="space-y-3 sm:space-y-4">
           {/* Totalizadores - Primeiro no mobile para dar destaque */}
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
             <Card className="bg-primary/5 border-primary/20">
@@ -646,34 +622,7 @@ const Vendas = () => {
               }
             />
           )}
-        </TabsContent>
-
-        <TabsContent value="compras" className="mt-4">
-          <ComprasTab />
-        </TabsContent>
-
-        <TabsContent value="lancamentos" className="mt-4">
-          <LancamentosManuaisTab />
-        </TabsContent>
-
-        <TabsContent value="importar" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="h-5 w-5" />
-                Importar Relatório de Vendas
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-muted-foreground">
-                Importe relatórios do iFood, Rappi, 99Food e outras plataformas de delivery.
-                O sistema detecta automaticamente o formato do arquivo.
-              </p>
-              <ImportarVendasDialog />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      </div>
 
       <DeleteConfirmationDialog
         open={deleteConfirmOpen}
