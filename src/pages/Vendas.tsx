@@ -15,9 +15,10 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { MobileDataView } from '@/components/ui/mobile-data-view';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Package, User, Filter, DollarSign, ShoppingCart } from 'lucide-react';
+import { Plus, Trash2, Package, User, Filter, DollarSign, ShoppingCart, Upload } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import ImportarVendasDialog from '@/components/vendas/ImportarVendasDialog';
 
 interface Cliente {
   id: string;
@@ -239,16 +240,17 @@ const Vendas = () => {
           <p className="text-sm sm:text-base text-muted-foreground">Registre e acompanhe suas vendas</p>
         </div>
 
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) resetForm();
-        }}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Venda
-            </Button>
-          </DialogTrigger>
+        <div className="flex flex-wrap gap-2">
+          <Dialog open={dialogOpen} onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) resetForm();
+          }}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Nova Venda
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Registrar Venda</DialogTitle>
@@ -389,6 +391,9 @@ const Vendas = () => {
             </form>
           </DialogContent>
         </Dialog>
+          
+          <ImportarVendasDialog />
+        </div>
       </div>
 
       <div className="space-y-3 sm:space-y-4">
