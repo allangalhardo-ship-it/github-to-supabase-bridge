@@ -46,26 +46,32 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,ico,png,svg,woff,woff2}"],
+        // Não cachear JS/CSS agressivamente - o Vite já adiciona hashes nos nomes
+        globPatterns: ["**/*.{ico,png,svg,woff,woff2}"],
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
+        // Navegação SEMPRE vai para rede primeiro, sem cache
+        navigateFallback: null,
         runtimeCaching: [
           {
+            // HTML/navegação: SEMPRE busca da rede, cache só como fallback offline
             urlPattern: ({ request }) => request.mode === "navigate",
-            handler: "NetworkFirst",
+            handler: "NetworkOnly",
             options: {
               cacheName: "pages-cache",
+            },
+          },
+          {
+            // JS/CSS: Stale-while-revalidate para pegar novo em background
+            urlPattern: /\.(js|css)$/i,
+            handler: "StaleWhileRevalidate",
+            options: {
+              cacheName: "static-resources",
               expiration: {
-                maxEntries: 20,
-                // Reduz o tempo de "páginas" em cache para não ficar preso em versão antiga no 4G
-                maxAgeSeconds: 60 * 5, // 5 minutos
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60, // 1 hora
               },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-              // Em rede móvel, 3s costuma cair no cache antigo; damos mais tempo pra buscar a versão nova
-              networkTimeoutSeconds: 10,
             },
           },
           {
@@ -75,7 +81,7 @@ export default defineConfig(({ mode }) => ({
               cacheName: "supabase-api-cache",
               expiration: {
                 maxEntries: 100,
-                maxAgeSeconds: 60 * 5, // 5 minutes
+                maxAgeSeconds: 60 * 5,
               },
               cacheableResponse: {
                 statuses: [0, 200],
@@ -90,7 +96,7 @@ export default defineConfig(({ mode }) => ({
               cacheName: "supabase-storage-cache",
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 60 * 60, // 1 hour
+                maxAgeSeconds: 60 * 60,
               },
               cacheableResponse: {
                 statuses: [0, 200],
