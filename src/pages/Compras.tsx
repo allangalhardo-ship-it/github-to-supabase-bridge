@@ -535,25 +535,25 @@ const Compras = () => {
       });
       if (movError) throw movError;
 
-      // Get current stock
-      const { data: insumo, error: insumoError } = await supabase
-        .from('insumos')
-        .select('estoque_atual')
-        .eq('id', data.insumo_id)
-        .maybeSingle();
+      // Calculate stock from all movements (source of truth)
+      const { data: movimentos, error: movimentosError } = await supabase
+        .from('estoque_movimentos')
+        .select('tipo, quantidade')
+        .eq('insumo_id', data.insumo_id);
       
-      if (insumoError) throw insumoError;
-      if (!insumo) throw new Error('Insumo não encontrado');
+      if (movimentosError) throw movimentosError;
 
-      // Calculate new stock
-      const estoqueAtual = Number(insumo.estoque_atual) || 0;
-      const novoEstoque = estoqueAtual + quantidade;
+      // Calculate correct stock from movements
+      const novoEstoque = (movimentos || []).reduce((acc, mov) => {
+        const qty = Number(mov.quantidade) || 0;
+        return mov.tipo === 'entrada' ? acc + qty : acc - qty;
+      }, 0);
 
       // Update the insumo stock and cost
       const { error: updateError } = await supabase
         .from('insumos')
         .update({ 
-          estoque_atual: novoEstoque,
+          estoque_atual: Math.max(0, novoEstoque),
           custo_unitario: custoUnitario 
         })
         .eq('id', data.insumo_id);
