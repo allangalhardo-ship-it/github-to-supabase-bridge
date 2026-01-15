@@ -593,64 +593,66 @@ const Caixa = () => {
             {isLoading ? (
               <Skeleton className="h-64" />
             ) : movimentosFiltrados.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Categoria</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Origem</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {movimentosFiltrados.map((movimento) => (
-                    <TableRow key={movimento.id}>
-                      <TableCell>
-                        {format(parseISO(movimento.data), 'dd/MM/yyyy')}
-                      </TableCell>
-                      <TableCell>
-                        {movimento.tipo === 'entrada' ? (
-                          <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
-                            <ArrowUpCircle className="h-3 w-3 mr-1" />
-                            Entrada
-                          </Badge>
-                        ) : (
-                          <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-100">
-                            <ArrowDownCircle className="h-3 w-3 mr-1" />
-                            Saída
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>{movimento.categoria}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">{movimento.descricao}</TableCell>
-                      <TableCell>
-                        {movimento.origem === 'venda' && (
-                          <Badge variant="outline" className="gap-1">
-                            <ShoppingCart className="h-3 w-3" />
-                            Venda
-                          </Badge>
-                        )}
-                        {movimento.origem === 'nota' && (
-                          <Badge variant="outline" className="gap-1">
-                            <Receipt className="h-3 w-3" />
-                            NF-e
-                          </Badge>
-                        )}
-                        {movimento.origem === 'manual' && (
-                          <Badge variant="secondary" className="gap-1">
-                            Manual
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className={`text-right font-medium ${movimento.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
-                        {movimento.tipo === 'entrada' ? '+' : '-'} {formatCurrency(movimento.valor)}
-                      </TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[100px]">Data</TableHead>
+                      <TableHead className="min-w-[90px]">Tipo</TableHead>
+                      <TableHead className="min-w-[120px]">Categoria</TableHead>
+                      <TableHead className="min-w-[150px]">Descrição</TableHead>
+                      <TableHead className="min-w-[80px]">Origem</TableHead>
+                      <TableHead className="text-right min-w-[100px]">Valor</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {movimentosFiltrados.map((movimento) => (
+                      <TableRow key={movimento.id}>
+                        <TableCell className="whitespace-nowrap">
+                          {format(parseISO(movimento.data), 'dd/MM/yyyy')}
+                        </TableCell>
+                        <TableCell>
+                          {movimento.tipo === 'entrada' ? (
+                            <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
+                              <ArrowUpCircle className="h-3 w-3 mr-1" />
+                              Entrada
+                            </Badge>
+                          ) : (
+                            <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-100">
+                              <ArrowDownCircle className="h-3 w-3 mr-1" />
+                              Saída
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>{movimento.categoria}</TableCell>
+                        <TableCell className="max-w-[200px] truncate">{movimento.descricao}</TableCell>
+                        <TableCell>
+                          {movimento.origem === 'venda' && (
+                            <Badge variant="outline" className="gap-1">
+                              <ShoppingCart className="h-3 w-3" />
+                              Venda
+                            </Badge>
+                          )}
+                          {movimento.origem === 'nota' && (
+                            <Badge variant="outline" className="gap-1">
+                              <Receipt className="h-3 w-3" />
+                              NF-e
+                            </Badge>
+                          )}
+                          {movimento.origem === 'manual' && (
+                            <Badge variant="secondary" className="gap-1">
+                              Manual
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className={`text-right font-medium whitespace-nowrap ${movimento.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
+                          {movimento.tipo === 'entrada' ? '+' : '-'} {formatCurrency(movimento.valor)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             ) : (
               <div className="text-center py-12">
                 <Wallet className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

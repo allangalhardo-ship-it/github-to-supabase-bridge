@@ -334,50 +334,52 @@ const Estoque = () => {
                   <Skeleton className="h-64" />
                 </div>
               ) : insumosFiltrados && insumosFiltrados.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Insumo</TableHead>
-                      <TableHead className="text-right">Estoque Atual</TableHead>
-                      <TableHead className="text-right">Estoque Mínimo</TableHead>
-                      <TableHead className="text-right">Custo Unit.</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {insumosFiltrados.map((insumo) => {
-                      const estoqueBaixo = Number(insumo.estoque_atual) <= Number(insumo.estoque_minimo);
-                      const estoqueZerado = Number(insumo.estoque_atual) <= 0;
-                      return (
-                        <TableRow key={insumo.id}>
-                          <TableCell className="font-medium">
-                            {insumo.nome}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <span className={estoqueZerado ? 'text-red-600 font-semibold' : estoqueBaixo ? 'text-amber-600 font-semibold' : ''}>
-                              {Number(insumo.estoque_atual).toFixed(2)} {insumo.unidade_medida}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right text-muted-foreground">
-                            {Number(insumo.estoque_minimo).toFixed(2)} {insumo.unidade_medida}
-                          </TableCell>
-                          <TableCell className="text-right text-muted-foreground">
-                            R$ {Number(insumo.custo_unitario).toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {estoqueZerado ? (
-                              <Badge variant="destructive">Zerado</Badge>
-                            ) : estoqueBaixo ? (
-                              <Badge variant="outline" className="text-amber-600 border-amber-600">Baixo</Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-green-600 border-green-600">OK</Badge>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[150px]">Insumo</TableHead>
+                        <TableHead className="text-right min-w-[120px]">Estoque Atual</TableHead>
+                        <TableHead className="text-right min-w-[120px]">Estoque Mínimo</TableHead>
+                        <TableHead className="text-right min-w-[100px]">Custo Unit.</TableHead>
+                        <TableHead className="text-center min-w-[80px]">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {insumosFiltrados.map((insumo) => {
+                        const estoqueBaixo = Number(insumo.estoque_atual) <= Number(insumo.estoque_minimo);
+                        const estoqueZerado = Number(insumo.estoque_atual) <= 0;
+                        return (
+                          <TableRow key={insumo.id}>
+                            <TableCell className="font-medium">
+                              {insumo.nome}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <span className={estoqueZerado ? 'text-red-600 font-semibold' : estoqueBaixo ? 'text-amber-600 font-semibold' : ''}>
+                                {Number(insumo.estoque_atual).toFixed(2)} {insumo.unidade_medida}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right text-muted-foreground">
+                              {Number(insumo.estoque_minimo).toFixed(2)} {insumo.unidade_medida}
+                            </TableCell>
+                            <TableCell className="text-right text-muted-foreground">
+                              R$ {Number(insumo.custo_unitario).toFixed(2)}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {estoqueZerado ? (
+                                <Badge variant="destructive">Zerado</Badge>
+                              ) : estoqueBaixo ? (
+                                <Badge variant="outline" className="text-amber-600 border-amber-600">Baixo</Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-green-600 border-green-600">OK</Badge>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               ) : (
                 <div className="p-12 text-center">
                   <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -423,95 +425,97 @@ const Estoque = () => {
                   <Skeleton className="h-64" />
                 </div>
               ) : produtosFiltrados && produtosFiltrados.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Produto</TableHead>
-                      <TableHead>Categoria</TableHead>
-                      <TableHead className="text-right">Estoque</TableHead>
-                      <TableHead>Validade</TableHead>
-                      <TableHead className="text-right">Preço</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {produtosFiltrados.map((produto) => {
-                      const estoque = Number(produto.estoque_acabado);
-                      const hoje = new Date();
-                      hoje.setHours(0, 0, 0, 0);
-                      
-                      let statusValidade: 'ok' | 'proximo' | 'vencido' | null = null;
-                      let diasRestantes = 0;
-                      
-                      if (produto.proxima_validade) {
-                        const dataVenc = new Date(produto.proxima_validade);
-                        dataVenc.setHours(0, 0, 0, 0);
-                        diasRestantes = differenceInDays(dataVenc, hoje);
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[150px]">Produto</TableHead>
+                        <TableHead className="min-w-[100px]">Categoria</TableHead>
+                        <TableHead className="text-right min-w-[80px]">Estoque</TableHead>
+                        <TableHead className="min-w-[110px]">Validade</TableHead>
+                        <TableHead className="text-right min-w-[80px]">Preço</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {produtosFiltrados.map((produto) => {
+                        const estoque = Number(produto.estoque_acabado);
+                        const hoje = new Date();
+                        hoje.setHours(0, 0, 0, 0);
                         
-                        if (isBefore(dataVenc, hoje)) {
-                          statusValidade = 'vencido';
-                        } else if (diasRestantes <= 3) {
-                          statusValidade = 'proximo';
-                        } else {
-                          statusValidade = 'ok';
+                        let statusValidade: 'ok' | 'proximo' | 'vencido' | null = null;
+                        let diasRestantes = 0;
+                        
+                        if (produto.proxima_validade) {
+                          const dataVenc = new Date(produto.proxima_validade);
+                          dataVenc.setHours(0, 0, 0, 0);
+                          diasRestantes = differenceInDays(dataVenc, hoje);
+                          
+                          if (isBefore(dataVenc, hoje)) {
+                            statusValidade = 'vencido';
+                          } else if (diasRestantes <= 3) {
+                            statusValidade = 'proximo';
+                          } else {
+                            statusValidade = 'ok';
+                          }
                         }
-                      }
-                      
-                      return (
-                        <TableRow key={produto.id}>
-                          <TableCell className="font-medium">
-                            {produto.nome}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {produto.categoria || '-'}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <span className={estoque === 0 ? 'text-muted-foreground' : 'font-semibold text-green-600'}>
-                              {estoque} un
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            {produto.proxima_validade ? (
-                              <div className="flex items-center gap-1.5">
-                                <Clock className={`h-3.5 w-3.5 ${
-                                  statusValidade === 'vencido' ? 'text-destructive' :
-                                  statusValidade === 'proximo' ? 'text-amber-500' :
-                                  'text-muted-foreground'
-                                }`} />
-                                <span className={`text-sm ${
-                                  statusValidade === 'vencido' ? 'text-destructive font-medium' :
-                                  statusValidade === 'proximo' ? 'text-amber-600 font-medium' :
-                                  'text-muted-foreground'
-                                }`}>
-                                  {format(new Date(produto.proxima_validade), 'dd/MM/yy', { locale: ptBR })}
-                                  {statusValidade === 'vencido' && ' (vencido)'}
-                                  {statusValidade === 'proximo' && diasRestantes === 0 && ' (hoje)'}
-                                  {statusValidade === 'proximo' && diasRestantes > 0 && ` (${diasRestantes}d)`}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground/50 text-sm">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right text-muted-foreground">
-                            R$ {Number(produto.preco_venda).toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {estoque > 0 ? (
-                              <Badge variant="outline" className="text-green-600 border-green-600">
-                                Em estoque
-                              </Badge>
-                            ) : (
-                              <Badge variant="secondary">
-                                Sem estoque
-                              </Badge>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                        
+                        return (
+                          <TableRow key={produto.id}>
+                            <TableCell className="font-medium">
+                              {produto.nome}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {produto.categoria || '-'}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <span className={estoque === 0 ? 'text-muted-foreground' : 'font-semibold text-green-600'}>
+                                {estoque} un
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              {produto.proxima_validade ? (
+                                <div className="flex items-center gap-1.5">
+                                  <Clock className={`h-3.5 w-3.5 ${
+                                    statusValidade === 'vencido' ? 'text-destructive' :
+                                    statusValidade === 'proximo' ? 'text-amber-500' :
+                                    'text-muted-foreground'
+                                  }`} />
+                                  <span className={`text-sm whitespace-nowrap ${
+                                    statusValidade === 'vencido' ? 'text-destructive font-medium' :
+                                    statusValidade === 'proximo' ? 'text-amber-600 font-medium' :
+                                    'text-muted-foreground'
+                                  }`}>
+                                    {format(new Date(produto.proxima_validade), 'dd/MM/yy', { locale: ptBR })}
+                                    {statusValidade === 'vencido' && ' (vencido)'}
+                                    {statusValidade === 'proximo' && diasRestantes === 0 && ' (hoje)'}
+                                    {statusValidade === 'proximo' && diasRestantes > 0 && ` (${diasRestantes}d)`}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground/50 text-sm">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right text-muted-foreground">
+                              R$ {Number(produto.preco_venda).toFixed(2)}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {estoque > 0 ? (
+                                <Badge variant="outline" className="text-green-600 border-green-600">
+                                  Em estoque
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary">
+                                  Sem estoque
+                                </Badge>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               ) : (
                 <div className="p-12 text-center">
                   <Factory className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -627,52 +631,54 @@ const Estoque = () => {
                   <Skeleton className="h-64" />
                 </div>
               ) : movimentosFiltrados && movimentosFiltrados.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Insumo</TableHead>
-                      <TableHead className="text-center">Tipo</TableHead>
-                      <TableHead className="text-right">Quantidade</TableHead>
-                      <TableHead>Origem</TableHead>
-                      <TableHead>Observação</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {movimentosFiltrados.map((mov) => (
-                      <TableRow key={mov.id}>
-                        <TableCell className="text-muted-foreground whitespace-nowrap">
-                          {format(new Date(mov.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {mov.insumos?.nome}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {mov.tipo === 'entrada' ? (
-                            <Badge variant="outline" className="text-green-600 border-green-600">
-                              <ArrowUp className="h-3 w-3 mr-1" />
-                              Entrada
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-red-600 border-red-600">
-                              <ArrowDown className="h-3 w-3 mr-1" />
-                              Saída
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right whitespace-nowrap">
-                          {Number(mov.quantidade).toFixed(2)} {mov.insumos?.unidade_medida}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{mov.origem}</Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground max-w-48 truncate">
-                          {mov.observacao || '-'}
-                        </TableCell>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[130px]">Data</TableHead>
+                        <TableHead className="min-w-[120px]">Insumo</TableHead>
+                        <TableHead className="text-center min-w-[90px]">Tipo</TableHead>
+                        <TableHead className="text-right min-w-[100px]">Quantidade</TableHead>
+                        <TableHead className="min-w-[80px]">Origem</TableHead>
+                        <TableHead className="min-w-[120px]">Observação</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {movimentosFiltrados.map((mov) => (
+                        <TableRow key={mov.id}>
+                          <TableCell className="text-muted-foreground whitespace-nowrap">
+                            {format(new Date(mov.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {mov.insumos?.nome}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {mov.tipo === 'entrada' ? (
+                              <Badge variant="outline" className="text-green-600 border-green-600">
+                                <ArrowUp className="h-3 w-3 mr-1" />
+                                Entrada
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-red-600 border-red-600">
+                                <ArrowDown className="h-3 w-3 mr-1" />
+                                Saída
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right whitespace-nowrap">
+                            {Number(mov.quantidade).toFixed(2)} {mov.insumos?.unidade_medida}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">{mov.origem}</Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground max-w-48 truncate">
+                            {mov.observacao || '-'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               ) : (
                 <div className="p-12 text-center">
                   <Warehouse className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

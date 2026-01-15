@@ -1087,51 +1087,53 @@ const Compras = () => {
                   <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
               ) : comprasManuais && comprasManuais.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Insumo</TableHead>
-                      <TableHead className="text-right">Quantidade</TableHead>
-                      <TableHead className="text-right">Custo Unit.</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                      <TableHead>Observação</TableHead>
-                      <TableHead className="w-16"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {comprasManuais.map((compra) => {
-                      const insumoData = compra.insumos as any;
-                      const custoUnit = insumoData?.custo_unitario || 0;
-                      const total = Number(compra.quantidade) * custoUnit;
-                      return (
-                        <TableRow key={compra.id}>
-                          <TableCell>{formatDate(compra.created_at)}</TableCell>
-                          <TableCell className="font-medium">{insumoData?.nome || '-'}</TableCell>
-                          <TableCell className="text-right">
-                            {compra.quantidade} {insumoData?.unidade_medida || 'un'}
-                          </TableCell>
-                          <TableCell className="text-right">{formatCurrency(custoUnit)}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(total)}</TableCell>
-                          <TableCell className="text-muted-foreground max-w-[200px] truncate">
-                            {compra.observacao || '-'}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={() => setDeleteManualId(compra.id)}
-                              disabled={deleteManualMutation.isPending}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[100px]">Data</TableHead>
+                        <TableHead className="min-w-[120px]">Insumo</TableHead>
+                        <TableHead className="text-right min-w-[100px]">Quantidade</TableHead>
+                        <TableHead className="text-right min-w-[100px]">Custo Unit.</TableHead>
+                        <TableHead className="text-right min-w-[90px]">Total</TableHead>
+                        <TableHead className="min-w-[120px]">Observação</TableHead>
+                        <TableHead className="w-16"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {comprasManuais.map((compra) => {
+                        const insumoData = compra.insumos as any;
+                        const custoUnit = insumoData?.custo_unitario || 0;
+                        const total = Number(compra.quantidade) * custoUnit;
+                        return (
+                          <TableRow key={compra.id}>
+                            <TableCell className="whitespace-nowrap">{formatDate(compra.created_at)}</TableCell>
+                            <TableCell className="font-medium">{insumoData?.nome || '-'}</TableCell>
+                            <TableCell className="text-right whitespace-nowrap">
+                              {compra.quantidade} {insumoData?.unidade_medida || 'un'}
+                            </TableCell>
+                            <TableCell className="text-right whitespace-nowrap">{formatCurrency(custoUnit)}</TableCell>
+                            <TableCell className="text-right whitespace-nowrap">{formatCurrency(total)}</TableCell>
+                            <TableCell className="text-muted-foreground max-w-[200px] truncate">
+                              {compra.observacao || '-'}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => setDeleteManualId(compra.id)}
+                                disabled={deleteManualMutation.isPending}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <Plus className="h-12 w-12 mx-auto mb-4 opacity-50" />

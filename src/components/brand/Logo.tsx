@@ -4,15 +4,16 @@ import logoImage from '@/assets/logo.png';
 
 interface LogoProps {
   className?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   variant?: 'full' | 'icon';
   theme?: 'light' | 'dark';
 }
 
 const sizeMap = {
-  sm: { icon: 48, text: 'text-lg' },
-  md: { icon: 56, text: 'text-xl' },
-  lg: { icon: 72, text: 'text-2xl' },
+  xs: { icon: 36, text: 'text-base', padding: 'p-1' },
+  sm: { icon: 48, text: 'text-lg', padding: 'p-1.5' },
+  md: { icon: 56, text: 'text-xl', padding: 'p-1.5' },
+  lg: { icon: 72, text: 'text-2xl', padding: 'p-1.5' },
 };
 
 export const Logo: React.FC<LogoProps> = ({
@@ -21,14 +22,14 @@ export const Logo: React.FC<LogoProps> = ({
   variant = 'full',
   theme = 'dark',
 }) => {
-  const { icon: iconSize, text: textSize } = sizeMap[size];
+  const { icon: iconSize, text: textSize, padding } = sizeMap[size];
   
   const textColor = theme === 'dark' ? 'text-white' : 'text-primary-dark';
 
   return (
-    <div className={cn('flex items-center gap-3', className)}>
+    <div className={cn('flex items-center gap-2', className)}>
       {/* Logo Image with white background */}
-      <div className="bg-white rounded-xl p-1.5 shadow-sm flex-shrink-0">
+      <div className={cn('bg-white rounded-xl shadow-sm flex-shrink-0', padding)}>
         <img
           src={logoImage}
           alt="GastroGestor"
