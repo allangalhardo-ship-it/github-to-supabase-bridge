@@ -733,6 +733,7 @@ export type Database = {
       }
       usuarios: {
         Row: {
+          avatar_url: string | null
           cpf_cnpj: string | null
           created_at: string
           email: string
@@ -743,6 +744,7 @@ export type Database = {
           telefone: string | null
         }
         Insert: {
+          avatar_url?: string | null
           cpf_cnpj?: string | null
           created_at?: string
           email: string
@@ -753,6 +755,7 @@ export type Database = {
           telefone?: string | null
         }
         Update: {
+          avatar_url?: string | null
           cpf_cnpj?: string | null
           created_at?: string
           email?: string
