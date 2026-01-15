@@ -68,6 +68,15 @@ const Compras = () => {
     observacao: '',
   });
   const [deleteManualId, setDeleteManualId] = useState<string | null>(null);
+  const [costVariationWarning, setCostVariationWarning] = useState<{
+    show: boolean;
+    type: 'manual' | 'import';
+    insumoNome: string;
+    custoAtual: number;
+    custoNovo: number;
+    variacao: number;
+    onConfirm: () => void;
+  } | null>(null);
   
   // Filters state
   const [searchTerm, setSearchTerm] = useState('');
@@ -653,9 +662,44 @@ const Compras = () => {
     setManualDialogOpen(false);
   };
 
+  // Check cost variation for manual purchase
+  const checkCostVariation = (insumoId: string, novoCusto: number): { variacao: number; custoAtual: number; insumoNome: string } | null => {
+    const insumo = insumos?.find(i => i.id === insumoId);
+    if (!insumo || !insumo.custo_unitario || insumo.custo_unitario === 0) return null;
+    
+    const custoAtual = Number(insumo.custo_unitario);
+    const variacao = ((novoCusto - custoAtual) / custoAtual) * 100;
+    
+    return {
+      variacao,
+      custoAtual,
+      insumoNome: insumo.nome,
+    };
+  };
+
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    manualPurchaseMutation.mutate(manualFormData);
+    
+    const novoCusto = parseFloat(manualFormData.custo_unitario) || 0;
+    const variation = checkCostVariation(manualFormData.insumo_id, novoCusto);
+    
+    // If variation > 15%, show warning
+    if (variation && Math.abs(variation.variacao) > 15) {
+      setCostVariationWarning({
+        show: true,
+        type: 'manual',
+        insumoNome: variation.insumoNome,
+        custoAtual: variation.custoAtual,
+        custoNovo: novoCusto,
+        variacao: variation.variacao,
+        onConfirm: () => {
+          manualPurchaseMutation.mutate(manualFormData);
+          setCostVariationWarning(null);
+        },
+      });
+    } else {
+      manualPurchaseMutation.mutate(manualFormData);
+    }
   };
 
   const formatCurrency = (value: number) => {
@@ -734,6 +778,45 @@ const Compras = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Show current cost info when insumo is selected */}
+            {manualFormData.insumo_id && (() => {
+              const selectedInsumo = insumos?.find(i => i.id === manualFormData.insumo_id);
+              const custoAtual = selectedInsumo?.custo_unitario || 0;
+              const custoNovo = parseFloat(manualFormData.custo_unitario) || 0;
+              const variacao = custoAtual > 0 ? ((custoNovo - custoAtual) / custoAtual) * 100 : 0;
+              const showVariation = manualFormData.custo_unitario && custoAtual > 0;
+              
+              return (
+                <div className="p-3 bg-muted/50 rounded-lg space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Custo atual:</span>
+                    <span className="font-medium">{formatCurrency(custoAtual)}</span>
+                  </div>
+                  {showVariation && (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Novo custo:</span>
+                        <span className="font-medium">{formatCurrency(custoNovo)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Variação:</span>
+                        <span className={`font-medium ${Math.abs(variacao) > 15 ? 'text-destructive' : variacao > 0 ? 'text-orange-500' : 'text-green-500'}`}>
+                          {variacao > 0 ? '+' : ''}{variacao.toFixed(1)}%
+                          {Math.abs(variacao) > 15 && (
+                            <Badge variant="destructive" className="ml-2 text-xs">
+                              <AlertCircle className="h-3 w-3 mr-1" />
+                              Alerta
+                            </Badge>
+                          )}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="quantidade">Quantidade</Label>
@@ -1505,7 +1588,21 @@ const Compras = () => {
                                     className="h-8 text-sm w-24 text-right"
                                   />
                                 ) : (
-                                  formatCurrency(item.custo_unitario)
+                                  <div className="flex flex-col items-end">
+                                    <span>{formatCurrency(item.custo_unitario)}</span>
+                                    {item.insumo_id && item.mapeado && (() => {
+                                      const insumo = insumos?.find(i => i.id === item.insumo_id);
+                                      if (!insumo || !insumo.custo_unitario || insumo.custo_unitario === 0) return null;
+                                      const variacao = ((item.custo_unitario - insumo.custo_unitario) / insumo.custo_unitario) * 100;
+                                      if (Math.abs(variacao) < 1) return null;
+                                      return (
+                                        <span className={`text-xs ${Math.abs(variacao) > 15 ? 'text-destructive font-medium' : variacao > 0 ? 'text-orange-500' : 'text-green-500'}`}>
+                                          {variacao > 0 ? '+' : ''}{variacao.toFixed(1)}%
+                                          {Math.abs(variacao) > 15 && ' ⚠️'}
+                                        </span>
+                                      );
+                                    })()}
+                                  </div>
                                 )}
                               </TableCell>
                               <TableCell className="text-right font-medium">{formatCurrency(item.valor_total)}</TableCell>
@@ -1605,13 +1702,78 @@ const Compras = () => {
                         Todos os itens precisam estar mapeados para importar a nota
                       </p>
                     )}
+                    {(() => {
+                      // Check for cost variations > 15% in mapped items
+                      const itensComVariacao = parsedNota.itens.filter(item => {
+                        if (!item.insumo_id || !item.mapeado) return false;
+                        const insumo = insumos?.find(i => i.id === item.insumo_id);
+                        if (!insumo || !insumo.custo_unitario || insumo.custo_unitario === 0) return false;
+                        const variacao = ((item.custo_unitario - insumo.custo_unitario) / insumo.custo_unitario) * 100;
+                        return Math.abs(variacao) > 15;
+                      });
+
+                      if (itensComVariacao.length > 0) {
+                        return (
+                          <p className="text-sm text-orange-600 dark:text-orange-400 flex items-center gap-2">
+                            <AlertCircle className="h-4 w-4" />
+                            {itensComVariacao.length} item(ns) com variação de custo &gt; 15%
+                          </p>
+                        );
+                      }
+                      return null;
+                    })()}
                     <div className="flex justify-end gap-2">
                       <Button variant="outline" onClick={() => setParsedNota(null)}>
                         Voltar
                       </Button>
                       {parsedNota.itens.length > 0 && (
                         <Button
-                          onClick={() => importarNotaMutation.mutate()}
+                          onClick={() => {
+                            // Check for significant cost variations before importing
+                            const itensComVariacao = parsedNota.itens.filter(item => {
+                              if (!item.insumo_id || !item.mapeado) return false;
+                              const insumo = insumos?.find(i => i.id === item.insumo_id);
+                              if (!insumo || !insumo.custo_unitario || insumo.custo_unitario === 0) return false;
+                              const variacao = ((item.custo_unitario - insumo.custo_unitario) / insumo.custo_unitario) * 100;
+                              return Math.abs(variacao) > 15;
+                            });
+
+                            if (itensComVariacao.length > 0) {
+                              // Find the item with the largest variation for the warning
+                              let maxVariation = 0;
+                              let maxVariationItem: any = null;
+                              let maxVariationInsumo: any = null;
+
+                              itensComVariacao.forEach(item => {
+                                const insumo = insumos?.find(i => i.id === item.insumo_id);
+                                if (insumo) {
+                                  const variacao = ((item.custo_unitario - insumo.custo_unitario) / insumo.custo_unitario) * 100;
+                                  if (Math.abs(variacao) > Math.abs(maxVariation)) {
+                                    maxVariation = variacao;
+                                    maxVariationItem = item;
+                                    maxVariationInsumo = insumo;
+                                  }
+                                }
+                              });
+
+                              setCostVariationWarning({
+                                show: true,
+                                type: 'import',
+                                insumoNome: itensComVariacao.length > 1 
+                                  ? `${maxVariationInsumo?.nome} e mais ${itensComVariacao.length - 1} item(ns)`
+                                  : maxVariationInsumo?.nome,
+                                custoAtual: maxVariationInsumo?.custo_unitario || 0,
+                                custoNovo: maxVariationItem?.custo_unitario || 0,
+                                variacao: maxVariation,
+                                onConfirm: () => {
+                                  importarNotaMutation.mutate();
+                                  setCostVariationWarning(null);
+                                },
+                              });
+                            } else {
+                              importarNotaMutation.mutate();
+                            }
+                          }}
                           disabled={importarNotaMutation.isPending || parsedNota.itens.some(i => !i.mapeado)}
                         >
                           {importarNotaMutation.isPending ? (
@@ -1848,6 +2010,51 @@ const Compras = () => {
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : null}
               Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Cost Variation Warning Dialog */}
+      <AlertDialog open={!!costVariationWarning?.show} onOpenChange={(open) => !open && setCostVariationWarning(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-orange-500">
+              <AlertCircle className="h-5 w-5" />
+              Alerta de Variação de Custo
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                O custo do insumo <span className="font-semibold">{costVariationWarning?.insumoNome}</span> apresenta uma variação significativa:
+              </p>
+              <div className="p-3 bg-muted rounded-lg space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Custo atual:</span>
+                  <span className="font-medium">{formatCurrency(costVariationWarning?.custoAtual || 0)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Novo custo:</span>
+                  <span className="font-medium">{formatCurrency(costVariationWarning?.custoNovo || 0)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Variação:</span>
+                  <span className={`font-bold ${(costVariationWarning?.variacao || 0) > 0 ? 'text-destructive' : 'text-green-600'}`}>
+                    {(costVariationWarning?.variacao || 0) > 0 ? '+' : ''}{costVariationWarning?.variacao?.toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Variações acima de 15% podem indicar erro de digitação ou mudança significativa no preço do fornecedor. Deseja confirmar esta entrada?
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => costVariationWarning?.onConfirm()}
+              className="bg-orange-500 text-white hover:bg-orange-600"
+            >
+              Confirmar mesmo assim
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
