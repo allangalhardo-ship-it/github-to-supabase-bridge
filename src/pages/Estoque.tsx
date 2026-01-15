@@ -196,15 +196,42 @@ const Estoque = () => {
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
+      const quantidade = parseFloat(data.quantidade) || 0;
+      
+      // Insert the movement
       const { error } = await supabase.from('estoque_movimentos').insert({
         empresa_id: usuario!.empresa_id,
         insumo_id: data.insumo_id,
         tipo: data.tipo,
-        quantidade: parseFloat(data.quantidade) || 0,
+        quantidade: quantidade,
         origem: 'manual',
         observacao: data.observacao || null,
       });
       if (error) throw error;
+
+      // Get current stock
+      const { data: insumo, error: insumoError } = await supabase
+        .from('insumos')
+        .select('estoque_atual')
+        .eq('id', data.insumo_id)
+        .maybeSingle();
+      
+      if (insumoError) throw insumoError;
+      if (!insumo) throw new Error('Insumo não encontrado');
+
+      // Calculate new stock based on movement type
+      const estoqueAtual = Number(insumo.estoque_atual) || 0;
+      const novoEstoque = data.tipo === 'entrada' 
+        ? estoqueAtual + quantidade 
+        : Math.max(0, estoqueAtual - quantidade);
+
+      // Update the insumo stock
+      const { error: updateError } = await supabase
+        .from('insumos')
+        .update({ estoque_atual: novoEstoque })
+        .eq('id', data.insumo_id);
+      
+      if (updateError) throw updateError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['estoque-movimentos'] });
