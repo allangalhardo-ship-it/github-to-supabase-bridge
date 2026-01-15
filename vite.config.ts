@@ -15,6 +15,8 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
+      // Evita injeção automática para não duplicar registro (registramos no src/main.tsx)
+      injectRegister: null,
       includeAssets: ["favicon.png", "icon-512.png"],
       devOptions: {
         enabled: false, // Disable SW in dev to avoid caching issues
@@ -56,12 +58,14 @@ export default defineConfig(({ mode }) => ({
               cacheName: "pages-cache",
               expiration: {
                 maxEntries: 20,
-                maxAgeSeconds: 60 * 60, // 1 hora
+                // Reduz o tempo de "páginas" em cache para não ficar preso em versão antiga no 4G
+                maxAgeSeconds: 60 * 5, // 5 minutos
               },
               cacheableResponse: {
                 statuses: [0, 200],
               },
-              networkTimeoutSeconds: 3,
+              // Em rede móvel, 3s costuma cair no cache antigo; damos mais tempo pra buscar a versão nova
+              networkTimeoutSeconds: 10,
             },
           },
           {
