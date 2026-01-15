@@ -136,28 +136,28 @@ const AppLayout = () => {
   useAlertNotifications();
 
   return (
-    <div className="fixed inset-0 flex bg-background">
+    <div className="fixed inset-0 flex bg-background overflow-hidden">
       {/* Desktop Sidebar - só aparece em telas grandes */}
       <aside className="hidden lg:flex w-64 flex-col flex-shrink-0">
         <SidebarContent isAdmin={isAdmin} />
       </aside>
 
       {/* Mobile & Tablet - sidebar escondida, abre via menu */}
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 flex flex-col min-h-0 min-w-0 w-full max-w-full overflow-hidden">
         {/* Header fixo - Trial Banner + Navigation */}
-        <div className="flex-shrink-0 bg-primary-dark" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        <div className="flex-shrink-0 bg-primary-dark w-full max-w-full overflow-hidden" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
           {/* Trial Banner */}
           <TrialBanner />
           
           {/* Header mobile com botão menu - compacto */}
-          <header className="lg:hidden flex items-center justify-between px-3 py-2">
-            <div className="flex items-center gap-2">
+          <header className="lg:hidden flex items-center justify-between px-3 py-2 w-full max-w-full">
+            <div className="flex items-center gap-2 min-w-0">
               <Sheet open={open} onOpenChange={setOpen}>
                 <SheetTrigger asChild>
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="text-white hover:bg-white/10 active:bg-white/20 h-8 w-8"
+                    className="text-white hover:bg-white/10 active:bg-white/20 h-8 w-8 flex-shrink-0"
                   >
                     <Menu className="h-5 w-5" />
                   </Button>
@@ -170,19 +170,19 @@ const AppLayout = () => {
             </div>
             
             {/* Notification button */}
-            <NotificationSettings className="text-white hover:bg-white/10 h-8 w-8" />
+            <NotificationSettings className="text-white hover:bg-white/10 h-8 w-8 flex-shrink-0" />
           </header>
         </div>
 
         {/* Main Content - área com scroll */}
         <main 
-          className="flex-1 overflow-y-auto overflow-x-auto bg-surface-alt overscroll-contain min-w-0"
+          className="flex-1 overflow-y-auto overflow-x-hidden bg-surface-alt overscroll-contain min-w-0 w-full max-w-full"
           style={{ 
             paddingBottom: 'env(safe-area-inset-bottom)',
             WebkitOverflowScrolling: 'touch'
           }}
         >
-          <div className="w-full min-w-0 p-4 md:p-6 max-w-7xl mx-auto">
+          <div className="w-full min-w-0 p-4 md:p-6 max-w-7xl mx-auto box-border">
             <Outlet />
           </div>
         </main>
