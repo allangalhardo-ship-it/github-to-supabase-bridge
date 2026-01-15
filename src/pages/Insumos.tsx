@@ -412,23 +412,23 @@ const Insumos = () => {
       render: (insumo) => {
         const estoqueBaixo = Number(insumo.estoque_atual) <= Number(insumo.estoque_minimo);
         return (
-          <div className="flex items-center gap-2 flex-wrap">
-            {insumo.is_intermediario ? (
-              <FlaskConical className="h-4 w-4 text-purple-500" />
-            ) : (
-              <ShoppingBasket className="h-4 w-4 text-muted-foreground" />
-            )}
-            <span className="font-medium">{insumo.nome}</span>
+          <div className="flex items-center gap-1.5 min-w-0 overflow-hidden max-w-full">
+            <span className="shrink-0">
+              {insumo.is_intermediario ? (
+                <FlaskConical className="h-4 w-4 text-purple-500" />
+              ) : (
+                <ShoppingBasket className="h-4 w-4 text-muted-foreground" />
+              )}
+            </span>
+            <span className="font-medium truncate flex-1 min-w-0">{insumo.nome}</span>
             {estoqueBaixo && (
-              <Badge variant="destructive" className="gap-1">
+              <Badge variant="destructive" className="gap-0.5 shrink-0 text-[10px] px-1.5 py-0">
                 <AlertTriangle className="h-3 w-3" />
-                Baixo
               </Badge>
             )}
             {insumo.is_intermediario && (
-              <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-                <Layers className="h-3 w-3 mr-1" />
-                Intermediário
+              <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 shrink-0 text-[10px] px-1.5 py-0">
+                <Layers className="h-3 w-3" />
               </Badge>
             )}
           </div>

@@ -102,34 +102,34 @@ export function MobileDataView<T>({
             <Card
               key={key}
               className={cn(
-                "overflow-hidden transition-all",
+                "overflow-hidden transition-all w-full",
                 onItemClick && "cursor-pointer hover:shadow-md",
                 rowClassName
               )}
               onClick={() => onItemClick?.(item)}
             >
-              <CardContent className="p-4">
+              <CardContent className="p-4 w-full overflow-hidden">
                 {/* Header Row */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2 w-full overflow-hidden">
+                  <div className="flex-1 min-w-0 overflow-hidden">
                     {/* Custom or Auto Header */}
                     {renderMobileHeader ? (
-                      <div className="font-medium text-foreground truncate">
+                      <div className="font-medium text-foreground truncate max-w-full">
                         {renderMobileHeader(item)}
                       </div>
                     ) : mobileColumns[0]?.render ? (
-                      <div className="font-medium text-foreground">
+                      <div className="font-medium text-foreground truncate max-w-full overflow-hidden">
                         {mobileColumns[0].render(item)}
                       </div>
                     ) : null}
 
                     {/* Subtitle */}
                     {renderMobileSubtitle ? (
-                      <div className="text-sm text-muted-foreground mt-0.5">
+                      <div className="text-sm text-muted-foreground mt-0.5 truncate max-w-full">
                         {renderMobileSubtitle(item)}
                       </div>
                     ) : mobileColumns[1]?.render ? (
-                      <div className="text-sm text-muted-foreground mt-0.5">
+                      <div className="text-sm text-muted-foreground mt-0.5 truncate max-w-full">
                         {mobileColumns[1].render(item)}
                       </div>
                     ) : null}
@@ -137,7 +137,7 @@ export function MobileDataView<T>({
 
                   {/* Highlight (price, total, etc) */}
                   {renderMobileHighlight && (
-                    <div className="text-right shrink-0">
+                    <div className="text-right shrink-0 whitespace-nowrap">
                       {renderMobileHighlight(item)}
                     </div>
                   )}
@@ -172,10 +172,10 @@ export function MobileDataView<T>({
                         {expandableColumns.map((col) => (
                           <div
                             key={col.key}
-                            className="flex items-center justify-between text-sm"
+                            className="flex items-center justify-between gap-2 text-sm overflow-hidden"
                           >
-                            <span className="text-muted-foreground">{col.header}</span>
-                            <span className="text-foreground">
+                            <span className="text-muted-foreground shrink-0">{col.header}</span>
+                            <span className="text-foreground truncate text-right">
                               {col.render?.(item) ?? "-"}
                             </span>
                           </div>
@@ -188,7 +188,7 @@ export function MobileDataView<T>({
                 {/* Actions */}
                 {renderActions && (
                   <div
-                    className="flex justify-end gap-1 mt-3 pt-3 border-t border-border"
+                    className="flex justify-end gap-1 mt-3 pt-3 border-t border-border flex-wrap"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {renderActions(item)}
