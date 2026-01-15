@@ -37,11 +37,11 @@ const navItems = [
   { to: '/insumos', icon: Carrot, label: 'Insumos' },
   { to: '/estoque', icon: PackageOpen, label: 'Estoque' },
   { to: '/producao', icon: Factory, label: 'Produção' },
-  { to: '/movimentacoes', icon: ShoppingCart, label: 'Movimentações' },
+  { to: '/compras', icon: FileSpreadsheet, label: 'Compras' },
+  { to: '/movimentacoes', icon: ShoppingCart, label: 'Vendas' },
   { to: '/caixa', icon: Wallet, label: 'Caixa' },
   { to: '/clientes', icon: Users, label: 'Clientes' },
   { to: '/custos-fixos', icon: Calculator, label: 'Custos Fixos' },
-  { to: '/xml-import', icon: FileSpreadsheet, label: 'Importar NF-e' },
   { to: '/configuracoes', icon: SlidersHorizontal, label: 'Configurações' },
 ];
 

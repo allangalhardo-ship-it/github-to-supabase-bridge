@@ -21,6 +21,7 @@ import Clientes from "@/pages/Clientes";
 import CustosFixos from "@/pages/CustosFixos";
 import Configuracoes from "@/pages/Configuracoes";
 import XmlImport from "@/pages/XmlImport";
+import Compras from "@/pages/Compras";
 import Receitas from "@/pages/Receitas";
 import Caixa from "@/pages/Caixa";
 import Admin from "@/pages/Admin";
@@ -105,6 +106,7 @@ const AppRoutes = () => {
         <Route path="clientes" element={<Clientes />} />
         <Route path="custos-fixos" element={<CustosFixos />} />
         <Route path="caixa" element={<Caixa />} />
+        <Route path="compras" element={<Compras />} />
         <Route path="configuracoes" element={<Configuracoes />} />
         <Route path="xml-import" element={<XmlImport />} />
         <Route path="receitas" element={<Receitas />} />
