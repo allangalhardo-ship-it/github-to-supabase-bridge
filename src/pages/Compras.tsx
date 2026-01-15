@@ -783,14 +783,19 @@ const Compras = () => {
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Compras</h1>
           <p className="text-sm sm:text-base text-muted-foreground">Gerencie suas notas fiscais e itens comprados</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setManualDialogOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Compra Manual
+
+        <div className="grid grid-cols-2 gap-2 w-full sm:w-auto sm:flex sm:justify-end">
+          <Button
+            variant="outline"
+            onClick={() => setManualDialogOpen(true)}
+            className="gap-2 w-full min-w-0"
+          >
+            <Plus className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 truncate">Compra Manual</span>
           </Button>
-          <Button onClick={() => setImportDialogOpen(true)} className="gap-2">
-            <Upload className="h-4 w-4" />
-            Importar NF-e
+          <Button onClick={() => setImportDialogOpen(true)} className="gap-2 w-full min-w-0">
+            <Upload className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 truncate">Importar NF-e</span>
           </Button>
         </div>
       </div>
@@ -921,29 +926,29 @@ const Compras = () => {
       </Dialog>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 grid-cols-3">
-        <Card>
+      <div className="grid gap-2 sm:gap-4 grid-cols-2 sm:grid-cols-3">
+        <Card className="min-w-0">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total em Compras</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{formatCurrency(totalCompras)}</p>
+          <CardContent className="min-w-0">
+            <p className="text-2xl font-bold whitespace-nowrap">{formatCurrency(totalCompras)}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="min-w-0">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Notas Importadas</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{totalNotasCount}</p>
+          <CardContent className="min-w-0">
+            <p className="text-2xl font-bold whitespace-nowrap">{totalNotasCount}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="min-w-0 col-span-2 sm:col-span-1">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Compras Manuais</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{totalManuaisCount}</p>
+          <CardContent className="min-w-0">
+            <p className="text-2xl font-bold whitespace-nowrap">{totalManuaisCount}</p>
           </CardContent>
         </Card>
       </div>
@@ -951,8 +956,8 @@ const Compras = () => {
       {/* Filters */}
       <Card>
         <CardContent className="pt-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
+          <div className="flex flex-col gap-3">
+            <div className="relative w-full min-w-0">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por número, fornecedor ou produto..."
@@ -961,9 +966,10 @@ const Compras = () => {
                 className="pl-9"
               />
             </div>
-            <div className="flex gap-2">
+
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-end">
               <Select value={fornecedorFilter} onValueChange={setFornecedorFilter}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full min-w-0 sm:w-[220px]">
                   <SelectValue placeholder="Fornecedor" />
                 </SelectTrigger>
                 <SelectContent>
@@ -973,11 +979,12 @@ const Compras = () => {
                   ))}
                 </SelectContent>
               </Select>
+
               <Input
                 type="date"
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
-                className="w-[140px]"
+                className="w-full sm:w-[160px]"
               />
             </div>
           </div>
@@ -986,16 +993,16 @@ const Compras = () => {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="notas" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="notas" className="gap-2">
+        <TabsList className="w-full justify-start overflow-x-auto">
+          <TabsTrigger value="notas" className="gap-2 shrink-0">
             <FileText className="h-4 w-4" />
             Notas Fiscais
           </TabsTrigger>
-          <TabsTrigger value="manuais" className="gap-2">
+          <TabsTrigger value="manuais" className="gap-2 shrink-0">
             <Plus className="h-4 w-4" />
             Compras Manuais
           </TabsTrigger>
-          <TabsTrigger value="itens" className="gap-2">
+          <TabsTrigger value="itens" className="gap-2 shrink-0">
             <Package className="h-4 w-4" />
             Itens Detalhados
           </TabsTrigger>
