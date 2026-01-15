@@ -403,14 +403,14 @@ const Produtos = () => {
             const temFichaTecnica = produto.fichas_tecnicas && produto.fichas_tecnicas.length > 0;
 
             return (
-              <Card key={produto.id} className={!produto.ativo ? 'opacity-60' : ''}>
+              <Card key={produto.id} className={`${!produto.ativo ? 'opacity-60' : ''} overflow-hidden`}>
                 <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <Package className="h-5 w-5 text-primary" />
-                      <CardTitle className="text-lg">{produto.nome}</CardTitle>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                      <Package className="h-5 w-5 text-primary shrink-0" />
+                      <CardTitle className="text-base sm:text-lg truncate">{produto.nome}</CardTitle>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 shrink-0">
                       <MarketPriceSearch
                         productName={produto.nome}
                         category={produto.categoria}
@@ -440,7 +440,7 @@ const Produtos = () => {
                     </div>
                   </div>
                   {produto.categoria && (
-                    <Badge variant="secondary" className="w-fit">
+                    <Badge variant="secondary" className="w-fit text-[10px] px-1.5 py-0 max-w-[100px] truncate">
                       {produto.categoria}
                     </Badge>
                   )}

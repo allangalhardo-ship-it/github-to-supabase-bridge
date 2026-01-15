@@ -347,8 +347,8 @@ const Producao = () => {
                   data={produtosComEstoque}
                   keyExtractor={(produto) => produto.id}
                   columns={[
-                    { key: 'nome', header: 'Produto', mobilePriority: 1, render: (p) => <span className="font-medium">{p.nome}</span> },
-                    { key: 'categoria', header: 'Categoria', mobilePriority: 4, render: (p) => <span className="text-muted-foreground">{p.categoria || '-'}</span> },
+                    { key: 'nome', header: 'Produto', mobilePriority: 1, render: (p) => <span className="font-medium truncate block max-w-[120px] sm:max-w-none">{p.nome}</span> },
+                    { key: 'categoria', header: 'Categoria', mobilePriority: 4, render: (p) => <span className="text-muted-foreground truncate block max-w-[80px]">{p.categoria || '-'}</span> },
                     { key: 'estoque', header: 'Estoque Acabado', align: 'right', mobilePriority: 2, render: (p) => {
                       const estoque = Number(p.estoque_acabado);
                       return <span className={estoque === 0 ? 'text-muted-foreground' : 'font-semibold text-green-600'}>{estoque} un</span>;
@@ -363,8 +363,8 @@ const Producao = () => {
                       );
                     }},
                   ]}
-                  renderMobileHeader={(p) => p.nome}
-                  renderMobileSubtitle={(p) => p.categoria || 'Sem categoria'}
+                  renderMobileHeader={(p) => <span className="truncate block max-w-[180px]">{p.nome}</span>}
+                  renderMobileSubtitle={(p) => <span className="truncate block max-w-[120px]">{p.categoria || 'Sem categoria'}</span>}
                   renderMobileHighlight={(p) => {
                     const estoque = Number(p.estoque_acabado);
                     return <span className={estoque === 0 ? 'text-muted-foreground' : 'font-semibold text-green-600'}>{estoque} un</span>;
@@ -405,20 +405,20 @@ const Producao = () => {
                   data={producoes}
                   keyExtractor={(prod) => prod.id}
                   columns={[
-                    { key: 'data', header: 'Data', mobilePriority: 3, render: (p) => <span className="text-muted-foreground whitespace-nowrap">{format(new Date(p.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span> },
-                    { key: 'produto', header: 'Produto', mobilePriority: 1, render: (p) => <span className="font-medium">{p.produtos?.nome}</span> },
-                    { key: 'quantidade', header: 'Quantidade', align: 'right', mobilePriority: 2, render: (p) => (
-                      <Badge variant="outline" className="text-green-600 border-green-600">+{Number(p.quantidade)} un</Badge>
+                    { key: 'data', header: 'Data', mobilePriority: 3, render: (p) => <span className="text-muted-foreground whitespace-nowrap text-xs">{format(new Date(p.created_at), 'dd/MM HH:mm', { locale: ptBR })}</span> },
+                    { key: 'produto', header: 'Produto', mobilePriority: 1, render: (p) => <span className="font-medium truncate block max-w-[120px] sm:max-w-none">{p.produtos?.nome}</span> },
+                    { key: 'quantidade', header: 'Qtd', align: 'right', mobilePriority: 2, render: (p) => (
+                      <Badge variant="outline" className="text-green-600 border-green-600 text-[10px] px-1.5 py-0">+{Number(p.quantidade)}</Badge>
                     )},
-                    { key: 'validade', header: 'Validade', mobilePriority: 4, render: (p) => p.data_vencimento ? (
-                      <span className="text-muted-foreground text-sm">{format(new Date(p.data_vencimento), 'dd/MM/yyyy', { locale: ptBR })}</span>
-                    ) : <span className="text-muted-foreground/50 text-sm">-</span> },
-                    { key: 'obs', header: 'Observação', mobilePriority: 5, render: (p) => <span className="text-muted-foreground">{p.observacao || '-'}</span> },
+                    { key: 'validade', header: 'Validade', mobilePriority: 4, hideOnMobile: true, render: (p) => p.data_vencimento ? (
+                      <span className="text-muted-foreground text-xs whitespace-nowrap">{format(new Date(p.data_vencimento), 'dd/MM/yy', { locale: ptBR })}</span>
+                    ) : <span className="text-muted-foreground/50 text-xs">-</span> },
+                    { key: 'obs', header: 'Obs', mobilePriority: 5, hideOnMobile: true, render: (p) => <span className="text-muted-foreground text-xs truncate block max-w-[80px]">{p.observacao || '-'}</span> },
                   ]}
-                  renderMobileHeader={(p) => p.produtos?.nome}
-                  renderMobileSubtitle={(p) => format(new Date(p.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                  renderMobileHeader={(p) => <span className="truncate block max-w-[180px]">{p.produtos?.nome || 'Produto'}</span>}
+                  renderMobileSubtitle={(p) => <span className="text-xs text-muted-foreground whitespace-nowrap">{format(new Date(p.created_at), "dd/MM 'às' HH:mm", { locale: ptBR })}</span>}
                   renderMobileHighlight={(p) => (
-                    <Badge variant="outline" className="text-green-600 border-green-600">+{Number(p.quantidade)} un</Badge>
+                    <Badge variant="outline" className="text-green-600 border-green-600 text-[10px] px-1.5 py-0">+{Number(p.quantidade)} un</Badge>
                   )}
                   emptyMessage="Nenhuma produção registrada"
                   emptyAction={

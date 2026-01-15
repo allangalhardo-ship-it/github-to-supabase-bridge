@@ -266,6 +266,48 @@
   .touch-feedback {
     @apply active:scale-95 transition-transform;
   }
+
+  /* ===== MOBILE UTILITIES ===== */
+  
+  /* Text truncation with ellipsis */
+  .text-truncate {
+    @apply truncate overflow-hidden text-ellipsis whitespace-nowrap;
+  }
+  
+  /* Container that prevents overflow */
+  .mobile-container {
+    @apply w-full overflow-hidden min-w-0;
+  }
+  
+  /* Flex item that can shrink */
+  .flex-shrinkable {
+    @apply min-w-0 flex-1 overflow-hidden;
+  }
+  
+  /* Table cell with truncation */
+  .table-cell-truncate {
+    @apply max-w-[120px] sm:max-w-none truncate;
+  }
+  
+  /* Card content with proper overflow */
+  .card-content-mobile {
+    @apply overflow-hidden w-full;
+  }
+  
+  /* Mobile-friendly button sizes */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+  
+  /* Responsive text sizing */
+  .text-responsive {
+    @apply text-sm sm:text-base;
+  }
+  
+  /* Mobile-optimized badge */
+  .badge-mobile {
+    @apply text-[10px] px-1.5 py-0.5 shrink-0 whitespace-nowrap;
+  }
 }
 
 /* Print Styles */

@@ -344,14 +344,14 @@ const Dashboard = () => {
                   {totalVendas} {totalVendas === 1 ? 'venda' : 'vendas'} no período
                 </p>
                 {ticketPorCanal.length > 0 && (
-                  <div className="pt-2 border-t">
-                    <table className="w-full text-xs">
+                  <div className="pt-2 border-t overflow-hidden">
+                    <table className="w-full text-xs table-fixed">
                       <tbody>
                         {ticketPorCanal.map((item) => (
                           <tr key={item.canal}>
-                            <td className="text-muted-foreground py-0.5 truncate max-w-[80px]">{item.canal}</td>
-                            <td className="text-right font-medium py-0.5">{formatCurrency(item.ticketMedio)}</td>
-                            <td className="text-right text-muted-foreground py-0.5 w-8">({item.quantidade})</td>
+                            <td className="text-muted-foreground py-0.5 truncate max-w-[60px] overflow-hidden">{item.canal}</td>
+                            <td className="text-right font-medium py-0.5 whitespace-nowrap">{formatCurrency(item.ticketMedio)}</td>
+                            <td className="text-right text-muted-foreground py-0.5 w-8 whitespace-nowrap">({item.quantidade})</td>
                           </tr>
                         ))}
                       </tbody>
@@ -454,24 +454,24 @@ const Dashboard = () => {
                 {topProdutos.map((produto, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg gap-2 overflow-hidden"
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg font-bold text-muted-foreground">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 overflow-hidden">
+                      <span className="text-sm sm:text-lg font-bold text-muted-foreground shrink-0">
                         #{index + 1}
                       </span>
-                      <div>
-                        <p className="font-medium">{produto.nome}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {produto.quantidade} vendidos
+                      <div className="min-w-0 flex-1 overflow-hidden">
+                        <p className="font-medium truncate text-sm sm:text-base">{produto.nome}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {produto.quantidade}x vendidos
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-green-600">
+                    <div className="text-right shrink-0">
+                      <p className="font-bold text-green-600 text-sm sm:text-base whitespace-nowrap">
                         {formatCurrency(produto.lucro)}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
                         {formatCurrency(produto.receita)} receita
                       </p>
                     </div>
@@ -500,17 +500,17 @@ const Dashboard = () => {
                 {insumosAlerta.slice(0, 5).map((insumo, index) => (
                   <div
                     key={insumo.id}
-                    className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg gap-2 overflow-hidden"
                   >
-                    <div>
-                      <p className="font-medium">{insumo.nome}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Mínimo: {insumo.estoque_minimo} {insumo.unidade_medida}
+                    <div className="min-w-0 flex-1 overflow-hidden">
+                      <p className="font-medium truncate text-sm">{insumo.nome}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        Mín: {insumo.estoque_minimo} {insumo.unidade_medida}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-amber-600">
-                        {Number(insumo.estoque_atual).toFixed(2)} {insumo.unidade_medida}
+                    <div className="text-right shrink-0">
+                      <p className="font-bold text-amber-600 text-sm whitespace-nowrap">
+                        {Number(insumo.estoque_atual).toFixed(1)} {insumo.unidade_medida}
                       </p>
                     </div>
                   </div>

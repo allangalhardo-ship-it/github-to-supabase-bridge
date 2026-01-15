@@ -232,7 +232,7 @@ const Clientes = () => {
               key: 'nome',
               header: 'Nome',
               mobilePriority: 1,
-              render: (cliente) => <span className="font-medium">{cliente.nome}</span>,
+              render: (cliente) => <span className="font-medium truncate block max-w-[150px] sm:max-w-none">{cliente.nome}</span>,
             },
             {
               key: 'whatsapp',
@@ -267,6 +267,9 @@ const Clientes = () => {
             },
           ]}
           keyExtractor={(cliente) => cliente.id}
+          renderMobileHeader={(cliente) => (
+            <span className="truncate block max-w-[180px]">{cliente.nome}</span>
+          )}
           renderActions={(cliente) => (
             <>
               <Button
@@ -287,7 +290,6 @@ const Clientes = () => {
               </Button>
             </>
           )}
-          renderMobileHeader={(cliente) => cliente.nome}
           renderMobileSubtitle={(cliente) => (
             cliente.whatsapp ? (
               <Button
