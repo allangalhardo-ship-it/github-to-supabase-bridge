@@ -898,9 +898,12 @@ const Compras = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {
+                        onClick={async () => {
                           const unmappedItems = parsedNota.itens.filter(i => !i.mapeado);
-                          unmappedItems.forEach(async (item) => {
+                          const updatedItens = [...parsedNota.itens];
+                          
+                          for (let i = 0; i < unmappedItems.length; i++) {
+                            const item = unmappedItems[i];
                             const { data: newInsumo, error } = await supabase
                               .from('insumos')
                               .insert({
@@ -923,25 +926,25 @@ const Compras = () => {
                               }, {
                                 onConflict: 'empresa_id,fornecedor_cnpj,codigo_produto_nota',
                               });
+                              
+                              // Update the item in our local array
+                              const idx = updatedItens.findIndex(ui => ui.produto_descricao === item.produto_descricao);
+                              if (idx !== -1) {
+                                updatedItens[idx] = { ...updatedItens[idx], insumo_id: newInsumo.id, mapeado: true };
+                              }
                             }
-                          });
+                          }
                           
-                          // Update local state after all operations
-                          setTimeout(() => {
-                            queryClient.invalidateQueries({ queryKey: ['insumos'] });
-                            queryClient.invalidateQueries({ queryKey: ['mapeamentos'] });
-                            setParsedNota({
-                              ...parsedNota,
-                              itens: parsedNota.itens.map(item => ({
-                                ...item,
-                                mapeado: true,
-                              })),
-                            });
-                            toast({ 
-                              title: 'Insumos criados!', 
-                              description: `${unmappedItems.length} insumo(s) cadastrado(s) automaticamente.` 
-                            });
-                          }, 500);
+                          queryClient.invalidateQueries({ queryKey: ['insumos'] });
+                          queryClient.invalidateQueries({ queryKey: ['mapeamentos'] });
+                          setParsedNota({
+                            ...parsedNota,
+                            itens: updatedItens,
+                          });
+                          toast({ 
+                            title: 'Insumos criados!', 
+                            description: `${unmappedItems.length} insumo(s) cadastrado(s) automaticamente.` 
+                          });
                         }}
                         className="gap-1"
                       >
@@ -959,6 +962,7 @@ const Compras = () => {
                             <TableHead className="w-10"></TableHead>
                             <TableHead>Produto</TableHead>
                             <TableHead className="text-right">Qtd</TableHead>
+                            <TableHead className="text-right">Vlr Unit.</TableHead>
                             <TableHead className="text-right">Total</TableHead>
                             <TableHead className="text-center">Status</TableHead>
                             <TableHead></TableHead>
@@ -990,6 +994,7 @@ const Compras = () => {
                               <TableCell className="text-right whitespace-nowrap">
                                 {item.quantidade} {item.unidade}
                               </TableCell>
+                              <TableCell className="text-right">{formatCurrency(item.custo_unitario)}</TableCell>
                               <TableCell className="text-right">{formatCurrency(item.valor_total)}</TableCell>
                               <TableCell className="text-center">
                                 {item.mapeado ? (
@@ -1080,23 +1085,31 @@ const Compras = () => {
                     </div>
                   )}
 
-                  <div className="flex justify-end gap-2 pt-4 border-t">
-                    <Button variant="outline" onClick={() => setParsedNota(null)}>
-                      Voltar
-                    </Button>
-                    {parsedNota.itens.length > 0 && (
-                      <Button
-                        onClick={() => importarNotaMutation.mutate()}
-                        disabled={importarNotaMutation.isPending}
-                      >
-                        {importarNotaMutation.isPending ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Check className="mr-2 h-4 w-4" />
-                        )}
-                        Importar Nota
-                      </Button>
+                  <div className="flex flex-col gap-2 pt-4 border-t">
+                    {parsedNota.itens.some(i => !i.mapeado) && (
+                      <p className="text-sm text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4" />
+                        Todos os itens precisam estar mapeados para importar a nota
+                      </p>
                     )}
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" onClick={() => setParsedNota(null)}>
+                        Voltar
+                      </Button>
+                      {parsedNota.itens.length > 0 && (
+                        <Button
+                          onClick={() => importarNotaMutation.mutate()}
+                          disabled={importarNotaMutation.isPending || parsedNota.itens.some(i => !i.mapeado)}
+                        >
+                          {importarNotaMutation.isPending ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Check className="mr-2 h-4 w-4" />
+                          )}
+                          Importar Nota
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
