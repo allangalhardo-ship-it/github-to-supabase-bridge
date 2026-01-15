@@ -8,6 +8,7 @@ import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import AppLayout from "@/components/layout/AppLayout";
 import PaywallGuard from "@/components/subscription/PaywallGuard";
+import UpdateBanner, { useUpdateBanner } from "@/components/pwa/UpdateBanner";
 import Login from "@/pages/Login";
 import Cadastro from "@/pages/Cadastro";
 import Assinatura from "@/pages/Assinatura";
@@ -26,6 +27,15 @@ import Receitas from "@/pages/Receitas";
 import Caixa from "@/pages/Caixa";
 import Admin from "@/pages/Admin";
 import NotFound from "@/pages/NotFound";
+
+// Componente para exibir o banner de atualização
+const PWAUpdateBanner = () => {
+  const { showBanner, handleUpdate } = useUpdateBanner();
+  
+  if (!showBanner) return null;
+  
+  return <UpdateBanner onUpdate={handleUpdate} />;
+};
 
 // Component to initialize offline sync
 const OfflineSyncProvider = ({ children }: { children: React.ReactNode }) => {
@@ -121,6 +131,7 @@ const AppRoutes = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <PWAUpdateBanner />
       <Toaster />
       <Sonner />
       <BrowserRouter>
