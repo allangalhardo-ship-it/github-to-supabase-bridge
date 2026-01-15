@@ -26,6 +26,7 @@ import Compras from "@/pages/Compras";
 import Receitas from "@/pages/Receitas";
 import Caixa from "@/pages/Caixa";
 import Admin from "@/pages/Admin";
+import MeusDados from "@/pages/MeusDados";
 import NotFound from "@/pages/NotFound";
 
 // Componente para exibir o banner de atualização
@@ -121,6 +122,7 @@ const AppRoutes = () => {
         <Route path="xml-import" element={<XmlImport />} />
         <Route path="receitas" element={<Receitas />} />
         <Route path="admin" element={<Admin />} />
+        <Route path="meus-dados" element={<MeusDados />} />
       </Route>
       
       <Route path="*" element={<NotFound />} />
