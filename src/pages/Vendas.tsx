@@ -545,8 +545,8 @@ const Vendas = () => {
                   header: 'Data',
                   mobilePriority: 2,
                   render: (venda) => (
-                    <span className="text-muted-foreground">
-                      {format(new Date(venda.data_venda), 'dd/MM/yyyy', { locale: ptBR })}
+                    <span className="text-muted-foreground whitespace-nowrap text-xs sm:text-sm">
+                      {format(new Date(venda.data_venda), 'dd/MM/yy', { locale: ptBR })}
                     </span>
                   ),
                 },
@@ -555,7 +555,7 @@ const Vendas = () => {
                   header: 'Produto',
                   mobilePriority: 1,
                   render: (venda) => (
-                    <span className="font-medium">
+                    <span className="font-medium truncate block max-w-[120px] sm:max-w-[200px]">
                       {venda.produtos?.nome || venda.descricao_produto || '-'}
                     </span>
                   ),
@@ -565,6 +565,7 @@ const Vendas = () => {
                   header: 'Qtd',
                   align: 'center',
                   mobilePriority: 4,
+                  hideOnMobile: true,
                   render: (venda) => Number(venda.quantidade),
                 },
                 {
@@ -573,20 +574,30 @@ const Vendas = () => {
                   align: 'right',
                   mobilePriority: 3,
                   render: (venda) => (
-                    <span className="font-medium">{formatCurrency(Number(venda.valor_total))}</span>
+                    <span className="font-medium whitespace-nowrap text-xs sm:text-sm">{formatCurrency(Number(venda.valor_total))}</span>
                   ),
                 },
                 {
                   key: 'canal',
                   header: 'Canal',
                   mobilePriority: 5,
-                  render: (venda) => <Badge variant="secondary">{venda.canal}</Badge>,
+                  hideOnMobile: true,
+                  render: (venda) => (
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 truncate max-w-[80px]">
+                      {venda.canal}
+                    </Badge>
+                  ),
                 },
                 {
                   key: 'origem',
                   header: 'Origem',
                   mobilePriority: 6,
-                  render: (venda) => <Badge variant="outline">{venda.origem}</Badge>,
+                  hideOnMobile: true,
+                  render: (venda) => (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                      {venda.origem}
+                    </Badge>
+                  ),
                 },
               ]}
               keyExtractor={(venda) => venda.id}
@@ -603,17 +614,21 @@ const Vendas = () => {
                   <Trash2 className="h-4 w-4" />
                 </Button>
               )}
-              renderMobileHeader={(venda) => venda.produtos?.nome || venda.descricao_produto || 'Venda'}
+              renderMobileHeader={(venda) => (
+                <span className="truncate block max-w-[150px]">
+                  {venda.produtos?.nome || venda.descricao_produto || 'Venda'}
+                </span>
+              )}
               renderMobileSubtitle={(venda) => (
-                <div className="flex items-center gap-2">
-                  <span>{format(new Date(venda.data_venda), 'dd/MM/yyyy', { locale: ptBR })}</span>
-                  <Badge variant="secondary" className="text-xs">{venda.canal}</Badge>
+                <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
+                  <span className="text-xs whitespace-nowrap">{format(new Date(venda.data_venda), 'dd/MM/yy', { locale: ptBR })}</span>
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 truncate max-w-[70px] shrink-0">{venda.canal}</Badge>
                 </div>
               )}
               renderMobileHighlight={(venda) => (
-                <div className="text-right">
-                  <p className="font-bold text-foreground">{formatCurrency(Number(venda.valor_total))}</p>
-                  <p className="text-xs text-muted-foreground">Qtd: {Number(venda.quantidade)}</p>
+                <div className="text-right whitespace-nowrap shrink-0">
+                  <p className="font-bold text-foreground text-sm">{formatCurrency(Number(venda.valor_total))}</p>
+                  <p className="text-[10px] text-muted-foreground">Qtd: {Number(venda.quantidade)}</p>
                 </div>
               )}
               emptyMessage={
