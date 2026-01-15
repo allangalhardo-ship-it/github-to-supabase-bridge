@@ -2,19 +2,27 @@ import { createRoot } from "react-dom/client";
 import { registerSW } from "virtual:pwa-register";
 import App from "./App.tsx";
 import "./index.css";
+import { setUpdateCallback, triggerUpdateBanner } from "./components/pwa/UpdateBanner";
 
-// Atualização automática do PWA: quando uma nova versão estiver disponível,
-// força a troca do Service Worker e recarrega o app.
+// Registra o Service Worker com callback para atualização
 const updateSW = registerSW({
   immediate: true,
   onNeedRefresh() {
-    // true => recarrega a página após ativar o novo SW
-    updateSW(true);
+    // Quando uma nova versão estiver disponível, mostra o banner
+    triggerUpdateBanner();
+  },
+  onOfflineReady() {
+    console.log("App pronto para uso offline");
   },
 });
 
+// Define o callback que será chamado quando o usuário clicar em "Atualizar"
+setUpdateCallback(() => {
+  updateSW(true);
+});
+
 // Garante que, ao abrir o link publicado, o app tente sempre pegar a versão mais nova
-// (evita ficar “preso” em cache do Service Worker / PWA).
+// (evita ficar "preso" em cache do Service Worker / PWA).
 const ensureFreshApp = () => {
   if (!("serviceWorker" in navigator)) return;
 
@@ -35,7 +43,7 @@ const ensureFreshApp = () => {
       // Força o navegador a checar se existe SW/versão nova
       await reg.update();
 
-      // Em alguns cenários, pode ficar aguardando; tentamos “adiantar” a ativação
+      // Em alguns cenários, pode ficar aguardando; tentamos "adiantar" a ativação
       reg.waiting?.postMessage({ type: "SKIP_WAITING" });
     } catch {
       // silencioso: não quebra o app se o browser bloquear SW
@@ -46,4 +54,3 @@ const ensureFreshApp = () => {
 ensureFreshApp();
 
 createRoot(document.getElementById("root")!).render(<App />);
-
