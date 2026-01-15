@@ -156,6 +156,17 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({ produtoId, prod
                   +
                 </Button>
               </div>
+              {/* Preview do custo em tempo real */}
+              {insumoSelecionado && quantidade && parseFloat(quantidade) > 0 && (
+                <div className="mt-2 flex items-center justify-between text-xs bg-primary/5 rounded px-2 py-1.5">
+                  <span className="text-muted-foreground">
+                    {parseFloat(quantidade)} × {formatCurrency(insumoSelecionado.custo_unitario)}
+                  </span>
+                  <span className="font-semibold text-primary">
+                    = {formatCurrency(parseFloat(quantidade) * insumoSelecionado.custo_unitario)}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Lista de insumos */}
