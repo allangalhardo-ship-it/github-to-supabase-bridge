@@ -195,6 +195,16 @@
   h3 {
     @apply text-lg md:text-xl;
   }
+
+  /* Prevent horizontal overflow on mobile */
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Tables must scroll horizontally on mobile */
+  table {
+    @apply min-w-full;
+  }
 }
 
 @layer components {
