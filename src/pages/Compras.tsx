@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Loader2, ImageIcon, Filter, Calendar, Package, Search, Trash2, Wand2 } from 'lucide-react';
+import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Loader2, ImageIcon, Filter, Calendar, Package, Search, Trash2, Wand2, Pencil } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
 import { format } from 'date-fns';
@@ -53,6 +53,7 @@ const Compras = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [importTab, setImportTab] = useState('xml');
+  const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
   
   // Filters state
   const [searchTerm, setSearchTerm] = useState('');
@@ -419,6 +420,25 @@ const Compras = () => {
     },
   });
 
+  // Delete nota mutation
+  const deleteNotaMutation = useMutation({
+    mutationFn: async (notaId: string) => {
+      const { error } = await supabase
+        .from('xml_notas')
+        .delete()
+        .eq('id', notaId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['xml-notas'] });
+      queryClient.invalidateQueries({ queryKey: ['xml-itens-all'] });
+      toast({ title: 'Nota excluída com sucesso!' });
+    },
+    onError: (error) => {
+      toast({ title: 'Erro ao excluir nota', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -543,6 +563,7 @@ const Compras = () => {
                       <TableHead>Fornecedor</TableHead>
                       <TableHead>Data Emissão</TableHead>
                       <TableHead className="text-right">Valor Total</TableHead>
+                      <TableHead className="w-10"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -552,6 +573,21 @@ const Compras = () => {
                         <TableCell>{nota.fornecedor || '-'}</TableCell>
                         <TableCell>{formatDate(nota.data_emissao)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(nota.valor_total || 0)}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => {
+                              if (confirm('Tem certeza que deseja excluir esta nota fiscal?')) {
+                                deleteNotaMutation.mutate(nota.id);
+                              }
+                            }}
+                            disabled={deleteNotaMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -955,15 +991,15 @@ const Compras = () => {
                   )}
 
                   {parsedNota.itens.length > 0 ? (
-                    <div className="max-h-64 overflow-y-auto">
+                    <div className="max-h-80 overflow-y-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
                             <TableHead className="w-10"></TableHead>
                             <TableHead>Produto</TableHead>
-                            <TableHead className="text-right">Qtd</TableHead>
-                            <TableHead className="text-right">Vlr Unit.</TableHead>
-                            <TableHead className="text-right">Total</TableHead>
+                            <TableHead className="text-right w-24">Qtd</TableHead>
+                            <TableHead className="text-right w-28">Vlr Unit.</TableHead>
+                            <TableHead className="text-right w-24">Total</TableHead>
                             <TableHead className="text-center">Status</TableHead>
                             <TableHead></TableHead>
                           </TableRow>
@@ -972,30 +1008,94 @@ const Compras = () => {
                           {parsedNota.itens.map((item, index) => (
                             <TableRow key={index}>
                               <TableCell>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                  onClick={() => {
-                                    const newItens = parsedNota.itens.filter((_, i) => i !== index);
-                                    const newValorTotal = newItens.reduce((acc, i) => acc + i.valor_total, 0);
-                                    setParsedNota({
-                                      ...parsedNota,
-                                      itens: newItens,
-                                      valor_total: newValorTotal,
-                                    });
-                                    toast({ title: 'Item removido da importação' });
-                                  }}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                <div className="flex gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => {
+                                      const newItens = parsedNota.itens.filter((_, i) => i !== index);
+                                      const newValorTotal = newItens.reduce((acc, i) => acc + i.valor_total, 0);
+                                      setParsedNota({
+                                        ...parsedNota,
+                                        itens: newItens,
+                                        valor_total: newValorTotal,
+                                      });
+                                      if (editingItemIndex === index) setEditingItemIndex(null);
+                                      toast({ title: 'Item removido da importação' });
+                                    }}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => setEditingItemIndex(editingItemIndex === index ? null : index)}
+                                    title="Editar item"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
                               </TableCell>
-                              <TableCell className="font-medium max-w-[200px] truncate">{item.produto_descricao}</TableCell>
-                              <TableCell className="text-right whitespace-nowrap">
-                                {item.quantidade} {item.unidade}
+                              <TableCell className="font-medium">
+                                {editingItemIndex === index ? (
+                                  <Input
+                                    value={item.produto_descricao}
+                                    onChange={(e) => {
+                                      const newItens = [...parsedNota.itens];
+                                      newItens[index] = { ...newItens[index], produto_descricao: e.target.value };
+                                      setParsedNota({ ...parsedNota, itens: newItens });
+                                    }}
+                                    className="h-8 text-sm"
+                                  />
+                                ) : (
+                                  <span className="max-w-[200px] truncate block">{item.produto_descricao}</span>
+                                )}
                               </TableCell>
-                              <TableCell className="text-right">{formatCurrency(item.custo_unitario)}</TableCell>
-                              <TableCell className="text-right">{formatCurrency(item.valor_total)}</TableCell>
+                              <TableCell className="text-right">
+                                {editingItemIndex === index ? (
+                                  <Input
+                                    type="number"
+                                    step="0.001"
+                                    min="0"
+                                    value={item.quantidade}
+                                    onChange={(e) => {
+                                      const newQtd = parseFloat(e.target.value) || 0;
+                                      const newItens = [...parsedNota.itens];
+                                      const newTotal = newQtd * item.custo_unitario;
+                                      newItens[index] = { ...newItens[index], quantidade: newQtd, valor_total: newTotal };
+                                      const notaTotal = newItens.reduce((acc, i) => acc + i.valor_total, 0);
+                                      setParsedNota({ ...parsedNota, itens: newItens, valor_total: notaTotal });
+                                    }}
+                                    className="h-8 text-sm w-20 text-right"
+                                  />
+                                ) : (
+                                  <span className="whitespace-nowrap">{item.quantidade} {item.unidade}</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {editingItemIndex === index ? (
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={item.custo_unitario}
+                                    onChange={(e) => {
+                                      const newCusto = parseFloat(e.target.value) || 0;
+                                      const newItens = [...parsedNota.itens];
+                                      const newTotal = item.quantidade * newCusto;
+                                      newItens[index] = { ...newItens[index], custo_unitario: newCusto, valor_total: newTotal };
+                                      const notaTotal = newItens.reduce((acc, i) => acc + i.valor_total, 0);
+                                      setParsedNota({ ...parsedNota, itens: newItens, valor_total: notaTotal });
+                                    }}
+                                    className="h-8 text-sm w-24 text-right"
+                                  />
+                                ) : (
+                                  formatCurrency(item.custo_unitario)
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right font-medium">{formatCurrency(item.valor_total)}</TableCell>
                               <TableCell className="text-center">
                                 {item.mapeado ? (
                                   <Badge variant="default" className="gap-1">
