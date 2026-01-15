@@ -67,6 +67,7 @@ const Compras = () => {
     fornecedor: '',
     observacao: '',
   });
+  const [deleteManualId, setDeleteManualId] = useState<string | null>(null);
   
   // Filters state
   const [searchTerm, setSearchTerm] = useState('');
@@ -587,6 +588,60 @@ const Compras = () => {
     },
   });
 
+  // Delete manual purchase mutation
+  const deleteManualMutation = useMutation({
+    mutationFn: async (movimentoId: string) => {
+      // Get the movement details first
+      const { data: movimento, error: getError } = await supabase
+        .from('estoque_movimentos')
+        .select('insumo_id, quantidade')
+        .eq('id', movimentoId)
+        .single();
+      
+      if (getError) throw getError;
+      if (!movimento) throw new Error('Movimento não encontrado');
+
+      // Delete the movement
+      const { error: deleteError } = await supabase
+        .from('estoque_movimentos')
+        .delete()
+        .eq('id', movimentoId);
+      
+      if (deleteError) throw deleteError;
+
+      // Recalculate stock from remaining movements
+      const { data: movimentos, error: movimentosError } = await supabase
+        .from('estoque_movimentos')
+        .select('tipo, quantidade')
+        .eq('insumo_id', movimento.insumo_id);
+      
+      if (movimentosError) throw movimentosError;
+
+      const novoEstoque = (movimentos || []).reduce((acc, mov) => {
+        const qty = Number(mov.quantidade) || 0;
+        return mov.tipo === 'entrada' ? acc + qty : acc - qty;
+      }, 0);
+
+      // Update insumo stock
+      const { error: updateError } = await supabase
+        .from('insumos')
+        .update({ estoque_atual: Math.max(0, novoEstoque) })
+        .eq('id', movimento.insumo_id);
+      
+      if (updateError) throw updateError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['insumos'] });
+      queryClient.invalidateQueries({ queryKey: ['estoque-movimentos'] });
+      queryClient.invalidateQueries({ queryKey: ['compras-manuais'] });
+      toast({ title: 'Compra excluída!', description: 'Estoque atualizado.' });
+      setDeleteManualId(null);
+    },
+    onError: (error) => {
+      toast({ title: 'Erro ao excluir compra', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const resetManualForm = () => {
     setManualFormData({
       insumo_id: '',
@@ -914,6 +969,7 @@ const Compras = () => {
                       <TableHead className="text-right">Custo Unit.</TableHead>
                       <TableHead className="text-right">Total</TableHead>
                       <TableHead>Observação</TableHead>
+                      <TableHead className="w-16"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -932,6 +988,17 @@ const Compras = () => {
                           <TableCell className="text-right">{formatCurrency(total)}</TableCell>
                           <TableCell className="text-muted-foreground max-w-[200px] truncate">
                             {compra.observacao || '-'}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => setDeleteManualId(compra.id)}
+                              disabled={deleteManualMutation.isPending}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       );
@@ -1750,6 +1817,34 @@ const Compras = () => {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleteNotaMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Manual Purchase Confirmation Dialog */}
+      <AlertDialog open={!!deleteManualId} onOpenChange={(open) => !open && setDeleteManualId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Compra Manual</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta compra manual? O estoque do insumo será revertido automaticamente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteManualId) {
+                  deleteManualMutation.mutate(deleteManualId);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteManualMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : null}
               Excluir
