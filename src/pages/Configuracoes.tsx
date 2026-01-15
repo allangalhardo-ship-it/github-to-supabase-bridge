@@ -1,87 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSubscription } from '@/contexts/SubscriptionContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Settings, Save, Loader2, Crown, ArrowRight, CreditCard, RefreshCw } from 'lucide-react';
+import { Settings, Save, Loader2 } from 'lucide-react';
 import TaxasAppsConfig from '@/components/configuracoes/TaxasAppsConfig';
 
 const Configuracoes = () => {
   const { usuario } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { subscription, openCustomerPortal } = useSubscription();
-  const [portalLoading, setPortalLoading] = useState(false);
-  const [forceUpdateLoading, setForceUpdateLoading] = useState(false);
 
-  const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev';
-
-  const handleForceUpdate = async () => {
-    setForceUpdateLoading(true);
-    try {
-      // Tenta adiantar a ativação caso exista SW "waiting" (alguns browsers ficam presos nessa etapa)
-      if ('serviceWorker' in navigator) {
-        const reg = await navigator.serviceWorker.getRegistration();
-        reg?.waiting?.postMessage({ type: 'SKIP_WAITING' });
-      }
-
-      // 1. Limpa TODOS os caches
-      if ('caches' in window) {
-        const cacheNames = await caches.keys();
-        await Promise.all(cacheNames.map((name) => caches.delete(name)));
-      }
-
-      // 2. Remove completamente o Service Worker
-      if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations.map((r) => r.unregister()));
-      }
-
-      // 3. Limpa flag de reload para evitar loops
-      sessionStorage.removeItem('gg_sw_reloaded');
-
-      toast({
-        title: 'Atualização forçada',
-        description: 'Limpamos cache e reiniciaremos o app agora…',
-      });
-
-      // 4. Recarrega com bypass do cache HTTP do navegador
-      setTimeout(() => {
-        const url = new URL(window.location.href);
-        url.searchParams.set('_refresh', Date.now().toString());
-        window.location.replace(url.toString());
-      }, 400);
-
-      // Caso o reload seja bloqueado (alguns PWAs), pelo menos libera o botão
-      setTimeout(() => setForceUpdateLoading(false), 1500);
-    } catch (error) {
-      console.error('Erro ao forçar atualização:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível limpar o cache. Tente novamente.',
-        variant: 'destructive',
-      });
-      setForceUpdateLoading(false);
-    }
-  };
-
-  const handleManageSubscription = async () => {
-    setPortalLoading(true);
-    try {
-      await openCustomerPortal();
-    } finally {
-      setPortalLoading(false);
-    }
-  };
   const [formData, setFormData] = useState({
     margem_desejada_padrao: '',
     cmv_alvo: '',
@@ -158,83 +92,12 @@ const Configuracoes = () => {
     );
   }
 
-  const getStatusLabel = () => {
-    if (subscription.status === 'active') return 'Ativo';
-    if (subscription.status === 'trialing' && subscription.subscribed) return 'Em teste (assinatura confirmada)';
-    if (subscription.status === 'trialing') return 'Período de teste';
-    if (subscription.status === 'expired') return 'Expirado';
-    return 'Carregando...';
-  };
-
-  const getStatusVariant = (): 'default' | 'secondary' | 'destructive' | 'outline' => {
-    if (subscription.status === 'active') return 'default';
-    if (subscription.status === 'trialing' && subscription.subscribed) return 'default';
-    if (subscription.status === 'trialing') return 'secondary';
-    if (subscription.status === 'expired') return 'destructive';
-    return 'outline';
-  };
-
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-foreground">Configurações</h1>
         <p className="text-muted-foreground">Defina os parâmetros de cálculo do seu negócio</p>
       </div>
-
-      {/* Card de Assinatura */}
-      <Card className="border-primary/30">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Crown className="h-5 w-5 text-primary" />
-              Assinatura
-            </CardTitle>
-            <Badge variant={getStatusVariant()}>{getStatusLabel()}</Badge>
-          </div>
-          <CardDescription>
-            Gerencie seu plano e forma de pagamento
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="space-y-1">
-              <p className="font-medium">GastroGestor Pro</p>
-              <p className="text-sm text-muted-foreground">R$ 39,90/mês</p>
-              {subscription.status === 'trialing' && subscription.trialEnd && (
-                <p className="text-xs text-muted-foreground">
-                  {subscription.subscribed 
-                    ? `Cobrança inicia em ${new Date(subscription.trialEnd).toLocaleDateString('pt-BR')}`
-                    : `Teste expira em ${new Date(subscription.trialEnd).toLocaleDateString('pt-BR')}`
-                  }
-                </p>
-              )}
-              {subscription.status === 'active' && subscription.subscriptionEnd && (
-                <p className="text-xs text-muted-foreground">
-                  Próxima cobrança: {new Date(subscription.subscriptionEnd).toLocaleDateString('pt-BR')}
-                </p>
-              )}
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2">
-              {subscription.subscribed ? (
-                <Button variant="outline" onClick={handleManageSubscription} disabled={portalLoading}>
-                  {portalLoading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <CreditCard className="mr-2 h-4 w-4" />
-                  )}
-                  Gerenciar Assinatura
-                </Button>
-              ) : (
-                <Button onClick={() => navigate('/assinatura')}>
-                  <Crown className="mr-2 h-4 w-4" />
-                  Ver Planos
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       <form onSubmit={handleSubmit}>
         <Card>
@@ -334,54 +197,6 @@ const Configuracoes = () => {
             <h4 className="font-medium text-foreground">Lucro Estimado</h4>
             <p>Receita - CMV - Custos Fixos - Impostos</p>
             <p className="text-xs">Visão completa considerando todos os custos do negócio</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Card de Suporte / Atualização */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <RefreshCw className="h-5 w-5" />
-            Suporte Técnico
-          </CardTitle>
-          <CardDescription>
-            Opções para resolver problemas técnicos do aplicativo
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="space-y-1">
-              <p className="font-medium">Forçar Atualização do App</p>
-              <p className="text-sm text-muted-foreground">
-                Use se o app estiver mostrando versão desatualizada ou com problemas de cache
-              </p>
-            </div>
-            <Button 
-              variant="outline" 
-              onClick={handleForceUpdate} 
-              disabled={forceUpdateLoading}
-              className="shrink-0"
-            >
-              {forceUpdateLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
-              )}
-              Forçar Atualização
-            </Button>
-          </div>
-          
-          {/* Versão do App para diagnóstico */}
-          <div className="pt-4 border-t">
-            <p className="text-xs text-muted-foreground">
-              Versão do App:{' '}
-              <code className="bg-muted px-1 py-0.5 rounded">{appVersion}</code>
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Se dois usuários virem versões diferentes aqui, um deles está preso em cache; com esta versão o app também
-              tenta se auto-atualizar ao detectar build novo.
-            </p>
           </div>
         </CardContent>
       </Card>

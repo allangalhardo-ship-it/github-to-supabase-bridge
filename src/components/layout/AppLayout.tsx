@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Logo, LogoMark } from '@/components/brand/Logo';
-import TrialBanner from '@/components/subscription/TrialBanner';
 import OfflineIndicator from '@/components/layout/OfflineIndicator';
 import NotificationSettings from '@/components/layout/NotificationSettings';
 import { useAlertNotifications } from '@/hooks/useAlertNotifications';
@@ -43,6 +42,7 @@ const navItems = [
   { to: '/clientes', icon: Users, label: 'Clientes' },
   { to: '/custos-fixos', icon: Calculator, label: 'Custos Fixos' },
   { to: '/configuracoes', icon: SlidersHorizontal, label: 'Configurações' },
+  { to: '/meus-dados', icon: Users, label: 'Meus Dados' },
 ];
 
 const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAdmin: boolean }) => {
@@ -144,11 +144,8 @@ const AppLayout = () => {
 
       {/* Mobile & Tablet - sidebar escondida, abre via menu */}
       <div className="flex-1 flex flex-col min-h-0 min-w-0 w-full max-w-full overflow-hidden">
-        {/* Header fixo - Trial Banner + Navigation */}
+        {/* Header fixo */}
         <div className="flex-shrink-0 bg-primary-dark w-full max-w-full overflow-hidden" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-          {/* Trial Banner */}
-          <TrialBanner />
-          
           {/* Header mobile com botão menu - compacto */}
           <header className="lg:hidden flex items-center justify-between px-3 py-2 w-full max-w-full">
             <div className="flex items-center gap-2 min-w-0">
