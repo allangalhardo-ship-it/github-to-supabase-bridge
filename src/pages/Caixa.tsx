@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -42,7 +41,7 @@ import {
 import { format, startOfMonth, endOfMonth, subMonths, parseISO, addMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
-import { ScrollableTableWrapper } from '@/components/ui/scrollable-table-wrapper';
+import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 
 interface CaixaMovimento {
   id: string;
@@ -594,66 +593,46 @@ const Caixa = () => {
             {isLoading ? (
               <Skeleton className="h-64" />
             ) : movimentosFiltrados.length > 0 ? (
-            <ScrollableTableWrapper>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[100px]">Data</TableHead>
-                      <TableHead className="min-w-[90px]">Tipo</TableHead>
-                      <TableHead className="min-w-[120px]">Categoria</TableHead>
-                      <TableHead className="min-w-[150px]">Descrição</TableHead>
-                      <TableHead className="min-w-[80px]">Origem</TableHead>
-                      <TableHead className="text-right min-w-[100px]">Valor</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {movimentosFiltrados.map((movimento) => (
-                      <TableRow key={movimento.id}>
-                        <TableCell className="whitespace-nowrap">
-                          {format(parseISO(movimento.data), 'dd/MM/yyyy')}
-                        </TableCell>
-                        <TableCell>
-                          {movimento.tipo === 'entrada' ? (
-                            <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
-                              <ArrowUpCircle className="h-3 w-3 mr-1" />
-                              Entrada
-                            </Badge>
-                          ) : (
-                            <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-100">
-                              <ArrowDownCircle className="h-3 w-3 mr-1" />
-                              Saída
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>{movimento.categoria}</TableCell>
-                        <TableCell className="max-w-[200px] truncate">{movimento.descricao}</TableCell>
-                        <TableCell>
-                          {movimento.origem === 'venda' && (
-                            <Badge variant="outline" className="gap-1">
-                              <ShoppingCart className="h-3 w-3" />
-                              Venda
-                            </Badge>
-                          )}
-                          {movimento.origem === 'nota' && (
-                            <Badge variant="outline" className="gap-1">
-                              <Receipt className="h-3 w-3" />
-                              NF-e
-                            </Badge>
-                          )}
-                          {movimento.origem === 'manual' && (
-                            <Badge variant="secondary" className="gap-1">
-                              Manual
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className={`text-right font-medium whitespace-nowrap ${movimento.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
-                          {movimento.tipo === 'entrada' ? '+' : '-'} {formatCurrency(movimento.valor)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </ScrollableTableWrapper>
+              <MobileDataView
+                data={movimentosFiltrados}
+                keyExtractor={(m) => m.id}
+                columns={[
+                  { key: 'data', header: 'Data', mobilePriority: 3, render: (m) => (
+                    <span className="whitespace-nowrap">{format(parseISO(m.data), 'dd/MM/yyyy')}</span>
+                  )},
+                  { key: 'tipo', header: 'Tipo', mobilePriority: 2, render: (m) => m.tipo === 'entrada' ? (
+                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100"><ArrowUpCircle className="h-3 w-3 mr-1" />Entrada</Badge>
+                  ) : (
+                    <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-100"><ArrowDownCircle className="h-3 w-3 mr-1" />Saída</Badge>
+                  )},
+                  { key: 'categoria', header: 'Categoria', mobilePriority: 4, render: (m) => m.categoria },
+                  { key: 'descricao', header: 'Descrição', mobilePriority: 1, render: (m) => <span className="max-w-[200px] truncate">{m.descricao}</span> },
+                  { key: 'origem', header: 'Origem', mobilePriority: 5, render: (m) => {
+                    if (m.origem === 'venda') return <Badge variant="outline" className="gap-1"><ShoppingCart className="h-3 w-3" />Venda</Badge>;
+                    if (m.origem === 'nota') return <Badge variant="outline" className="gap-1"><Receipt className="h-3 w-3" />NF-e</Badge>;
+                    return <Badge variant="secondary" className="gap-1">Manual</Badge>;
+                  }},
+                  { key: 'valor', header: 'Valor', align: 'right', mobilePriority: 6, render: (m) => (
+                    <span className={`font-medium whitespace-nowrap ${m.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
+                      {m.tipo === 'entrada' ? '+' : '-'} {formatCurrency(m.valor)}
+                    </span>
+                  )},
+                ]}
+                renderMobileHeader={(m) => m.descricao}
+                renderMobileSubtitle={(m) => (
+                  <span className="flex items-center gap-2">
+                    {format(parseISO(m.data), 'dd/MM/yyyy')}
+                    <span className="text-muted-foreground">•</span>
+                    {m.categoria}
+                  </span>
+                )}
+                renderMobileHighlight={(m) => (
+                  <span className={`font-bold ${m.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
+                    {m.tipo === 'entrada' ? '+' : '-'} {formatCurrency(m.valor)}
+                  </span>
+                )}
+                emptyMessage="Não há movimentações neste período."
+              />
             ) : (
               <div className="text-center py-12">
                 <Wallet className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
