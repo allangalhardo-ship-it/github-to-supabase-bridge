@@ -440,65 +440,69 @@ const Vendas = () => {
             </Card>
           </div>
 
-          {/* Filtros - Ultra Compactos */}
-          <div className="flex flex-wrap items-end gap-1.5 sm:gap-2 p-2 sm:p-3 bg-muted/30 rounded-lg">
-            <div className="flex items-center gap-1.5 mr-1">
+          {/* Filtros - Mobile First */}
+          <div className="bg-muted/30 rounded-lg p-2 sm:p-3 space-y-2">
+            <div className="flex items-center gap-1.5">
               <Filter className="h-3 w-3 text-muted-foreground" />
-              <span className="text-[10px] font-medium text-muted-foreground hidden sm:inline">Filtros:</span>
+              <span className="text-[10px] font-medium text-muted-foreground">Filtros</span>
             </div>
-            <div className="flex-1 min-w-[90px] max-w-[120px]">
+            
+            {/* Linha 1: Datas */}
+            <div className="flex items-center gap-2">
               <Input
                 type="date"
                 value={filtroDataInicio}
                 onChange={(e) => setFiltroDataInicio(e.target.value)}
-                className="h-7 text-[11px] px-1.5"
+                className="h-8 text-xs flex-1"
               />
-            </div>
-            <span className="text-muted-foreground text-xs">-</span>
-            <div className="flex-1 min-w-[90px] max-w-[120px]">
+              <span className="text-muted-foreground text-xs">a</span>
               <Input
                 type="date"
                 value={filtroDataFim}
                 onChange={(e) => setFiltroDataFim(e.target.value)}
-                className="h-7 text-[11px] px-1.5"
+                className="h-8 text-xs flex-1"
               />
             </div>
-            <Select value={filtroProduto} onValueChange={setFiltroProduto}>
-              <SelectTrigger className="h-7 text-[11px] w-[80px] sm:w-[100px] px-2">
-                <SelectValue placeholder="Produto" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                {produtos?.map((produto) => (
-                  <SelectItem key={produto.id} value={produto.id}>
-                    {produto.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filtroCanal} onValueChange={setFiltroCanal}>
-              <SelectTrigger className="h-7 text-[11px] w-[70px] sm:w-[90px] px-2">
-                <SelectValue placeholder="Canal" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                {canaisUnicos.map((canal) => (
-                  <SelectItem key={canal} value={canal}>
-                    {canal}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filtroOrigem} onValueChange={setFiltroOrigem}>
-              <SelectTrigger className="h-7 text-[11px] w-[70px] sm:w-[85px] px-2">
-                <SelectValue placeholder="Origem" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todas</SelectItem>
-                <SelectItem value="manual">Manual</SelectItem>
-                <SelectItem value="importacao">Import</SelectItem>
-              </SelectContent>
-            </Select>
+            
+            {/* Linha 2: Selects */}
+            <div className="flex gap-2">
+              <Select value={filtroProduto} onValueChange={setFiltroProduto}>
+                <SelectTrigger className="h-8 text-xs flex-1">
+                  <SelectValue placeholder="Produto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos produtos</SelectItem>
+                  {produtos?.map((produto) => (
+                    <SelectItem key={produto.id} value={produto.id}>
+                      {produto.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filtroCanal} onValueChange={setFiltroCanal}>
+                <SelectTrigger className="h-8 text-xs flex-1">
+                  <SelectValue placeholder="Canal" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos canais</SelectItem>
+                  {canaisUnicos.map((canal) => (
+                    <SelectItem key={canal} value={canal}>
+                      {canal}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filtroOrigem} onValueChange={setFiltroOrigem}>
+                <SelectTrigger className="h-8 text-xs flex-1">
+                  <SelectValue placeholder="Origem" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todas</SelectItem>
+                  <SelectItem value="manual">Manual</SelectItem>
+                  <SelectItem value="importacao">Import</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {isLoading ? (
