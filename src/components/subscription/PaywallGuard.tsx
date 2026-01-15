@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
 interface PaywallGuardProps {
@@ -8,7 +9,8 @@ interface PaywallGuardProps {
 }
 
 const PaywallGuard: React.FC<PaywallGuardProps> = ({ children }) => {
-  const { hasAccess, loading } = useSubscription();
+  const { hasAccess, loading, subscription } = useSubscription();
+  const { user } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -19,8 +21,12 @@ const PaywallGuard: React.FC<PaywallGuardProps> = ({ children }) => {
     );
   }
 
-  // Se não tem acesso (trial expirado e não assinante), redireciona para página de assinatura
-  if (!hasAccess) {
+  // Só redireciona para assinatura se:
+  // 1. Usuário está logado (user existe)
+  // 2. Trial expirou (status === 'expired') e não é assinante
+  const shouldRedirectToSubscription = user && !hasAccess && subscription.status === 'expired';
+
+  if (shouldRedirectToSubscription) {
     return <Navigate to="/assinatura" state={{ from: location }} replace />;
   }
 
