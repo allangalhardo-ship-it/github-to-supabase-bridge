@@ -42,6 +42,7 @@ import {
 import { format, startOfMonth, endOfMonth, subMonths, parseISO, addMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import { ScrollableTableWrapper } from '@/components/ui/scrollable-table-wrapper';
 
 interface CaixaMovimento {
   id: string;
@@ -593,7 +594,7 @@ const Caixa = () => {
             {isLoading ? (
               <Skeleton className="h-64" />
             ) : movimentosFiltrados.length > 0 ? (
-              <div className="overflow-x-auto">
+            <ScrollableTableWrapper>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -652,7 +653,7 @@ const Caixa = () => {
                     ))}
                   </TableBody>
                 </Table>
-              </div>
+              </ScrollableTableWrapper>
             ) : (
               <div className="text-center py-12">
                 <Wallet className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Factory, Package, Search, ChefHat, AlertTriangle, Clock } from 'lucide-react';
+import { ScrollableTableWrapper } from '@/components/ui/scrollable-table-wrapper';
 import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { AlertaVencimento } from '@/components/producao/AlertaVencimento';
@@ -343,7 +344,7 @@ const Producao = () => {
                   <Skeleton className="h-64" />
                 </div>
               ) : produtosComEstoque && produtosComEstoque.length > 0 ? (
-                <div className="overflow-x-auto">
+              <ScrollableTableWrapper>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -389,7 +390,7 @@ const Producao = () => {
                       })}
                     </TableBody>
                   </Table>
-                </div>
+                </ScrollableTableWrapper>
               ) : (
                 <div className="p-12 text-center">
                   <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -420,7 +421,7 @@ const Producao = () => {
                   <Skeleton className="h-64" />
                 </div>
               ) : producoes && producoes.length > 0 ? (
-                <div className="overflow-x-auto">
+              <ScrollableTableWrapper>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -461,7 +462,7 @@ const Producao = () => {
                       ))}
                     </TableBody>
                   </Table>
-                </div>
+                </ScrollableTableWrapper>
               ) : (
                 <div className="p-12 text-center">
                   <Factory className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

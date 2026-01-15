@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Loader2, ImageIcon, Filter, Calendar, Package, Search, Trash2, Wand2, Pencil, Eye } from 'lucide-react';
+import { ScrollableTableWrapper } from '@/components/ui/scrollable-table-wrapper';
 import { Checkbox } from '@/components/ui/checkbox';
 import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
 import { format } from 'date-fns';
@@ -1087,7 +1088,7 @@ const Compras = () => {
                   <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
               ) : comprasManuais && comprasManuais.length > 0 ? (
-                <div className="overflow-x-auto">
+              <ScrollableTableWrapper>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -1133,7 +1134,7 @@ const Compras = () => {
                       })}
                     </TableBody>
                   </Table>
-                </div>
+                </ScrollableTableWrapper>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <Plus className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -1157,7 +1158,7 @@ const Compras = () => {
                   <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
               ) : filteredItens && filteredItens.length > 0 ? (
-                <div className="overflow-x-auto">
+              <ScrollableTableWrapper>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -1191,7 +1192,7 @@ const Compras = () => {
                       ))}
                     </TableBody>
                   </Table>
-                </div>
+                </ScrollableTableWrapper>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />

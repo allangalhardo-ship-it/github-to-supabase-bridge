@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, ArrowUp, ArrowDown, Warehouse, Package, AlertTriangle, Search, Filter, X, Factory, Clock } from 'lucide-react';
+import { ScrollableTableWrapper } from '@/components/ui/scrollable-table-wrapper';
 import { format, startOfMonth, endOfMonth, subMonths, differenceInDays, isBefore } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -334,7 +335,7 @@ const Estoque = () => {
                   <Skeleton className="h-64" />
                 </div>
               ) : insumosFiltrados && insumosFiltrados.length > 0 ? (
-                <div className="overflow-x-auto">
+              <ScrollableTableWrapper>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -379,7 +380,7 @@ const Estoque = () => {
                       })}
                     </TableBody>
                   </Table>
-                </div>
+                </ScrollableTableWrapper>
               ) : (
                 <div className="p-12 text-center">
                   <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -425,7 +426,7 @@ const Estoque = () => {
                   <Skeleton className="h-64" />
                 </div>
               ) : produtosFiltrados && produtosFiltrados.length > 0 ? (
-                <div className="overflow-x-auto">
+              <ScrollableTableWrapper>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -515,7 +516,7 @@ const Estoque = () => {
                       })}
                     </TableBody>
                   </Table>
-                </div>
+                </ScrollableTableWrapper>
               ) : (
                 <div className="p-12 text-center">
                   <Factory className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -631,7 +632,7 @@ const Estoque = () => {
                   <Skeleton className="h-64" />
                 </div>
               ) : movimentosFiltrados && movimentosFiltrados.length > 0 ? (
-                <div className="overflow-x-auto">
+              <ScrollableTableWrapper>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -678,7 +679,7 @@ const Estoque = () => {
                       ))}
                     </TableBody>
                   </Table>
-                </div>
+                </ScrollableTableWrapper>
               ) : (
                 <div className="p-12 text-center">
                   <Warehouse className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
