@@ -187,11 +187,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
     <Card className={`${!produto.ativo ? "opacity-60" : ""} overflow-hidden hover:shadow-sm transition-shadow`}>
       <CardContent className="p-3">
         <div className="flex gap-3">
-          <div className="w-16 h-16">
-            {React.cloneElement(productImage, {
-              className:
-                "w-16 h-16 bg-muted rounded-md flex items-center justify-center shrink-0 overflow-hidden",
-              children: produto.imagem_url ? (
+          {/* Imagem mais alta e estreita */}
+          <div className="w-12 h-20 shrink-0">
+            <div className="w-12 h-20 bg-muted rounded-md flex items-center justify-center overflow-hidden">
+              {produto.imagem_url ? (
                 <img
                   src={produto.imagem_url}
                   alt={produto.nome}
@@ -199,73 +198,74 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   loading="lazy"
                 />
               ) : (
-                <ImageIcon className="h-6 w-6 text-muted-foreground/50" />
-              ),
-            })}
+                <ImageIcon className="h-5 w-5 text-muted-foreground/50" />
+              )}
+            </div>
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <h3 className="font-medium text-sm leading-tight line-clamp-2">{produto.nome}</h3>
-                {produto.categoria && (
-                  <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 mt-0.5">
-                    {produto.categoria}
-                  </Badge>
-                )}
-              </div>
-
-              <div className="flex items-center gap-1 shrink-0">
-                <FichaTecnicaDialog
-                  produtoId={produto.id}
-                  produtoNome={produto.nome}
-                  fichaTecnica={produto.fichas_tecnicas || []}
-                  trigger={
-                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Ficha Técnica">
-                      <FileText className="h-3.5 w-3.5" />
-                    </Button>
-                  }
-                />
-
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit} title="Editar">
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-destructive hover:text-destructive"
-                  onClick={onDelete}
-                  title="Excluir"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
+            {/* Nome e categoria - sem botões ao lado */}
+            <div className="mb-1">
+              <h3 className="font-medium text-sm leading-tight line-clamp-2">{produto.nome}</h3>
+              {produto.categoria && (
+                <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 mt-0.5">
+                  {produto.categoria}
+                </Badge>
+              )}
             </div>
 
-            <div className="mt-2 flex items-end justify-between gap-2">
-              <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs">
-                <div>
-                  <span className="text-muted-foreground">Preço </span>
-                  <span className="font-bold text-sm">{formatCurrency(precoVenda)}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Lucro </span>
-                  <span className={`font-bold text-sm ${lucroTextClass}`}>{formatCurrency(lucro)}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Margem </span>
-                  <span className={`font-bold text-sm ${margemTextClass}`}>{margemPercent.toFixed(1)}%</span>
-                </div>
+            {/* KPIs */}
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs">
+              <div>
+                <span className="text-muted-foreground">Preço </span>
+                <span className="font-bold text-sm">{formatCurrency(precoVenda)}</span>
               </div>
-
+              <div>
+                <span className="text-muted-foreground">Lucro </span>
+                <span className={`font-bold text-sm ${lucroTextClass}`}>{formatCurrency(lucro)}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Margem </span>
+                <span className={`font-bold text-sm ${margemTextClass}`}>{margemPercent.toFixed(1)}%</span>
+              </div>
               {produto.rendimento_padrao && produto.rendimento_padrao > 0 && (
-                <div className="text-xs text-muted-foreground shrink-0">
+                <div className="text-muted-foreground">
                   Rende <span className="font-medium text-foreground">{produto.rendimento_padrao}</span>
                 </div>
               )}
             </div>
           </div>
+        </div>
+
+        {/* Botões movidos para baixo */}
+        <div className="mt-2 pt-2 border-t flex items-center gap-1">
+          <FichaTecnicaDialog
+            produtoId={produto.id}
+            produtoNome={produto.nome}
+            fichaTecnica={produto.fichas_tecnicas || []}
+            trigger={
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1">
+                <FileText className="h-3.5 w-3.5" />
+                Ficha ({qtdInsumos})
+              </Button>
+            }
+          />
+
+          <div className="flex-1" />
+
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit} title="Editar">
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-destructive hover:text-destructive"
+            onClick={onDelete}
+            title="Excluir"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
         </div>
 
         {/* Detalhes (desktop): custo + CMV + metas/barras */}
