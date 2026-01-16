@@ -19,6 +19,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import RegistrarCompraDialog from '@/components/compras/RegistrarCompraDialog';
 
 interface XmlItem {
   produto_descricao: string;
@@ -59,8 +60,9 @@ const Compras = () => {
   const [deleteNotaId, setDeleteNotaId] = useState<string | null>(null);
   const [viewNotaId, setViewNotaId] = useState<string | null>(null);
   
-  // Manual purchase dialog state
-  const [manualDialogOpen, setManualDialogOpen] = useState(false);
+  // Manual purchase dialog state - now using new RegistrarCompraDialog
+  const [compraDialogOpen, setCompraDialogOpen] = useState(false);
+  // Legacy manual form data - keeping for backward compatibility with existing purchases display
   const [manualFormData, setManualFormData] = useState({
     insumo_id: '',
     quantidade: '',
@@ -704,7 +706,6 @@ const Compras = () => {
       fornecedor: '',
       observacao: '',
     });
-    setManualDialogOpen(false);
   };
 
   // Check cost variation for manual purchase
@@ -787,11 +788,11 @@ const Compras = () => {
         <div className="grid grid-cols-2 gap-2 w-full sm:w-auto sm:flex sm:justify-end">
           <Button
             variant="outline"
-            onClick={() => setManualDialogOpen(true)}
+            onClick={() => setCompraDialogOpen(true)}
             className="gap-2 w-full min-w-0"
           >
             <Plus className="h-4 w-4 shrink-0" />
-            <span className="min-w-0 truncate">Compra Manual</span>
+            <span className="min-w-0 truncate">Registrar Compra</span>
           </Button>
           <Button onClick={() => setImportDialogOpen(true)} className="gap-2 w-full min-w-0">
             <Upload className="h-4 w-4 shrink-0" />
@@ -800,130 +801,13 @@ const Compras = () => {
         </div>
       </div>
 
-      {/* Manual Purchase Dialog */}
-      <Dialog open={manualDialogOpen} onOpenChange={(open) => {
-        setManualDialogOpen(open);
-        if (!open) resetManualForm();
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Registrar Compra Manual</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleManualSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="insumo">Insumo</Label>
-              <Select
-                value={manualFormData.insumo_id}
-                onValueChange={(value) => setManualFormData({ ...manualFormData, insumo_id: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um insumo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {insumos?.map((insumo) => (
-                    <SelectItem key={insumo.id} value={insumo.id}>
-                      {insumo.nome} ({insumo.unidade_medida})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      {/* New Purchase Dialog with Unit Conversion */}
+      <RegistrarCompraDialog
+        open={compraDialogOpen}
+        onOpenChange={setCompraDialogOpen}
+      />
 
-            {/* Show current cost info when insumo is selected */}
-            {manualFormData.insumo_id && (() => {
-              const selectedInsumo = insumos?.find(i => i.id === manualFormData.insumo_id);
-              const custoAtual = selectedInsumo?.custo_unitario || 0;
-              const custoNovo = parseFloat(manualFormData.custo_unitario) || 0;
-              const variacao = custoAtual > 0 ? ((custoNovo - custoAtual) / custoAtual) * 100 : 0;
-              const showVariation = manualFormData.custo_unitario && custoAtual > 0;
-              
-              return (
-                <div className="p-3 bg-muted/50 rounded-lg space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Custo atual:</span>
-                    <span className="font-medium">{formatCurrency(custoAtual)}</span>
-                  </div>
-                  {showVariation && (
-                    <>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Novo custo:</span>
-                        <span className="font-medium">{formatCurrency(custoNovo)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Variação:</span>
-                        <span className={`font-medium ${Math.abs(variacao) > 15 ? 'text-destructive' : variacao > 0 ? 'text-orange-500' : 'text-green-500'}`}>
-                          {variacao > 0 ? '+' : ''}{variacao.toFixed(1)}%
-                          {Math.abs(variacao) > 15 && (
-                            <Badge variant="destructive" className="ml-2 text-xs">
-                              <AlertCircle className="h-3 w-3 mr-1" />
-                              Alerta
-                            </Badge>
-                          )}
-                        </span>
-                      </div>
-                    </>
-                  )}
-                </div>
-              );
-            })()}
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="quantidade">Quantidade</Label>
-                <Input
-                  id="quantidade"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={manualFormData.quantidade}
-                  onChange={(e) => setManualFormData({ ...manualFormData, quantidade: e.target.value })}
-                  placeholder="0"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="custo_unitario">Custo Unitário (R$)</Label>
-                <Input
-                  id="custo_unitario"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={manualFormData.custo_unitario}
-                  onChange={(e) => setManualFormData({ ...manualFormData, custo_unitario: e.target.value })}
-                  placeholder="0.00"
-                  required
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="fornecedor">Fornecedor (opcional)</Label>
-              <Input
-                id="fornecedor"
-                value={manualFormData.fornecedor}
-                onChange={(e) => setManualFormData({ ...manualFormData, fornecedor: e.target.value })}
-                placeholder="Nome do fornecedor"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="observacao">Observação (opcional)</Label>
-              <Input
-                id="observacao"
-                value={manualFormData.observacao}
-                onChange={(e) => setManualFormData({ ...manualFormData, observacao: e.target.value })}
-                placeholder="Ex: Compra emergencial"
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={resetManualForm}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={manualPurchaseMutation.isPending}>
-                Registrar
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* Legacy Manual Purchase Dialog - kept for reference but replaced by RegistrarCompraDialog above */}
 
       {/* Summary Cards */}
       <div className="grid gap-2 sm:gap-4 grid-cols-2 sm:grid-cols-3">

@@ -229,36 +229,48 @@ export type Database = {
       estoque_movimentos: {
         Row: {
           created_at: string
+          custo_total: number | null
           empresa_id: string
+          fator_conversao: number | null
           id: string
           insumo_id: string
           observacao: string | null
           origem: string
           quantidade: number
+          quantidade_original: number | null
           referencia: string | null
           tipo: string
+          unidade_compra: string | null
         }
         Insert: {
           created_at?: string
+          custo_total?: number | null
           empresa_id: string
+          fator_conversao?: number | null
           id?: string
           insumo_id: string
           observacao?: string | null
           origem?: string
           quantidade: number
+          quantidade_original?: number | null
           referencia?: string | null
           tipo: string
+          unidade_compra?: string | null
         }
         Update: {
           created_at?: string
+          custo_total?: number | null
           empresa_id?: string
+          fator_conversao?: number | null
           id?: string
           insumo_id?: string
           observacao?: string | null
           origem?: string
           quantidade?: number
+          quantidade_original?: number | null
           referencia?: string | null
           tipo?: string
+          unidade_compra?: string | null
         }
         Relationships: [
           {
@@ -655,6 +667,51 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      unidades_compra: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          fator_conversao: number
+          id: string
+          insumo_id: string
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          fator_conversao?: number
+          id?: string
+          insumo_id: string
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          fator_conversao?: number
+          id?: string
+          insumo_id?: string
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unidades_compra_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unidades_compra_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

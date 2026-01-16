@@ -649,7 +649,7 @@ const Insumos = () => {
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="unidade_medida">Unidade</Label>
+                  <Label htmlFor="unidade_medida">Unidade de Produção</Label>
                   <Select
                     value={formData.unidade_medida}
                     onValueChange={(value) => setFormData({ ...formData, unidade_medida: value })}
@@ -665,6 +665,9 @@ const Insumos = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Unidade usada nas receitas (ex: gramas, ml)
+                  </p>
                 </div>
 
                 {formData.is_intermediario ? (
@@ -682,20 +685,29 @@ const Insumos = () => {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <Label htmlFor="custo_unitario">Custo Unitário (R$)</Label>
+                    <Label htmlFor="estoque_minimo">Estoque Mínimo</Label>
                     <Input
-                      id="custo_unitario"
+                      id="estoque_minimo"
                       type="number"
                       step="0.01"
                       min="0"
-                      value={formData.custo_unitario}
-                      onChange={(e) => setFormData({ ...formData, custo_unitario: e.target.value })}
-                      placeholder="0,00"
-                      required={!formData.is_intermediario}
+                      value={formData.estoque_minimo}
+                      onChange={(e) => setFormData({ ...formData, estoque_minimo: e.target.value })}
+                      placeholder="0"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Alerta quando estoque baixar
+                    </p>
                   </div>
                 )}
               </div>
+
+              {!formData.is_intermediario && !editingInsumo && (
+                <div className="p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
+                  <strong>💡 Dica:</strong> Custo e estoque serão preenchidos automaticamente quando você registrar compras. 
+                  A conversão de unidades (ex: comprar em kg, usar em g) é feita no momento da compra.
+                </div>
+              )}
 
               {/* Seção de ingredientes para intermediários */}
               {formData.is_intermediario && !editingInsumo && (
@@ -802,32 +814,37 @@ const Insumos = () => {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="estoque_atual">Estoque Atual</Label>
-                  <Input
-                    id="estoque_atual"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.estoque_atual}
-                    onChange={(e) => setFormData({ ...formData, estoque_atual: e.target.value })}
-                    placeholder="0"
-                  />
+              {/* Campos adicionais só aparecem na edição */}
+              {editingInsumo && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="estoque_atual">Estoque Atual</Label>
+                    <Input
+                      id="estoque_atual"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.estoque_atual}
+                      onChange={(e) => setFormData({ ...formData, estoque_atual: e.target.value })}
+                      placeholder="0"
+                    />
+                  </div>
+                  {formData.is_intermediario && (
+                    <div className="space-y-2">
+                      <Label htmlFor="estoque_minimo">Estoque Mínimo</Label>
+                      <Input
+                        id="estoque_minimo"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.estoque_minimo}
+                        onChange={(e) => setFormData({ ...formData, estoque_minimo: e.target.value })}
+                        placeholder="0"
+                      />
+                    </div>
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="estoque_minimo">Estoque Mínimo</Label>
-                  <Input
-                    id="estoque_minimo"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.estoque_minimo}
-                    onChange={(e) => setFormData({ ...formData, estoque_minimo: e.target.value })}
-                    placeholder="0"
-                  />
-                </div>
-              </div>
+              )}
               <div className="flex justify-end gap-2 pt-4">
                 <Button type="button" variant="outline" onClick={resetForm}>
                   Cancelar
