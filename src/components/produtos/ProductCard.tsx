@@ -3,16 +3,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Copy,
   FileText,
   ImageIcon,
   Pencil,
-  Search,
   Trash2,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import FichaTecnicaDialog from "./FichaTecnicaDialog";
-import MarketPriceSearch from "./MarketPriceSearch";
 
 interface FichaTecnicaItem {
   id: string;
@@ -42,7 +39,6 @@ interface ProductCardProps {
   } | null;
   onEdit: () => void;
   onDelete: () => void;
-  onDuplicate?: () => void;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({
@@ -50,7 +46,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
   config,
   onEdit,
   onDelete,
-  onDuplicate,
 }) => {
   const isMobile = useIsMobile();
 
@@ -135,8 +130,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <h3 className="font-medium text-sm leading-tight truncate">{produto.nome}</h3>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-medium text-sm leading-tight line-clamp-2">{produto.nome}</h3>
                   {produto.categoria && (
                     <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 mt-0.5">
                       {produto.categoria}
@@ -211,8 +206,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <h3 className="font-medium text-sm leading-tight truncate">{produto.nome}</h3>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-medium text-sm leading-tight line-clamp-2">{produto.nome}</h3>
                 {produto.categoria && (
                   <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 mt-0.5">
                     {produto.categoria}
@@ -221,17 +216,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
               </div>
 
               <div className="flex items-center gap-1 shrink-0">
-                <MarketPriceSearch
-                  productName={produto.nome}
-                  category={produto.categoria}
-                  currentPrice={precoVenda}
-                  trigger={
-                    <Button variant="ghost" size="icon" className="h-7 w-7">
-                      <Search className="h-3.5 w-3.5" />
-                    </Button>
-                  }
-                />
-
                 <FichaTecnicaDialog
                   produtoId={produto.id}
                   produtoNome={produto.nome}
@@ -246,12 +230,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit} title="Editar">
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
-
-                {onDuplicate && (
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onDuplicate} title="Duplicar">
-                    <Copy className="h-3.5 w-3.5" />
-                  </Button>
-                )}
 
                 <Button
                   variant="ghost"
