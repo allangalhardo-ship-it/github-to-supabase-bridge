@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Pencil, Trash2, Copy, Search, ImageIcon, FileText } from 'lucide-react';
+import { Pencil, Trash2, Copy, Search, ImageIcon } from 'lucide-react';
 import FichaTecnicaDialog from './FichaTecnicaDialog';
 import MarketPriceSearch from './MarketPriceSearch';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -77,54 +77,47 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const margemBarColor = margemPercent >= margemAlvo ? 'bg-green-500' : margemPercent >= 0 ? 'bg-amber-500' : 'bg-red-500';
   const cmvBarColor = cmvAtual <= cmvAlvo ? 'bg-green-500' : 'bg-amber-500';
 
+  // Mobile Layout
   if (isMobile) {
     return (
-      <Card className={`${!produto.ativo ? 'opacity-60' : ''} overflow-hidden`}>
+      <Card className={`${!produto.ativo ? 'opacity-60' : ''}`}>
         <CardContent className="p-4">
-          {/* Header: Imagem + Info */}
-          <div className="flex gap-3 mb-3">
-            <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+          <div className="flex gap-3">
+            {/* Imagem */}
+            <div className="w-20 h-20 bg-muted rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
               {produto.imagem_url ? (
                 <img src={produto.imagem_url} alt={produto.nome} className="w-full h-full object-cover" />
               ) : (
-                <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
+                <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
               )}
             </div>
+            
+            {/* Info */}
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-base leading-tight line-clamp-2">{produto.nome}</h3>
+              <h3 className="font-semibold text-sm leading-tight line-clamp-2 mb-1">{produto.nome}</h3>
               {produto.categoria && (
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 mt-1">
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 mb-2">
                   {produto.categoria}
                 </Badge>
               )}
+              <div className="text-lg font-bold">{formatCurrency(precoVenda)}</div>
             </div>
           </div>
 
-          {/* Preço + Lucro + Margem */}
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            <div className="bg-muted/50 rounded-lg p-2 text-center">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Preço</p>
-              <p className="font-bold text-sm">{formatCurrency(precoVenda)}</p>
+          {/* KPIs */}
+          <div className="grid grid-cols-2 gap-2 mt-3">
+            <div className="bg-muted/50 rounded px-3 py-2">
+              <span className="text-[10px] text-muted-foreground block">Lucro</span>
+              <span className={`font-bold ${lucroColor}`}>{formatCurrency(lucro)}</span>
             </div>
-            <div className="bg-muted/50 rounded-lg p-2 text-center">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Lucro</p>
-              <p className={`font-bold text-sm ${lucroColor}`}>{formatCurrency(lucro)}</p>
-            </div>
-            <div className="bg-muted/50 rounded-lg p-2 text-center">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Margem</p>
-              <p className={`font-bold text-sm ${margemColor}`}>{margemPercent.toFixed(1)}%</p>
+            <div className="bg-muted/50 rounded px-3 py-2">
+              <span className="text-[10px] text-muted-foreground block">Margem</span>
+              <span className={`font-bold ${margemColor}`}>{margemPercent.toFixed(1)}%</span>
             </div>
           </div>
 
-          {/* Rendimento se existir */}
-          {produto.rendimento_padrao && produto.rendimento_padrao > 0 && (
-            <p className="text-xs text-muted-foreground text-center mb-3">
-              Rende <span className="font-medium text-foreground">{produto.rendimento_padrao}</span> unidades
-            </p>
-          )}
-
-          {/* Botões */}
-          <div className="flex gap-2">
+          {/* Ações */}
+          <div className="flex gap-2 mt-3">
             <FichaTecnicaDialog
               produtoId={produto.id}
               produtoNome={produto.nome}
@@ -142,45 +135,41 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   // Desktop Layout
   return (
-    <Card className={`${!produto.ativo ? 'opacity-60' : ''} overflow-hidden hover:shadow-md transition-shadow`}>
+    <Card className={`${!produto.ativo ? 'opacity-60' : ''} hover:shadow-md transition-shadow`}>
       <CardContent className="p-4">
         <div className="flex gap-4">
           {/* Imagem */}
-          <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+          <div className="w-[100px] h-[100px] bg-muted rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
             {produto.imagem_url ? (
               <img src={produto.imagem_url} alt={produto.nome} className="w-full h-full object-cover" />
             ) : (
-              <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+              <ImageIcon className="h-10 w-10 text-muted-foreground/40" />
             )}
           </div>
 
-          {/* Conteúdo */}
-          <div className="flex-1 min-w-0">
-            {/* Nome + Categoria + Ações */}
+          {/* Info Principal */}
+          <div className="flex-1 min-w-0 flex flex-col">
+            {/* Header */}
             <div className="flex items-start justify-between gap-2 mb-2">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-base truncate">{produto.nome}</h3>
-                  <MarketPriceSearch
-                    productName={produto.nome}
-                    category={produto.categoria}
-                    currentPrice={precoVenda}
-                    trigger={
-                      <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
-                        <Search className="h-3.5 w-3.5" />
-                      </Button>
-                    }
-                  />
-                </div>
+              <div className="min-w-0">
+                <h3 className="font-semibold text-base leading-tight mb-1">{produto.nome}</h3>
                 {produto.categoria && (
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 mt-0.5">
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                     {produto.categoria}
                   </Badge>
                 )}
               </div>
-              
-              {/* Ações rápidas */}
-              <div className="flex items-center gap-1 shrink-0">
+              <div className="flex items-center gap-0.5 shrink-0">
+                <MarketPriceSearch
+                  productName={produto.nome}
+                  category={produto.categoria}
+                  currentPrice={precoVenda}
+                  trigger={
+                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <Search className="h-3.5 w-3.5" />
+                    </Button>
+                  }
+                />
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit}>
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
@@ -196,57 +185,67 @@ const ProductCard: React.FC<ProductCardProps> = ({
             </div>
 
             {/* KPIs em linha */}
-            <div className="flex items-center gap-4 text-sm mb-3">
+            <div className="grid grid-cols-4 gap-3 text-sm">
               <div>
-                <span className="text-muted-foreground text-xs">Preço: </span>
-                <span className="font-semibold">{formatCurrency(precoVenda)}</span>
+                <p className="text-[10px] text-muted-foreground uppercase">Preço</p>
+                <p className="font-bold text-base">{formatCurrency(precoVenda)}</p>
               </div>
               <div>
-                <span className="text-muted-foreground text-xs">Custo: </span>
-                <span className="font-medium">{formatCurrency(custoInsumos)}</span>
+                <p className="text-[10px] text-muted-foreground uppercase">Custo</p>
+                <p className="font-medium text-sm">{formatCurrency(custoInsumos)}</p>
               </div>
               <div>
-                <span className="text-muted-foreground text-xs">Lucro: </span>
-                <span className={`font-semibold ${lucroColor}`}>{formatCurrency(lucro)}</span>
+                <p className="text-[10px] text-muted-foreground uppercase">Lucro</p>
+                <p className={`font-bold text-base ${lucroColor}`}>{formatCurrency(lucro)}</p>
               </div>
               <div>
-                <span className="text-muted-foreground text-xs">Margem: </span>
-                <span className={`font-semibold ${margemColor}`}>{margemPercent.toFixed(1)}%</span>
+                <p className="text-[10px] text-muted-foreground uppercase">Margem</p>
+                <p className={`font-bold text-base ${margemColor}`}>{margemPercent.toFixed(1)}%</p>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Barras de indicadores */}
-            {temFichaTecnica && (
-              <div className="flex gap-6 mb-3">
-                <div className="flex-1 max-w-[180px]">
-                  <div className="flex justify-between text-[10px] text-muted-foreground mb-0.5">
-                    <span>Margem {margemPercent.toFixed(0)}%</span>
-                    <span>Meta {margemAlvo}%</span>
-                  </div>
-                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div className={`h-full ${margemBarColor}`} style={{ width: `${Math.min(Math.max(margemPercent, 0), 100)}%` }} />
-                  </div>
+        {/* Footer: Barras + Ficha Técnica */}
+        {temFichaTecnica && (
+          <div className="flex items-center gap-4 mt-3 pt-3 border-t">
+            <div className="flex-1 grid grid-cols-2 gap-4">
+              <div>
+                <div className="flex justify-between text-[10px] text-muted-foreground mb-0.5">
+                  <span>Margem {margemPercent.toFixed(0)}%</span>
+                  <span>Meta {margemAlvo}%</span>
                 </div>
-                <div className="flex-1 max-w-[180px]">
-                  <div className="flex justify-between text-[10px] text-muted-foreground mb-0.5">
-                    <span>CMV {cmvAtual.toFixed(0)}%</span>
-                    <span>Meta {cmvAlvo}%</span>
-                  </div>
-                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div className={`h-full ${cmvBarColor}`} style={{ width: `${Math.min(cmvAtual, 100)}%` }} />
-                  </div>
+                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div className={`h-full ${margemBarColor}`} style={{ width: `${Math.min(Math.max(margemPercent, 0), 100)}%` }} />
                 </div>
               </div>
-            )}
-
-            {/* Ficha técnica */}
+              <div>
+                <div className="flex justify-between text-[10px] text-muted-foreground mb-0.5">
+                  <span>CMV {cmvAtual.toFixed(0)}%</span>
+                  <span>Meta {cmvAlvo}%</span>
+                </div>
+                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div className={`h-full ${cmvBarColor}`} style={{ width: `${Math.min(cmvAtual, 100)}%` }} />
+                </div>
+              </div>
+            </div>
             <FichaTecnicaDialog
               produtoId={produto.id}
               produtoNome={produto.nome}
               fichaTecnica={produto.fichas_tecnicas || []}
             />
           </div>
-        </div>
+        )}
+
+        {!temFichaTecnica && (
+          <div className="mt-3 pt-3 border-t">
+            <FichaTecnicaDialog
+              produtoId={produto.id}
+              produtoNome={produto.nome}
+              fichaTecnica={[]}
+            />
+          </div>
+        )}
       </CardContent>
     </Card>
   );
