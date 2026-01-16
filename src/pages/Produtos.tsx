@@ -400,7 +400,6 @@ const Produtos = () => {
               config={config}
               onEdit={() => handleEdit(produto)}
               onDelete={() => handleDeleteClick(produto.id)}
-              onDuplicate={() => handleDuplicate(produto)}
             />
           ))}
         </div>
