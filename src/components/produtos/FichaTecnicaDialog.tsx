@@ -23,6 +23,7 @@ interface FichaTecnicaDialogProps {
   produtoId: string;
   produtoNome: string;
   fichaTecnica: FichaTecnicaItem[];
+  trigger?: React.ReactNode;
 }
 
 interface InsumoSelecionado {
@@ -32,7 +33,7 @@ interface InsumoSelecionado {
   custo_unitario: number;
 }
 
-const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({ produtoId, produtoNome, fichaTecnica }) => {
+const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({ produtoId, produtoNome, fichaTecnica, trigger }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
