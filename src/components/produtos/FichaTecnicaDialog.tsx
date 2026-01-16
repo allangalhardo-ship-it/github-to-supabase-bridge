@@ -109,10 +109,12 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({ produtoId, prod
     <>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button variant="secondary" size="sm" className="w-full justify-center gap-2">
-            <FileText className="h-4 w-4" />
-            Ficha Técnica ({fichaTecnica.length})
-          </Button>
+          {trigger ?? (
+            <Button variant="secondary" size="sm" className="justify-center gap-2">
+              <FileText className="h-4 w-4" />
+              Ficha Técnica ({fichaTecnica.length})
+            </Button>
+          )}
         </DialogTrigger>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden flex flex-col p-0">
           <DialogHeader className="p-4 pb-3 border-b flex-shrink-0">
