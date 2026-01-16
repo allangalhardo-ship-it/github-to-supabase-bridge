@@ -386,13 +386,13 @@ const Produtos = () => {
       </div>
 
       {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-[180px]" />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <Skeleton key={i} className="h-[120px]" />
           ))}
         </div>
       ) : produtosFiltrados && produtosFiltrados.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {produtosFiltrados.map((produto) => (
             <ProductCard
               key={produto.id}
