@@ -2,9 +2,10 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Package, Pencil, Trash2, Copy, Search, AlertCircle, ImageIcon } from 'lucide-react';
+import { Pencil, Trash2, Copy, Search, ImageIcon, FileText } from 'lucide-react';
 import FichaTecnicaDialog from './FichaTecnicaDialog';
 import MarketPriceSearch from './MarketPriceSearch';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface FichaTecnicaItem {
   id: string;
@@ -44,6 +45,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
   onDelete,
   onDuplicate,
 }) => {
+  const isMobile = useIsMobile();
+  
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -51,7 +54,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
     }).format(value);
   };
 
-  // Calcular custo dos insumos
   const custoInsumos = React.useMemo(() => {
     if (!produto.fichas_tecnicas || produto.fichas_tecnicas.length === 0) return 0;
     return produto.fichas_tecnicas.reduce((sum, ft) => {
@@ -68,208 +70,181 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const cmvAlvo = config?.cmv_alvo || 35;
   const margemAlvo = config?.margem_desejada_padrao || 30;
   const temFichaTecnica = produto.fichas_tecnicas && produto.fichas_tecnicas.length > 0;
+  const qtdInsumos = produto.fichas_tecnicas?.length || 0;
 
-  // Cores baseadas em performance
   const lucroColor = lucro >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
   const margemColor = margemPercent >= margemAlvo ? 'text-green-600 dark:text-green-400' : margemPercent >= 0 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400';
-  const cmvColor = cmvAtual <= cmvAlvo ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400';
+  const margemBarColor = margemPercent >= margemAlvo ? 'bg-green-500' : margemPercent >= 0 ? 'bg-amber-500' : 'bg-red-500';
+  const cmvBarColor = cmvAtual <= cmvAlvo ? 'bg-green-500' : 'bg-amber-500';
 
-  return (
-    <Card className={`${!produto.ativo ? 'opacity-60' : ''} overflow-hidden transition-shadow hover:shadow-md`}>
-      <CardContent className="p-4">
-        {/* Desktop Layout */}
-        <div className="hidden md:block space-y-4">
-          <div className="flex gap-4">
-            {/* Imagem */}
-            <div className="w-[120px] h-[120px] bg-muted rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+  if (isMobile) {
+    return (
+      <Card className={`${!produto.ativo ? 'opacity-60' : ''} overflow-hidden`}>
+        <CardContent className="p-4">
+          {/* Header: Imagem + Info */}
+          <div className="flex gap-3 mb-3">
+            <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
               {produto.imagem_url ? (
-                <img 
-                  src={produto.imagem_url} 
-                  alt={produto.nome}
-                  className="w-full h-full object-cover"
-                />
+                <img src={produto.imagem_url} alt={produto.nome} className="w-full h-full object-cover" />
               ) : (
-                <ImageIcon className="h-10 w-10 text-muted-foreground/50" />
+                <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
               )}
             </div>
-
-            {/* Informações principais */}
-            <div className="flex-1 min-w-0 space-y-3">
-              {/* Header: Nome + Categoria + Ações */}
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-lg truncate">{produto.nome}</h3>
-                    <MarketPriceSearch
-                      productName={produto.nome}
-                      category={produto.categoria}
-                      currentPrice={precoVenda}
-                      trigger={
-                        <Button variant="ghost" size="icon" className="h-6 w-6" title="Pesquisar preço de mercado">
-                          <Search className="h-3.5 w-3.5" />
-                        </Button>
-                      }
-                    />
-                  </div>
-                  {produto.categoria && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 mt-1 font-normal">
-                      {produto.categoria}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-
-              {/* KPIs em linha */}
-              <div className="flex flex-wrap gap-x-6 gap-y-2">
-                <div>
-                  <p className="text-muted-foreground text-xs">Preço Venda</p>
-                  <p className="font-bold text-lg text-foreground">{formatCurrency(precoVenda)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Custo Insumos</p>
-                  <p className="font-medium text-base">{formatCurrency(custoInsumos)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Lucro</p>
-                  <p className={`font-bold text-lg ${lucroColor}`}>{formatCurrency(lucro)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Margem</p>
-                  <p className={`font-bold text-lg ${margemColor}`}>{margemPercent.toFixed(1)}%</p>
-                </div>
-              </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-base leading-tight line-clamp-2">{produto.nome}</h3>
+              {produto.categoria && (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 mt-1">
+                  {produto.categoria}
+                </Badge>
+              )}
             </div>
           </div>
 
-          {/* Indicadores visuais - apenas desktop */}
-          {temFichaTecnica && (
-            <div className="grid grid-cols-2 gap-4">
-              {/* Margem Bar */}
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <div className="flex justify-between text-[10px] mb-1 text-muted-foreground">
-                    <span>Margem: {margemPercent.toFixed(1)}%</span>
-                    <span>Alvo: {margemAlvo}%</span>
-                  </div>
-                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={`h-full transition-all ${margemPercent >= margemAlvo ? 'bg-green-500' : margemPercent >= 0 ? 'bg-amber-500' : 'bg-red-500'}`}
-                      style={{ width: `${Math.min(Math.max(margemPercent, 0), 100)}%` }}
-                    />
-                  </div>
-                </div>
-                {margemPercent < margemAlvo && (
-                  <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                )}
-              </div>
-
-              {/* CMV Bar */}
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <div className="flex justify-between text-[10px] mb-1 text-muted-foreground">
-                    <span>CMV: {cmvAtual.toFixed(1)}%</span>
-                    <span>Alvo: {cmvAlvo}%</span>
-                  </div>
-                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={`h-full transition-all ${cmvAtual <= cmvAlvo ? 'bg-green-500' : 'bg-amber-500'}`}
-                      style={{ width: `${Math.min(cmvAtual, 100)}%` }}
-                    />
-                  </div>
-                </div>
-                {cmvAtual > cmvAlvo && (
-                  <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                )}
-              </div>
+          {/* Preço + Lucro + Margem */}
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            <div className="bg-muted/50 rounded-lg p-2 text-center">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Preço</p>
+              <p className="font-bold text-sm">{formatCurrency(precoVenda)}</p>
             </div>
-          )}
-
-          {/* Botões Desktop */}
-          <div className="flex items-center gap-2 pt-2 border-t border-border/50">
-            <FichaTecnicaDialog
-              produtoId={produto.id}
-              produtoNome={produto.nome}
-              fichaTecnica={produto.fichas_tecnicas || []}
-            />
-            <Button variant="outline" size="sm" onClick={onEdit}>
-              <Pencil className="h-3.5 w-3.5 mr-1.5" />
-              Editar
-            </Button>
-            {onDuplicate && (
-              <Button variant="outline" size="sm" onClick={onDuplicate}>
-                <Copy className="h-3.5 w-3.5 mr-1.5" />
-                Duplicar
-              </Button>
-            )}
-            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive ml-auto" onClick={onDelete}>
-              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-              Excluir
-            </Button>
-          </div>
-        </div>
-
-        {/* Mobile Layout */}
-        <div className="md:hidden p-4 space-y-3">
-          {/* Imagem centralizada */}
-          <div className="w-full aspect-square max-w-[200px] mx-auto bg-muted rounded-lg flex items-center justify-center overflow-hidden">
-            {produto.imagem_url ? (
-              <img 
-                src={produto.imagem_url} 
-                alt={produto.nome}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <ImageIcon className="h-16 w-16 text-muted-foreground/50" />
-            )}
-          </div>
-
-          {/* Nome + Categoria */}
-          <div className="text-center">
-            <h3 className="font-semibold text-lg">{produto.nome}</h3>
-            {produto.categoria && (
-              <Badge variant="outline" className="text-[10px] px-2 py-0 mt-1 font-normal">
-                {produto.categoria}
-              </Badge>
-            )}
-          </div>
-
-          {/* Preço destacado */}
-          <div className="text-center">
-            <p className="text-muted-foreground text-xs">Preço Venda</p>
-            <p className="font-bold text-2xl text-foreground">{formatCurrency(precoVenda)}</p>
-          </div>
-
-          {/* KPIs principais - 2 colunas */}
-          <div className="grid grid-cols-2 gap-3 text-center">
-            <div className="bg-muted/50 rounded-lg p-3">
-              <p className="text-muted-foreground text-xs">Lucro</p>
-              <p className={`font-bold text-xl ${lucroColor}`}>{formatCurrency(lucro)}</p>
+            <div className="bg-muted/50 rounded-lg p-2 text-center">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Lucro</p>
+              <p className={`font-bold text-sm ${lucroColor}`}>{formatCurrency(lucro)}</p>
             </div>
-            <div className="bg-muted/50 rounded-lg p-3">
-              <p className="text-muted-foreground text-xs">Margem</p>
-              <p className={`font-bold text-xl ${margemColor}`}>{margemPercent.toFixed(1)}%</p>
+            <div className="bg-muted/50 rounded-lg p-2 text-center">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Margem</p>
+              <p className={`font-bold text-sm ${margemColor}`}>{margemPercent.toFixed(1)}%</p>
             </div>
           </div>
 
           {/* Rendimento se existir */}
-          {produto.rendimento_padrao && (
-            <div className="text-center bg-muted/50 rounded-lg p-2">
-              <p className="text-muted-foreground text-xs">Rendimento</p>
-              <p className="font-semibold">{produto.rendimento_padrao} unidades</p>
-            </div>
+          {produto.rendimento_padrao && produto.rendimento_padrao > 0 && (
+            <p className="text-xs text-muted-foreground text-center mb-3">
+              Rende <span className="font-medium text-foreground">{produto.rendimento_padrao}</span> unidades
+            </p>
           )}
 
-          {/* Botões Mobile */}
-          <div className="flex gap-2 pt-2">
+          {/* Botões */}
+          <div className="flex gap-2">
             <FichaTecnicaDialog
               produtoId={produto.id}
               produtoNome={produto.nome}
               fichaTecnica={produto.fichas_tecnicas || []}
             />
             <Button variant="outline" size="sm" className="flex-1" onClick={onEdit}>
-              <Pencil className="h-4 w-4 mr-1.5" />
+              <Pencil className="h-3.5 w-3.5 mr-1" />
               Editar
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Desktop Layout
+  return (
+    <Card className={`${!produto.ativo ? 'opacity-60' : ''} overflow-hidden hover:shadow-md transition-shadow`}>
+      <CardContent className="p-4">
+        <div className="flex gap-4">
+          {/* Imagem */}
+          <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+            {produto.imagem_url ? (
+              <img src={produto.imagem_url} alt={produto.nome} className="w-full h-full object-cover" />
+            ) : (
+              <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+            )}
+          </div>
+
+          {/* Conteúdo */}
+          <div className="flex-1 min-w-0">
+            {/* Nome + Categoria + Ações */}
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-base truncate">{produto.nome}</h3>
+                  <MarketPriceSearch
+                    productName={produto.nome}
+                    category={produto.categoria}
+                    currentPrice={precoVenda}
+                    trigger={
+                      <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
+                        <Search className="h-3.5 w-3.5" />
+                      </Button>
+                    }
+                  />
+                </div>
+                {produto.categoria && (
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 mt-0.5">
+                    {produto.categoria}
+                  </Badge>
+                )}
+              </div>
+              
+              {/* Ações rápidas */}
+              <div className="flex items-center gap-1 shrink-0">
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                {onDuplicate && (
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onDuplicate}>
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={onDelete}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+
+            {/* KPIs em linha */}
+            <div className="flex items-center gap-4 text-sm mb-3">
+              <div>
+                <span className="text-muted-foreground text-xs">Preço: </span>
+                <span className="font-semibold">{formatCurrency(precoVenda)}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground text-xs">Custo: </span>
+                <span className="font-medium">{formatCurrency(custoInsumos)}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground text-xs">Lucro: </span>
+                <span className={`font-semibold ${lucroColor}`}>{formatCurrency(lucro)}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground text-xs">Margem: </span>
+                <span className={`font-semibold ${margemColor}`}>{margemPercent.toFixed(1)}%</span>
+              </div>
+            </div>
+
+            {/* Barras de indicadores */}
+            {temFichaTecnica && (
+              <div className="flex gap-6 mb-3">
+                <div className="flex-1 max-w-[180px]">
+                  <div className="flex justify-between text-[10px] text-muted-foreground mb-0.5">
+                    <span>Margem {margemPercent.toFixed(0)}%</span>
+                    <span>Meta {margemAlvo}%</span>
+                  </div>
+                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div className={`h-full ${margemBarColor}`} style={{ width: `${Math.min(Math.max(margemPercent, 0), 100)}%` }} />
+                  </div>
+                </div>
+                <div className="flex-1 max-w-[180px]">
+                  <div className="flex justify-between text-[10px] text-muted-foreground mb-0.5">
+                    <span>CMV {cmvAtual.toFixed(0)}%</span>
+                    <span>Meta {cmvAlvo}%</span>
+                  </div>
+                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div className={`h-full ${cmvBarColor}`} style={{ width: `${Math.min(cmvAtual, 100)}%` }} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Ficha técnica */}
+            <FichaTecnicaDialog
+              produtoId={produto.id}
+              produtoNome={produto.nome}
+              fichaTecnica={produto.fichas_tecnicas || []}
+            />
           </div>
         </div>
       </CardContent>
