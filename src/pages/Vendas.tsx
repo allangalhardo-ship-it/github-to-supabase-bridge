@@ -315,7 +315,7 @@ const Vendas = () => {
                 Nova Venda
               </Button>
             </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Registrar Venda</DialogTitle>
             </DialogHeader>
@@ -336,9 +336,11 @@ const Vendas = () => {
                   emptyMessage="Nenhum produto encontrado."
                 />
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              
+              {/* Layout responsivo: 2 colunas no mobile, 3 no desktop */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="quantidade">Quantidade</Label>
+                  <Label htmlFor="quantidade" className="text-xs sm:text-sm">Qtd</Label>
                   <Input
                     id="quantidade"
                     type="number"
@@ -346,11 +348,12 @@ const Vendas = () => {
                     min="1"
                     value={formData.quantidade}
                     onChange={(e) => handleQuantidadeChange(e.target.value)}
+                    className="text-base"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="valor_unitario">Valor Unit. (R$)</Label>
+                  <Label htmlFor="valor_unitario" className="text-xs sm:text-sm">Valor Unit.</Label>
                   <Input
                     id="valor_unitario"
                     type="number"
@@ -358,48 +361,50 @@ const Vendas = () => {
                     min="0"
                     value={formData.valor_unitario}
                     onChange={(e) => handleValorUnitarioChange(e.target.value)}
+                    className="text-base"
+                    placeholder="R$"
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="valor_total">Total (R$)</Label>
+                <div className="space-y-2 col-span-2 sm:col-span-1">
+                  <Label htmlFor="valor_total" className="text-xs sm:text-sm">Total</Label>
                   <Input
                     id="valor_total"
                     type="number"
                     step="0.01"
                     min="0"
                     value={formData.valor_total}
-                    className="bg-muted/50"
+                    className="bg-muted/50 text-base font-semibold"
                     readOnly
                   />
                 </div>
               </div>
 
-              {/* Card de Lucro Estimado */}
+              {/* Card de Lucro Estimado - mais compacto no mobile */}
               {lucroEstimado && (
-                <div className={`rounded-lg p-3 border ${lucroEstimado.lucro >= 0 ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900' : 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900'}`}>
-                  <div className="flex items-center gap-2 mb-2">
+                <div className={`rounded-lg p-2 sm:p-3 border ${lucroEstimado.lucro >= 0 ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900' : 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900'}`}>
+                  <div className="flex items-center gap-2 mb-1 sm:mb-2">
                     {lucroEstimado.lucro >= 0 ? (
-                      <TrendingUp className="h-4 w-4 text-green-600" />
+                      <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
                     ) : (
-                      <TrendingDown className="h-4 w-4 text-red-600" />
+                      <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
                     )}
-                    <span className="text-sm font-medium">Previsão desta venda</span>
+                    <span className="text-xs sm:text-sm font-medium">Previsão desta venda</span>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="grid grid-cols-3 gap-1 sm:gap-2 text-center">
                     <div>
-                      <p className="text-[10px] text-muted-foreground">Custo</p>
-                      <p className="text-sm font-medium text-muted-foreground">{formatCurrency(lucroEstimado.custoTotal)}</p>
+                      <p className="text-[9px] sm:text-[10px] text-muted-foreground">Custo</p>
+                      <p className="text-xs sm:text-sm font-medium text-muted-foreground">{formatCurrency(lucroEstimado.custoTotal)}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] text-muted-foreground">Lucro Bruto</p>
-                      <p className={`text-sm font-bold ${lucroEstimado.lucro >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      <p className="text-[9px] sm:text-[10px] text-muted-foreground">Lucro</p>
+                      <p className={`text-xs sm:text-sm font-bold ${lucroEstimado.lucro >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {formatCurrency(lucroEstimado.lucro)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[10px] text-muted-foreground">Margem</p>
-                      <p className={`text-sm font-bold ${lucroEstimado.margem >= 30 ? 'text-green-600' : lucroEstimado.margem >= 20 ? 'text-yellow-600' : 'text-red-600'}`}>
+                      <p className="text-[9px] sm:text-[10px] text-muted-foreground">Margem</p>
+                      <p className={`text-xs sm:text-sm font-bold ${lucroEstimado.margem >= 30 ? 'text-green-600' : lucroEstimado.margem >= 20 ? 'text-yellow-600' : 'text-red-600'}`}>
                         {lucroEstimado.margem.toFixed(1)}%
                       </p>
                     </div>
