@@ -1430,203 +1430,54 @@ const Compras = () => {
                     </div>
                   )}
 
+                  {/* Mobile: Cards layout / Desktop: Table layout */}
                   {parsedNota.itens.length > 0 ? (
-                    <div className="max-h-80 overflow-y-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-10"></TableHead>
-                            <TableHead>Produto</TableHead>
-                            <TableHead className="text-right w-24">Qtd Nota</TableHead>
-                            <TableHead className="text-right w-24">Qtd Conv.</TableHead>
-                            <TableHead className="text-right w-28">Custo/Un</TableHead>
-                            <TableHead className="text-right w-24">Total</TableHead>
-                            <TableHead className="text-center">Status</TableHead>
-                            <TableHead></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {parsedNota.itens.map((item, index) => {
-                            const insumoMapeado = insumos?.find(i => i.id === item.insumo_id);
-                            const fator = item.fator_conversao || 1;
-                            const qtdConv = item.quantidade_convertida || item.quantidade * fator;
-                            const custoConv = item.custo_unitario_convertido || (qtdConv > 0 ? item.valor_total / qtdConv : 0);
-                            
-                            // Detectar possível erro de conversão: unidades diferentes mas fator = 1
-                            const unidadeXml = item.unidade?.toLowerCase().trim();
-                            const unidadeInsumo = insumoMapeado?.unidade_medida?.toLowerCase().trim();
-                            const unidadesDiferentes = unidadeXml && unidadeInsumo && unidadeXml !== unidadeInsumo;
-                            const possivelErroConversao = item.mapeado && unidadesDiferentes && fator === 1;
-                            
-                            return (
-                              <TableRow key={index} className={possivelErroConversao ? 'bg-warning/10' : ''}>
-                                <TableCell>
+                    <div className="max-h-[60vh] overflow-y-auto">
+                      {/* Mobile Card View */}
+                      <div className="md:hidden space-y-2">
+                        {parsedNota.itens.map((item, index) => {
+                          const insumoMapeado = insumos?.find(i => i.id === item.insumo_id);
+                          const fator = item.fator_conversao || 1;
+                          const qtdConv = item.quantidade_convertida || item.quantidade * fator;
+                          const custoConv = item.custo_unitario_convertido || (qtdConv > 0 ? item.valor_total / qtdConv : 0);
+                          const unidadeXml = item.unidade?.toLowerCase().trim();
+                          const unidadeInsumo = insumoMapeado?.unidade_medida?.toLowerCase().trim();
+                          const unidadesDiferentes = unidadeXml && unidadeInsumo && unidadeXml !== unidadeInsumo;
+                          const possivelErroConversao = item.mapeado && unidadesDiferentes && fator === 1;
+                          
+                          return (
+                            <Card key={index} className={`${possivelErroConversao ? 'border-warning bg-warning/5' : ''}`}>
+                              <CardContent className="p-3 space-y-2">
+                                {/* Header: Actions + Status */}
+                                <div className="flex items-start justify-between gap-2">
                                   <div className="flex gap-1">
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                      className="h-8 w-8 text-destructive"
                                       onClick={() => {
                                         const newItens = parsedNota.itens.filter((_, i) => i !== index);
                                         const newValorTotal = newItens.reduce((acc, i) => acc + i.valor_total, 0);
-                                        setParsedNota({
-                                          ...parsedNota,
-                                          itens: newItens,
-                                          valor_total: newValorTotal,
-                                        });
-                                        if (editingItemIndex === index) setEditingItemIndex(null);
-                                        toast({ title: 'Item removido da importação' });
+                                        setParsedNota({ ...parsedNota, itens: newItens, valor_total: newValorTotal });
+                                        toast({ title: 'Item removido' });
                                       }}
                                     >
-                                      <Trash2 className="h-3.5 w-3.5" />
+                                      <Trash2 className="h-4 w-4" />
                                     </Button>
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      className="h-7 w-7"
+                                      className="h-8 w-8"
                                       onClick={() => setEditingItemIndex(editingItemIndex === index ? null : index)}
-                                      title="Editar item"
                                     >
-                                      <Pencil className="h-3.5 w-3.5" />
+                                      <Pencil className="h-4 w-4" />
                                     </Button>
                                   </div>
-                                </TableCell>
-                                <TableCell className="font-medium">
-                                  {editingItemIndex === index ? (
-                                    <Input
-                                      value={item.produto_descricao}
-                                      onChange={(e) => {
-                                        const newItens = [...parsedNota.itens];
-                                        newItens[index] = { ...newItens[index], produto_descricao: e.target.value };
-                                        setParsedNota({ ...parsedNota, itens: newItens });
-                                      }}
-                                      className="h-8 text-sm"
-                                    />
-                                  ) : (
-                                    <div>
-                                      <span className="max-w-[200px] truncate block">{item.produto_descricao}</span>
-                                      {item.mapeado && insumoMapeado && (
-                                        <p className="text-xs text-muted-foreground">
-                                          → {insumoMapeado.nome}
-                                        </p>
-                                      )}
-                                    </div>
-                                  )}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  {editingItemIndex === index ? (
-                                    <Input
-                                      type="number"
-                                      step="0.001"
-                                      min="0"
-                                      value={item.quantidade}
-                                      onChange={(e) => {
-                                        const newQtd = parseFloat(e.target.value) || 0;
-                                        const newItens = [...parsedNota.itens];
-                                        const newTotal = newQtd * item.custo_unitario;
-                                        newItens[index] = { ...newItens[index], quantidade: newQtd, valor_total: newTotal };
-                                        const notaTotal = newItens.reduce((acc, i) => acc + i.valor_total, 0);
-                                        setParsedNota({ ...parsedNota, itens: newItens, valor_total: notaTotal });
-                                      }}
-                                      className="h-8 text-sm w-20 text-right"
-                                    />
-                                  ) : (
-                                    <span className="whitespace-nowrap">{item.quantidade} {item.unidade}</span>
-                                  )}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  {item.mapeado && insumoMapeado ? (
-                                    <div className="flex items-center gap-1 justify-end">
-                                      <span className={fator !== 1 ? 'text-primary font-medium' : ''}>
-                                        {qtdConv.toFixed(2)} {insumoMapeado.unidade_medida}
-                                      </span>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className={`h-6 w-6 ${possivelErroConversao ? 'text-warning' : ''}`}
-                                        title={`Editar conversão (fator atual: ${fator})`}
-                                        onClick={() => {
-                                          setConversionItemIndex(index);
-                                          setConversionUnidadeCompraId('');
-                                          setConversionShowNovaUnidade(false);
-                                          setConversionNovaUnidadeNome('');
-                                          setConversionFatorManual(String(fator));
-                                          setConversionDialogOpen(true);
-                                        }}
-                                      >
-                                        <Pencil className="h-3 w-3" />
-                                      </Button>
-                                    </div>
-                                  ) : (
-                                    <span className="text-muted-foreground">-</span>
-                                  )}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  {editingItemIndex === index ? (
-                                    <Input
-                                      type="number"
-                                      step="0.01"
-                                      min="0"
-                                      value={item.custo_unitario}
-                                      onChange={(e) => {
-                                        const newCusto = parseFloat(e.target.value) || 0;
-                                        const newItens = [...parsedNota.itens];
-                                        const newTotal = item.quantidade * newCusto;
-                                        newItens[index] = { ...newItens[index], custo_unitario: newCusto, valor_total: newTotal };
-                                        const notaTotal = newItens.reduce((acc, i) => acc + i.valor_total, 0);
-                                        setParsedNota({ ...parsedNota, itens: newItens, valor_total: notaTotal });
-                                      }}
-                                      className="h-8 text-sm w-24 text-right"
-                                    />
-                                  ) : (
-                                    <div className="flex flex-col items-end">
-                                      {item.mapeado && insumoMapeado ? (
-                                        <span className="text-xs">
-                                          {new Intl.NumberFormat('pt-BR', {
-                                            style: 'currency',
-                                            currency: 'BRL',
-                                            minimumFractionDigits: 4,
-                                          }).format(custoConv)}/{insumoMapeado.unidade_medida}
-                                        </span>
-                                      ) : (
-                                        <span>{formatCurrency(item.custo_unitario)}</span>
-                                      )}
-                                      {(() => {
-                                        if (!item.insumo_id || !item.mapeado) return null;
-                                        const insumo = insumos?.find(i => i.id === item.insumo_id);
-                                        if (!insumo || !insumo.custo_unitario || insumo.custo_unitario === 0) return null;
-                                        const variacaoCusto = ((custoConv - insumo.custo_unitario) / insumo.custo_unitario) * 100;
-                                        if (Math.abs(variacaoCusto) < 1) return null;
-                                        return (
-                                          <span className={`text-xs ${Math.abs(variacaoCusto) > 15 ? 'text-destructive font-medium' : variacaoCusto > 0 ? 'text-orange-500' : 'text-green-500'}`}>
-                                            {variacaoCusto > 0 ? '+' : ''}{variacaoCusto.toFixed(1)}%
-                                            {Math.abs(variacaoCusto) > 15 && ' ⚠️'}
-                                          </span>
-                                        );
-                                      })()}
-                                    </div>
-                                  )}
-                                </TableCell>
-                                <TableCell className="text-right font-medium">{formatCurrency(item.valor_total)}</TableCell>
-                                <TableCell className="text-center">
                                   {possivelErroConversao ? (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Badge variant="outline" className="gap-1 border-warning text-warning cursor-help">
-                                            <AlertTriangle className="h-3 w-3" />
-                                            Verificar
-                                          </Badge>
-                                        </TooltipTrigger>
-                                        <TooltipContent className="max-w-xs">
-                                          <p className="font-medium">Possível erro de conversão</p>
-                                          <p className="text-xs mt-1">
-                                            Unidade da nota ({item.unidade}) difere do insumo ({insumoMapeado?.unidade_medida}), 
-                                            mas o fator de conversão é 1. Configure a conversão na página de Importar XML.
-                                          </p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
+                                    <Badge variant="outline" className="gap-1 border-warning text-warning">
+                                      <AlertTriangle className="h-3 w-3" />
+                                      Verificar
+                                    </Badge>
                                   ) : item.mapeado ? (
                                     <Badge variant="default" className="gap-1">
                                       <Check className="h-3 w-3" />
@@ -1638,8 +1489,334 @@ const Compras = () => {
                                       Não mapeado
                                     </Badge>
                                   )}
-                                </TableCell>
-                                <TableCell>
+                                </div>
+                                
+                                {/* Produto */}
+                                <div>
+                                  <p className="font-medium text-sm line-clamp-2">{item.produto_descricao}</p>
+                                  {item.mapeado && insumoMapeado && (
+                                    <p className="text-xs text-muted-foreground">→ {insumoMapeado.nome}</p>
+                                  )}
+                                </div>
+                                
+                                {/* Quantidades e Valores */}
+                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                  <div>
+                                    <span className="text-muted-foreground text-xs">Nota:</span>
+                                    <p className="font-medium">{item.quantidade} {item.unidade}</p>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground text-xs">Total:</span>
+                                    <p className="font-bold text-primary">{formatCurrency(item.valor_total)}</p>
+                                  </div>
+                                  {item.mapeado && insumoMapeado && (
+                                    <>
+                                      <div className="flex items-center gap-1">
+                                        <div>
+                                          <span className="text-muted-foreground text-xs">Conv.:</span>
+                                          <p className={`font-medium ${fator !== 1 ? 'text-primary' : ''}`}>
+                                            {qtdConv.toFixed(2)} {insumoMapeado.unidade_medida}
+                                          </p>
+                                        </div>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className={`h-7 w-7 ${possivelErroConversao ? 'text-warning' : ''}`}
+                                          onClick={() => {
+                                            setConversionItemIndex(index);
+                                            setConversionUnidadeCompraId('');
+                                            setConversionShowNovaUnidade(false);
+                                            setConversionNovaUnidadeNome('');
+                                            setConversionFatorManual(String(fator));
+                                            setConversionDialogOpen(true);
+                                          }}
+                                        >
+                                          <Pencil className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                      <div>
+                                        <span className="text-muted-foreground text-xs">Custo/Un:</span>
+                                        <p className="text-xs">
+                                          {new Intl.NumberFormat('pt-BR', {
+                                            style: 'currency',
+                                            currency: 'BRL',
+                                            minimumFractionDigits: 4,
+                                          }).format(custoConv)}/{insumoMapeado.unidade_medida}
+                                        </p>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                                
+                                {/* Ações de mapeamento */}
+                                {!item.mapeado && (
+                                  <div className="flex gap-2 pt-2 border-t">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="flex-1"
+                                      onClick={() => {
+                                        setSelectedItem(item);
+                                        setMappingDialogOpen(true);
+                                      }}
+                                    >
+                                      <Link2 className="h-4 w-4 mr-1" />
+                                      Mapear
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={async () => {
+                                        const { data: newInsumo, error } = await supabase
+                                          .from('insumos')
+                                          .insert({
+                                            empresa_id: usuario!.empresa_id,
+                                            nome: item.produto_descricao,
+                                            unidade_medida: item.unidade || 'un',
+                                            custo_unitario: item.custo_unitario || 0,
+                                          })
+                                          .select()
+                                          .single();
+                                        
+                                        if (error) {
+                                          toast({ title: 'Erro ao criar insumo', variant: 'destructive' });
+                                          return;
+                                        }
+                                        
+                                        await supabase.from('produto_mapeamento').upsert({
+                                          empresa_id: usuario!.empresa_id,
+                                          ean_gtin: item.ean || null,
+                                          descricao_nota: item.produto_descricao,
+                                          insumo_id: newInsumo.id,
+                                          fornecedor_cnpj: null,
+                                          codigo_produto_nota: null,
+                                        });
+                                        
+                                        queryClient.invalidateQueries({ queryKey: ['insumos'] });
+                                        queryClient.invalidateQueries({ queryKey: ['mapeamentos'] });
+                                        const updatedItens = [...parsedNota.itens];
+                                        updatedItens[index] = { ...updatedItens[index], insumo_id: newInsumo.id, mapeado: true };
+                                        setParsedNota({ ...parsedNota, itens: updatedItens });
+                                        toast({ title: 'Insumo criado e mapeado!' });
+                                      }}
+                                    >
+                                      <Plus className="h-4 w-4" />
+                                      Criar
+                                    </Button>
+                                  </div>
+                                )}
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                      
+                      {/* Desktop Table View */}
+                      <div className="hidden md:block">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-[70px]"></TableHead>
+                              <TableHead className="min-w-[180px]">Produto</TableHead>
+                              <TableHead className="text-center w-[80px]">Nota</TableHead>
+                              <TableHead className="text-center w-[100px]">Conv.</TableHead>
+                              <TableHead className="text-right w-[100px]">Custo/Un</TableHead>
+                              <TableHead className="text-right w-[80px]">Total</TableHead>
+                              <TableHead className="text-center w-[100px]">Status</TableHead>
+                              <TableHead className="w-[80px]"></TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {parsedNota.itens.map((item, index) => {
+                              const insumoMapeado = insumos?.find(i => i.id === item.insumo_id);
+                              const fator = item.fator_conversao || 1;
+                              const qtdConv = item.quantidade_convertida || item.quantidade * fator;
+                              const custoConv = item.custo_unitario_convertido || (qtdConv > 0 ? item.valor_total / qtdConv : 0);
+                              const unidadeXml = item.unidade?.toLowerCase().trim();
+                              const unidadeInsumo = insumoMapeado?.unidade_medida?.toLowerCase().trim();
+                              const unidadesDiferentes = unidadeXml && unidadeInsumo && unidadeXml !== unidadeInsumo;
+                              const possivelErroConversao = item.mapeado && unidadesDiferentes && fator === 1;
+                              
+                              return (
+                                <TableRow key={index} className={possivelErroConversao ? 'bg-warning/10' : ''}>
+                                  <TableCell className="py-2">
+                                    <div className="flex gap-0.5">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                        onClick={() => {
+                                          const newItens = parsedNota.itens.filter((_, i) => i !== index);
+                                          const newValorTotal = newItens.reduce((acc, i) => acc + i.valor_total, 0);
+                                          setParsedNota({ ...parsedNota, itens: newItens, valor_total: newValorTotal });
+                                          if (editingItemIndex === index) setEditingItemIndex(null);
+                                          toast({ title: 'Item removido da importação' });
+                                        }}
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() => setEditingItemIndex(editingItemIndex === index ? null : index)}
+                                      >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-2">
+                                    {editingItemIndex === index ? (
+                                      <Input
+                                        value={item.produto_descricao}
+                                        onChange={(e) => {
+                                          const newItens = [...parsedNota.itens];
+                                          newItens[index] = { ...newItens[index], produto_descricao: e.target.value };
+                                          setParsedNota({ ...parsedNota, itens: newItens });
+                                        }}
+                                        className="h-8 text-sm"
+                                      />
+                                    ) : (
+                                      <div>
+                                        <span className="font-medium text-sm line-clamp-1">{item.produto_descricao}</span>
+                                        {item.mapeado && insumoMapeado && (
+                                          <p className="text-xs text-muted-foreground">→ {insumoMapeado.nome}</p>
+                                        )}
+                                      </div>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-center py-2">
+                                    {editingItemIndex === index ? (
+                                      <Input
+                                        type="number"
+                                        step="0.001"
+                                        min="0"
+                                        value={item.quantidade}
+                                        onChange={(e) => {
+                                          const newQtd = parseFloat(e.target.value) || 0;
+                                          const newItens = [...parsedNota.itens];
+                                          const newTotal = newQtd * item.custo_unitario;
+                                          newItens[index] = { ...newItens[index], quantidade: newQtd, valor_total: newTotal };
+                                          const notaTotal = newItens.reduce((acc, i) => acc + i.valor_total, 0);
+                                          setParsedNota({ ...parsedNota, itens: newItens, valor_total: notaTotal });
+                                        }}
+                                        className="h-8 text-sm w-16 text-center"
+                                      />
+                                    ) : (
+                                      <div className="text-sm">
+                                        <span>{item.quantidade}</span>
+                                        <span className="text-muted-foreground text-xs block">{item.unidade}</span>
+                                      </div>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-center py-2">
+                                    {item.mapeado && insumoMapeado ? (
+                                      <div className="flex items-center gap-1 justify-center">
+                                        <div className="text-sm">
+                                          <span className={fator !== 1 ? 'text-primary font-medium' : ''}>{qtdConv.toFixed(2)}</span>
+                                          <span className="text-muted-foreground text-xs block">{insumoMapeado.unidade_medida}</span>
+                                        </div>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className={`h-6 w-6 ${possivelErroConversao ? 'text-warning' : ''}`}
+                                          onClick={() => {
+                                            setConversionItemIndex(index);
+                                            setConversionUnidadeCompraId('');
+                                            setConversionShowNovaUnidade(false);
+                                            setConversionNovaUnidadeNome('');
+                                            setConversionFatorManual(String(fator));
+                                            setConversionDialogOpen(true);
+                                          }}
+                                        >
+                                          <Pencil className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <span className="text-muted-foreground">-</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-right py-2">
+                                    {editingItemIndex === index ? (
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={item.custo_unitario}
+                                        onChange={(e) => {
+                                          const newCusto = parseFloat(e.target.value) || 0;
+                                          const newItens = [...parsedNota.itens];
+                                          const newTotal = item.quantidade * newCusto;
+                                          newItens[index] = { ...newItens[index], custo_unitario: newCusto, valor_total: newTotal };
+                                          const notaTotal = newItens.reduce((acc, i) => acc + i.valor_total, 0);
+                                          setParsedNota({ ...parsedNota, itens: newItens, valor_total: notaTotal });
+                                        }}
+                                        className="h-8 text-sm w-20 text-right"
+                                      />
+                                    ) : (
+                                      <div className="text-sm">
+                                        {item.mapeado && insumoMapeado ? (
+                                          <>
+                                            <span className="text-xs">
+                                              {new Intl.NumberFormat('pt-BR', {
+                                                style: 'currency',
+                                                currency: 'BRL',
+                                                minimumFractionDigits: 2,
+                                                maximumFractionDigits: 4,
+                                              }).format(custoConv)}
+                                            </span>
+                                            <span className="text-muted-foreground text-xs block">/{insumoMapeado.unidade_medida}</span>
+                                          </>
+                                        ) : (
+                                          <span>{formatCurrency(item.custo_unitario)}</span>
+                                        )}
+                                        {(() => {
+                                          if (!item.insumo_id || !item.mapeado) return null;
+                                          const insumo = insumos?.find(i => i.id === item.insumo_id);
+                                          if (!insumo || !insumo.custo_unitario || insumo.custo_unitario === 0) return null;
+                                          const variacaoCusto = ((custoConv - insumo.custo_unitario) / insumo.custo_unitario) * 100;
+                                          if (Math.abs(variacaoCusto) < 1) return null;
+                                          return (
+                                            <span className={`text-xs block ${Math.abs(variacaoCusto) > 15 ? 'text-destructive font-medium' : variacaoCusto > 0 ? 'text-orange-500' : 'text-green-500'}`}>
+                                              {variacaoCusto > 0 ? '+' : ''}{variacaoCusto.toFixed(1)}%
+                                            </span>
+                                          );
+                                        })()}
+                                      </div>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-right py-2 font-medium text-sm">{formatCurrency(item.valor_total)}</TableCell>
+                                  <TableCell className="text-center py-2">
+                                    {possivelErroConversao ? (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Badge variant="outline" className="gap-0.5 text-xs border-warning text-warning cursor-help">
+                                              <AlertTriangle className="h-3 w-3" />
+                                              Verificar
+                                            </Badge>
+                                          </TooltipTrigger>
+                                          <TooltipContent className="max-w-xs">
+                                            <p className="font-medium">Possível erro de conversão</p>
+                                            <p className="text-xs mt-1">
+                                              Unidade da nota ({item.unidade}) difere do insumo ({insumoMapeado?.unidade_medida}).
+                                            </p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    ) : item.mapeado ? (
+                                      <Badge variant="default" className="gap-0.5 text-xs">
+                                        <Check className="h-3 w-3" />
+                                        Mapeado
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="destructive" className="gap-0.5 text-xs">
+                                        <AlertCircle className="h-3 w-3" />
+                                        Não map.
+                                      </Badge>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="py-2">
                                   {!item.mapeado && (
                                     <div className="flex gap-1">
                                       <Button
@@ -1708,6 +1885,7 @@ const Compras = () => {
                           })}
                         </TableBody>
                       </Table>
+                      </div>
                     </div>
                   ) : (
                     <div className="text-center py-4 text-muted-foreground">
@@ -2083,7 +2261,7 @@ const Compras = () => {
 
       {/* Conversion Dialog - igual ao RegistrarCompraDialog */}
       <Dialog open={conversionDialogOpen} onOpenChange={setConversionDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md w-[95vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Calculator className="h-5 w-5" />
@@ -2151,7 +2329,7 @@ const Compras = () => {
                         Cancelar
                       </Button>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <Label className="text-xs">Nome da unidade</Label>
                         <Input
