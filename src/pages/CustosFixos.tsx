@@ -446,11 +446,39 @@ const CustosFixos = () => {
                 </div>
               </div>
 
-              {faturamento > 0 && percentualCustoFixo > 25 && (
-                <p className="text-sm text-red-600">
-                  ⚠️ Seus custos fixos estão acima de 25% do faturamento. Considere revisar suas despesas.
+              {faturamento > 0 && percentualCustoFixo <= 20 && (
+                <p className="text-sm text-green-600">
+                  ✓ Seus custos fixos estão controlados e dentro do ideal para um negócio saudável.
                 </p>
               )}
+
+              {faturamento > 0 && percentualCustoFixo > 20 && percentualCustoFixo <= 25 && (
+                <p className="text-sm text-yellow-600">
+                  ⚠️ Seus custos fixos estão próximos do limite. Fique atento para não ultrapassar 25%.
+                </p>
+              )}
+
+              {faturamento > 0 && percentualCustoFixo > 25 && (() => {
+                // Para chegar a 20% (saudável):
+                // Opção 1: Reduzir custos → custos_alvo = faturamento * 0.20
+                const custosAlvo = faturamento * 0.20;
+                const reducaoCustos = totalMensal - custosAlvo;
+                
+                // Opção 2: Aumentar faturamento → faturamento_alvo = totalMensal / 0.20
+                const faturamentoAlvo = totalMensal / 0.20;
+                const aumentoFaturamento = faturamentoAlvo - faturamento;
+
+                return (
+                  <div className="text-sm text-red-600 space-y-2">
+                    <p>⚠️ Seus custos fixos estão acima de 25% do faturamento. Considere revisar suas despesas.</p>
+                    <div className="bg-red-50 dark:bg-red-950/30 p-3 rounded-lg space-y-1">
+                      <p className="font-medium">Para alcançar uma margem saudável (20%):</p>
+                      <p>• Reduza <strong>{formatCurrency(reducaoCustos)}</strong> em custos fixos, ou</p>
+                      <p>• Aumente o faturamento em <strong>{formatCurrency(aumentoFaturamento)}</strong></p>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </CardContent>
