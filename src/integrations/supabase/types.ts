@@ -131,6 +131,7 @@ export type Database = {
           cmv_alvo: number
           created_at: string
           empresa_id: string
+          faturamento_mensal: number
           id: string
           imposto_medio_sobre_vendas: number
           margem_desejada_padrao: number
@@ -141,6 +142,7 @@ export type Database = {
           cmv_alvo?: number
           created_at?: string
           empresa_id: string
+          faturamento_mensal?: number
           id?: string
           imposto_medio_sobre_vendas?: number
           margem_desejada_padrao?: number
@@ -151,6 +153,7 @@ export type Database = {
           cmv_alvo?: number
           created_at?: string
           empresa_id?: string
+          faturamento_mensal?: number
           id?: string
           imposto_medio_sobre_vendas?: number
           margem_desejada_padrao?: number
