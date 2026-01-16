@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -13,6 +14,9 @@ import {
   Package,
   AlertTriangle,
   Receipt,
+  Wallet,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysInMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -219,6 +223,24 @@ const Dashboard = () => {
   const margemContribuicao = receitaBruta - cmvTotal;
   
   const custoFixoMensal = custosFixos?.reduce((sum, c) => sum + Number(c.valor_mensal), 0) || 0;
+  const faturamentoMensal = config?.faturamento_mensal || 0;
+  const percentualCustoFixo = faturamentoMensal > 0 ? (custoFixoMensal / faturamentoMensal) * 100 : 0;
+
+  const getHealthStatus = () => {
+    if (faturamentoMensal === 0) {
+      return { label: 'Configure', color: 'text-muted-foreground', bgColor: 'bg-muted', icon: AlertCircle, status: 'neutral' };
+    }
+    if (percentualCustoFixo <= 20) {
+      return { label: 'Saudável', color: 'text-green-600', bgColor: 'bg-green-100 dark:bg-green-950/30', icon: CheckCircle2, status: 'healthy' };
+    }
+    if (percentualCustoFixo <= 25) {
+      return { label: 'Atenção', color: 'text-yellow-600', bgColor: 'bg-yellow-100 dark:bg-yellow-950/30', icon: AlertTriangle, status: 'warning' };
+    }
+    return { label: 'Alarmante', color: 'text-red-600', bgColor: 'bg-red-100 dark:bg-red-950/30', icon: AlertTriangle, status: 'danger' };
+  };
+
+  const healthStatus = getHealthStatus();
+  const HealthIcon = healthStatus.icon;
   
   // Calcular custo fixo proporcional ao período
   const calcularCustoFixoProporcional = () => {
@@ -432,6 +454,62 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Indicador Custos Fixos */}
+      <Card className="animate-fade-in">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Wallet className="h-5 w-5" />
+            Saúde dos Custos Fixos
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="text-sm text-muted-foreground">Custos Fixos Mensais</p>
+                  <p className="text-xl font-bold">{formatCurrency(custoFixoMensal)}</p>
+                </div>
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${healthStatus.bgColor}`}>
+                  <HealthIcon className={`h-4 w-4 ${healthStatus.color}`} />
+                  <span className={`text-sm font-medium ${healthStatus.color}`}>
+                    {healthStatus.label}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">
+                    {faturamentoMensal > 0 
+                      ? `${percentualCustoFixo.toFixed(1)}% do faturamento (${formatCurrency(faturamentoMensal)})`
+                      : 'Informe o faturamento em Custos Fixos'}
+                  </span>
+                </div>
+                <div className="relative h-2 w-full rounded-full bg-muted overflow-hidden">
+                  <div 
+                    className={`absolute left-0 top-0 h-full transition-all duration-500 ${
+                      faturamentoMensal === 0 ? 'bg-muted' :
+                      percentualCustoFixo <= 20 ? 'bg-green-500' :
+                      percentualCustoFixo <= 25 ? 'bg-yellow-500' : 'bg-red-500'
+                    }`}
+                    style={{ width: `${Math.min(percentualCustoFixo, 100)}%` }}
+                  />
+                  <div className="absolute left-[20%] top-0 h-full w-px bg-green-600/50" />
+                  <div className="absolute left-[25%] top-0 h-full w-px bg-red-600/50" />
+                </div>
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>0%</span>
+                  <span className="text-green-600">20%</span>
+                  <span className="text-red-600">25%</span>
+                  <span>50%+</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 animate-fade-in">
         {/* Top 5 Produtos */}
