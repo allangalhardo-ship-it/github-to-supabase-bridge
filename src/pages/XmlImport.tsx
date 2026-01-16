@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Key, QrCode, Loader2, ImageIcon, Calculator } from 'lucide-react';
+import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Key, QrCode, Loader2, ImageIcon, Calculator, Pencil } from 'lucide-react';
 import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
 
 interface XmlItem {
@@ -166,6 +166,11 @@ const XmlImport = () => {
         m.descricao_nota?.toLowerCase() === descricao.toLowerCase()
       );
 
+      // Calcular conversão se mapeamento existir com fator
+      const fatorConv = mapeamento?.unidade_conversao || 1;
+      const qtdConvertida = quantidade * fatorConv;
+      const custoConvertido = qtdConvertida > 0 ? valorTotalItem / qtdConvertida : 0;
+
       itens.push({
         produto_descricao: descricao,
         ean: ean,
@@ -175,6 +180,9 @@ const XmlImport = () => {
         custo_unitario: custoUnitario,
         insumo_id: mapeamento?.insumo_id || undefined,
         mapeado: !!mapeamento,
+        fator_conversao: mapeamento ? fatorConv : undefined,
+        quantidade_convertida: mapeamento ? qtdConvertida : undefined,
+        custo_unitario_convertido: mapeamento ? custoConvertido : undefined,
       });
     });
 
@@ -254,15 +262,25 @@ const XmlImport = () => {
           const mapeamento = mapeamentos?.find(m => 
             m.descricao_nota?.toLowerCase() === item.descricao?.toLowerCase()
           );
+          
+          const quantidade = item.quantidade || 0;
+          const valorTotal = item.valorTotal || 0;
+          const fatorConv = mapeamento?.unidade_conversao || 1;
+          const qtdConvertida = quantidade * fatorConv;
+          const custoConvertido = qtdConvertida > 0 ? valorTotal / qtdConvertida : 0;
+          
           return {
             produto_descricao: item.descricao || '',
             ean: item.ean || '',
-            quantidade: item.quantidade || 0,
+            quantidade: quantidade,
             unidade: item.unidade || 'un',
-            valor_total: item.valorTotal || 0,
+            valor_total: valorTotal,
             custo_unitario: item.valorUnitario || 0,
             insumo_id: mapeamento?.insumo_id,
             mapeado: !!mapeamento,
+            fator_conversao: mapeamento ? fatorConv : undefined,
+            quantidade_convertida: mapeamento ? qtdConvertida : undefined,
+            custo_unitario_convertido: mapeamento ? custoConvertido : undefined,
           };
         }) || [];
 
@@ -498,7 +516,19 @@ const XmlImport = () => {
 
   const handleOpenMappingDialog = (item: XmlItem) => {
     setSelectedItem(item);
-    resetMappingState();
+    
+    // Se já está mapeado, pré-popular os dados
+    if (item.mapeado && item.insumo_id) {
+      setSelectedInsumoId(item.insumo_id);
+      setFatorConversao((item.fator_conversao || 1).toString());
+      setSelectedUnidadeCompraId(item.unidade_compra_id || '');
+    } else {
+      resetMappingState();
+    }
+    
+    setShowNovaUnidade(false);
+    setNovaUnidadeNome('');
+    setNewInsumoNome('');
     setMappingDialogOpen(true);
   };
 
@@ -961,50 +991,95 @@ const XmlImport = () => {
                   <TableRow>
                     <TableHead>Produto</TableHead>
                     <TableHead>EAN</TableHead>
-                    <TableHead className="text-right">Qtd</TableHead>
-                    <TableHead className="text-right">Custo Unit.</TableHead>
+                    <TableHead className="text-right">Qtd Nota</TableHead>
+                    <TableHead className="text-right">Qtd Convertida</TableHead>
+                    <TableHead className="text-right">Custo/Un</TableHead>
                     <TableHead className="text-right">Total</TableHead>
                     <TableHead className="text-center">Status</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {parsedNota.itens.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-medium">{item.produto_descricao}</TableCell>
-                      <TableCell className="text-muted-foreground">{item.ean || '-'}</TableCell>
-                      <TableCell className="text-right">
-                        {item.quantidade} {item.unidade}
-                      </TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.custo_unitario)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.valor_total)}</TableCell>
-                      <TableCell className="text-center">
-                        {item.mapeado ? (
-                          <Badge variant="default" className="gap-1">
-                            <Check className="h-3 w-3" />
-                            Mapeado
-                          </Badge>
-                        ) : (
-                          <Badge variant="destructive" className="gap-1">
-                            <AlertCircle className="h-3 w-3" />
-                            Não mapeado
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {!item.mapeado && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleOpenMappingDialog(item)}
-                          >
-                            <Link2 className="h-4 w-4 mr-1" />
-                            Mapear
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {parsedNota.itens.map((item, index) => {
+                    const insumoMapeado = insumos?.find(i => i.id === item.insumo_id);
+                    const fator = item.fator_conversao || 1;
+                    const qtdConv = item.quantidade_convertida || item.quantidade * fator;
+                    const custoConv = item.custo_unitario_convertido || item.valor_total / qtdConv;
+                    
+                    return (
+                      <TableRow key={index}>
+                        <TableCell className="font-medium">
+                          {item.produto_descricao}
+                          {item.mapeado && insumoMapeado && (
+                            <p className="text-xs text-muted-foreground">
+                              → {insumoMapeado.nome}
+                            </p>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{item.ean || '-'}</TableCell>
+                        <TableCell className="text-right">
+                          {item.quantidade} {item.unidade}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {item.mapeado && insumoMapeado ? (
+                            <span className={fator !== 1 ? 'text-primary font-medium' : ''}>
+                              {qtdConv.toFixed(2)} {insumoMapeado.unidade_medida}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {item.mapeado && insumoMapeado ? (
+                            <span className="text-xs">
+                              {new Intl.NumberFormat('pt-BR', {
+                                style: 'currency',
+                                currency: 'BRL',
+                                minimumFractionDigits: 4,
+                              }).format(custoConv)}/{insumoMapeado.unidade_medida}
+                            </span>
+                          ) : (
+                            formatCurrency(item.custo_unitario)
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">{formatCurrency(item.valor_total)}</TableCell>
+                        <TableCell className="text-center">
+                          {item.mapeado ? (
+                            <Badge variant="default" className="gap-1">
+                              <Check className="h-3 w-3" />
+                              Mapeado
+                            </Badge>
+                          ) : (
+                            <Badge variant="destructive" className="gap-1">
+                              <AlertCircle className="h-3 w-3" />
+                              Não mapeado
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {item.mapeado ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenMappingDialog(item)}
+                              title="Editar conversão"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenMappingDialog(item)}
+                            >
+                              <Link2 className="h-4 w-4 mr-1" />
+                              Mapear
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             ) : (
