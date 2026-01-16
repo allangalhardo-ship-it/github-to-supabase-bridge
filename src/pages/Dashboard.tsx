@@ -162,14 +162,25 @@ const Dashboard = () => {
           };
         }
         
-        acc[produtoId].receita += Number(venda.valor_total);
-        acc[produtoId].quantidade += Number(venda.quantidade);
+        const valorTotal = Number(venda.valor_total);
+        const precoVendaProduto = Number(venda.produtos.preco_venda) || 0;
         
-        // Calcular custo dos insumos
+        // Calcula unidades reais baseado no valor
+        let unidadesReais: number;
+        if (precoVendaProduto > 0) {
+          unidadesReais = valorTotal / precoVendaProduto;
+        } else {
+          unidadesReais = Number(venda.quantidade);
+        }
+        
+        acc[produtoId].receita += valorTotal;
+        acc[produtoId].quantidade += unidadesReais;
+        
+        // Calcular custo dos insumos baseado nas unidades reais
         const custoUnitario = (venda.produtos.fichas_tecnicas || []).reduce((sum, ft) => {
           return sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0));
         }, 0);
-        acc[produtoId].custo += custoUnitario * Number(venda.quantidade);
+        acc[produtoId].custo += custoUnitario * unidadesReais;
         
         return acc;
       }, {} as Record<string, { nome: string; receita: number; custo: number; quantidade: number }>);
@@ -211,12 +222,31 @@ const Dashboard = () => {
       .sort((a, b) => b.quantidade - a.quantidade);
   }, [vendas]);
   
+  // Cálculo do CMV: custo dos insumos proporcional ao valor vendido
+  // Se a venda tem valor_total e preco_venda do produto, calculamos quantas unidades reais foram vendidas
   const cmvTotal = vendas?.reduce((sum, venda) => {
     if (!venda.produtos?.fichas_tecnicas) return sum;
-    const custoUnitario = venda.produtos.fichas_tecnicas.reduce((s, ft) => {
+    
+    // Custo de insumos para produzir 1 unidade do produto
+    const custoUnitarioProduto = venda.produtos.fichas_tecnicas.reduce((s, ft) => {
       return s + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0));
     }, 0);
-    return sum + (custoUnitario * Number(venda.quantidade));
+    
+    // Calculamos quantas unidades reais foram vendidas baseado no valor
+    // Se o produto tem preço, usamos: unidades = valor_total / preco_venda
+    const precoVendaProduto = Number(venda.produtos.preco_venda) || 0;
+    const valorTotal = Number(venda.valor_total) || 0;
+    
+    let unidadesReais: number;
+    if (precoVendaProduto > 0) {
+      // Calcula unidades baseado no valor da venda dividido pelo preço unitário
+      unidadesReais = valorTotal / precoVendaProduto;
+    } else {
+      // Fallback: usa a quantidade informada na venda
+      unidadesReais = Number(venda.quantidade);
+    }
+    
+    return sum + (custoUnitarioProduto * unidadesReais);
   }, 0) || 0;
 
   const cmvPercent = receitaBruta > 0 ? (cmvTotal / receitaBruta) * 100 : 0;
