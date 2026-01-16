@@ -45,6 +45,7 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
     insumo_id: '',
     quantidade: '',
     unidade_compra_id: '',
+    valor_unitario: '',
     valor_total: '',
     fornecedor: '',
     fator_conversao_manual: '',
@@ -205,6 +206,7 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
       insumo_id: '',
       quantidade: '',
       unidade_compra_id: '',
+      valor_unitario: '',
       valor_total: '',
       fornecedor: '',
       fator_conversao_manual: '',
@@ -216,7 +218,7 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.insumo_id || !formData.quantidade || !formData.valor_total) {
+    if (!formData.insumo_id || !formData.quantidade || !formData.valor_unitario) {
       toast({ title: 'Preencha todos os campos obrigatórios', variant: 'destructive' });
       return;
     }
@@ -284,7 +286,7 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
           {/* Purchase Data */}
           {formData.insumo_id && (
             <>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-2">
                   <Label>Quantidade *</Label>
                   <Input
@@ -293,19 +295,50 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
                     min="0"
                     placeholder="Ex: 2"
                     value={formData.quantidade}
-                    onChange={(e) => setFormData({ ...formData, quantidade: e.target.value })}
+                    onChange={(e) => {
+                      const qtd = e.target.value;
+                      const valorUnit = parseFloat(formData.valor_unitario) || 0;
+                      const novoTotal = (parseFloat(qtd) || 0) * valorUnit;
+                      setFormData({ 
+                        ...formData, 
+                        quantidade: qtd,
+                        valor_total: novoTotal > 0 ? novoTotal.toFixed(2) : ''
+                      });
+                    }}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Valor Total *</Label>
+                  <Label>Vlr Unitário *</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="R$ 0,00"
+                    value={formData.valor_unitario}
+                    onChange={(e) => {
+                      const valorUnit = e.target.value;
+                      const qtd = parseFloat(formData.quantidade) || 0;
+                      const novoTotal = qtd * (parseFloat(valorUnit) || 0);
+                      setFormData({ 
+                        ...formData, 
+                        valor_unitario: valorUnit,
+                        valor_total: novoTotal > 0 ? novoTotal.toFixed(2) : ''
+                      });
+                    }}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Valor Total</Label>
                   <Input
                     type="number"
                     step="0.01"
                     min="0"
                     placeholder="R$ 0,00"
                     value={formData.valor_total}
-                    onChange={(e) => setFormData({ ...formData, valor_total: e.target.value })}
+                    readOnly
+                    className="bg-muted"
                   />
                 </div>
               </div>
