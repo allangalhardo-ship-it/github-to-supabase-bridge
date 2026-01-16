@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Package, Search, Filter, X, Upload } from 'lucide-react';
+import { Plus, Package, Search, Filter, X, Upload, ImageIcon, Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ProductCard from '@/components/produtos/ProductCard';
 import ImportProdutosDialog from '@/components/import/ImportProdutosDialog';
@@ -52,9 +52,12 @@ const Produtos = () => {
     categoria: '',
     preco_venda: '',
     ativo: true,
+    imagem_url: '',
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>('todas');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch produtos with ficha técnica
   const { data: produtos, isLoading } = useQuery({
@@ -111,6 +114,7 @@ const Produtos = () => {
         categoria: data.categoria || null,
         preco_venda: parseFloat(data.preco_venda) || 0,
         ativo: data.ativo,
+        imagem_url: data.imagem_url || null,
       });
       if (error) throw error;
     },
@@ -133,6 +137,7 @@ const Produtos = () => {
           categoria: data.categoria || null,
           preco_venda: parseFloat(data.preco_venda) || 0,
           ativo: data.ativo,
+          imagem_url: data.imagem_url || null,
         })
         .eq('id', data.id);
       if (error) throw error;
@@ -175,7 +180,7 @@ const Produtos = () => {
   };
 
   const resetForm = () => {
-    setFormData({ nome: '', categoria: '', preco_venda: '', ativo: true });
+    setFormData({ nome: '', categoria: '', preco_venda: '', ativo: true, imagem_url: '' });
     setEditingProduto(null);
     setDialogOpen(false);
   };
@@ -187,8 +192,50 @@ const Produtos = () => {
       categoria: produto.categoria || '',
       preco_venda: produto.preco_venda.toString(),
       ativo: produto.ativo,
+      imagem_url: produto.imagem_url || '',
     });
     setDialogOpen(true);
+  };
+
+  // Upload de imagem
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !usuario?.empresa_id) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Arquivo inválido', description: 'Selecione uma imagem.', variant: 'destructive' });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'Arquivo muito grande', description: 'Máximo 5MB.', variant: 'destructive' });
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${usuario.empresa_id}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(fileName);
+
+      setFormData(prev => ({ ...prev, imagem_url: urlData.publicUrl }));
+      toast({ title: 'Imagem enviada!' });
+    } catch (error: any) {
+      toast({ title: 'Erro ao enviar imagem', description: error.message, variant: 'destructive' });
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -297,6 +344,70 @@ const Produtos = () => {
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Upload de imagem */}
+              <div className="space-y-2">
+                <Label>Foto do Produto</Label>
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="w-20 h-20 bg-muted rounded-md flex items-center justify-center overflow-hidden border-2 border-dashed border-muted-foreground/30 cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {formData.imagem_url ? (
+                      <img 
+                        src={formData.imagem_url} 
+                        alt="Preview" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : uploadingImage ? (
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    ) : (
+                      <ImageIcon className="h-6 w-6 text-muted-foreground/50" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageUpload}
+                      disabled={uploadingImage}
+                    />
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingImage}
+                    >
+                      {uploadingImage ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Enviando...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="mr-2 h-4 w-4" />
+                          {formData.imagem_url ? 'Trocar foto' : 'Enviar foto'}
+                        </>
+                      )}
+                    </Button>
+                    {formData.imagem_url && (
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm"
+                        className="ml-2 text-destructive"
+                        onClick={() => setFormData(prev => ({ ...prev, imagem_url: '' }))}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-1">JPG, PNG até 5MB</p>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="nome">Nome</Label>
                 <Input

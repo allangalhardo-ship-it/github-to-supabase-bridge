@@ -187,9 +187,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
     <Card className={`${!produto.ativo ? "opacity-60" : ""} overflow-hidden hover:shadow-sm transition-shadow`}>
       <CardContent className="p-3">
         <div className="flex gap-3">
-          {/* Imagem mais alta e estreita */}
-          <div className="w-12 h-20 shrink-0">
-            <div className="w-12 h-20 bg-muted rounded-md flex items-center justify-center overflow-hidden">
+          {/* Imagem mais proporcional */}
+          <div className="w-16 h-20 shrink-0">
+            <div className="w-16 h-20 bg-muted rounded-md flex items-center justify-center overflow-hidden">
               {produto.imagem_url ? (
                 <img
                   src={produto.imagem_url}
@@ -198,7 +198,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   loading="lazy"
                 />
               ) : (
-                <ImageIcon className="h-5 w-5 text-muted-foreground/50" />
+                <ImageIcon className="h-6 w-6 text-muted-foreground/50" />
               )}
             </div>
           </div>
