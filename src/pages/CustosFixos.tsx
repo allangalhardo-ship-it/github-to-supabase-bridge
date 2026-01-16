@@ -51,6 +51,7 @@ const CustosFixos = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [faturamentoInput, setFaturamentoInput] = useState('');
+  const [isEditingFaturamento, setIsEditingFaturamento] = useState(false);
   const [formData, setFormData] = useState({
     nome: '',
     valor_mensal: '',
@@ -241,11 +242,15 @@ const CustosFixos = () => {
   const healthStatus = getHealthStatus(percentualCustoFixo);
   const HealthIcon = healthStatus.icon;
 
-  const handleFaturamentoBlur = () => {
+  const handleSaveFaturamento = () => {
     const valor = parseFloat(faturamentoInput) || 0;
-    if (valor !== (configuracoes?.faturamento_mensal || 0)) {
-      updateFaturamentoMutation.mutate(valor);
-    }
+    updateFaturamentoMutation.mutate(valor);
+    setIsEditingFaturamento(false);
+  };
+
+  const handleCancelFaturamento = () => {
+    setFaturamentoInput((configuracoes?.faturamento_mensal || 0).toString());
+    setIsEditingFaturamento(false);
   };
 
   const getProgressColor = () => {
@@ -344,25 +349,62 @@ const CustosFixos = () => {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-primary" />
-                <Label htmlFor="faturamento" className="text-base font-medium">Faturamento Mensal</Label>
+                <Label className="text-base font-medium">Faturamento Mensal</Label>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">R$</span>
-                <Input
-                  id="faturamento"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={faturamentoInput}
-                  onChange={(e) => setFaturamentoInput(e.target.value)}
-                  onBlur={handleFaturamentoBlur}
-                  placeholder="Informe seu faturamento mensal"
-                  className="max-w-xs"
-                />
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Informe o faturamento para calcular o percentual de custo fixo
-              </p>
+              
+              {isEditingFaturamento ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">R$</span>
+                    <Input
+                      id="faturamento"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={faturamentoInput}
+                      onChange={(e) => setFaturamentoInput(e.target.value)}
+                      placeholder="0,00"
+                      className="max-w-[200px]"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      onClick={handleSaveFaturamento}
+                      disabled={updateFaturamentoMutation.isPending}
+                    >
+                      {updateFaturamentoMutation.isPending ? 'Salvando...' : 'Salvar'}
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={handleCancelFaturamento}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div 
+                    className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors"
+                    onClick={() => setIsEditingFaturamento(true)}
+                  >
+                    <span className="text-2xl font-bold">
+                      {faturamento > 0 ? formatCurrency(faturamento) : 'R$ 0,00'}
+                    </span>
+                    <Button size="sm" variant="ghost" className="h-7 px-2">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  {faturamento === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      Clique para informar seu faturamento mensal
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Right: Health Status */}
