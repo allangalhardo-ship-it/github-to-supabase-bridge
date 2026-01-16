@@ -44,6 +44,7 @@ const Vendas = () => {
   const [formData, setFormData] = useState({
     produto_id: '',
     quantidade: '1',
+    valor_unitario: '',
     valor_total: '',
     canal: 'balcao',
     data_venda: format(new Date(), 'yyyy-MM-dd'),
@@ -202,6 +203,7 @@ const Vendas = () => {
     setFormData({
       produto_id: '',
       quantidade: '1',
+      valor_unitario: '',
       valor_total: '',
       canal: 'balcao',
       data_venda: format(new Date(), 'yyyy-MM-dd'),
@@ -213,10 +215,39 @@ const Vendas = () => {
 
   const handleProdutoChange = (produtoId: string) => {
     const produto = produtos?.find(p => p.id === produtoId);
+    const valorUnitario = produto ? produto.preco_venda.toString() : '';
+    const quantidade = parseFloat(formData.quantidade) || 1;
+    const valorTotal = valorUnitario ? (parseFloat(valorUnitario) * quantidade).toFixed(2) : '';
+    
     setFormData({
       ...formData,
       produto_id: produtoId,
-      valor_total: produto ? produto.preco_venda.toString() : formData.valor_total,
+      valor_unitario: valorUnitario,
+      valor_total: valorTotal,
+    });
+  };
+
+  const handleQuantidadeChange = (quantidade: string) => {
+    const qtd = parseFloat(quantidade) || 0;
+    const valorUnitario = parseFloat(formData.valor_unitario) || 0;
+    const valorTotal = (qtd * valorUnitario).toFixed(2);
+    
+    setFormData({
+      ...formData,
+      quantidade,
+      valor_total: valorUnitario > 0 ? valorTotal : formData.valor_total,
+    });
+  };
+
+  const handleValorUnitarioChange = (valorUnitario: string) => {
+    const unitario = parseFloat(valorUnitario) || 0;
+    const quantidade = parseFloat(formData.quantidade) || 1;
+    const valorTotal = (quantidade * unitario).toFixed(2);
+    
+    setFormData({
+      ...formData,
+      valor_unitario: valorUnitario,
+      valor_total: valorTotal,
     });
   };
 
@@ -272,7 +303,7 @@ const Vendas = () => {
                   emptyMessage="Nenhum produto encontrado."
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-2">
                   <Label htmlFor="quantidade">Quantidade</Label>
                   <Input
@@ -281,20 +312,32 @@ const Vendas = () => {
                     step="1"
                     min="1"
                     value={formData.quantidade}
-                    onChange={(e) => setFormData({ ...formData, quantidade: e.target.value })}
+                    onChange={(e) => handleQuantidadeChange(e.target.value)}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="valor_total">Valor Total (R$)</Label>
+                  <Label htmlFor="valor_unitario">Valor Unit. (R$)</Label>
+                  <Input
+                    id="valor_unitario"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.valor_unitario}
+                    onChange={(e) => handleValorUnitarioChange(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="valor_total">Total (R$)</Label>
                   <Input
                     id="valor_total"
                     type="number"
                     step="0.01"
                     min="0"
                     value={formData.valor_total}
-                    onChange={(e) => setFormData({ ...formData, valor_total: e.target.value })}
-                    required
+                    className="bg-muted/50"
+                    readOnly
                   />
                 </div>
               </div>
