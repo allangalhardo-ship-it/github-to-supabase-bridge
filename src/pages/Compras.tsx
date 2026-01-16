@@ -19,7 +19,6 @@ import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { Checkbox } from '@/components/ui/checkbox';
 import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import RegistrarCompraDialog from '@/components/compras/RegistrarCompraDialog';
 
 interface XmlItem {
@@ -771,7 +770,7 @@ const Compras = () => {
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
     try {
-      return format(new Date(dateStr), 'dd/MM/yyyy', { locale: ptBR });
+      return format(new Date(dateStr), 'dd/MM/yyyy');
     } catch {
       return dateStr;
     }
@@ -1532,7 +1531,8 @@ const Compras = () => {
                                       ) : (
                                         <span>{formatCurrency(item.custo_unitario)}</span>
                                       )}
-                                      {item.insumo_id && item.mapeado && (() => {
+                                      {(() => {
+                                        if (!item.insumo_id || !item.mapeado) return null;
                                         const insumo = insumos?.find(i => i.id === item.insumo_id);
                                         if (!insumo || !insumo.custo_unitario || insumo.custo_unitario === 0) return null;
                                         const variacaoCusto = ((custoConv - insumo.custo_unitario) / insumo.custo_unitario) * 100;
@@ -1579,72 +1579,73 @@ const Compras = () => {
                                     </Badge>
                                   )}
                                 </TableCell>
-                              <TableCell>
-                                {!item.mapeado && (
-                                  <div className="flex gap-1">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => {
-                                        setSelectedItem(item);
-                                        setMappingDialogOpen(true);
-                                      }}
-                                    >
-                                      <Link2 className="h-4 w-4 mr-1" />
-                                      Mapear
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      title="Cadastrar como insumo"
-                                      onClick={async () => {
-                                        const { data: newInsumo, error } = await supabase
-                                          .from('insumos')
-                                          .insert({
+                                <TableCell>
+                                  {!item.mapeado && (
+                                    <div className="flex gap-1">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          setSelectedItem(item);
+                                          setMappingDialogOpen(true);
+                                        }}
+                                      >
+                                        <Link2 className="h-4 w-4 mr-1" />
+                                        Mapear
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        title="Cadastrar como insumo"
+                                        onClick={async () => {
+                                          const { data: newInsumo, error } = await supabase
+                                            .from('insumos')
+                                            .insert({
+                                              empresa_id: usuario!.empresa_id,
+                                              nome: item.produto_descricao,
+                                              unidade_medida: item.unidade || 'un',
+                                              custo_unitario: item.custo_unitario || 0,
+                                            })
+                                            .select()
+                                            .single();
+                                          
+                                          if (error) {
+                                            toast({ title: 'Erro ao criar insumo', variant: 'destructive' });
+                                            return;
+                                          }
+
+                                          await supabase.from('produto_mapeamento').upsert({
                                             empresa_id: usuario!.empresa_id,
-                                            nome: item.produto_descricao,
-                                            unidade_medida: item.unidade || 'un',
-                                            custo_unitario: item.custo_unitario || 0,
-                                          })
-                                          .select()
-                                          .single();
-                                        
-                                        if (error) {
-                                          toast({ title: 'Erro ao criar insumo', variant: 'destructive' });
-                                          return;
-                                        }
+                                            ean_gtin: item.ean || null,
+                                            descricao_nota: item.produto_descricao,
+                                            insumo_id: newInsumo.id,
+                                            fornecedor_cnpj: null,
+                                            codigo_produto_nota: null,
+                                          }, {
+                                            onConflict: 'empresa_id,fornecedor_cnpj,codigo_produto_nota',
+                                          });
 
-                                        await supabase.from('produto_mapeamento').upsert({
-                                          empresa_id: usuario!.empresa_id,
-                                          ean_gtin: item.ean || null,
-                                          descricao_nota: item.produto_descricao,
-                                          insumo_id: newInsumo.id,
-                                          fornecedor_cnpj: null,
-                                          codigo_produto_nota: null,
-                                        }, {
-                                          onConflict: 'empresa_id,fornecedor_cnpj,codigo_produto_nota',
-                                        });
-
-                                        setParsedNota({
-                                          ...parsedNota,
-                                          itens: parsedNota.itens.map((i, idx) => 
-                                            idx === index 
-                                              ? { ...i, insumo_id: newInsumo.id, mapeado: true }
-                                              : i
-                                          ),
-                                        });
-                                        queryClient.invalidateQueries({ queryKey: ['insumos'] });
-                                        queryClient.invalidateQueries({ queryKey: ['mapeamentos'] });
-                                        toast({ title: 'Insumo criado!', description: `"${item.produto_descricao}" cadastrado.` });
-                                      }}
-                                    >
-                                      <Plus className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
+                                          setParsedNota({
+                                            ...parsedNota,
+                                            itens: parsedNota.itens.map((i, idx) => 
+                                              idx === index 
+                                                ? { ...i, insumo_id: newInsumo.id, mapeado: true }
+                                                : i
+                                            ),
+                                          });
+                                          queryClient.invalidateQueries({ queryKey: ['insumos'] });
+                                          queryClient.invalidateQueries({ queryKey: ['mapeamentos'] });
+                                          toast({ title: 'Insumo criado!', description: `"${item.produto_descricao}" cadastrado.` });
+                                        }}
+                                      >
+                                        <Plus className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
                         </TableBody>
                       </Table>
                     </div>
