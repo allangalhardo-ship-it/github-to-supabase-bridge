@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Key, QrCode, Loader2, ImageIcon } from 'lucide-react';
+import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Key, QrCode, Loader2, ImageIcon, Calculator } from 'lucide-react';
 import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
 
 interface XmlItem {
@@ -24,6 +24,11 @@ interface XmlItem {
   custo_unitario: number;
   insumo_id?: string;
   mapeado?: boolean;
+  // Campos de conversão
+  fator_conversao?: number;
+  quantidade_convertida?: number;
+  custo_unitario_convertido?: number;
+  unidade_compra_id?: string;
 }
 
 interface ParsedNota {
@@ -48,6 +53,13 @@ const XmlImport = () => {
   const [filePreview, setFilePreview] = useState<{ url: string; type: 'image' | 'pdf'; name: string } | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  
+  // Estado para conversão de unidades no mapeamento
+  const [selectedInsumoId, setSelectedInsumoId] = useState<string>('');
+  const [fatorConversao, setFatorConversao] = useState<string>('1');
+  const [showNovaUnidade, setShowNovaUnidade] = useState(false);
+  const [novaUnidadeNome, setNovaUnidadeNome] = useState('');
+  const [selectedUnidadeCompraId, setSelectedUnidadeCompraId] = useState<string>('');
 
   // Fetch insumos para mapeamento
   const { data: insumos } = useQuery({
@@ -69,12 +81,37 @@ const XmlImport = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('produto_mapeamento')
-        .select('*, insumos(nome)');
+        .select('*, insumos(nome, unidade_medida)');
       if (error) throw error;
       return data;
     },
     enabled: !!usuario?.empresa_id,
   });
+
+  // Fetch unidades de compra para o insumo selecionado no mapeamento
+  const { data: unidadesCompra } = useQuery({
+    queryKey: ['unidades-compra', selectedInsumoId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('unidades_compra')
+        .select('*')
+        .eq('insumo_id', selectedInsumoId)
+        .order('nome');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedInsumoId,
+  });
+
+  const insumoSelecionadoParaMapeamento = insumos?.find(i => i.id === selectedInsumoId);
+  const unidadeSelecionada = unidadesCompra?.find(u => u.id === selectedUnidadeCompraId);
+
+  // Calcular conversão baseado na seleção
+  const fatorConversaoNumerico = parseFloat(fatorConversao) || 1;
+  const quantidadeOriginal = selectedItem?.quantidade || 0;
+  const valorTotalItem = selectedItem?.valor_total || 0;
+  const quantidadeConvertida = quantidadeOriginal * fatorConversaoNumerico;
+  const custoUnitarioConvertido = quantidadeConvertida > 0 ? valorTotalItem / quantidadeConvertida : 0;
 
   const parseXmlFile = async (file: File) => {
     const text = await file.text();
@@ -352,6 +389,30 @@ const XmlImport = () => {
     }
   };
 
+  // Criar unidade de compra mutation
+  const createUnidadeCompraMutation = useMutation({
+    mutationFn: async (data: { nome: string; fator_conversao: number; insumo_id: string }) => {
+      const { data: result, error } = await supabase
+        .from('unidades_compra')
+        .insert({
+          empresa_id: usuario!.empresa_id,
+          insumo_id: data.insumo_id,
+          nome: data.nome,
+          fator_conversao: data.fator_conversao,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return result;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['unidades-compra'] });
+      setSelectedUnidadeCompraId(data.id);
+      setShowNovaUnidade(false);
+      toast({ title: 'Unidade de compra salva!' });
+    },
+  });
+
   const createInsumoMutation = useMutation({
     mutationFn: async (nome: string) => {
       const { data, error } = await supabase
@@ -360,7 +421,7 @@ const XmlImport = () => {
           empresa_id: usuario!.empresa_id,
           nome,
           unidade_medida: selectedItem?.unidade || 'un',
-          custo_unitario: selectedItem?.custo_unitario || 0,
+          custo_unitario: 0, // Será calculado na importação
         })
         .select()
         .single();
@@ -369,40 +430,76 @@ const XmlImport = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['insumos'] });
-      handleMapItem(data.id);
+      setSelectedInsumoId(data.id);
+      setFatorConversao('1'); // Reset fator para 1:1 já que unidade do insumo = unidade da nota
       setNewInsumoNome('');
+      toast({ title: 'Insumo criado! Configure a conversão abaixo.' });
     },
   });
 
-  const handleMapItem = async (insumoId: string) => {
-    if (!selectedItem || !parsedNota) return;
+  const handleConfirmMapping = async () => {
+    if (!selectedItem || !parsedNota || !selectedInsumoId) return;
 
-    // Save mapping
+    // Salvar nova unidade se estiver criando
+    if (showNovaUnidade && novaUnidadeNome && fatorConversaoNumerico > 0) {
+      await createUnidadeCompraMutation.mutateAsync({
+        nome: novaUnidadeNome,
+        fator_conversao: fatorConversaoNumerico,
+        insumo_id: selectedInsumoId,
+      });
+    }
+
+    // Save mapping with conversion factor
     await supabase.from('produto_mapeamento').upsert({
       empresa_id: usuario!.empresa_id,
       ean_gtin: selectedItem.ean || null,
       descricao_nota: selectedItem.produto_descricao,
-      insumo_id: insumoId,
+      insumo_id: selectedInsumoId,
+      unidade_conversao: fatorConversaoNumerico,
       fornecedor_cnpj: null,
       codigo_produto_nota: null,
     }, {
       onConflict: 'empresa_id,fornecedor_cnpj,codigo_produto_nota',
     });
 
-    // Update local state
+    // Update local state com dados de conversão
     setParsedNota({
       ...parsedNota,
       itens: parsedNota.itens.map(item => 
         item.produto_descricao === selectedItem.produto_descricao
-          ? { ...item, insumo_id: insumoId, mapeado: true }
+          ? { 
+              ...item, 
+              insumo_id: selectedInsumoId, 
+              mapeado: true,
+              fator_conversao: fatorConversaoNumerico,
+              quantidade_convertida: item.quantidade * fatorConversaoNumerico,
+              custo_unitario_convertido: item.valor_total / (item.quantidade * fatorConversaoNumerico),
+              unidade_compra_id: selectedUnidadeCompraId || undefined,
+            }
           : item
       ),
     });
 
     queryClient.invalidateQueries({ queryKey: ['mapeamentos'] });
+    resetMappingState();
     setMappingDialogOpen(false);
     setSelectedItem(null);
-    toast({ title: 'Item mapeado!' });
+    toast({ title: 'Item mapeado com conversão!' });
+  };
+
+  const resetMappingState = () => {
+    setSelectedInsumoId('');
+    setFatorConversao('1');
+    setShowNovaUnidade(false);
+    setNovaUnidadeNome('');
+    setSelectedUnidadeCompraId('');
+    setNewInsumoNome('');
+  };
+
+  const handleOpenMappingDialog = (item: XmlItem) => {
+    setSelectedItem(item);
+    resetMappingState();
+    setMappingDialogOpen(true);
   };
 
   const importarNotaMutation = useMutation({
@@ -438,22 +535,54 @@ const XmlImport = () => {
           mapeado: item.mapeado || false,
         });
 
-        // 3. If mapped, create stock movement and update cost
+        // 3. If mapped, create stock movement with conversion and update cost
         if (item.insumo_id && item.mapeado) {
+          const fator = item.fator_conversao || 1;
+          const quantidadeConv = item.quantidade_convertida || item.quantidade * fator;
+          const custoConv = item.custo_unitario_convertido || item.valor_total / quantidadeConv;
+
+          // Get current insumo cost for history
+          const { data: insumoAtual } = await supabase
+            .from('insumos')
+            .select('custo_unitario, unidade_medida')
+            .eq('id', item.insumo_id)
+            .single();
+
+          const custoAnterior = insumoAtual?.custo_unitario || 0;
+          const variacao = custoAnterior > 0 
+            ? ((custoConv - custoAnterior) / custoAnterior) * 100 
+            : 0;
+
+          // Insert stock movement with conversion info
           await supabase.from('estoque_movimentos').insert({
             empresa_id: usuario!.empresa_id,
             insumo_id: item.insumo_id,
             tipo: 'entrada',
-            quantidade: item.quantidade,
+            quantidade: quantidadeConv,
+            quantidade_original: item.quantidade,
+            unidade_compra: item.unidade,
+            fator_conversao: fator,
+            custo_total: item.valor_total,
             origem: 'xml',
             referencia: nota.id,
             observacao: `NF-e ${parsedNota.numero} - ${parsedNota.fornecedor}`,
           });
 
-          // Update insumo cost
+          // Record price history
+          await supabase.from('historico_precos').insert({
+            empresa_id: usuario!.empresa_id,
+            insumo_id: item.insumo_id,
+            preco_anterior: custoAnterior,
+            preco_novo: custoConv,
+            variacao_percentual: variacao,
+            origem: 'xml',
+            observacao: `NF-e ${parsedNota.numero}`,
+          });
+
+          // Update insumo cost with converted value
           await supabase
             .from('insumos')
-            .update({ custo_unitario: item.custo_unitario })
+            .update({ custo_unitario: custoConv })
             .eq('id', item.insumo_id);
         }
       }
@@ -867,10 +996,7 @@ const XmlImport = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => {
-                              setSelectedItem(item);
-                              setMappingDialogOpen(true);
-                            }}
+                            onClick={() => handleOpenMappingDialog(item)}
                           >
                             <Link2 className="h-4 w-4 mr-1" />
                             Mapear
@@ -911,23 +1037,33 @@ const XmlImport = () => {
         </Card>
       )}
 
-      {/* Mapping Dialog */}
-      <Dialog open={mappingDialogOpen} onOpenChange={setMappingDialogOpen}>
-        <DialogContent>
+      {/* Mapping Dialog with Unit Conversion */}
+      <Dialog open={mappingDialogOpen} onOpenChange={(open) => {
+        setMappingDialogOpen(open);
+        if (!open) resetMappingState();
+      }}>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Mapear Item para Insumo</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Item da Nota */}
             <div className="p-3 bg-muted rounded-lg">
               <p className="font-medium">{selectedItem?.produto_descricao}</p>
               <p className="text-sm text-muted-foreground">
-                EAN: {selectedItem?.ean || 'N/A'} • {formatCurrency(selectedItem?.custo_unitario || 0)}/{selectedItem?.unidade}
+                EAN: {selectedItem?.ean || 'N/A'} • Qtd: {selectedItem?.quantidade} {selectedItem?.unidade} • {formatCurrency(selectedItem?.valor_total || 0)}
               </p>
             </div>
 
+            {/* Selecionar Insumo */}
             <div className="space-y-2">
               <Label>Vincular a insumo existente</Label>
-              <Select onValueChange={handleMapItem}>
+              <Select value={selectedInsumoId} onValueChange={(value) => {
+                setSelectedInsumoId(value);
+                setFatorConversao('1');
+                setShowNovaUnidade(false);
+                setSelectedUnidadeCompraId('');
+              }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um insumo" />
                 </SelectTrigger>
@@ -941,6 +1077,7 @@ const XmlImport = () => {
               </Select>
             </div>
 
+            {/* Divisor OU */}
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t" />
@@ -950,6 +1087,7 @@ const XmlImport = () => {
               </div>
             </div>
 
+            {/* Criar Novo Insumo */}
             <div className="space-y-2">
               <Label>Criar novo insumo</Label>
               <div className="flex gap-2">
@@ -959,12 +1097,161 @@ const XmlImport = () => {
                   onChange={(e) => setNewInsumoNome(e.target.value)}
                 />
                 <Button
+                  type="button"
                   onClick={() => createInsumoMutation.mutate(newInsumoNome)}
                   disabled={!newInsumoNome || createInsumoMutation.isPending}
                 >
-                  <Plus className="h-4 w-4" />
+                  {createInsumoMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 </Button>
               </div>
+            </div>
+
+            {/* Conversão de Unidade - só aparece se insumo selecionado */}
+            {selectedInsumoId && insumoSelecionadoParaMapeamento && (
+              <Card className="border-primary/20">
+                <CardContent className="pt-4 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Calculator className="h-4 w-4 text-primary" />
+                    <span className="font-medium text-sm">Conversão de Unidade</span>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    A nota tem <strong>{selectedItem?.unidade}</strong>, mas o insumo usa <strong>{insumoSelecionadoParaMapeamento.unidade_medida}</strong>
+                  </p>
+
+                  {/* Selecionar unidade de compra existente ou criar nova */}
+                  {!showNovaUnidade ? (
+                    <div className="space-y-2">
+                      <Label className="text-xs">Unidade de Compra</Label>
+                      <Select
+                        value={selectedUnidadeCompraId}
+                        onValueChange={(value) => {
+                          if (value === 'nova') {
+                            setShowNovaUnidade(true);
+                            setSelectedUnidadeCompraId('');
+                          } else if (value === 'manual') {
+                            setSelectedUnidadeCompraId('');
+                            // Deixa o fator manual
+                          } else {
+                            setSelectedUnidadeCompraId(value);
+                            const unidade = unidadesCompra?.find(u => u.id === value);
+                            if (unidade) {
+                              setFatorConversao(unidade.fator_conversao.toString());
+                            }
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione ou defina conversão..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {unidadesCompra?.map((u) => (
+                            <SelectItem key={u.id} value={u.id}>
+                              {u.nome} (1 = {u.fator_conversao} {insumoSelecionadoParaMapeamento.unidade_medida})
+                            </SelectItem>
+                          ))}
+                          <SelectItem value="manual">Definir fator manualmente</SelectItem>
+                          <SelectItem value="nova" className="text-primary font-medium">
+                            <span className="flex items-center gap-2">
+                              <Plus className="h-4 w-4" />
+                              Salvar nova unidade...
+                            </span>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 p-3 border rounded-lg bg-muted/50">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Nova Unidade de Compra</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowNovaUnidade(false)}
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Nome da unidade</Label>
+                          <Input
+                            placeholder="Ex: pacote 500g"
+                            value={novaUnidadeNome}
+                            onChange={(e) => setNovaUnidadeNome(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">
+                            1 {selectedItem?.unidade} = X {insumoSelecionadoParaMapeamento.unidade_medida}
+                          </Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="Ex: 500"
+                            value={fatorConversao}
+                            onChange={(e) => setFatorConversao(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Input manual de fator quando não selecionou unidade */}
+                  {!showNovaUnidade && !selectedUnidadeCompraId && (
+                    <div className="space-y-1">
+                      <Label className="text-xs">
+                        1 {selectedItem?.unidade} equivale a quantos {insumoSelecionadoParaMapeamento.unidade_medida}?
+                      </Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="Ex: 1000 (se 1kg = 1000g)"
+                        value={fatorConversao}
+                        onChange={(e) => setFatorConversao(e.target.value)}
+                      />
+                    </div>
+                  )}
+
+                  {/* Resumo da conversão */}
+                  {fatorConversaoNumerico > 0 && (
+                    <div className="p-3 bg-primary/5 rounded-lg space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Entrada no estoque:</span>
+                        <Badge className="bg-primary">
+                          {quantidadeConvertida.toFixed(2)} {insumoSelecionadoParaMapeamento.unidade_medida}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Custo por {insumoSelecionadoParaMapeamento.unidade_medida}:</span>
+                        <span className="font-bold text-primary">
+                          {new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                            minimumFractionDigits: 4,
+                          }).format(custoUnitarioConvertido)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Botão Confirmar */}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setMappingDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleConfirmMapping}
+                disabled={!selectedInsumoId || fatorConversaoNumerico <= 0}
+              >
+                Confirmar Mapeamento
+              </Button>
             </div>
           </div>
         </DialogContent>
