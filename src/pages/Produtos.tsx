@@ -5,17 +5,15 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Package, AlertCircle, Search, Filter, X, Upload } from 'lucide-react';
+import { Plus, Package, Search, Filter, X, Upload } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import FichaTecnicaDialog from '@/components/produtos/FichaTecnicaDialog';
-import MarketPriceSearch from '@/components/produtos/MarketPriceSearch';
+import ProductCard from '@/components/produtos/ProductCard';
 import ImportProdutosDialog from '@/components/import/ImportProdutosDialog';
 import ImportFichaTecnicaDialog from '@/components/import/ImportFichaTecnicaDialog';
 
@@ -25,6 +23,8 @@ interface Produto {
   categoria: string | null;
   preco_venda: number;
   ativo: boolean;
+  rendimento_padrao?: number | null;
+  imagem_url?: string | null;
   fichas_tecnicas?: {
     id: string;
     quantidade: number;
@@ -98,19 +98,6 @@ const Produtos = () => {
     enabled: !!usuario?.empresa_id,
   });
 
-  // Fetch taxas dos apps para calcular taxa média
-  const { data: taxasApps } = useQuery({
-    queryKey: ['taxas_apps', usuario?.empresa_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('taxas_apps')
-        .select('taxa_percentual')
-        .eq('ativo', true);
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!usuario?.empresa_id,
-  });
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -213,33 +200,47 @@ const Produtos = () => {
     }
   };
 
-  const calcularCustoInsumos = (produto: Produto) => {
-    if (!produto.fichas_tecnicas || produto.fichas_tecnicas.length === 0) return 0;
-    return produto.fichas_tecnicas.reduce((sum, ft) => {
-      const quantidade = Number(ft.quantidade) || 0;
-      const custoUnitario = Number(ft.insumos?.custo_unitario) || 0;
-      return sum + (quantidade * custoUnitario);
-    }, 0);
-  };
-
-  const calcularPrecoSugerido = (custoInsumos: number) => {
-    if (custoInsumos <= 0) return 0;
-    const margemDesejada = config?.margem_desejada_padrao || 30;
-    // Calcula taxa média dos apps cadastrados
-    const taxaMedia = taxasApps && taxasApps.length > 0
-      ? taxasApps.reduce((sum, t) => sum + Number(t.taxa_percentual || 0), 0) / taxasApps.length
-      : 0;
-    // Preço = Custo / (1 - margem% - taxaApp%)
-    const divisor = 1 - (margemDesejada + taxaMedia) / 100;
-    if (divisor <= 0) return custoInsumos * 2; // Fallback se margem >= 100%
-    return custoInsumos / divisor;
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
+  // Duplicar produto
+  const handleDuplicate = async (produto: Produto) => {
+    if (!usuario?.empresa_id) return;
+    
+    try {
+      // Criar cópia do produto
+      const { data: novoProduto, error: produtoError } = await supabase
+        .from('produtos')
+        .insert({
+          empresa_id: usuario.empresa_id,
+          nome: `${produto.nome} (cópia)`,
+          categoria: produto.categoria,
+          preco_venda: produto.preco_venda,
+          ativo: produto.ativo,
+          rendimento_padrao: produto.rendimento_padrao,
+        })
+        .select()
+        .single();
+      
+      if (produtoError) throw produtoError;
+      
+      // Copiar ficha técnica se existir
+      if (produto.fichas_tecnicas && produto.fichas_tecnicas.length > 0) {
+        const fichasParaCopiar = produto.fichas_tecnicas.map(ft => ({
+          produto_id: novoProduto.id,
+          insumo_id: ft.insumos.id,
+          quantidade: ft.quantidade,
+        }));
+        
+        const { error: fichasError } = await supabase
+          .from('fichas_tecnicas')
+          .insert(fichasParaCopiar);
+        
+        if (fichasError) throw fichasError;
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ['produtos'] });
+      toast({ title: 'Produto duplicado com sucesso!' });
+    } catch (error: any) {
+      toast({ title: 'Erro ao duplicar', description: error.message, variant: 'destructive' });
+    }
   };
 
   // Extrair categorias únicas dos produtos
@@ -385,152 +386,23 @@ const Produtos = () => {
       </div>
 
       {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-48" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {[...Array(8)].map((_, i) => (
+            <Skeleton key={i} className="h-[300px] md:h-[220px]" />
           ))}
         </div>
       ) : produtosFiltrados && produtosFiltrados.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {produtosFiltrados.map((produto) => {
-            const custoInsumos = calcularCustoInsumos(produto);
-            const precoVenda = Number(produto.preco_venda) || 0;
-            const precoSugerido = calcularPrecoSugerido(custoInsumos);
-            const cmvAtual = precoVenda > 0 ? (custoInsumos / precoVenda) * 100 : 0;
-            const cmvAlvo = config?.cmv_alvo || 35;
-            const lucro = precoVenda - custoInsumos;
-            const margemPercent = precoVenda > 0 ? (lucro / precoVenda) * 100 : 0;
-            const temFichaTecnica = produto.fichas_tecnicas && produto.fichas_tecnicas.length > 0;
-
-            return (
-              <Card key={produto.id} className={`${!produto.ativo ? 'opacity-60' : ''} overflow-hidden`}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-                      <Package className="h-5 w-5 text-primary shrink-0" />
-                      <CardTitle className="text-base sm:text-lg truncate">{produto.nome}</CardTitle>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <MarketPriceSearch
-                        productName={produto.nome}
-                        category={produto.categoria}
-                        currentPrice={precoVenda}
-                        trigger={
-                          <Button variant="ghost" size="icon" className="h-8 w-8" title="Pesquisar preço de mercado">
-                            <Search className="h-4 w-4" />
-                          </Button>
-                        }
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleEdit(produto)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive"
-                        onClick={() => handleDeleteClick(produto.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  {produto.categoria && (
-                    <Badge variant="secondary" className="w-fit text-[10px] px-1.5 py-0 max-w-[100px] truncate">
-                      {produto.categoria}
-                    </Badge>
-                  )}
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Preço Atual</p>
-                      <p className="font-bold text-lg">{formatCurrency(precoVenda)}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Custo Insumos</p>
-                      <p className="font-medium">{formatCurrency(custoInsumos)}</p>
-                    </div>
-                  </div>
-
-                  {temFichaTecnica && (
-                    <>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div>
-                          <p className="text-muted-foreground">Preço Sugerido</p>
-                          <p className={`font-medium ${precoVenda < precoSugerido ? 'text-amber-600' : 'text-green-600'}`}>
-                            {formatCurrency(precoSugerido)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Margem</p>
-                          <p className={`font-medium ${margemPercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {margemPercent.toFixed(1)}%
-                          </p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div>
-                          <p className="text-muted-foreground">Lucro</p>
-                          <p className={`font-medium ${lucro >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatCurrency(lucro)}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Indicador visual de Margem */}
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1">
-                          <div className="flex justify-between text-xs mb-1">
-                            <span>Margem: {margemPercent.toFixed(1)}%</span>
-                            <span className="text-muted-foreground">Alvo: {config?.margem_desejada_padrao || 30}%</span>
-                          </div>
-                          <div className="h-2 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className={`h-full transition-all ${margemPercent >= (config?.margem_desejada_padrao || 30) ? 'bg-green-500' : margemPercent >= 0 ? 'bg-amber-500' : 'bg-red-500'}`}
-                              style={{ width: `${Math.min(Math.max(margemPercent, 0), 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                        {margemPercent < (config?.margem_desejada_padrao || 30) && (
-                          <AlertCircle className="h-4 w-4 text-amber-500" />
-                        )}
-                      </div>
-
-                      {/* Indicador visual de CMV */}
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1">
-                          <div className="flex justify-between text-xs mb-1">
-                            <span>CMV: {cmvAtual.toFixed(1)}%</span>
-                            <span className="text-muted-foreground">Alvo: {cmvAlvo}%</span>
-                          </div>
-                          <div className="h-2 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className={`h-full transition-all ${cmvAtual <= cmvAlvo ? 'bg-green-500' : 'bg-amber-500'}`}
-                              style={{ width: `${Math.min(cmvAtual, 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                        {cmvAtual > cmvAlvo && (
-                          <AlertCircle className="h-4 w-4 text-amber-500" />
-                        )}
-                      </div>
-                    </>
-                  )}
-
-                  <FichaTecnicaDialog
-                    produtoId={produto.id}
-                    produtoNome={produto.nome}
-                    fichaTecnica={produto.fichas_tecnicas || []}
-                  />
-                </CardContent>
-              </Card>
-            );
-          })}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {produtosFiltrados.map((produto) => (
+            <ProductCard
+              key={produto.id}
+              produto={produto}
+              config={config}
+              onEdit={() => handleEdit(produto)}
+              onDelete={() => handleDeleteClick(produto.id)}
+              onDuplicate={() => handleDuplicate(produto)}
+            />
+          ))}
         </div>
       ) : (
         <Card className="p-12 text-center">
