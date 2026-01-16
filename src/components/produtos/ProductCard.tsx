@@ -76,134 +76,135 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   return (
     <Card className={`${!produto.ativo ? 'opacity-60' : ''} overflow-hidden transition-shadow hover:shadow-md`}>
-      <CardContent className="p-0">
+      <CardContent className="p-4">
         {/* Desktop Layout */}
-        <div className="hidden md:flex gap-4 p-4">
-          {/* Imagem */}
-          <div className="w-[120px] h-[120px] bg-muted rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
-            {produto.imagem_url ? (
-              <img 
-                src={produto.imagem_url} 
-                alt={produto.nome}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <ImageIcon className="h-10 w-10 text-muted-foreground/50" />
-            )}
+        <div className="hidden md:block space-y-4">
+          <div className="flex gap-4">
+            {/* Imagem */}
+            <div className="w-[120px] h-[120px] bg-muted rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+              {produto.imagem_url ? (
+                <img 
+                  src={produto.imagem_url} 
+                  alt={produto.nome}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <ImageIcon className="h-10 w-10 text-muted-foreground/50" />
+              )}
+            </div>
+
+            {/* Informações principais */}
+            <div className="flex-1 min-w-0 space-y-3">
+              {/* Header: Nome + Categoria + Ações */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-lg truncate">{produto.nome}</h3>
+                    <MarketPriceSearch
+                      productName={produto.nome}
+                      category={produto.categoria}
+                      currentPrice={precoVenda}
+                      trigger={
+                        <Button variant="ghost" size="icon" className="h-6 w-6" title="Pesquisar preço de mercado">
+                          <Search className="h-3.5 w-3.5" />
+                        </Button>
+                      }
+                    />
+                  </div>
+                  {produto.categoria && (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 mt-1 font-normal">
+                      {produto.categoria}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              {/* KPIs em linha */}
+              <div className="flex flex-wrap gap-x-6 gap-y-2">
+                <div>
+                  <p className="text-muted-foreground text-xs">Preço Venda</p>
+                  <p className="font-bold text-lg text-foreground">{formatCurrency(precoVenda)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Custo Insumos</p>
+                  <p className="font-medium text-base">{formatCurrency(custoInsumos)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Lucro</p>
+                  <p className={`font-bold text-lg ${lucroColor}`}>{formatCurrency(lucro)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Margem</p>
+                  <p className={`font-bold text-lg ${margemColor}`}>{margemPercent.toFixed(1)}%</p>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Informações principais */}
-          <div className="flex-1 min-w-0 flex flex-col gap-3">
-            {/* Header: Nome + Categoria */}
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <h3 className="font-semibold text-lg truncate">{produto.nome}</h3>
-                {produto.categoria && (
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 mt-1 font-normal">
-                    {produto.categoria}
-                  </Badge>
+          {/* Indicadores visuais - apenas desktop */}
+          {temFichaTecnica && (
+            <div className="grid grid-cols-2 gap-4">
+              {/* Margem Bar */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <div className="flex justify-between text-[10px] mb-1 text-muted-foreground">
+                    <span>Margem: {margemPercent.toFixed(1)}%</span>
+                    <span>Alvo: {margemAlvo}%</span>
+                  </div>
+                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all ${margemPercent >= margemAlvo ? 'bg-green-500' : margemPercent >= 0 ? 'bg-amber-500' : 'bg-red-500'}`}
+                      style={{ width: `${Math.min(Math.max(margemPercent, 0), 100)}%` }}
+                    />
+                  </div>
+                </div>
+                {margemPercent < margemAlvo && (
+                  <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                 )}
               </div>
-              {/* Ações desktop */}
-              <div className="flex items-center gap-1 shrink-0">
-                <MarketPriceSearch
-                  productName={produto.nome}
-                  category={produto.categoria}
-                  currentPrice={precoVenda}
-                  trigger={
-                    <Button variant="ghost" size="icon" className="h-8 w-8" title="Pesquisar preço de mercado">
-                      <Search className="h-4 w-4" />
-                    </Button>
-                  }
-                />
+
+              {/* CMV Bar */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <div className="flex justify-between text-[10px] mb-1 text-muted-foreground">
+                    <span>CMV: {cmvAtual.toFixed(1)}%</span>
+                    <span>Alvo: {cmvAlvo}%</span>
+                  </div>
+                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all ${cmvAtual <= cmvAlvo ? 'bg-green-500' : 'bg-amber-500'}`}
+                      style={{ width: `${Math.min(cmvAtual, 100)}%` }}
+                    />
+                  </div>
+                </div>
+                {cmvAtual > cmvAlvo && (
+                  <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                )}
               </div>
             </div>
+          )}
 
-            {/* KPIs Grid */}
-            <div className="grid grid-cols-4 gap-3 text-sm">
-              <div>
-                <p className="text-muted-foreground text-xs">Preço Venda</p>
-                <p className="font-bold text-lg text-foreground">{formatCurrency(precoVenda)}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Custo Insumos</p>
-                <p className="font-medium">{formatCurrency(custoInsumos)}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Lucro</p>
-                <p className={`font-bold text-lg ${lucroColor}`}>{formatCurrency(lucro)}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Margem</p>
-                <p className={`font-bold text-lg ${margemColor}`}>{margemPercent.toFixed(1)}%</p>
-              </div>
-            </div>
-
-            {/* Indicadores visuais - apenas desktop */}
-            {temFichaTecnica && (
-              <div className="grid grid-cols-2 gap-4">
-                {/* Margem Bar */}
-                <div className="flex items-center gap-2">
-                  <div className="flex-1">
-                    <div className="flex justify-between text-[10px] mb-1 text-muted-foreground">
-                      <span>Margem: {margemPercent.toFixed(1)}%</span>
-                      <span>Alvo: {margemAlvo}%</span>
-                    </div>
-                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className={`h-full transition-all ${margemPercent >= margemAlvo ? 'bg-green-500' : margemPercent >= 0 ? 'bg-amber-500' : 'bg-red-500'}`}
-                        style={{ width: `${Math.min(Math.max(margemPercent, 0), 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                  {margemPercent < margemAlvo && (
-                    <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                  )}
-                </div>
-
-                {/* CMV Bar */}
-                <div className="flex items-center gap-2">
-                  <div className="flex-1">
-                    <div className="flex justify-between text-[10px] mb-1 text-muted-foreground">
-                      <span>CMV: {cmvAtual.toFixed(1)}%</span>
-                      <span>Alvo: {cmvAlvo}%</span>
-                    </div>
-                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className={`h-full transition-all ${cmvAtual <= cmvAlvo ? 'bg-green-500' : 'bg-amber-500'}`}
-                        style={{ width: `${Math.min(cmvAtual, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                  {cmvAtual > cmvAlvo && (
-                    <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                  )}
-                </div>
-              </div>
+          {/* Botões Desktop */}
+          <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+            <FichaTecnicaDialog
+              produtoId={produto.id}
+              produtoNome={produto.nome}
+              fichaTecnica={produto.fichas_tecnicas || []}
+            />
+            <Button variant="outline" size="sm" onClick={onEdit}>
+              <Pencil className="h-3.5 w-3.5 mr-1.5" />
+              Editar
+            </Button>
+            {onDuplicate && (
+              <Button variant="outline" size="sm" onClick={onDuplicate}>
+                <Copy className="h-3.5 w-3.5 mr-1.5" />
+                Duplicar
+              </Button>
             )}
-
-            {/* Botões Desktop */}
-            <div className="flex items-center gap-2 mt-auto pt-2 border-t border-border/50">
-              <FichaTecnicaDialog
-                produtoId={produto.id}
-                produtoNome={produto.nome}
-                fichaTecnica={produto.fichas_tecnicas || []}
-              />
-              <Button variant="outline" size="sm" onClick={onEdit}>
-                <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                Editar
-              </Button>
-              {onDuplicate && (
-                <Button variant="outline" size="sm" onClick={onDuplicate}>
-                  <Copy className="h-3.5 w-3.5 mr-1.5" />
-                  Duplicar
-                </Button>
-              )}
-              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive ml-auto" onClick={onDelete}>
-                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                Excluir
-              </Button>
-            </div>
+            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive ml-auto" onClick={onDelete}>
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              Excluir
+            </Button>
           </div>
         </div>
 
