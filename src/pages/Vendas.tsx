@@ -15,7 +15,7 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { MobileDataView } from '@/components/ui/mobile-data-view';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Package, User, Filter, DollarSign, ShoppingCart, Upload } from 'lucide-react';
+import { Plus, Trash2, Package, User, Filter, DollarSign, ShoppingCart, Upload, TrendingUp, TrendingDown } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import ImportarVendasDialog from '@/components/vendas/ImportarVendasDialog';
@@ -52,13 +52,23 @@ const Vendas = () => {
     cliente_id: '',
   });
 
-  // Fetch produtos para o select
+  // Fetch produtos para o select com ficha técnica para calcular custo
   const { data: produtos } = useQuery({
     queryKey: ['produtos-select', usuario?.empresa_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('produtos')
-        .select('id, nome, preco_venda')
+        .select(`
+          id, 
+          nome, 
+          preco_venda,
+          fichas_tecnicas (
+            quantidade,
+            insumos (
+              custo_unitario
+            )
+          )
+        `)
         .eq('ativo', true)
         .order('nome');
 
@@ -256,6 +266,29 @@ const Vendas = () => {
     createMutation.mutate(formData);
   };
 
+  // Calcular custo e lucro estimado do produto selecionado
+  const calcularLucroEstimado = () => {
+    if (!formData.produto_id || !formData.valor_total) return null;
+    
+    const produto = produtos?.find(p => p.id === formData.produto_id);
+    if (!produto) return null;
+    
+    // Calcular custo unitário do produto (soma dos insumos da ficha técnica)
+    const custoUnitario = (produto.fichas_tecnicas || []).reduce((sum, ft) => {
+      return sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0));
+    }, 0);
+    
+    const quantidade = parseFloat(formData.quantidade) || 1;
+    const valorTotal = parseFloat(formData.valor_total) || 0;
+    const custoTotal = custoUnitario * quantidade;
+    const lucro = valorTotal - custoTotal;
+    const margem = valorTotal > 0 ? (lucro / valorTotal) * 100 : 0;
+    
+    return { custoUnitario, custoTotal, lucro, margem };
+  };
+
+  const lucroEstimado = calcularLucroEstimado();
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -341,6 +374,38 @@ const Vendas = () => {
                   />
                 </div>
               </div>
+
+              {/* Card de Lucro Estimado */}
+              {lucroEstimado && (
+                <div className={`rounded-lg p-3 border ${lucroEstimado.lucro >= 0 ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900' : 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900'}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    {lucroEstimado.lucro >= 0 ? (
+                      <TrendingUp className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <TrendingDown className="h-4 w-4 text-red-600" />
+                    )}
+                    <span className="text-sm font-medium">Previsão desta venda</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">Custo</p>
+                      <p className="text-sm font-medium text-muted-foreground">{formatCurrency(lucroEstimado.custoTotal)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">Lucro Bruto</p>
+                      <p className={`text-sm font-bold ${lucroEstimado.lucro >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatCurrency(lucroEstimado.lucro)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">Margem</p>
+                      <p className={`text-sm font-bold ${lucroEstimado.margem >= 30 ? 'text-green-600' : lucroEstimado.margem >= 20 ? 'text-yellow-600' : 'text-red-600'}`}>
+                        {lucroEstimado.margem.toFixed(1)}%
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="space-y-3">
                 <Label>Tipo de Venda</Label>
                 <RadioGroup
