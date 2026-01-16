@@ -560,6 +560,7 @@ export type Database = {
           empresa_id: string
           estoque_acabado: number
           id: string
+          imagem_url: string | null
           nome: string
           preco_venda: number
           rendimento_padrao: number | null
@@ -572,6 +573,7 @@ export type Database = {
           empresa_id: string
           estoque_acabado?: number
           id?: string
+          imagem_url?: string | null
           nome: string
           preco_venda?: number
           rendimento_padrao?: number | null
@@ -584,6 +586,7 @@ export type Database = {
           empresa_id?: string
           estoque_acabado?: number
           id?: string
+          imagem_url?: string | null
           nome?: string
           preco_venda?: number
           rendimento_padrao?: number | null
