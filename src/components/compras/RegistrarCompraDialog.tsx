@@ -1,3 +1,4 @@
+// RegistrarCompraDialog - Formulário de compra manual com cálculo automático de valor total
 import React, { useState, useMemo, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
