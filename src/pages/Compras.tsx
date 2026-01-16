@@ -13,7 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Loader2, ImageIcon, Filter, Calendar, Package, Search, Trash2, Wand2, Pencil, Eye, AlertTriangle } from 'lucide-react';
+import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Loader2, ImageIcon, Filter, Calendar, Package, Search, Trash2, Wand2, Pencil, Eye, AlertTriangle, ArrowRight, Calculator } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -169,6 +169,39 @@ const Compras = () => {
     },
     enabled: !!usuario?.empresa_id,
   });
+
+  // Pegar item em edição de conversão
+  const conversionItem = conversionItemIndex !== null ? parsedNota?.itens[conversionItemIndex] : null;
+  const conversionInsumo = conversionItem?.insumo_id ? insumos?.find(i => i.id === conversionItem.insumo_id) : null;
+
+  // Fetch unidades de compra para o insumo selecionado na conversão
+  const { data: conversionUnidades } = useQuery({
+    queryKey: ['unidades-compra-conversion', conversionInsumo?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('unidades_compra')
+        .select('*')
+        .eq('insumo_id', conversionInsumo!.id)
+        .order('nome');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!conversionInsumo?.id,
+  });
+
+  // Calcular fator de conversão ativo
+  const conversionUnidadeSelecionada = conversionUnidades?.find(u => u.id === conversionUnidadeCompraId);
+  const conversionFatorAtivo = conversionFatorManual 
+    ? (parseFloat(conversionFatorManual) || 1) 
+    : (conversionUnidadeSelecionada?.fator_conversao || 1);
+
+  // Reset conversão quando muda insumo
+  useEffect(() => {
+    if (conversionDialogOpen && conversionInsumo) {
+      setConversionUnidadeCompraId('');
+      setConversionShowNovaUnidade(false);
+    }
+  }, [conversionInsumo?.id]);
 
   // Get unique suppliers for filter
   const fornecedores = [...new Set(notas?.map(n => n.fornecedor).filter(Boolean))];
@@ -1503,78 +1536,27 @@ const Compras = () => {
                                 </TableCell>
                                 <TableCell className="text-right">
                                   {item.mapeado && insumoMapeado ? (
-                                    editingConversionIndex === index ? (
-                                      <div className="flex items-center gap-1 justify-end">
-                                        <Input
-                                          type="number"
-                                          step="0.001"
-                                          min="0.001"
-                                          value={tempConversionFactor}
-                                          onChange={(e) => setTempConversionFactor(e.target.value)}
-                                          className="h-7 text-sm w-20 text-right"
-                                          autoFocus
-                                          onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                              const newFator = parseFloat(tempConversionFactor) || 1;
-                                              const newQtdConv = item.quantidade * newFator;
-                                              const newCustoConv = newQtdConv > 0 ? item.valor_total / newQtdConv : 0;
-                                              const newItens = [...parsedNota.itens];
-                                              newItens[index] = {
-                                                ...newItens[index],
-                                                fator_conversao: newFator,
-                                                quantidade_convertida: newQtdConv,
-                                                custo_unitario_convertido: newCustoConv,
-                                              };
-                                              setParsedNota({ ...parsedNota, itens: newItens });
-                                              setEditingConversionIndex(null);
-                                              toast({ title: 'Conversão atualizada!' });
-                                            } else if (e.key === 'Escape') {
-                                              setEditingConversionIndex(null);
-                                            }
-                                          }}
-                                        />
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-6 w-6"
-                                          onClick={() => {
-                                            const newFator = parseFloat(tempConversionFactor) || 1;
-                                            const newQtdConv = item.quantidade * newFator;
-                                            const newCustoConv = newQtdConv > 0 ? item.valor_total / newQtdConv : 0;
-                                            const newItens = [...parsedNota.itens];
-                                            newItens[index] = {
-                                              ...newItens[index],
-                                              fator_conversao: newFator,
-                                              quantidade_convertida: newQtdConv,
-                                              custo_unitario_convertido: newCustoConv,
-                                            };
-                                            setParsedNota({ ...parsedNota, itens: newItens });
-                                            setEditingConversionIndex(null);
-                                            toast({ title: 'Conversão atualizada!' });
-                                          }}
-                                        >
-                                          <Check className="h-3 w-3" />
-                                        </Button>
-                                      </div>
-                                    ) : (
-                                      <div className="flex items-center gap-1 justify-end">
-                                        <span className={fator !== 1 ? 'text-primary font-medium' : ''}>
-                                          {qtdConv.toFixed(2)} {insumoMapeado.unidade_medida}
-                                        </span>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className={`h-6 w-6 ${possivelErroConversao ? 'text-warning' : ''}`}
-                                          title={`Editar conversão (fator atual: ${fator})`}
-                                          onClick={() => {
-                                            setEditingConversionIndex(index);
-                                            setTempConversionFactor(String(fator));
-                                          }}
-                                        >
-                                          <Pencil className="h-3 w-3" />
-                                        </Button>
-                                      </div>
-                                    )
+                                    <div className="flex items-center gap-1 justify-end">
+                                      <span className={fator !== 1 ? 'text-primary font-medium' : ''}>
+                                        {qtdConv.toFixed(2)} {insumoMapeado.unidade_medida}
+                                      </span>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className={`h-6 w-6 ${possivelErroConversao ? 'text-warning' : ''}`}
+                                        title={`Editar conversão (fator atual: ${fator})`}
+                                        onClick={() => {
+                                          setConversionItemIndex(index);
+                                          setConversionUnidadeCompraId('');
+                                          setConversionShowNovaUnidade(false);
+                                          setConversionNovaUnidadeNome('');
+                                          setConversionFatorManual(String(fator));
+                                          setConversionDialogOpen(true);
+                                        }}
+                                      >
+                                        <Pencil className="h-3 w-3" />
+                                      </Button>
+                                    </div>
                                   ) : (
                                     <span className="text-muted-foreground">-</span>
                                   )}
@@ -2098,6 +2080,188 @@ const Compras = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Conversion Dialog - igual ao RegistrarCompraDialog */}
+      <Dialog open={conversionDialogOpen} onOpenChange={setConversionDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calculator className="h-5 w-5" />
+              Editar Conversão
+            </DialogTitle>
+          </DialogHeader>
+
+          {conversionItem && conversionInsumo && (
+            <div className="space-y-4">
+              {/* Item info */}
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="font-medium">{conversionItem.produto_descricao}</p>
+                <p className="text-sm text-muted-foreground">
+                  {conversionItem.quantidade} {conversionItem.unidade} → {conversionInsumo.nome} ({conversionInsumo.unidade_medida})
+                </p>
+              </div>
+
+              {/* Unit Selection */}
+              <div className="space-y-2">
+                <Label>Unidade de Compra</Label>
+                {!conversionShowNovaUnidade ? (
+                  <Select
+                    value={conversionUnidadeCompraId}
+                    onValueChange={(value) => {
+                      if (value === 'nova') {
+                        setConversionShowNovaUnidade(true);
+                        setConversionUnidadeCompraId('');
+                        setConversionFatorManual('');
+                      } else {
+                        setConversionUnidadeCompraId(value);
+                        setConversionFatorManual('');
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione ou crie uma unidade..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {conversionUnidades?.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.nome} (1 = {u.fator_conversao} {conversionInsumo.unidade_medida})
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="nova" className="text-primary font-medium">
+                        <span className="flex items-center gap-2">
+                          <Plus className="h-4 w-4" />
+                          Nova unidade...
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="space-y-3 p-3 border rounded-lg bg-muted/50">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Nova Unidade de Compra</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setConversionShowNovaUnidade(false);
+                          setConversionFatorManual('');
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Nome da unidade</Label>
+                        <Input
+                          placeholder="Ex: pacote 500g"
+                          value={conversionNovaUnidadeNome}
+                          onChange={(e) => setConversionNovaUnidadeNome(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">
+                          1 unidade = X {conversionInsumo.unidade_medida}
+                        </Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="Ex: 500"
+                          value={conversionFatorManual}
+                          onChange={(e) => setConversionFatorManual(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Calculation Preview */}
+              {conversionFatorAtivo > 0 && (
+                <Card className="bg-primary/5 border-primary/20">
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Calculator className="h-4 w-4 text-primary" />
+                      <span className="font-medium text-sm">Prévia da Conversão</span>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">
+                          {conversionItem.quantidade} {conversionItem.unidade}
+                        </Badge>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        <Badge className="bg-primary">
+                          {(conversionItem.quantidade * conversionFatorAtivo).toFixed(2)} {conversionInsumo.unidade_medida}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between pt-2 border-t">
+                        <span className="text-muted-foreground">Custo por {conversionInsumo.unidade_medida}:</span>
+                        <span className="font-bold text-primary">
+                          {new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                            minimumFractionDigits: 4,
+                          }).format(conversionItem.valor_total / (conversionItem.quantidade * conversionFatorAtivo))}
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Actions */}
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setConversionDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={async () => {
+                    if (conversionItemIndex === null || !parsedNota) return;
+                    
+                    // Se está criando nova unidade, salvar primeiro
+                    if (conversionShowNovaUnidade && conversionNovaUnidadeNome && conversionFatorManual) {
+                      const { error } = await supabase
+                        .from('unidades_compra')
+                        .insert({
+                          empresa_id: usuario!.empresa_id,
+                          insumo_id: conversionInsumo!.id,
+                          nome: conversionNovaUnidadeNome,
+                          fator_conversao: parseFloat(conversionFatorManual),
+                        });
+                      if (error) {
+                        toast({ title: 'Erro ao salvar unidade', variant: 'destructive' });
+                        return;
+                      }
+                      queryClient.invalidateQueries({ queryKey: ['unidades-compra-conversion'] });
+                      toast({ title: 'Unidade de compra salva!' });
+                    }
+
+                    // Atualizar item com novo fator
+                    const newFator = conversionFatorAtivo;
+                    const newQtdConv = conversionItem!.quantidade * newFator;
+                    const newCustoConv = newQtdConv > 0 ? conversionItem!.valor_total / newQtdConv : 0;
+                    const newItens = [...parsedNota.itens];
+                    newItens[conversionItemIndex] = {
+                      ...newItens[conversionItemIndex],
+                      fator_conversao: newFator,
+                      quantidade_convertida: newQtdConv,
+                      custo_unitario_convertido: newCustoConv,
+                    };
+                    setParsedNota({ ...parsedNota, itens: newItens });
+                    setConversionDialogOpen(false);
+                    toast({ title: 'Conversão atualizada!' });
+                  }}
+                  disabled={conversionFatorAtivo <= 0}
+                >
+                  Aplicar Conversão
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
