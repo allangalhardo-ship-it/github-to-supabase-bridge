@@ -273,15 +273,21 @@ const Dashboard = () => {
   const HealthIcon = healthStatus.icon;
   
   // Calcular custo fixo proporcional baseado no percentual sobre faturamento
-  // Se temos faturamento configurado, usamos o percentual. Senão, usamos proporcional por dias.
+  // REGRA: Se não há receita no período, não há custo fixo proporcional a deduzir
   const calcularCustoFixoProporcional = () => {
+    // Sem receita = sem custo fixo proporcional (o custo fixo é proporcional à receita)
+    if (receitaBruta <= 0) {
+      return 0;
+    }
+    
     // Se há faturamento configurado, usa o percentual sobre a receita do período
-    if (faturamentoMensal > 0 && receitaBruta > 0) {
+    if (faturamentoMensal > 0) {
       // O custo fixo proporcional = receita do período × (custos fixos / faturamento mensal)
       return receitaBruta * (custoFixoMensal / faturamentoMensal);
     }
     
-    // Fallback: cálculo por dias (quando não há faturamento configurado)
+    // Fallback: se não tem faturamento configurado, usa proporcional por dias
+    // mas apenas se houver receita
     const hoje = new Date();
     const diasNoMes = getDaysInMonth(hoje);
     const custoDiario = custoFixoMensal / diasNoMes;
