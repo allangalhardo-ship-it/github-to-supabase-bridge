@@ -12,7 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Key, QrCode, Loader2, ImageIcon, Calculator, Pencil } from 'lucide-react';
+import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Key, QrCode, Loader2, ImageIcon, Calculator, Pencil, AlertTriangle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
 
 interface XmlItem {
@@ -1006,8 +1007,14 @@ const XmlImport = () => {
                     const qtdConv = item.quantidade_convertida || item.quantidade * fator;
                     const custoConv = item.custo_unitario_convertido || item.valor_total / qtdConv;
                     
+                    // Detectar possível erro de conversão: unidades diferentes mas fator = 1
+                    const unidadeXml = item.unidade?.toLowerCase().trim();
+                    const unidadeInsumo = insumoMapeado?.unidade_medida?.toLowerCase().trim();
+                    const unidadesDiferentes = unidadeXml && unidadeInsumo && unidadeXml !== unidadeInsumo;
+                    const possivelErroConversao = item.mapeado && unidadesDiferentes && fator === 1;
+                    
                     return (
-                      <TableRow key={index}>
+                      <TableRow key={index} className={possivelErroConversao ? 'bg-warning/10' : ''}>
                         <TableCell className="font-medium">
                           {item.produto_descricao}
                           {item.mapeado && insumoMapeado && (
@@ -1044,7 +1051,25 @@ const XmlImport = () => {
                         </TableCell>
                         <TableCell className="text-right">{formatCurrency(item.valor_total)}</TableCell>
                         <TableCell className="text-center">
-                          {item.mapeado ? (
+                          {possivelErroConversao ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="outline" className="gap-1 border-warning text-warning cursor-help">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    Verificar
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p className="font-medium">Possível erro de conversão</p>
+                                  <p className="text-xs mt-1">
+                                    Unidade da nota ({item.unidade}) difere do insumo ({insumoMapeado?.unidade_medida}), 
+                                    mas o fator de conversão é 1. Clique no lápis para ajustar.
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : item.mapeado ? (
                             <Badge variant="default" className="gap-1">
                               <Check className="h-3 w-3" />
                               Mapeado
@@ -1059,10 +1084,11 @@ const XmlImport = () => {
                         <TableCell>
                           {item.mapeado ? (
                             <Button
-                              variant="ghost"
+                              variant={possivelErroConversao ? "outline" : "ghost"}
                               size="sm"
                               onClick={() => handleOpenMappingDialog(item)}
                               title="Editar conversão"
+                              className={possivelErroConversao ? 'border-warning text-warning hover:bg-warning/10' : ''}
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
