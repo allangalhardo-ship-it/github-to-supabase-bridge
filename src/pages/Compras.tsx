@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -61,8 +61,15 @@ const Compras = () => {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [importTab, setImportTab] = useState('xml');
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
-  const [editingConversionIndex, setEditingConversionIndex] = useState<number | null>(null);
-  const [tempConversionFactor, setTempConversionFactor] = useState<string>('');
+
+  // Conversão (na importação da NF-e)
+  const [conversionDialogOpen, setConversionDialogOpen] = useState(false);
+  const [conversionItemIndex, setConversionItemIndex] = useState<number | null>(null);
+  const [conversionUnidadeCompraId, setConversionUnidadeCompraId] = useState('');
+  const [conversionShowNovaUnidade, setConversionShowNovaUnidade] = useState(false);
+  const [conversionNovaUnidadeNome, setConversionNovaUnidadeNome] = useState('');
+  const [conversionFatorManual, setConversionFatorManual] = useState('');
+
   const [deleteNotaId, setDeleteNotaId] = useState<string | null>(null);
   const [viewNotaId, setViewNotaId] = useState<string | null>(null);
   
