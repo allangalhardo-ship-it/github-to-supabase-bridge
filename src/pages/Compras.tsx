@@ -13,7 +13,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Loader2, ImageIcon, Filter, Calendar, Package, Search, Trash2, Wand2, Pencil, Eye } from 'lucide-react';
+import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Loader2, ImageIcon, Filter, Calendar, Package, Search, Trash2, Wand2, Pencil, Eye, AlertTriangle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { Checkbox } from '@/components/ui/checkbox';
 import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
@@ -30,6 +31,10 @@ interface XmlItem {
   custo_unitario: number;
   insumo_id?: string;
   mapeado?: boolean;
+  // Campos de conversão
+  fator_conversao?: number;
+  quantidade_convertida?: number;
+  custo_unitario_convertido?: number;
 }
 
 interface ParsedNota {
@@ -227,6 +232,11 @@ const Compras = () => {
         m.descricao_nota?.toLowerCase() === descricao.toLowerCase()
       );
 
+      // Calcular conversão se mapeamento existir com fator
+      const fatorConv = mapeamento?.unidade_conversao || 1;
+      const qtdConvertida = quantidade * fatorConv;
+      const custoConvertido = qtdConvertida > 0 ? valorTotalItem / qtdConvertida : 0;
+
       itens.push({
         produto_descricao: descricao,
         ean: ean,
@@ -236,6 +246,9 @@ const Compras = () => {
         custo_unitario: custoUnitario,
         insumo_id: mapeamento?.insumo_id || undefined,
         mapeado: !!mapeamento,
+        fator_conversao: mapeamento ? fatorConv : undefined,
+        quantidade_convertida: mapeamento ? qtdConvertida : undefined,
+        custo_unitario_convertido: mapeamento ? custoConvertido : undefined,
       });
     });
 
@@ -1383,132 +1396,189 @@ const Compras = () => {
                           <TableRow>
                             <TableHead className="w-10"></TableHead>
                             <TableHead>Produto</TableHead>
-                            <TableHead className="text-right w-24">Qtd</TableHead>
-                            <TableHead className="text-right w-28">Vlr Unit.</TableHead>
+                            <TableHead className="text-right w-24">Qtd Nota</TableHead>
+                            <TableHead className="text-right w-24">Qtd Conv.</TableHead>
+                            <TableHead className="text-right w-28">Custo/Un</TableHead>
                             <TableHead className="text-right w-24">Total</TableHead>
                             <TableHead className="text-center">Status</TableHead>
                             <TableHead></TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {parsedNota.itens.map((item, index) => (
-                            <TableRow key={index}>
-                              <TableCell>
-                                <div className="flex gap-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                    onClick={() => {
-                                      const newItens = parsedNota.itens.filter((_, i) => i !== index);
-                                      const newValorTotal = newItens.reduce((acc, i) => acc + i.valor_total, 0);
-                                      setParsedNota({
-                                        ...parsedNota,
-                                        itens: newItens,
-                                        valor_total: newValorTotal,
-                                      });
-                                      if (editingItemIndex === index) setEditingItemIndex(null);
-                                      toast({ title: 'Item removido da importação' });
-                                    }}
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7"
-                                    onClick={() => setEditingItemIndex(editingItemIndex === index ? null : index)}
-                                    title="Editar item"
-                                  >
-                                    <Pencil className="h-3.5 w-3.5" />
-                                  </Button>
-                                </div>
-                              </TableCell>
-                              <TableCell className="font-medium">
-                                {editingItemIndex === index ? (
-                                  <Input
-                                    value={item.produto_descricao}
-                                    onChange={(e) => {
-                                      const newItens = [...parsedNota.itens];
-                                      newItens[index] = { ...newItens[index], produto_descricao: e.target.value };
-                                      setParsedNota({ ...parsedNota, itens: newItens });
-                                    }}
-                                    className="h-8 text-sm"
-                                  />
-                                ) : (
-                                  <span className="max-w-[200px] truncate block">{item.produto_descricao}</span>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {editingItemIndex === index ? (
-                                  <Input
-                                    type="number"
-                                    step="0.001"
-                                    min="0"
-                                    value={item.quantidade}
-                                    onChange={(e) => {
-                                      const newQtd = parseFloat(e.target.value) || 0;
-                                      const newItens = [...parsedNota.itens];
-                                      const newTotal = newQtd * item.custo_unitario;
-                                      newItens[index] = { ...newItens[index], quantidade: newQtd, valor_total: newTotal };
-                                      const notaTotal = newItens.reduce((acc, i) => acc + i.valor_total, 0);
-                                      setParsedNota({ ...parsedNota, itens: newItens, valor_total: notaTotal });
-                                    }}
-                                    className="h-8 text-sm w-20 text-right"
-                                  />
-                                ) : (
-                                  <span className="whitespace-nowrap">{item.quantidade} {item.unidade}</span>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {editingItemIndex === index ? (
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={item.custo_unitario}
-                                    onChange={(e) => {
-                                      const newCusto = parseFloat(e.target.value) || 0;
-                                      const newItens = [...parsedNota.itens];
-                                      const newTotal = item.quantidade * newCusto;
-                                      newItens[index] = { ...newItens[index], custo_unitario: newCusto, valor_total: newTotal };
-                                      const notaTotal = newItens.reduce((acc, i) => acc + i.valor_total, 0);
-                                      setParsedNota({ ...parsedNota, itens: newItens, valor_total: notaTotal });
-                                    }}
-                                    className="h-8 text-sm w-24 text-right"
-                                  />
-                                ) : (
-                                  <div className="flex flex-col items-end">
-                                    <span>{formatCurrency(item.custo_unitario)}</span>
-                                    {item.insumo_id && item.mapeado && (() => {
-                                      const insumo = insumos?.find(i => i.id === item.insumo_id);
-                                      if (!insumo || !insumo.custo_unitario || insumo.custo_unitario === 0) return null;
-                                      const variacao = ((item.custo_unitario - insumo.custo_unitario) / insumo.custo_unitario) * 100;
-                                      if (Math.abs(variacao) < 1) return null;
-                                      return (
-                                        <span className={`text-xs ${Math.abs(variacao) > 15 ? 'text-destructive font-medium' : variacao > 0 ? 'text-orange-500' : 'text-green-500'}`}>
-                                          {variacao > 0 ? '+' : ''}{variacao.toFixed(1)}%
-                                          {Math.abs(variacao) > 15 && ' ⚠️'}
-                                        </span>
-                                      );
-                                    })()}
+                          {parsedNota.itens.map((item, index) => {
+                            const insumoMapeado = insumos?.find(i => i.id === item.insumo_id);
+                            const fator = item.fator_conversao || 1;
+                            const qtdConv = item.quantidade_convertida || item.quantidade * fator;
+                            const custoConv = item.custo_unitario_convertido || (qtdConv > 0 ? item.valor_total / qtdConv : 0);
+                            
+                            // Detectar possível erro de conversão: unidades diferentes mas fator = 1
+                            const unidadeXml = item.unidade?.toLowerCase().trim();
+                            const unidadeInsumo = insumoMapeado?.unidade_medida?.toLowerCase().trim();
+                            const unidadesDiferentes = unidadeXml && unidadeInsumo && unidadeXml !== unidadeInsumo;
+                            const possivelErroConversao = item.mapeado && unidadesDiferentes && fator === 1;
+                            
+                            return (
+                              <TableRow key={index} className={possivelErroConversao ? 'bg-warning/10' : ''}>
+                                <TableCell>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                      onClick={() => {
+                                        const newItens = parsedNota.itens.filter((_, i) => i !== index);
+                                        const newValorTotal = newItens.reduce((acc, i) => acc + i.valor_total, 0);
+                                        setParsedNota({
+                                          ...parsedNota,
+                                          itens: newItens,
+                                          valor_total: newValorTotal,
+                                        });
+                                        if (editingItemIndex === index) setEditingItemIndex(null);
+                                        toast({ title: 'Item removido da importação' });
+                                      }}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => setEditingItemIndex(editingItemIndex === index ? null : index)}
+                                      title="Editar item"
+                                    >
+                                      <Pencil className="h-3.5 w-3.5" />
+                                    </Button>
                                   </div>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right font-medium">{formatCurrency(item.valor_total)}</TableCell>
-                              <TableCell className="text-center">
-                                {item.mapeado ? (
-                                  <Badge variant="default" className="gap-1">
-                                    <Check className="h-3 w-3" />
-                                    Mapeado
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="destructive" className="gap-1">
-                                    <AlertCircle className="h-3 w-3" />
-                                    Não mapeado
-                                  </Badge>
-                                )}
-                              </TableCell>
+                                </TableCell>
+                                <TableCell className="font-medium">
+                                  {editingItemIndex === index ? (
+                                    <Input
+                                      value={item.produto_descricao}
+                                      onChange={(e) => {
+                                        const newItens = [...parsedNota.itens];
+                                        newItens[index] = { ...newItens[index], produto_descricao: e.target.value };
+                                        setParsedNota({ ...parsedNota, itens: newItens });
+                                      }}
+                                      className="h-8 text-sm"
+                                    />
+                                  ) : (
+                                    <div>
+                                      <span className="max-w-[200px] truncate block">{item.produto_descricao}</span>
+                                      {item.mapeado && insumoMapeado && (
+                                        <p className="text-xs text-muted-foreground">
+                                          → {insumoMapeado.nome}
+                                        </p>
+                                      )}
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {editingItemIndex === index ? (
+                                    <Input
+                                      type="number"
+                                      step="0.001"
+                                      min="0"
+                                      value={item.quantidade}
+                                      onChange={(e) => {
+                                        const newQtd = parseFloat(e.target.value) || 0;
+                                        const newItens = [...parsedNota.itens];
+                                        const newTotal = newQtd * item.custo_unitario;
+                                        newItens[index] = { ...newItens[index], quantidade: newQtd, valor_total: newTotal };
+                                        const notaTotal = newItens.reduce((acc, i) => acc + i.valor_total, 0);
+                                        setParsedNota({ ...parsedNota, itens: newItens, valor_total: notaTotal });
+                                      }}
+                                      className="h-8 text-sm w-20 text-right"
+                                    />
+                                  ) : (
+                                    <span className="whitespace-nowrap">{item.quantidade} {item.unidade}</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {item.mapeado && insumoMapeado ? (
+                                    <span className={fator !== 1 ? 'text-primary font-medium' : ''}>
+                                      {qtdConv.toFixed(2)} {insumoMapeado.unidade_medida}
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {editingItemIndex === index ? (
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      value={item.custo_unitario}
+                                      onChange={(e) => {
+                                        const newCusto = parseFloat(e.target.value) || 0;
+                                        const newItens = [...parsedNota.itens];
+                                        const newTotal = item.quantidade * newCusto;
+                                        newItens[index] = { ...newItens[index], custo_unitario: newCusto, valor_total: newTotal };
+                                        const notaTotal = newItens.reduce((acc, i) => acc + i.valor_total, 0);
+                                        setParsedNota({ ...parsedNota, itens: newItens, valor_total: notaTotal });
+                                      }}
+                                      className="h-8 text-sm w-24 text-right"
+                                    />
+                                  ) : (
+                                    <div className="flex flex-col items-end">
+                                      {item.mapeado && insumoMapeado ? (
+                                        <span className="text-xs">
+                                          {new Intl.NumberFormat('pt-BR', {
+                                            style: 'currency',
+                                            currency: 'BRL',
+                                            minimumFractionDigits: 4,
+                                          }).format(custoConv)}/{insumoMapeado.unidade_medida}
+                                        </span>
+                                      ) : (
+                                        <span>{formatCurrency(item.custo_unitario)}</span>
+                                      )}
+                                      {item.insumo_id && item.mapeado && (() => {
+                                        const insumo = insumos?.find(i => i.id === item.insumo_id);
+                                        if (!insumo || !insumo.custo_unitario || insumo.custo_unitario === 0) return null;
+                                        const variacaoCusto = ((custoConv - insumo.custo_unitario) / insumo.custo_unitario) * 100;
+                                        if (Math.abs(variacaoCusto) < 1) return null;
+                                        return (
+                                          <span className={`text-xs ${Math.abs(variacaoCusto) > 15 ? 'text-destructive font-medium' : variacaoCusto > 0 ? 'text-orange-500' : 'text-green-500'}`}>
+                                            {variacaoCusto > 0 ? '+' : ''}{variacaoCusto.toFixed(1)}%
+                                            {Math.abs(variacaoCusto) > 15 && ' ⚠️'}
+                                          </span>
+                                        );
+                                      })()}
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right font-medium">{formatCurrency(item.valor_total)}</TableCell>
+                                <TableCell className="text-center">
+                                  {possivelErroConversao ? (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Badge variant="outline" className="gap-1 border-warning text-warning cursor-help">
+                                            <AlertTriangle className="h-3 w-3" />
+                                            Verificar
+                                          </Badge>
+                                        </TooltipTrigger>
+                                        <TooltipContent className="max-w-xs">
+                                          <p className="font-medium">Possível erro de conversão</p>
+                                          <p className="text-xs mt-1">
+                                            Unidade da nota ({item.unidade}) difere do insumo ({insumoMapeado?.unidade_medida}), 
+                                            mas o fator de conversão é 1. Configure a conversão na página de Importar XML.
+                                          </p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  ) : item.mapeado ? (
+                                    <Badge variant="default" className="gap-1">
+                                      <Check className="h-3 w-3" />
+                                      Mapeado
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="destructive" className="gap-1">
+                                      <AlertCircle className="h-3 w-3" />
+                                      Não mapeado
+                                    </Badge>
+                                  )}
+                                </TableCell>
                               <TableCell>
                                 {!item.mapeado && (
                                   <div className="flex gap-1">
