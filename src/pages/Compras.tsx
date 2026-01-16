@@ -61,6 +61,8 @@ const Compras = () => {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [importTab, setImportTab] = useState('xml');
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
+  const [editingConversionIndex, setEditingConversionIndex] = useState<number | null>(null);
+  const [tempConversionFactor, setTempConversionFactor] = useState<string>('');
   const [deleteNotaId, setDeleteNotaId] = useState<string | null>(null);
   const [viewNotaId, setViewNotaId] = useState<string | null>(null);
   
@@ -1494,9 +1496,78 @@ const Compras = () => {
                                 </TableCell>
                                 <TableCell className="text-right">
                                   {item.mapeado && insumoMapeado ? (
-                                    <span className={fator !== 1 ? 'text-primary font-medium' : ''}>
-                                      {qtdConv.toFixed(2)} {insumoMapeado.unidade_medida}
-                                    </span>
+                                    editingConversionIndex === index ? (
+                                      <div className="flex items-center gap-1 justify-end">
+                                        <Input
+                                          type="number"
+                                          step="0.001"
+                                          min="0.001"
+                                          value={tempConversionFactor}
+                                          onChange={(e) => setTempConversionFactor(e.target.value)}
+                                          className="h-7 text-sm w-20 text-right"
+                                          autoFocus
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                              const newFator = parseFloat(tempConversionFactor) || 1;
+                                              const newQtdConv = item.quantidade * newFator;
+                                              const newCustoConv = newQtdConv > 0 ? item.valor_total / newQtdConv : 0;
+                                              const newItens = [...parsedNota.itens];
+                                              newItens[index] = {
+                                                ...newItens[index],
+                                                fator_conversao: newFator,
+                                                quantidade_convertida: newQtdConv,
+                                                custo_unitario_convertido: newCustoConv,
+                                              };
+                                              setParsedNota({ ...parsedNota, itens: newItens });
+                                              setEditingConversionIndex(null);
+                                              toast({ title: 'Conversão atualizada!' });
+                                            } else if (e.key === 'Escape') {
+                                              setEditingConversionIndex(null);
+                                            }
+                                          }}
+                                        />
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-6 w-6"
+                                          onClick={() => {
+                                            const newFator = parseFloat(tempConversionFactor) || 1;
+                                            const newQtdConv = item.quantidade * newFator;
+                                            const newCustoConv = newQtdConv > 0 ? item.valor_total / newQtdConv : 0;
+                                            const newItens = [...parsedNota.itens];
+                                            newItens[index] = {
+                                              ...newItens[index],
+                                              fator_conversao: newFator,
+                                              quantidade_convertida: newQtdConv,
+                                              custo_unitario_convertido: newCustoConv,
+                                            };
+                                            setParsedNota({ ...parsedNota, itens: newItens });
+                                            setEditingConversionIndex(null);
+                                            toast({ title: 'Conversão atualizada!' });
+                                          }}
+                                        >
+                                          <Check className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center gap-1 justify-end">
+                                        <span className={fator !== 1 ? 'text-primary font-medium' : ''}>
+                                          {qtdConv.toFixed(2)} {insumoMapeado.unidade_medida}
+                                        </span>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className={`h-6 w-6 ${possivelErroConversao ? 'text-warning' : ''}`}
+                                          title={`Editar conversão (fator atual: ${fator})`}
+                                          onClick={() => {
+                                            setEditingConversionIndex(index);
+                                            setTempConversionFactor(String(fator));
+                                          }}
+                                        >
+                                          <Pencil className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    )
                                   ) : (
                                     <span className="text-muted-foreground">-</span>
                                   )}
