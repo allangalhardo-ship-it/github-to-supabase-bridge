@@ -907,32 +907,32 @@ const ImportarVendasDialog: React.FC = () => {
                 )}
 
                 {photoStep === 'items' && photoImportData && (
-                  <div className="space-y-4">
-                    {/* Header info */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-muted/50 rounded-lg">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">{photoImportData.tipo === 'comanda' ? 'Comanda' : 'Relatório'}</Badge>
+                  <div className="space-y-3">
+                    {/* Header info - mais compacto */}
+                    <div className="flex flex-col gap-2 p-2 sm:p-3 bg-muted/50 rounded-lg">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant="outline" className="text-xs">{photoImportData.tipo === 'comanda' ? 'Comanda' : 'Relatório'}</Badge>
                           {photoImportData.plataforma && (
-                            <Badge variant="secondary">{photoImportData.plataforma}</Badge>
+                            <Badge variant="secondary" className="text-xs">{photoImportData.plataforma}</Badge>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          Data: {photoImportData.data} 
-                          {photoImportData.cliente && ` • Cliente: ${photoImportData.cliente}`}
-                        </p>
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground">Total da comanda</p>
+                          <p className="text-base sm:text-lg font-bold">{formatCurrency(photoImportData.total_geral)}</p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm text-muted-foreground">Total da comanda</p>
-                        <p className="text-lg font-bold">{formatCurrency(photoImportData.total_geral)}</p>
-                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Data: {photoImportData.data} 
+                        {photoImportData.cliente && ` • Cliente: ${photoImportData.cliente}`}
+                      </p>
                     </div>
 
-                    {/* Canal override */}
-                    <div className="flex items-center gap-2">
-                      <Label className="text-sm">Canal para todas:</Label>
+                    {/* Canal override - responsivo */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2">
+                      <Label className="text-xs sm:text-sm">Canal para todas:</Label>
                       <Select value={canalOverride || "__fromfile__"} onValueChange={v => setCanalOverride(v === "__fromfile__" ? "" : v)}>
-                        <SelectTrigger className="w-40">
+                        <SelectTrigger className="w-full sm:w-40 h-8 text-sm">
                           <SelectValue placeholder="Do arquivo" />
                         </SelectTrigger>
                         <SelectContent>
@@ -947,61 +947,55 @@ const ImportarVendasDialog: React.FC = () => {
                       </Select>
                     </div>
 
-                    {/* Items table */}
+                    {/* Items - Mobile cards / Desktop table */}
                     <div className="border rounded-lg">
-                      <div className="p-3 border-b bg-muted/30">
-                        <p className="font-medium">
-                          {photoImportData.itens.length} itens encontrados • 
-                          <span className="text-muted-foreground ml-1">
-                            {photoImportData.itens.filter(i => i.selected && i.produto_id).length} vinculados
-                          </span>
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Vincule cada item a um produto cadastrado para poder importar
-                        </p>
+                      <div className="p-2 sm:p-3 border-b bg-muted/30 flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium">
+                            {photoImportData.itens.length} itens encontrados • 
+                            <span className="text-muted-foreground ml-1">
+                              {photoImportData.itens.filter(i => i.selected && i.produto_id).length} vinculados
+                            </span>
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Vincule cada item a um produto cadastrado para poder importar
+                          </p>
+                        </div>
+                        <Checkbox 
+                          checked={photoImportData.itens.every(i => i.selected)}
+                          onCheckedChange={(checked) => {
+                            setPhotoImportData({
+                              ...photoImportData,
+                              itens: photoImportData.itens.map(item => ({ ...item, selected: !!checked }))
+                            });
+                          }}
+                        />
                       </div>
-                      <ScrollArea className="h-[300px] border rounded-md">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-10">
+                      <ScrollArea className="h-[250px] sm:h-[300px]">
+                        {/* Mobile: Cards layout */}
+                        <div className="sm:hidden p-2 space-y-2">
+                          {photoImportData.itens.map((item, idx) => (
+                            <div 
+                              key={idx} 
+                              className={`p-2.5 border rounded-lg bg-background ${!item.selected ? 'opacity-50' : ''}`}
+                            >
+                              <div className="flex items-start gap-2">
                                 <Checkbox 
-                                  checked={photoImportData.itens.every(i => i.selected)}
-                                  onCheckedChange={(checked) => {
-                                    setPhotoImportData({
-                                      ...photoImportData,
-                                      itens: photoImportData.itens.map(item => ({ ...item, selected: !!checked }))
-                                    });
-                                  }}
+                                  checked={item.selected}
+                                  onCheckedChange={() => handleToggleItem(idx)}
+                                  className="mt-0.5"
                                 />
-                              </TableHead>
-                              <TableHead>Item Identificado</TableHead>
-                              <TableHead className="text-center">Qtd</TableHead>
-                              <TableHead className="text-right">Valor</TableHead>
-                              <TableHead>Vincular ao Produto</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {photoImportData.itens.map((item, idx) => (
-                              <TableRow key={idx} className={!item.selected ? 'opacity-50' : ''}>
-                                <TableCell>
-                                  <Checkbox 
-                                    checked={item.selected}
-                                    onCheckedChange={() => handleToggleItem(idx)}
-                                  />
-                                </TableCell>
-                                <TableCell>
-                                  <span className="font-medium">{item.produto}</span>
-                                </TableCell>
-                                <TableCell className="text-center">{item.quantidade}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(item.valor_total)}</TableCell>
-                                <TableCell>
+                                <div className="flex-1 min-w-0 space-y-2">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="font-medium text-sm truncate">{item.produto}</span>
+                                    <span className="text-sm font-medium shrink-0">{formatCurrency(item.valor_total)}</span>
+                                  </div>
                                   <Select 
                                     value={item.produto_id || "__none__"} 
                                     onValueChange={(v) => handleLinkProduct(idx, v)}
                                     disabled={!item.selected}
                                   >
-                                    <SelectTrigger className="w-full max-w-[200px]">
+                                    <SelectTrigger className="w-full h-8 text-xs">
                                       <SelectValue placeholder="Selecionar produto" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -1011,28 +1005,89 @@ const ImportarVendasDialog: React.FC = () => {
                                       ))}
                                     </SelectContent>
                                   </Select>
-                                </TableCell>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Desktop: Table layout */}
+                        <div className="hidden sm:block">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="w-10">
+                                  <Checkbox 
+                                    checked={photoImportData.itens.every(i => i.selected)}
+                                    onCheckedChange={(checked) => {
+                                      setPhotoImportData({
+                                        ...photoImportData,
+                                        itens: photoImportData.itens.map(item => ({ ...item, selected: !!checked }))
+                                      });
+                                    }}
+                                  />
+                                </TableHead>
+                                <TableHead>Item Identificado</TableHead>
+                                <TableHead className="text-center">Qtd</TableHead>
+                                <TableHead className="text-right">Valor</TableHead>
+                                <TableHead>Vincular ao Produto</TableHead>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
+                            </TableHeader>
+                            <TableBody>
+                              {photoImportData.itens.map((item, idx) => (
+                                <TableRow key={idx} className={!item.selected ? 'opacity-50' : ''}>
+                                  <TableCell>
+                                    <Checkbox 
+                                      checked={item.selected}
+                                      onCheckedChange={() => handleToggleItem(idx)}
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <span className="font-medium">{item.produto}</span>
+                                  </TableCell>
+                                  <TableCell className="text-center">{item.quantidade}</TableCell>
+                                  <TableCell className="text-right">{formatCurrency(item.valor_total)}</TableCell>
+                                  <TableCell>
+                                    <Select 
+                                      value={item.produto_id || "__none__"} 
+                                      onValueChange={(v) => handleLinkProduct(idx, v)}
+                                      disabled={!item.selected}
+                                    >
+                                      <SelectTrigger className="w-full max-w-[200px]">
+                                        <SelectValue placeholder="Selecionar produto" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="__none__">Não vincular</SelectItem>
+                                        {produtos?.map(p => (
+                                          <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
                       </ScrollArea>
                     </div>
 
-                    {/* Summary and actions */}
-                    <div className="flex items-center justify-between pt-2 border-t">
+                    {/* Summary and actions - mais compacto mobile */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t">
                       <div className="text-sm">
                         <span className="font-medium">Total a importar: </span>
-                        <span className="text-lg font-bold text-primary">
+                        <span className="text-base sm:text-lg font-bold text-primary">
                           {formatCurrency(photoImportData.itens.filter(i => i.selected && i.produto_id).reduce((sum, i) => sum + i.valor_total, 0))}
                         </span>
-                        <span className="text-muted-foreground ml-2">
+                        <span className="text-muted-foreground text-xs sm:text-sm ml-1 sm:ml-2">
                           ({photoImportData.itens.filter(i => i.selected && i.produto_id).length} vendas)
                         </span>
                       </div>
                       <div className="flex gap-2">
                         <Button 
                           variant="outline" 
+                          size="sm"
+                          className="flex-1 sm:flex-none"
                           onClick={() => {
                             setPhotoStep('upload');
                             setPhotoImportData(null);
@@ -1041,6 +1096,8 @@ const ImportarVendasDialog: React.FC = () => {
                           Voltar
                         </Button>
                         <Button 
+                          size="sm"
+                          className="flex-1 sm:flex-none"
                           onClick={() => importPhotoItemsMutation.mutate()}
                           disabled={
                             importPhotoItemsMutation.isPending || 
