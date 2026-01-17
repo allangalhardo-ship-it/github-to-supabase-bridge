@@ -45,33 +45,23 @@ const Dashboard = () => {
 
   const { inicio, fim } = getDateRange();
 
-  // Fetch vendas do período
+  // Fetch vendas do período usando função otimizada
   const { data: vendas, isLoading: loadingVendas } = useQuery({
     queryKey: ['vendas-dashboard', usuario?.empresa_id, inicio, fim],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('vendas')
-        .select(`
-          *,
-          produtos (
-            id,
-            nome,
-            preco_venda,
-            fichas_tecnicas (
-              quantidade,
-              insumos (
-                custo_unitario
-              )
-            )
-          )
-        `)
-        .gte('data_venda', inicio)
-        .lte('data_venda', fim);
+        .rpc('get_dashboard_vendas', {
+          p_empresa_id: usuario?.empresa_id,
+          p_data_inicio: inicio,
+          p_data_fim: fim,
+        });
 
       if (error) throw error;
       return data;
     },
     enabled: !!usuario?.empresa_id,
+    staleTime: 2 * 60 * 1000, // 2 minutos - dados do dashboard podem ser ligeiramente atrasados
+    gcTime: 10 * 60 * 1000, // 10 minutos em cache
   });
 
   // Fetch custos fixos
@@ -103,94 +93,41 @@ const Dashboard = () => {
     enabled: !!usuario?.empresa_id,
   });
 
-  // Fetch insumos com estoque baixo
+  // Fetch insumos com estoque baixo usando função otimizada
   const { data: insumosAlerta } = useQuery({
     queryKey: ['insumos-alerta', usuario?.empresa_id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('insumos')
-        .select('*')
-        .filter('estoque_atual', 'lt', supabase.rpc as unknown as number);
+        .rpc('get_insumos_estoque_baixo', {
+          p_empresa_id: usuario?.empresa_id,
+        });
 
-      // Workaround: fetch all and filter client-side
-      const { data: allInsumos, error: err } = await supabase
-        .from('insumos')
-        .select('*');
-
-      if (err) throw err;
-      return allInsumos?.filter(i => Number(i.estoque_atual) <= Number(i.estoque_minimo)) || [];
+      if (error) throw error;
+      return data || [];
     },
     enabled: !!usuario?.empresa_id,
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    gcTime: 15 * 60 * 1000,
   });
 
-  // Fetch top produtos
+  // Fetch top produtos usando função otimizada
   const { data: topProdutos, isLoading: loadingTop } = useQuery({
     queryKey: ['top-produtos', usuario?.empresa_id, inicio, fim],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('vendas')
-        .select(`
-          produto_id,
-          quantidade,
-          valor_total,
-          produtos (
-            nome,
-            preco_venda,
-            fichas_tecnicas (
-              quantidade,
-              insumos (custo_unitario)
-            )
-          )
-        `)
-        .gte('data_venda', inicio)
-        .lte('data_venda', fim)
-        .not('produto_id', 'is', null);
+        .rpc('get_top_produtos', {
+          p_empresa_id: usuario?.empresa_id,
+          p_data_inicio: inicio,
+          p_data_fim: fim,
+          p_limit: 5,
+        });
 
       if (error) throw error;
-
-      // Agrupar por produto e calcular lucro
-      const grouped = (data || []).reduce((acc, venda) => {
-        if (!venda.produto_id || !venda.produtos) return acc;
-        
-        const produtoId = venda.produto_id;
-        if (!acc[produtoId]) {
-          acc[produtoId] = {
-            nome: venda.produtos.nome,
-            receita: 0,
-            custo: 0,
-            quantidade: 0,
-          };
-        }
-        
-        const valorTotal = Number(venda.valor_total);
-        const precoVendaProduto = Number(venda.produtos.preco_venda) || 0;
-        
-        // Calcula unidades reais baseado no valor
-        let unidadesReais: number;
-        if (precoVendaProduto > 0) {
-          unidadesReais = valorTotal / precoVendaProduto;
-        } else {
-          unidadesReais = Number(venda.quantidade);
-        }
-        
-        acc[produtoId].receita += valorTotal;
-        acc[produtoId].quantidade += unidadesReais;
-        
-        // Calcular custo dos insumos baseado nas unidades reais
-        const custoUnitario = (venda.produtos.fichas_tecnicas || []).reduce((sum, ft) => {
-          return sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0));
-        }, 0);
-        acc[produtoId].custo += custoUnitario * unidadesReais;
-        
-        return acc;
-      }, {} as Record<string, { nome: string; receita: number; custo: number; quantidade: number }>);
-
-      return Object.values(grouped)
-        .map(p => ({ ...p, lucro: p.receita - p.custo }))
-        .sort((a, b) => b.lucro - a.lucro)
-        .slice(0, 5);
+      return data || [];
     },
     enabled: !!usuario?.empresa_id,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   // Cálculos
@@ -223,26 +160,21 @@ const Dashboard = () => {
   }, [vendas]);
   
   // Cálculo do CMV: custo dos insumos proporcional ao valor vendido
-  // Se a venda tem valor_total e preco_venda do produto, calculamos quantas unidades reais foram vendidas
+  // Agora usando dados pré-calculados da função get_dashboard_vendas
   const cmvTotal = vendas?.reduce((sum, venda) => {
-    if (!venda.produtos?.fichas_tecnicas) return sum;
+    if (!venda.custo_insumos) return sum;
     
     // Custo de insumos para produzir 1 unidade do produto
-    const custoUnitarioProduto = venda.produtos.fichas_tecnicas.reduce((s, ft) => {
-      return s + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0));
-    }, 0);
+    const custoUnitarioProduto = Number(venda.custo_insumos) || 0;
     
     // Calculamos quantas unidades reais foram vendidas baseado no valor
-    // Se o produto tem preço, usamos: unidades = valor_total / preco_venda
-    const precoVendaProduto = Number(venda.produtos.preco_venda) || 0;
+    const precoVendaProduto = Number(venda.produto_preco_venda) || 0;
     const valorTotal = Number(venda.valor_total) || 0;
     
     let unidadesReais: number;
     if (precoVendaProduto > 0) {
-      // Calcula unidades baseado no valor da venda dividido pelo preço unitário
       unidadesReais = valorTotal / precoVendaProduto;
     } else {
-      // Fallback: usa a quantidade informada na venda
       unidadesReais = Number(venda.quantidade);
     }
     

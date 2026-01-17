@@ -1008,6 +1008,51 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_dashboard_vendas: {
+        Args: {
+          p_data_fim: string
+          p_data_inicio: string
+          p_empresa_id: string
+        }
+        Returns: {
+          canal: string
+          custo_insumos: number
+          data_venda: string
+          id: string
+          produto_id: string
+          produto_nome: string
+          produto_preco_venda: number
+          quantidade: number
+          valor_total: number
+        }[]
+      }
+      get_insumos_estoque_baixo: {
+        Args: { p_empresa_id: string }
+        Returns: {
+          custo_unitario: number
+          estoque_atual: number
+          estoque_minimo: number
+          id: string
+          nome: string
+          unidade_medida: string
+        }[]
+      }
+      get_top_produtos: {
+        Args: {
+          p_data_fim: string
+          p_data_inicio: string
+          p_empresa_id: string
+          p_limit?: number
+        }
+        Returns: {
+          custo: number
+          lucro: number
+          nome: string
+          produto_id: string
+          quantidade: number
+          receita: number
+        }[]
+      }
       get_user_empresa_id: { Args: never; Returns: string }
       has_role: {
         Args: {
