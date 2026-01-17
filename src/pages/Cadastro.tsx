@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import logoImage from '@/assets/logo.png';
@@ -111,6 +112,7 @@ const Cadastro = () => {
   const [telefone, setTelefone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [aceitoTermos, setAceitoTermos] = useState(false);
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
   const navigate = useNavigate();
@@ -179,6 +181,15 @@ const Cadastro = () => {
       toast({
         title: 'Segmento não selecionado',
         description: 'Por favor, selecione o segmento do seu negócio.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!aceitoTermos) {
+      toast({
+        title: 'Termos não aceitos',
+        description: 'Você precisa aceitar os Termos de Uso e a Política de Privacidade para continuar.',
         variant: 'destructive',
       });
       return;
@@ -306,9 +317,40 @@ const Cadastro = () => {
               />
               <p className="text-xs text-muted-foreground">Mínimo de 6 caracteres</p>
             </div>
+
+            <div className="flex items-start space-x-2">
+              <Checkbox 
+                id="termos" 
+                checked={aceitoTermos}
+                onCheckedChange={(checked) => setAceitoTermos(checked === true)}
+              />
+              <label 
+                htmlFor="termos" 
+                className="text-sm text-muted-foreground leading-tight cursor-pointer"
+              >
+                Li e aceito os{' '}
+                <Link 
+                  to="/termos-de-uso" 
+                  target="_blank"
+                  className="text-primary hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Termos de Uso
+                </Link>
+                {' '}e a{' '}
+                <Link 
+                  to="/politica-de-privacidade" 
+                  target="_blank"
+                  className="text-primary hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Política de Privacidade
+                </Link>
+              </label>
+            </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full" disabled={loading || !aceitoTermos}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Criar Conta
             </Button>
