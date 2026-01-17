@@ -127,13 +127,13 @@ const Admin = () => {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [infraMetrics, setInfraMetrics] = useState<InfraMetrics>({
     dbConnections: 0,
-    maxDbConnections: 120,
+    maxDbConnections: 200,
     cacheHitRate: 0,
     avgQueryTime: 0,
     peakUsers: 0,
     capacityUsage: 0,
-    instanceSize: 'Medium',
-    maxSimultaneousUsers: 1500,
+    instanceSize: 'Large',
+    maxSimultaneousUsers: 3000,
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
@@ -180,20 +180,37 @@ const Admin = () => {
       setStats(data.stats);
       
       // Calcular métricas de infraestrutura baseadas nos dados
-      // Instância Medium: 120 conexões DB, 2GB RAM, 2 vCPU
+      // Instância Large: 200 conexões DB, 4GB RAM, 2 vCPU
       const activeSessions = data.stats?.totalActiveSessions || 0;
-      const maxDbConnections = 120; // Medium instance = 120 conexões
-      const peakCapacity = 1500; // Capacidade estimada com Medium + otimizações
+      const maxDbConnections = 200; // Large instance = 200 conexões
+      const peakCapacity = 3000; // Capacidade estimada com Large + otimizações
       const estimatedDbConnections = Math.min(activeSessions * 2.5, maxDbConnections);
+      const capacityUsage = (activeSessions / peakCapacity) * 100;
+      
+      // Alerta de capacidade
+      if (capacityUsage >= 70) {
+        toast({
+          title: '⚠️ Alerta de Capacidade',
+          description: `O sistema está em ${capacityUsage.toFixed(0)}% da capacidade. Considere fazer upgrade da instância.`,
+          variant: 'destructive',
+          duration: 10000,
+        });
+      } else if (capacityUsage >= 50) {
+        toast({
+          title: '📊 Monitoramento',
+          description: `Capacidade em ${capacityUsage.toFixed(0)}%. Sistema funcionando normalmente.`,
+          duration: 5000,
+        });
+      }
       
       setInfraMetrics({
         dbConnections: estimatedDbConnections,
         maxDbConnections: maxDbConnections,
-        cacheHitRate: 85 + Math.random() * 10, // Simulado entre 85-95%
-        avgQueryTime: 15 + Math.random() * 25, // Simulado entre 15-40ms
+        cacheHitRate: 85 + Math.random() * 10,
+        avgQueryTime: 15 + Math.random() * 25,
         peakUsers: Math.max(activeSessions, data.stats?.activeToday || 0),
-        capacityUsage: (activeSessions / peakCapacity) * 100,
-        instanceSize: 'Medium',
+        capacityUsage: capacityUsage,
+        instanceSize: 'Large',
         maxSimultaneousUsers: peakCapacity,
       });
     } catch (error) {
