@@ -529,6 +529,56 @@ const Admin = () => {
                   Connection Pooling Auto
                 </Badge>
               </div>
+
+              {/* Emergency Upgrade Button */}
+              <div className="mt-4 pt-4 border-t border-dashed border-red-200">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-lg border border-red-200">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-red-100 rounded-full">
+                      <AlertTriangle className="h-5 w-5 text-red-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-red-800">Upgrade de Emergência</h4>
+                      <p className="text-sm text-red-600">
+                        Se o sistema estiver lento, faça upgrade da instância (~10 min para aplicar)
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="destructive"
+                    className="bg-red-600 hover:bg-red-700 whitespace-nowrap"
+                    onClick={() => {
+                      toast({
+                        title: '🚀 Abrindo Cloud Settings',
+                        description: 'Clique no ícone ☁️ Cloud no menu superior → Advanced → Selecione uma instância maior',
+                        duration: 10000,
+                      });
+                      // Tentar abrir a view do Cloud
+                      window.dispatchEvent(new CustomEvent('open-cloud-view'));
+                    }}
+                  >
+                    <Server className="h-4 w-4 mr-2" />
+                    Fazer Upgrade Agora
+                  </Button>
+                </div>
+                
+                {/* Capacity Warning */}
+                {infraMetrics.capacityUsage >= 50 && (
+                  <div className={`mt-3 p-3 rounded-lg flex items-center gap-2 ${
+                    infraMetrics.capacityUsage >= 70 
+                      ? 'bg-red-100 text-red-800 border border-red-300' 
+                      : 'bg-yellow-100 text-yellow-800 border border-yellow-300'
+                  }`}>
+                    <AlertTriangle className="h-4 w-4" />
+                    <span className="text-sm font-medium">
+                      {infraMetrics.capacityUsage >= 70 
+                        ? `⚠️ ATENÇÃO: Sistema em ${infraMetrics.capacityUsage.toFixed(0)}% da capacidade! Faça upgrade agora.`
+                        : `📊 Capacidade em ${infraMetrics.capacityUsage.toFixed(0)}%. Monitore de perto.`
+                      }
+                    </span>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </>
