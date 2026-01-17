@@ -95,7 +95,7 @@ EXEMPLOS DE ITENS A EXTRAIR:
   }
 
   const responseText = await response.text();
-  console.log("AI raw response text length:", responseText.length);
+  console.log("AI raw response text:", responseText);
   
   if (!responseText || responseText.trim() === '') {
     console.error("AI returned empty response");
@@ -106,11 +106,22 @@ EXEMPLOS DE ITENS A EXTRAIR:
   try {
     data = JSON.parse(responseText);
   } catch (parseError) {
-    console.error("Failed to parse AI response as JSON:", parseError, "Response:", responseText.substring(0, 500));
+    console.error("Failed to parse AI response as JSON:", parseError, "Response:", responseText);
     throw new Error("Invalid JSON response from AI");
   }
 
+  // Check if the AI returned an error
+  if (data.error) {
+    console.error("AI returned error:", data.error);
+    throw new Error(`AI error: ${data.error.message || JSON.stringify(data.error)}`);
+  }
+
   const content = data.choices?.[0]?.message?.content || '';
+  
+  if (!content) {
+    console.error("AI returned no content in choices:", JSON.stringify(data));
+    throw new Error("AI returned no content");
+  }
   
   console.log("AI content:", content.substring(0, 500));
   
