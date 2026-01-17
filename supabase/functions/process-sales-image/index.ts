@@ -7,18 +7,19 @@ const corsHeaders = {
 };
 
 interface SaleItem {
-  data: string;
-  valor: number;
-  canal: string;
-  status: string;
-  descricao: string;
+  produto: string;
+  quantidade: number;
+  valor_unitario: number;
+  valor_total: number;
 }
 
 interface SalesData {
+  tipo: 'comanda' | 'relatorio';
   plataforma: string;
-  periodo: string;
+  data: string;
+  cliente: string | null;
+  total_geral: number;
   itens: SaleItem[];
-  totalVendas: number;
 }
 
 // Process image with AI to extract sales data
@@ -27,6 +28,8 @@ async function processImageWithAI(imageBase64: string): Promise<SalesData | null
   if (!LOVABLE_API_KEY) {
     throw new Error("LOVABLE_API_KEY not configured");
   }
+
+  const currentDate = new Date().toISOString().split('T')[0];
 
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -39,37 +42,45 @@ async function processImageWithAI(imageBase64: string): Promise<SalesData | null
       messages: [
         {
           role: "system",
-          content: `Você é um extrator de dados de relatórios de vendas de plataformas de delivery (iFood, Rappi, 99Food, Uber Eats, etc) e prints de pedidos.
-Extraia os dados da imagem e retorne APENAS um JSON válido no seguinte formato:
+          content: `Você é um extrator de dados de comandas, cupons fiscais, recibos e relatórios de vendas.
+
+Analise a imagem e extraia TODOS OS ITENS INDIVIDUAIS vendidos.
+
+Retorne APENAS um JSON válido no seguinte formato:
 {
-  "plataforma": "nome da plataforma identificada (iFood, Rappi, etc)",
-  "periodo": "período do relatório se identificável",
-  "totalVendas": 0,
+  "tipo": "comanda",
+  "plataforma": "nome da plataforma ou estabelecimento",
+  "data": "${currentDate}",
+  "cliente": "nome do cliente se identificável ou null",
+  "total_geral": 194.50,
   "itens": [
     {
-      "data": "YYYY-MM-DD",
-      "valor": 25.90,
-      "canal": "iFood",
-      "status": "Concluído",
-      "descricao": "ID do pedido ou descrição"
+      "produto": "Nome do Produto",
+      "quantidade": 1,
+      "valor_unitario": 29.60,
+      "valor_total": 29.60
     }
   ]
 }
 
-REGRAS IMPORTANTES:
-- Extraia TODAS as vendas/pedidos visíveis na imagem
-- Para datas, converta para formato YYYY-MM-DD. Se só tiver dia/mês, use o ano atual
-- Para valores, extraia o valor líquido (após taxas) se disponível, senão o valor total
-- Para status, identifique se o pedido foi Concluído/Entregue ou Cancelado
-- Só inclua vendas com status Concluído/Entregue/Finalizado
-- Para o canal, identifique a plataforma (iFood, Rappi, 99Food, Uber Eats, etc)
-- Se não conseguir ler algum campo, use string vazia ou 0
-- Retorne APENAS o JSON, sem explicações ou markdown`
+REGRAS CRÍTICAS:
+1. Extraia CADA ITEM INDIVIDUALMENTE - se há 7 "Copo da Felicidade", liste 7 itens separados OU 1 item com quantidade 7
+2. Para cada item, identifique: nome do produto, quantidade, valor unitário e valor total
+3. Se o item aparecer múltiplas vezes com (1) antes, trate cada linha como 1 unidade
+4. Use a data de hoje (${currentDate}) se não houver data visível
+5. O tipo é "comanda" para cupons/comandas e "relatorio" para relatórios de apps
+6. Identifique o nome do cliente se visível
+7. NÃO agrupe itens iguais - cada linha de produto deve ser um item separado
+8. Retorne APENAS o JSON, sem explicações, sem markdown, sem \`\`\`
+
+EXEMPLOS DE ITENS A EXTRAIR:
+- "(1) Copo da Felicidade Mulan (300ml) R$ 29,60" → { "produto": "Copo da Felicidade Mulan (300ml)", "quantidade": 1, "valor_unitario": 29.60, "valor_total": 29.60 }
+- "2x Pizza Margherita R$ 50,00" → { "produto": "Pizza Margherita", "quantidade": 2, "valor_unitario": 25.00, "valor_total": 50.00 }`
         },
         {
           role: "user",
           content: [
-            { type: "text", text: "Extraia os dados de vendas desta imagem de relatório/print de pedidos:" },
+            { type: "text", text: "Extraia TODOS os itens individuais desta comanda/cupom/relatório. Liste cada produto separadamente:" },
             { type: "image_url", image_url: { url: imageBase64 } }
           ]
         }
@@ -86,14 +97,20 @@ REGRAS IMPORTANTES:
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content || '';
   
+  console.log("AI raw response:", content);
+  
   // Try to extract JSON from the response
   try {
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    // Remove markdown code blocks if present
+    let cleanContent = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+    const jsonMatch = cleanContent.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]) as SalesData;
+      const parsed = JSON.parse(jsonMatch[0]) as SalesData;
+      console.log("Parsed data:", JSON.stringify(parsed, null, 2));
+      return parsed;
     }
   } catch (e) {
-    console.error("Failed to parse AI response:", e);
+    console.error("Failed to parse AI response:", e, "Content:", content);
   }
   
   return null;
@@ -151,14 +168,16 @@ serve(async (req) => {
       );
     }
 
+    console.log("Processing image...");
     const parsedData = await processImageWithAI(content);
+    console.log("Parsed result:", parsedData);
     
     if (parsedData && parsedData.itens && parsedData.itens.length > 0) {
       return new Response(
         JSON.stringify({ 
           success: true, 
           data: parsedData,
-          message: `${parsedData.itens.length} vendas encontradas.`
+          message: `${parsedData.itens.length} itens encontrados.`
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -166,7 +185,8 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          message: "Não foi possível extrair dados de vendas da imagem. Certifique-se de que é uma imagem clara de um relatório de vendas ou print de pedidos." 
+          data: parsedData,
+          message: "Não foi possível extrair itens da imagem. Certifique-se de que é uma imagem clara de uma comanda, cupom ou relatório de vendas." 
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

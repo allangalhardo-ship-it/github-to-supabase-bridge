@@ -28,6 +28,25 @@ interface ParsedRow {
   isDuplicate?: boolean;
 }
 
+// Interface para itens extraídos de foto/comanda
+interface ParsedItem {
+  produto: string;
+  quantidade: number;
+  valor_unitario: number;
+  valor_total: number;
+  produto_id?: string; // ID do produto vinculado
+  selected: boolean;
+}
+
+interface PhotoImportData {
+  tipo: 'comanda' | 'relatorio';
+  plataforma: string;
+  data: string;
+  cliente: string | null;
+  total_geral: number;
+  itens: ParsedItem[];
+}
+
 interface ColumnMapping {
   data: string;
   valor: string;
@@ -95,6 +114,23 @@ const ImportarVendasDialog: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const [photoImportData, setPhotoImportData] = useState<PhotoImportData | null>(null);
+  const [photoStep, setPhotoStep] = useState<'upload' | 'items' | 'importing'>('upload');
+
+  // Fetch produtos para vincular
+  const { data: produtos } = useQuery({
+    queryKey: ['produtos', usuario?.empresa_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('produtos')
+        .select('id, nome, preco_venda')
+        .eq('ativo', true)
+        .order('nome');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!usuario?.empresa_id && open,
+  });
 
   // Fetch apps cadastrados
   const { data: taxasApps } = useQuery({
@@ -125,6 +161,8 @@ const ImportarVendasDialog: React.FC = () => {
     setFilePreview(null);
     setSelectedFile(null);
     setIsProcessingAI(false);
+    setPhotoImportData(null);
+    setPhotoStep('upload');
     if (imageInputRef.current) {
       imageInputRef.current.value = '';
     }
@@ -173,37 +211,35 @@ const ImportarVendasDialog: React.FC = () => {
       if (error) throw error;
 
       if (data.success && data.data?.itens?.length > 0) {
-        // Converter para o formato ParsedRow
-        const rows: ParsedRow[] = data.data.itens.map((item: any) => ({
-          data: item.data || '',
-          valor: parseFloat(item.valor) || 0,
-          canal: item.canal || data.data.plataforma || '',
-          status: item.status || 'Concluído',
-          descricao: item.descricao || '',
-          selected: (item.data || '') !== '' && (parseFloat(item.valor) || 0) > 0,
-          raw: item,
-          isDuplicate: false,
+        // Converter para o formato PhotoImportData com itens selecionáveis
+        const itens: ParsedItem[] = data.data.itens.map((item: any) => ({
+          produto: item.produto || '',
+          quantidade: item.quantidade || 1,
+          valor_unitario: item.valor_unitario || 0,
+          valor_total: item.valor_total || 0,
+          produto_id: undefined, // Será vinculado pelo usuário
+          selected: true,
         }));
 
-        // Verificar duplicatas
-        const checkedRows = await checkDuplicates(rows);
-        setParsedRows(checkedRows);
-        setFileName(`Foto: ${data.data.plataforma || 'Relatório de Vendas'}`);
+        setPhotoImportData({
+          tipo: data.data.tipo || 'comanda',
+          plataforma: data.data.plataforma || '',
+          data: data.data.data || new Date().toISOString().split('T')[0],
+          cliente: data.data.cliente || null,
+          total_geral: data.data.total_geral || 0,
+          itens,
+        });
         
-        if (data.data.plataforma) {
-          setCanalOverride(data.data.plataforma);
-        }
-        
-        setStep('preview');
+        setPhotoStep('items');
         toast({ 
           title: 'Imagem processada!', 
-          description: `${rows.length} vendas encontradas.` 
+          description: `${itens.length} itens encontrados. Vincule com seus produtos para importar.` 
         });
         clearFilePreview();
       } else {
         toast({
           title: 'Erro ao processar imagem',
-          description: data.message || 'Não foi possível extrair dados de vendas.',
+          description: data.message || 'Não foi possível extrair itens da imagem.',
           variant: 'destructive',
         });
       }
@@ -218,6 +254,75 @@ const ImportarVendasDialog: React.FC = () => {
       setIsProcessingAI(false);
     }
   };
+
+  // Vincular item com produto
+  const handleLinkProduct = (itemIndex: number, produtoId: string) => {
+    if (!photoImportData) return;
+    
+    setPhotoImportData({
+      ...photoImportData,
+      itens: photoImportData.itens.map((item, idx) => 
+        idx === itemIndex 
+          ? { ...item, produto_id: produtoId === '__none__' ? undefined : produtoId }
+          : item
+      ),
+    });
+  };
+
+  // Toggle seleção de item
+  const handleToggleItem = (itemIndex: number) => {
+    if (!photoImportData) return;
+    
+    setPhotoImportData({
+      ...photoImportData,
+      itens: photoImportData.itens.map((item, idx) => 
+        idx === itemIndex 
+          ? { ...item, selected: !item.selected }
+          : item
+      ),
+    });
+  };
+
+  // Importar itens vinculados
+  const importPhotoItemsMutation = useMutation({
+    mutationFn: async () => {
+      if (!photoImportData || !usuario?.empresa_id) {
+        throw new Error('Dados inválidos');
+      }
+
+      const selectedItems = photoImportData.itens.filter(i => i.selected && i.produto_id);
+      if (selectedItems.length === 0) {
+        throw new Error('Nenhum item vinculado a produto para importar');
+      }
+
+      const vendas = selectedItems.map(item => ({
+        empresa_id: usuario.empresa_id,
+        data_venda: photoImportData.data,
+        valor_total: item.valor_total,
+        canal: canalOverride || photoImportData.plataforma || 'Venda Direta',
+        descricao_produto: item.produto,
+        quantidade: item.quantidade,
+        origem: 'importacao_foto',
+        tipo_venda: photoImportData.tipo === 'comanda' ? 'direta' : 'app',
+        produto_id: item.produto_id,
+        cliente_id: null,
+      }));
+
+      const { error } = await supabase.from('vendas').insert(vendas);
+      if (error) throw error;
+      
+      return selectedItems.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['vendas'] });
+      toast({ title: `${count} vendas importadas com sucesso!` });
+      setOpen(false);
+      resetState();
+    },
+    onError: (error) => {
+      toast({ title: 'Erro na importação', description: error.message, variant: 'destructive' });
+    },
+  });
 
   // Verificar duplicatas no banco de dados
   const checkDuplicates = async (rows: ParsedRow[]) => {
@@ -553,13 +658,13 @@ const ImportarVendasDialog: React.FC = () => {
               </TabsContent>
 
               <TabsContent value="foto" className="mt-4 space-y-4">
-                {!filePreview ? (
+                {photoStep === 'upload' && !filePreview && (
                   <div className="space-y-4">
                     <div className="border-2 border-dashed rounded-lg p-8 text-center">
                       <Camera className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                       <p className="text-lg font-medium mb-2">Tire uma foto ou selecione uma imagem</p>
                       <p className="text-sm text-muted-foreground mb-4">
-                        A IA extrairá automaticamente os dados de vendas da imagem
+                        A IA extrairá automaticamente os itens da comanda/cupom
                       </p>
                       
                       <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto">
@@ -685,14 +790,16 @@ const ImportarVendasDialog: React.FC = () => {
                         Dicas para melhores resultados:
                       </h4>
                       <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
-                        <li>Tire uma foto clara do relatório de vendas ou print de pedidos</li>
-                        <li>Certifique-se de que todos os dados estão legíveis</li>
+                        <li>Tire uma foto clara da comanda, cupom ou relatório</li>
+                        <li>Certifique-se de que todos os itens estão legíveis</li>
                         <li>Evite reflexos ou áreas escuras na imagem</li>
-                        <li>Funciona com prints do iFood, Rappi, 99Food, etc</li>
+                        <li>Os itens serão identificados e você poderá vincular aos produtos cadastrados</li>
                       </ul>
                     </div>
                   </div>
-                ) : (
+                )}
+                
+                {photoStep === 'upload' && filePreview && (
                   <div className="space-y-4">
                     {/* Preview */}
                     <div className="border rounded-lg overflow-hidden bg-muted/50 max-w-2xl mx-auto">
@@ -734,6 +841,155 @@ const ImportarVendasDialog: React.FC = () => {
                       >
                         Trocar imagem
                       </Button>
+                    </div>
+                  </div>
+                )}
+
+                {photoStep === 'items' && photoImportData && (
+                  <div className="space-y-4">
+                    {/* Header info */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-muted/50 rounded-lg">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">{photoImportData.tipo === 'comanda' ? 'Comanda' : 'Relatório'}</Badge>
+                          {photoImportData.plataforma && (
+                            <Badge variant="secondary">{photoImportData.plataforma}</Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Data: {photoImportData.data} 
+                          {photoImportData.cliente && ` • Cliente: ${photoImportData.cliente}`}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground">Total da comanda</p>
+                        <p className="text-lg font-bold">{formatCurrency(photoImportData.total_geral)}</p>
+                      </div>
+                    </div>
+
+                    {/* Canal override */}
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm">Canal para todas:</Label>
+                      <Select value={canalOverride || "__fromfile__"} onValueChange={v => setCanalOverride(v === "__fromfile__" ? "" : v)}>
+                        <SelectTrigger className="w-40">
+                          <SelectValue placeholder="Do arquivo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__fromfile__">Do arquivo</SelectItem>
+                          {taxasApps?.map(app => (
+                            <SelectItem key={app.nome_app} value={app.nome_app}>{app.nome_app}</SelectItem>
+                          ))}
+                          <SelectItem value="Venda Direta">Venda Direta</SelectItem>
+                          <SelectItem value="iFood">iFood</SelectItem>
+                          <SelectItem value="Rappi">Rappi</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Items table */}
+                    <div className="border rounded-lg">
+                      <div className="p-3 border-b bg-muted/30">
+                        <p className="font-medium">
+                          {photoImportData.itens.length} itens encontrados • 
+                          <span className="text-muted-foreground ml-1">
+                            {photoImportData.itens.filter(i => i.selected && i.produto_id).length} vinculados
+                          </span>
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Vincule cada item a um produto cadastrado para poder importar
+                        </p>
+                      </div>
+                      <ScrollArea className="max-h-64">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-10">
+                                <Checkbox 
+                                  checked={photoImportData.itens.every(i => i.selected)}
+                                  onCheckedChange={(checked) => {
+                                    setPhotoImportData({
+                                      ...photoImportData,
+                                      itens: photoImportData.itens.map(item => ({ ...item, selected: !!checked }))
+                                    });
+                                  }}
+                                />
+                              </TableHead>
+                              <TableHead>Item Identificado</TableHead>
+                              <TableHead className="text-center">Qtd</TableHead>
+                              <TableHead className="text-right">Valor</TableHead>
+                              <TableHead>Vincular ao Produto</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {photoImportData.itens.map((item, idx) => (
+                              <TableRow key={idx} className={!item.selected ? 'opacity-50' : ''}>
+                                <TableCell>
+                                  <Checkbox 
+                                    checked={item.selected}
+                                    onCheckedChange={() => handleToggleItem(idx)}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <span className="font-medium">{item.produto}</span>
+                                </TableCell>
+                                <TableCell className="text-center">{item.quantidade}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(item.valor_total)}</TableCell>
+                                <TableCell>
+                                  <Select 
+                                    value={item.produto_id || "__none__"} 
+                                    onValueChange={(v) => handleLinkProduct(idx, v)}
+                                    disabled={!item.selected}
+                                  >
+                                    <SelectTrigger className="w-full max-w-[200px]">
+                                      <SelectValue placeholder="Selecionar produto" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="__none__">Não vincular</SelectItem>
+                                      {produtos?.map(p => (
+                                        <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </ScrollArea>
+                    </div>
+
+                    {/* Summary and actions */}
+                    <div className="flex items-center justify-between pt-2 border-t">
+                      <div className="text-sm">
+                        <span className="font-medium">Total a importar: </span>
+                        <span className="text-lg font-bold text-primary">
+                          {formatCurrency(photoImportData.itens.filter(i => i.selected && i.produto_id).reduce((sum, i) => sum + i.valor_total, 0))}
+                        </span>
+                        <span className="text-muted-foreground ml-2">
+                          ({photoImportData.itens.filter(i => i.selected && i.produto_id).length} vendas)
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          onClick={() => {
+                            setPhotoStep('upload');
+                            setPhotoImportData(null);
+                          }}
+                        >
+                          Voltar
+                        </Button>
+                        <Button 
+                          onClick={() => importPhotoItemsMutation.mutate()}
+                          disabled={
+                            importPhotoItemsMutation.isPending || 
+                            photoImportData.itens.filter(i => i.selected && i.produto_id).length === 0
+                          }
+                        >
+                          {importPhotoItemsMutation.isPending ? 'Importando...' : 
+                            `Importar ${photoImportData.itens.filter(i => i.selected && i.produto_id).length} vendas`}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 )}
