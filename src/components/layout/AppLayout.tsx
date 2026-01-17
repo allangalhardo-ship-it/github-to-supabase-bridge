@@ -26,6 +26,9 @@ import {
   Factory,
   Wallet,
   Shield,
+  HelpCircle,
+  Info,
+  MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -43,6 +46,12 @@ const navItems = [
   { to: '/custos-fixos', icon: Calculator, label: 'Custos Fixos' },
   { to: '/configuracoes', icon: SlidersHorizontal, label: 'Configurações' },
   { to: '/meus-dados', icon: Users, label: 'Meus Dados' },
+];
+
+const helpItems = [
+  { to: '/sobre', icon: Info, label: 'Sobre' },
+  { to: '/faq', icon: HelpCircle, label: 'FAQ' },
+  { to: '/contato', icon: MessageSquare, label: 'Contato' },
 ];
 
 const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAdmin: boolean }) => {
@@ -92,6 +101,33 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
             </NavLink>
           ))}
         </nav>
+
+        {/* Seção de Ajuda */}
+        <div className="px-3 mt-4 pt-4 border-t border-sidebar-border/50">
+          <p className="px-3 text-xs font-medium text-sidebar-foreground/50 uppercase tracking-wider mb-2">
+            Ajuda
+          </p>
+          <nav className="space-y-1">
+            {helpItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={onNavigate}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                      : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                  )
+                }
+              >
+                <item.icon className="h-4 w-4" />
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
+        </div>
       </ScrollArea>
 
       {/* Footer com logout */}
