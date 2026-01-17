@@ -90,14 +90,29 @@ EXEMPLOS DE ITENS A EXTRAIR:
 
   if (!response.ok) {
     const error = await response.text();
-    console.error("AI API error:", error);
-    throw new Error("Failed to process image with AI");
+    console.error("AI API error:", response.status, error);
+    throw new Error(`Failed to process image with AI: ${response.status}`);
   }
 
-  const data = await response.json();
+  const responseText = await response.text();
+  console.log("AI raw response text length:", responseText.length);
+  
+  if (!responseText || responseText.trim() === '') {
+    console.error("AI returned empty response");
+    throw new Error("AI returned empty response");
+  }
+
+  let data;
+  try {
+    data = JSON.parse(responseText);
+  } catch (parseError) {
+    console.error("Failed to parse AI response as JSON:", parseError, "Response:", responseText.substring(0, 500));
+    throw new Error("Invalid JSON response from AI");
+  }
+
   const content = data.choices?.[0]?.message?.content || '';
   
-  console.log("AI raw response:", content);
+  console.log("AI content:", content.substring(0, 500));
   
   // Try to extract JSON from the response
   try {
@@ -142,10 +157,10 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     
-    if (claimsError || !claimsData?.claims) {
+    if (userError || !user) {
+      console.error("Auth error:", userError);
       return new Response(
         JSON.stringify({ success: false, message: 'Token inválido ou expirado.' }),
         { 
