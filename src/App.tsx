@@ -30,6 +30,9 @@ import MeusDados from "@/pages/MeusDados";
 import NotFound from "@/pages/NotFound";
 import TermosDeUso from "@/pages/TermosDeUso";
 import PoliticaPrivacidade from "@/pages/PoliticaPrivacidade";
+import Sobre from "@/pages/Sobre";
+import Contato from "@/pages/Contato";
+import FAQ from "@/pages/FAQ";
 
 // Componente para exibir o banner de atualização
 const PWAUpdateBanner = () => {
@@ -98,6 +101,9 @@ const AppRoutes = () => {
       <Route path="/cadastro" element={<PublicRoute><Cadastro /></PublicRoute>} />
       <Route path="/termos-de-uso" element={<TermosDeUso />} />
       <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
+      <Route path="/sobre" element={<Sobre />} />
+      <Route path="/contato" element={<Contato />} />
+      <Route path="/faq" element={<FAQ />} />
       
       {/* Página de assinatura - acessível para usuários logados, mesmo sem assinatura */}
       <Route path="/assinatura" element={<ProtectedRoute><Assinatura /></ProtectedRoute>} />
