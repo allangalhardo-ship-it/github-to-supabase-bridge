@@ -168,6 +168,57 @@ const ImportarVendasDialog: React.FC = () => {
     }
   };
 
+  // Função para calcular similaridade de strings (Levenshtein simplificado)
+  const calculateSimilarity = (str1: string, str2: string): number => {
+    const s1 = str1.toLowerCase().trim();
+    const s2 = str2.toLowerCase().trim();
+    
+    if (s1 === s2) return 1;
+    if (s1.length === 0 || s2.length === 0) return 0;
+    
+    // Verificar se uma string contém a outra
+    if (s1.includes(s2) || s2.includes(s1)) {
+      const minLen = Math.min(s1.length, s2.length);
+      const maxLen = Math.max(s1.length, s2.length);
+      return minLen / maxLen;
+    }
+    
+    // Verificar palavras em comum
+    const words1 = s1.split(/\s+/);
+    const words2 = s2.split(/\s+/);
+    let matchingWords = 0;
+    
+    for (const w1 of words1) {
+      if (w1.length < 3) continue; // Ignorar palavras muito curtas
+      for (const w2 of words2) {
+        if (w2.length < 3) continue;
+        if (w1.includes(w2) || w2.includes(w1)) {
+          matchingWords++;
+          break;
+        }
+      }
+    }
+    
+    const totalWords = Math.max(words1.filter(w => w.length >= 3).length, 1);
+    return matchingWords / totalWords;
+  };
+
+  // Encontrar melhor produto correspondente
+  const findBestMatchingProduct = (itemName: string): string | undefined => {
+    if (!produtos || produtos.length === 0) return undefined;
+    
+    let bestMatch: { id: string; score: number } | null = null;
+    
+    for (const produto of produtos) {
+      const score = calculateSimilarity(itemName, produto.nome);
+      if (score >= 0.5 && (!bestMatch || score > bestMatch.score)) {
+        bestMatch = { id: produto.id, score };
+      }
+    }
+    
+    return bestMatch?.id;
+  };
+
   // Funções para importação por foto
   const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -212,14 +263,22 @@ const ImportarVendasDialog: React.FC = () => {
 
       if (data.success && data.data?.itens?.length > 0) {
         // Converter para o formato PhotoImportData com itens selecionáveis
-        const itens: ParsedItem[] = data.data.itens.map((item: any) => ({
-          produto: item.produto || '',
-          quantidade: item.quantidade || 1,
-          valor_unitario: item.valor_unitario || 0,
-          valor_total: item.valor_total || 0,
-          produto_id: undefined, // Será vinculado pelo usuário
-          selected: true,
-        }));
+        // e tentar auto-vincular com produtos existentes
+        const itens: ParsedItem[] = data.data.itens.map((item: any) => {
+          const itemName = item.produto || '';
+          const autoMatchedProductId = findBestMatchingProduct(itemName);
+          
+          return {
+            produto: itemName,
+            quantidade: item.quantidade || 1,
+            valor_unitario: item.valor_unitario || 0,
+            valor_total: item.valor_total || 0,
+            produto_id: autoMatchedProductId, // Auto-vinculado baseado em similaridade
+            selected: true,
+          };
+        });
+
+        const autoLinkedCount = itens.filter(i => i.produto_id).length;
 
         setPhotoImportData({
           tipo: data.data.tipo || 'comanda',
@@ -233,7 +292,9 @@ const ImportarVendasDialog: React.FC = () => {
         setPhotoStep('items');
         toast({ 
           title: 'Imagem processada!', 
-          description: `${itens.length} itens encontrados. Vincule com seus produtos para importar.` 
+          description: autoLinkedCount > 0 
+            ? `${itens.length} itens encontrados. ${autoLinkedCount} vinculado${autoLinkedCount > 1 ? 's' : ''} automaticamente!`
+            : `${itens.length} itens encontrados. Vincule com seus produtos para importar.` 
         });
         clearFilePreview();
       } else {
