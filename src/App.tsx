@@ -1,11 +1,12 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
+import { queryClient } from "@/lib/queryConfig";
 import AppLayout from "@/components/layout/AppLayout";
 import PaywallGuard from "@/components/subscription/PaywallGuard";
 import UpdateBanner, { useUpdateBanner } from "@/components/pwa/UpdateBanner";
@@ -48,15 +49,6 @@ const OfflineSyncProvider = ({ children }: { children: React.ReactNode }) => {
   useOfflineSync();
   return <>{children}</>;
 };
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      retry: 1,
-    },
-  },
-});
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
