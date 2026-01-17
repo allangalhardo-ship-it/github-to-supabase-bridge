@@ -109,10 +109,13 @@ interface AdminStats {
 
 interface InfraMetrics {
   dbConnections: number;
+  maxDbConnections: number;
   cacheHitRate: number;
   avgQueryTime: number;
   peakUsers: number;
   capacityUsage: number;
+  instanceSize: string;
+  maxSimultaneousUsers: number;
 }
 
 const Admin = () => {
@@ -124,10 +127,13 @@ const Admin = () => {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [infraMetrics, setInfraMetrics] = useState<InfraMetrics>({
     dbConnections: 0,
+    maxDbConnections: 120,
     cacheHitRate: 0,
     avgQueryTime: 0,
     peakUsers: 0,
     capacityUsage: 0,
+    instanceSize: 'Medium',
+    maxSimultaneousUsers: 1500,
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
@@ -174,15 +180,21 @@ const Admin = () => {
       setStats(data.stats);
       
       // Calcular métricas de infraestrutura baseadas nos dados
+      // Instância Medium: 120 conexões DB, 2GB RAM, 2 vCPU
       const activeSessions = data.stats?.totalActiveSessions || 0;
-      const peakCapacity = 1000; // Capacidade estimada após otimizações
+      const maxDbConnections = 120; // Medium instance = 120 conexões
+      const peakCapacity = 1500; // Capacidade estimada com Medium + otimizações
+      const estimatedDbConnections = Math.min(activeSessions * 2.5, maxDbConnections);
       
       setInfraMetrics({
-        dbConnections: Math.min(activeSessions * 2, 60), // ~2 conexões por sessão, max 60
+        dbConnections: estimatedDbConnections,
+        maxDbConnections: maxDbConnections,
         cacheHitRate: 85 + Math.random() * 10, // Simulado entre 85-95%
         avgQueryTime: 15 + Math.random() * 25, // Simulado entre 15-40ms
         peakUsers: Math.max(activeSessions, data.stats?.activeToday || 0),
         capacityUsage: (activeSessions / peakCapacity) * 100,
+        instanceSize: 'Medium',
+        maxSimultaneousUsers: peakCapacity,
       });
     } catch (error) {
       console.error('Error fetching admin data:', error);
@@ -393,9 +405,12 @@ const Admin = () => {
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Server className="h-5 w-5 text-primary" />
                 Monitoramento de Infraestrutura
+                <Badge className="ml-2 bg-blue-100 text-blue-700 border-blue-300">
+                  {infraMetrics.instanceSize}
+                </Badge>
               </CardTitle>
               <CardDescription>
-                Capacidade estimada: ~1000 usuários simultâneos após otimizações
+                Capacidade: ~{infraMetrics.maxSimultaneousUsers.toLocaleString()} usuários simultâneos | {infraMetrics.maxDbConnections} conexões DB
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -432,8 +447,8 @@ const Admin = () => {
                     Conexões DB
                   </div>
                   <p className="text-xl font-bold mt-1">
-                    {infraMetrics.dbConnections}
-                    <span className="text-xs text-muted-foreground font-normal">/60</span>
+                    {Math.round(infraMetrics.dbConnections)}
+                    <span className="text-xs text-muted-foreground font-normal">/{infraMetrics.maxDbConnections}</span>
                   </p>
                 </div>
 
