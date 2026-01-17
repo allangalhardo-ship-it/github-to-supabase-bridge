@@ -780,12 +780,12 @@ const ImportarVendasDialog: React.FC = () => {
               
               <div className="space-y-2">
                 <Label>Canal/Plataforma</Label>
-                <Select value={mapping.canal} onValueChange={v => setMapping(m => ({ ...m, canal: v }))}>
+                <Select value={mapping.canal || "__none__"} onValueChange={v => setMapping(m => ({ ...m, canal: v === "__none__" ? "" : v }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Opcional" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Não usar</SelectItem>
+                    <SelectItem value="__none__">Não usar</SelectItem>
                     {headers.map(h => (
                       <SelectItem key={h} value={h}>{h}</SelectItem>
                     ))}
@@ -795,12 +795,12 @@ const ImportarVendasDialog: React.FC = () => {
               
               <div className="space-y-2">
                 <Label>Status</Label>
-                <Select value={mapping.status} onValueChange={v => setMapping(m => ({ ...m, status: v }))}>
+                <Select value={mapping.status || "__none__"} onValueChange={v => setMapping(m => ({ ...m, status: v === "__none__" ? "" : v }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Opcional" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Não usar</SelectItem>
+                    <SelectItem value="__none__">Não usar</SelectItem>
                     {headers.map(h => (
                       <SelectItem key={h} value={h}>{h}</SelectItem>
                     ))}
@@ -841,12 +841,12 @@ const ImportarVendasDialog: React.FC = () => {
               </div>
               <div className="flex items-center gap-2">
                 <Label className="text-sm">Canal para todas:</Label>
-                <Select value={canalOverride} onValueChange={setCanalOverride}>
+                <Select value={canalOverride || "__fromfile__"} onValueChange={v => setCanalOverride(v === "__fromfile__" ? "" : v)}>
                   <SelectTrigger className="w-32">
                     <SelectValue placeholder="Do arquivo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Do arquivo</SelectItem>
+                    <SelectItem value="__fromfile__">Do arquivo</SelectItem>
                     {taxasApps?.map(app => (
                       <SelectItem key={app.nome_app} value={app.nome_app}>{app.nome_app}</SelectItem>
                     ))}
