@@ -899,7 +899,7 @@ const ImportarVendasDialog: React.FC = () => {
                           Vincule cada item a um produto cadastrado para poder importar
                         </p>
                       </div>
-                      <ScrollArea className="max-h-64">
+                      <ScrollArea className="h-[300px] border rounded-md">
                         <Table>
                           <TableHeader>
                             <TableRow>
