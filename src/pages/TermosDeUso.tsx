@@ -6,8 +6,8 @@ const TermosDeUso = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container max-w-4xl mx-auto px-4 py-8">
+    <div className="fixed inset-0 overflow-y-auto bg-background">
+      <div className="container max-w-4xl mx-auto px-4 py-8 pb-16">
         <Button 
           variant="ghost" 
           onClick={() => navigate(-1)}
