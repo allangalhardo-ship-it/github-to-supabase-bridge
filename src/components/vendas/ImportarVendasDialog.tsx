@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,9 +11,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, X, AlertTriangle } from 'lucide-react';
+import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, X, AlertTriangle, Camera, ImageIcon, Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
 
 interface ParsedRow {
   data: string;
@@ -86,6 +88,13 @@ const ImportarVendasDialog: React.FC = () => {
   const [canalOverride, setCanalOverride] = useState('');
   const [duplicateCount, setDuplicateCount] = useState(0);
   const [checkingDuplicates, setCheckingDuplicates] = useState(false);
+  
+  // Estados para importação por foto
+  const [importMethod, setImportMethod] = useState<'csv' | 'foto'>('csv');
+  const [filePreview, setFilePreview] = useState<{ url: string; name: string } | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isProcessingAI, setIsProcessingAI] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch apps cadastrados
   const { data: taxasApps } = useQuery({
@@ -112,6 +121,102 @@ const ImportarVendasDialog: React.FC = () => {
     setCanalOverride('');
     setDuplicateCount(0);
     setCheckingDuplicates(false);
+    setImportMethod('csv');
+    setFilePreview(null);
+    setSelectedFile(null);
+    setIsProcessingAI(false);
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
+    }
+  };
+
+  // Funções para importação por foto
+  const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setSelectedFile(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFilePreview({ url: reader.result as string, name: file.name });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const clearFilePreview = () => {
+    setFilePreview(null);
+    setSelectedFile(null);
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
+    }
+  };
+
+  const processImageWithAI = async () => {
+    if (!selectedFile && !filePreview) return;
+
+    setIsProcessingAI(true);
+    try {
+      let base64 = filePreview?.url;
+      
+      if (selectedFile && !base64) {
+        base64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(selectedFile);
+        });
+      }
+
+      const { data, error } = await supabase.functions.invoke('process-sales-image', {
+        body: { content: base64 }
+      });
+
+      if (error) throw error;
+
+      if (data.success && data.data?.itens?.length > 0) {
+        // Converter para o formato ParsedRow
+        const rows: ParsedRow[] = data.data.itens.map((item: any) => ({
+          data: item.data || '',
+          valor: parseFloat(item.valor) || 0,
+          canal: item.canal || data.data.plataforma || '',
+          status: item.status || 'Concluído',
+          descricao: item.descricao || '',
+          selected: (item.data || '') !== '' && (parseFloat(item.valor) || 0) > 0,
+          raw: item,
+          isDuplicate: false,
+        }));
+
+        // Verificar duplicatas
+        const checkedRows = await checkDuplicates(rows);
+        setParsedRows(checkedRows);
+        setFileName(`Foto: ${data.data.plataforma || 'Relatório de Vendas'}`);
+        
+        if (data.data.plataforma) {
+          setCanalOverride(data.data.plataforma);
+        }
+        
+        setStep('preview');
+        toast({ 
+          title: 'Imagem processada!', 
+          description: `${rows.length} vendas encontradas.` 
+        });
+        clearFilePreview();
+      } else {
+        toast({
+          title: 'Erro ao processar imagem',
+          description: data.message || 'Não foi possível extrair dados de vendas.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error processing image:', error);
+      toast({
+        title: 'Erro',
+        description: 'Falha ao processar imagem com IA.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsProcessingAI(false);
+    }
   };
 
   // Verificar duplicatas no banco de dados
@@ -406,32 +511,234 @@ const ImportarVendasDialog: React.FC = () => {
 
         {step === 'upload' && (
           <div className="space-y-4 py-4">
-            <div className="border-2 border-dashed rounded-lg p-8 text-center">
-              <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-lg font-medium mb-2">Arraste ou selecione um arquivo</p>
-              <p className="text-sm text-muted-foreground mb-4">
-                Suporta arquivos Excel (.xlsx, .xls) e CSV do iFood, Rappi, 99Food e outros
-              </p>
-              <Input
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                onChange={handleFileChange}
-                className="max-w-xs mx-auto"
-              />
-            </div>
-            <div className="bg-muted/50 rounded-lg p-4">
-              <h4 className="font-medium mb-2 flex items-center gap-2">
-                <AlertCircle className="h-4 w-4" />
-                Como exportar do iFood:
-              </h4>
-              <ol className="text-sm text-muted-foreground list-decimal list-inside space-y-1">
-                <li>Acesse o Portal do Parceiro iFood</li>
-                <li>Vá em Pedidos no menu lateral</li>
-                <li>Selecione o período desejado</li>
-                <li>Clique em "Exportar" → "Gerar Relatório"</li>
-                <li>O arquivo XLS será enviado para seu e-mail</li>
-              </ol>
-            </div>
+            <Tabs value={importMethod} onValueChange={(v) => setImportMethod(v as 'csv' | 'foto')} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="csv" className="flex items-center gap-2">
+                  <FileSpreadsheet className="h-4 w-4" />
+                  CSV/Excel
+                </TabsTrigger>
+                <TabsTrigger value="foto" className="flex items-center gap-2">
+                  <Camera className="h-4 w-4" />
+                  Foto
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="csv" className="mt-4 space-y-4">
+                <div className="border-2 border-dashed rounded-lg p-8 text-center">
+                  <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-lg font-medium mb-2">Arraste ou selecione um arquivo</p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Suporta arquivos Excel (.xlsx, .xls) e CSV do iFood, Rappi, 99Food e outros
+                  </p>
+                  <Input
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={handleFileChange}
+                    className="max-w-xs mx-auto"
+                  />
+                </div>
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <h4 className="font-medium mb-2 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    Como exportar do iFood:
+                  </h4>
+                  <ol className="text-sm text-muted-foreground list-decimal list-inside space-y-1">
+                    <li>Acesse o Portal do Parceiro iFood</li>
+                    <li>Vá em Pedidos no menu lateral</li>
+                    <li>Selecione o período desejado</li>
+                    <li>Clique em "Exportar" → "Gerar Relatório"</li>
+                    <li>O arquivo XLS será enviado para seu e-mail</li>
+                  </ol>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="foto" className="mt-4 space-y-4">
+                {!filePreview ? (
+                  <div className="space-y-4">
+                    <div className="border-2 border-dashed rounded-lg p-8 text-center">
+                      <Camera className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-lg font-medium mb-2">Tire uma foto ou selecione uma imagem</p>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        A IA extrairá automaticamente os dados de vendas da imagem
+                      </p>
+                      
+                      <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto">
+                        {isNativePlatform() ? (
+                          <>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="flex-1"
+                              disabled={isProcessingAI}
+                              onClick={async () => {
+                                try {
+                                  const base64 = await takePictureNative();
+                                  if (base64) {
+                                    setFilePreview({ url: base64, name: 'camera-photo.jpg' });
+                                    const blob = await fetch(base64).then(r => r.blob());
+                                    const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+                                    setSelectedFile(file);
+                                  }
+                                } catch (error: any) {
+                                  if (error.message !== 'User cancelled photos app') {
+                                    toast({
+                                      title: 'Erro',
+                                      description: 'Não foi possível acessar a câmera.',
+                                      variant: 'destructive',
+                                    });
+                                  }
+                                }
+                              }}
+                            >
+                              <Camera className="h-4 w-4 mr-2" />
+                              Tirar Foto
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="flex-1"
+                              disabled={isProcessingAI}
+                              onClick={async () => {
+                                try {
+                                  const base64 = await pickImageNative();
+                                  if (base64) {
+                                    setFilePreview({ url: base64, name: 'gallery-photo.jpg' });
+                                    const blob = await fetch(base64).then(r => r.blob());
+                                    const file = new File([blob], 'gallery-photo.jpg', { type: 'image/jpeg' });
+                                    setSelectedFile(file);
+                                  }
+                                } catch (error: any) {
+                                  if (error.message !== 'User cancelled photos app') {
+                                    toast({
+                                      title: 'Erro',
+                                      description: 'Não foi possível acessar a galeria.',
+                                      variant: 'destructive',
+                                    });
+                                  }
+                                }
+                              }}
+                            >
+                              <ImageIcon className="h-4 w-4 mr-2" />
+                              Galeria
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              capture="environment"
+                              onChange={handleImageFileSelect}
+                              disabled={isProcessingAI}
+                              className="hidden"
+                              id="camera-input-sales"
+                            />
+                            <label htmlFor="camera-input-sales" className="flex-1">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full cursor-pointer"
+                                disabled={isProcessingAI}
+                                asChild
+                              >
+                                <span>
+                                  <Camera className="h-4 w-4 mr-2" />
+                                  Tirar Foto
+                                </span>
+                              </Button>
+                            </label>
+                            <input
+                              ref={imageInputRef}
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageFileSelect}
+                              disabled={isProcessingAI}
+                              className="hidden"
+                              id="file-input-sales"
+                            />
+                            <label htmlFor="file-input-sales" className="flex-1">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full cursor-pointer"
+                                disabled={isProcessingAI}
+                                asChild
+                              >
+                                <span>
+                                  <Upload className="h-4 w-4 mr-2" />
+                                  Escolher Imagem
+                                </span>
+                              </Button>
+                            </label>
+                          </>
+                        )}
+                      </div>
+                      
+                      <p className="text-xs text-muted-foreground mt-4">
+                        Formatos aceitos: JPG, PNG, WEBP
+                      </p>
+                    </div>
+                    
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <h4 className="font-medium mb-2 flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4" />
+                        Dicas para melhores resultados:
+                      </h4>
+                      <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
+                        <li>Tire uma foto clara do relatório de vendas ou print de pedidos</li>
+                        <li>Certifique-se de que todos os dados estão legíveis</li>
+                        <li>Evite reflexos ou áreas escuras na imagem</li>
+                        <li>Funciona com prints do iFood, Rappi, 99Food, etc</li>
+                      </ul>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Preview */}
+                    <div className="border rounded-lg overflow-hidden bg-muted/50 max-w-2xl mx-auto">
+                      <img 
+                        src={filePreview.url} 
+                        alt="Preview" 
+                        className="max-h-64 w-auto mx-auto object-contain"
+                      />
+                      <div className="p-2 bg-muted flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground truncate max-w-xs">
+                          {filePreview.name}
+                        </span>
+                        <Badge variant="outline">Imagem</Badge>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-center gap-3">
+                      <Button
+                        onClick={processImageWithAI}
+                        disabled={isProcessingAI}
+                      >
+                        {isProcessingAI ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Processando com IA...
+                          </>
+                        ) : (
+                          <>
+                            <Camera className="h-4 w-4 mr-2" />
+                            Processar com IA
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={clearFilePreview}
+                        disabled={isProcessingAI}
+                      >
+                        Trocar imagem
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </div>
         )}
 
