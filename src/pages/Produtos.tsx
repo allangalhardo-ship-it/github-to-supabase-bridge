@@ -484,19 +484,6 @@ const Produtos = () => {
         </Dialog>
       </div>
 
-      {Number(config?.margem_desejada_padrao) >= 100 && (
-        <Alert className="border-warning/50">
-          <AlertTriangle className="h-4 w-4 text-warning" />
-          <AlertTitle>Margem desejada inválida</AlertTitle>
-          <AlertDescription>
-            <p>
-              Para calcular o <strong>Preço Sugerido</strong> e liberar o botão <strong>Aplicar</strong>, defina uma margem
-              menor que 100% em <strong>Configurações</strong>.
-            </p>
-          </AlertDescription>
-        </Alert>
-      )}
-
       {/* Filtros */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
