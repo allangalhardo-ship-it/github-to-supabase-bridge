@@ -168,6 +168,28 @@ const Produtos = () => {
     },
   });
 
+  // Mutation para aplicar preço sugerido
+  const applyPriceMutation = useMutation({
+    mutationFn: async ({ id, novoPreco }: { id: string; novoPreco: number }) => {
+      const { error } = await supabase
+        .from('produtos')
+        .update({ preco_venda: novoPreco })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['produtos'] });
+      toast({ title: 'Preço atualizado!', description: 'O preço sugerido foi aplicado com sucesso.' });
+    },
+    onError: (error) => {
+      toast({ title: 'Erro ao atualizar preço', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const handleApplyPrice = (produtoId: string, novoPreco: number) => {
+    applyPriceMutation.mutate({ id: produtoId, novoPreco });
+  };
+
   const handleDeleteClick = (id: string) => {
     setItemToDelete(id);
     setDeleteConfirmOpen(true);
@@ -511,6 +533,8 @@ const Produtos = () => {
               config={config}
               onEdit={() => handleEdit(produto)}
               onDelete={() => handleDeleteClick(produto.id)}
+              onApplyPrice={handleApplyPrice}
+              isApplyingPrice={applyPriceMutation.isPending}
             />
           ))}
         </div>
