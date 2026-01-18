@@ -80,18 +80,19 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const cmvAtual = precoVenda > 0 ? (custoInsumos / precoVenda) * 100 : 0;
 
   const cmvAlvo = Number(config?.cmv_alvo ?? 35);
-  const markupAlvo = Number(config?.margem_desejada_padrao ?? 100);
+  const margemDesejada = Number(config?.margem_desejada_padrao ?? 30);
 
-  // Markup atual: quanto % acima do custo está o preço de venda
-  const markupAtual = custoInsumos > 0 ? ((precoVenda - custoInsumos) / custoInsumos) * 100 : 0;
+  // Margem bruta atual: quanto % do preço é lucro bruto (antes de custos fixos/impostos)
+  const margemBruta = precoVenda > 0 ? ((precoVenda - custoInsumos) / precoVenda) * 100 : 0;
 
-  // Calcula preço sugerido com base no markup desejado
-  // Fórmula: Preço Sugerido = Custo × (1 + Markup%)
+  // Calcula preço sugerido com base na margem desejada
+  // Fórmula simplificada: Preço = Custo / (1 - Margem%)
+  // Nota: A precificação completa (com impostos, custos fixos) está na página de Precificação
   const precoSugerido = React.useMemo(() => {
     if (custoInsumos <= 0) return 0;
-    if (!Number.isFinite(markupAlvo) || markupAlvo < 0) return custoInsumos;
-    return custoInsumos * (1 + markupAlvo / 100);
-  }, [custoInsumos, markupAlvo]);
+    if (!Number.isFinite(margemDesejada) || margemDesejada < 0 || margemDesejada >= 100) return custoInsumos;
+    return custoInsumos / (1 - margemDesejada / 100);
+  }, [custoInsumos, margemDesejada]);
 
   const precoSugeridoValido = Number.isFinite(precoSugerido) && precoSugerido > 0;
   const precoAbaixoSugerido = precoSugeridoValido && precoVenda < precoSugerido;
@@ -101,17 +102,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   const lucroTextClass = lucro >= 0 ? "text-success" : "text-destructive";
   
-  const markupTextClass =
-    markupAtual < 0
+  const margemTextClass =
+    margemBruta < 0
       ? "text-destructive"
-      : markupAtual >= markupAlvo
+      : margemBruta >= margemDesejada
         ? "text-success"
         : "text-warning";
 
-  const markupBarClass =
-    markupAtual < 0
+  const margemBarClass =
+    margemBruta < 0
       ? "bg-destructive"
-      : markupAtual >= markupAlvo
+      : margemBruta >= margemDesejada
         ? "bg-success"
         : "bg-warning";
 
@@ -173,8 +174,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 <span className={`${lucroTextClass} font-medium`}>
                   Lucro: <span className="font-bold">{formatCurrency(lucro)}</span>
                 </span>
-                <span className={`${markupTextClass} font-medium`}>
-                  Markup: <span className="font-bold">{markupAtual.toFixed(0)}%</span>
+                <span className={`${margemTextClass} font-medium`}>
+                  Margem: <span className="font-bold">{margemBruta.toFixed(0)}%</span>
                 </span>
                 {temFichaTecnica && precoSugeridoValido && (
                   <span className={precoAbaixoSugerido ? "text-warning" : "text-muted-foreground"}>
@@ -274,8 +275,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 <span className={`font-bold text-sm ${lucroTextClass}`}>{formatCurrency(lucro)}</span>
               </div>
               <div>
-                <span className="text-muted-foreground">Markup </span>
-                <span className={`font-bold text-sm ${markupTextClass}`}>{markupAtual.toFixed(1)}%</span>
+                <span className="text-muted-foreground">Margem </span>
+                <span className={`font-bold text-sm ${margemTextClass}`}>{margemBruta.toFixed(1)}%</span>
               </div>
               {temFichaTecnica && precoSugeridoValido && (
                 <div className="flex items-center gap-1.5">
@@ -365,13 +366,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <div className="mt-2 grid grid-cols-2 gap-3">
               <div>
                 <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
-                  <span>Markup</span>
-                  <span>Meta {markupAlvo}%</span>
+                  <span>Margem Bruta</span>
+                  <span>Meta {margemDesejada}%</span>
                 </div>
                 <div className="h-1 bg-muted rounded-full overflow-hidden">
                   <div
-                    className={`h-full ${markupBarClass}`}
-                    style={{ width: `${Math.min(Math.max((markupAtual / Math.max(markupAlvo, 1)) * 100, 0), 100)}%` }}
+                    className={`h-full ${margemBarClass}`}
+                    style={{ width: `${Math.min(Math.max((margemBruta / Math.max(margemDesejada, 1)) * 100, 0), 100)}%` }}
                   />
                 </div>
               </div>
