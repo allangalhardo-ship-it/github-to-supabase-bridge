@@ -80,24 +80,25 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const margemPercent = precoVenda > 0 ? (lucro / precoVenda) * 100 : 0;
   const cmvAtual = precoVenda > 0 ? (custoInsumos / precoVenda) * 100 : 0;
 
-  const cmvAlvo = config?.cmv_alvo ?? 35;
-  const margemAlvo = config?.margem_desejada_padrao ?? 30;
+  const cmvAlvo = Number(config?.cmv_alvo ?? 35);
+  const margemAlvo = Number(config?.margem_desejada_padrao ?? 30);
+
+  const margemAlvoInvalida = !Number.isFinite(margemAlvo) || margemAlvo >= 100;
 
   // Calcula preço sugerido com base na margem desejada
   // Fórmula: Preço Sugerido = Custo / (1 - Margem%)
   const precoSugerido = React.useMemo(() => {
-    if (custoInsumos <= 0 || margemAlvo >= 100) return 0;
+    if (custoInsumos <= 0) return 0;
+    if (!Number.isFinite(margemAlvo) || margemAlvo <= 0) return custoInsumos;
+    if (margemAlvo >= 100) return NaN;
     return custoInsumos / (1 - margemAlvo / 100);
   }, [custoInsumos, margemAlvo]);
 
-  const diferencaPreco = precoVenda - precoSugerido;
-  const precoAbaixoSugerido = precoSugerido > 0 && precoVenda < precoSugerido;
+  const precoSugeridoValido = Number.isFinite(precoSugerido) && precoSugerido > 0;
+  const precoAbaixoSugerido = precoSugeridoValido && precoVenda < precoSugerido;
 
   const temFichaTecnica = (produto.fichas_tecnicas?.length || 0) > 0;
   const qtdInsumos = produto.fichas_tecnicas?.length || 0;
-  
-  // Debug logs
-  console.log(`[${produto.nome}] custoInsumos: ${custoInsumos}, margemAlvo: ${margemAlvo}, precoSugerido: ${precoSugerido}, temFicha: ${temFichaTecnica}`);
 
   const lucroTextClass = lucro >= 0 ? "text-success" : "text-destructive";
   const margemTextClass =
@@ -175,9 +176,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 <span className={`${margemTextClass} font-medium`}>
                   Margem: <span className="font-bold">{margemPercent.toFixed(0)}%</span>
                 </span>
-                {temFichaTecnica && precoSugerido > 0 && (
+                {temFichaTecnica && precoSugeridoValido && (
                   <span className={precoAbaixoSugerido ? "text-warning" : "text-muted-foreground"}>
                     Sugerido: <span className="font-medium">{formatCurrency(precoSugerido)}</span>
+                  </span>
+                )}
+                {temFichaTecnica && !precoSugeridoValido && margemAlvoInvalida && (
+                  <span className="text-warning">
+                    Sugerido: <span className="font-medium">ajuste a margem ({'<' } 100%) em Configurações</span>
                   </span>
                 )}
                 {produto.rendimento_padrao && produto.rendimento_padrao > 0 && (
@@ -276,7 +282,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 <span className="text-muted-foreground">Margem </span>
                 <span className={`font-bold text-sm ${margemTextClass}`}>{margemPercent.toFixed(1)}%</span>
               </div>
-              {temFichaTecnica && precoSugerido > 0 && (
+              {temFichaTecnica && precoSugeridoValido && (
                 <div className="flex items-center gap-1.5">
                   <span className="text-muted-foreground">Sugerido </span>
                   <span className={`font-bold text-sm ${precoAbaixoSugerido ? "text-warning" : "text-success"}`}>
@@ -301,6 +307,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
                       </TooltipContent>
                     </Tooltip>
                   )}
+                </div>
+              )}
+              {temFichaTecnica && !precoSugeridoValido && margemAlvoInvalida && (
+                <div className="text-warning">
+                  <span className="text-muted-foreground">Sugerido </span>
+                  <span className="font-semibold">ajuste a margem ({'<' } 100%) em Configurações</span>
                 </div>
               )}
               {produto.rendimento_padrao && produto.rendimento_padrao > 0 && (

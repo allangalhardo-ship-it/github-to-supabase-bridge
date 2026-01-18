@@ -11,8 +11,9 @@ import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Package, Search, Filter, X, Upload, ImageIcon, Loader2 } from 'lucide-react';
+import { Plus, Package, Search, Filter, X, Upload, ImageIcon, Loader2, AlertTriangle } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import ProductCard from '@/components/produtos/ProductCard';
 import ImportProdutosDialog from '@/components/import/ImportProdutosDialog';
 import ImportFichaTecnicaDialog from '@/components/import/ImportFichaTecnicaDialog';
@@ -482,6 +483,19 @@ const Produtos = () => {
           </DialogContent>
         </Dialog>
       </div>
+
+      {Number(config?.margem_desejada_padrao) >= 100 && (
+        <Alert className="border-warning/50">
+          <AlertTriangle className="h-4 w-4 text-warning" />
+          <AlertTitle>Margem desejada inválida</AlertTitle>
+          <AlertDescription>
+            <p>
+              Para calcular o <strong>Preço Sugerido</strong> e liberar o botão <strong>Aplicar</strong>, defina uma margem
+              menor que 100% em <strong>Configurações</strong>.
+            </p>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Filtros */}
       <div className="flex flex-col sm:flex-row gap-3">
