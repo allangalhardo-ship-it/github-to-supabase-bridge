@@ -375,6 +375,57 @@ export type Database = {
           },
         ]
       }
+      historico_precos_produtos: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          observacao: string | null
+          origem: string
+          preco_anterior: number | null
+          preco_novo: number
+          produto_id: string
+          variacao_percentual: number | null
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id?: string
+          observacao?: string | null
+          origem?: string
+          preco_anterior?: number | null
+          preco_novo: number
+          produto_id: string
+          variacao_percentual?: number | null
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          observacao?: string | null
+          origem?: string
+          preco_anterior?: number | null
+          preco_novo?: number
+          produto_id?: string
+          variacao_percentual?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historico_precos_produtos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_precos_produtos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_templates: {
         Row: {
           created_at: string
