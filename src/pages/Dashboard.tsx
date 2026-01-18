@@ -384,7 +384,7 @@ const Dashboard = () => {
 
         <Card className="p-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
-            <CardTitle className="text-sm sm:text-base font-medium">Margem de Contribuição</CardTitle>
+            <CardTitle className="text-sm sm:text-base font-medium">Lucro Bruto</CardTitle>
             <div className="h-10 w-10 sm:h-8 sm:w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
               <TrendingUp className="h-5 w-5 sm:h-4 sm:w-4 text-blue-600" />
             </div>
@@ -396,7 +396,7 @@ const Dashboard = () => {
               <>
                 <div className="text-2xl sm:text-2xl font-bold">{formatCurrency(margemContribuicao)}</div>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                  {receitaBruta > 0 ? ((margemContribuicao / receitaBruta) * 100).toFixed(1) : 0}% da receita
+                  Receita - CMV ({receitaBruta > 0 ? ((margemContribuicao / receitaBruta) * 100).toFixed(1) : 0}%)
                 </p>
               </>
             )}
