@@ -282,17 +282,18 @@ const ProductCard: React.FC<ProductCardProps> = ({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-5 w-5 text-primary hover:text-primary"
+                          variant="outline" 
+                          size="sm" 
+                          className="h-5 px-1.5 text-[10px] gap-0.5 text-primary border-primary hover:bg-primary/10"
                           onClick={() => onApplyPrice(produto.id, precoSugerido)}
                           disabled={isApplyingPrice}
                         >
                           <Zap className="h-3 w-3" />
+                          Aplicar
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Aplicar preço sugerido</p>
+                        <p>Aplicar preço sugerido de {formatCurrency(precoSugerido)}</p>
                       </TooltipContent>
                     </Tooltip>
                   )}
