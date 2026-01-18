@@ -398,7 +398,20 @@ const CustosFixos = () => {
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                  {faturamento === 0 && (
+                  {faturamento === 0 && totalMensal > 0 && (
+                    <div className="space-y-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                      <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                        💡 Para seus custos fixos ficarem saudáveis (até 20%):
+                      </p>
+                      <p className="text-lg font-bold text-amber-600">
+                        Fature pelo menos {formatCurrency(totalMensal / 0.20)}/mês
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Clique acima para informar seu faturamento atual
+                      </p>
+                    </div>
+                  )}
+                  {faturamento === 0 && totalMensal === 0 && (
                     <p className="text-sm text-muted-foreground">
                       Clique para informar seu faturamento mensal
                     </p>

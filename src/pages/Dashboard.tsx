@@ -14,9 +14,6 @@ import {
   Package,
   AlertTriangle,
   Receipt,
-  Wallet,
-  CheckCircle2,
-  AlertCircle,
 } from 'lucide-react';
 import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysInMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -188,22 +185,6 @@ const Dashboard = () => {
   const faturamentoMensal = config?.faturamento_mensal || 0;
   const percentualCustoFixo = faturamentoMensal > 0 ? (custoFixoMensal / faturamentoMensal) * 100 : 0;
 
-  const getHealthStatus = () => {
-    if (faturamentoMensal === 0) {
-      return { label: 'Configure', color: 'text-muted-foreground', bgColor: 'bg-muted', icon: AlertCircle, status: 'neutral' };
-    }
-    if (percentualCustoFixo <= 20) {
-      return { label: 'Saudável', color: 'text-green-600', bgColor: 'bg-green-100 dark:bg-green-950/30', icon: CheckCircle2, status: 'healthy' };
-    }
-    if (percentualCustoFixo <= 25) {
-      return { label: 'Atenção', color: 'text-yellow-600', bgColor: 'bg-yellow-100 dark:bg-yellow-950/30', icon: AlertTriangle, status: 'warning' };
-    }
-    return { label: 'Alarmante', color: 'text-red-600', bgColor: 'bg-red-100 dark:bg-red-950/30', icon: AlertTriangle, status: 'danger' };
-  };
-
-  const healthStatus = getHealthStatus();
-  const HealthIcon = healthStatus.icon;
-  
   // Calcular custo fixo proporcional baseado no percentual sobre faturamento
   // REGRA: Se não há receita no período, não há custo fixo proporcional a deduzir
   const calcularCustoFixoProporcional = () => {
@@ -431,59 +412,76 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Indicador Custos Fixos */}
+      {/* Meta de Faturamento */}
       <Card className="animate-fade-in">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Wallet className="h-5 w-5" />
-            Saúde dos Custos Fixos
+            <TrendingUp className="h-5 w-5" />
+            Meta de Faturamento
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            <div className="flex-1">
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <p className="text-sm text-muted-foreground">Custos Fixos Mensais</p>
-                  <p className="text-xl font-bold">{formatCurrency(custoFixoMensal)}</p>
+          {(() => {
+            // Faturamento necessário para custos fixos = 20% (saudável)
+            const faturamentoNecessario = custoFixoMensal / 0.20;
+            const faltaParaMeta = faturamentoNecessario - receitaBruta;
+            const progressoMeta = faturamentoNecessario > 0 ? Math.min((receitaBruta / faturamentoNecessario) * 100, 100) : 0;
+            
+            // Status baseado no progresso
+            const getMetaStatus = () => {
+              if (custoFixoMensal === 0) {
+                return { label: 'Sem custos', color: 'text-muted-foreground', bgColor: 'bg-muted' };
+              }
+              if (receitaBruta >= faturamentoNecessario) {
+                return { label: 'Meta atingida! 🎉', color: 'text-green-600', bgColor: 'bg-green-100 dark:bg-green-950/30' };
+              }
+              if (progressoMeta >= 80) {
+                return { label: 'Quase lá!', color: 'text-yellow-600', bgColor: 'bg-yellow-100 dark:bg-yellow-950/30' };
+              }
+              return { label: 'Em progresso', color: 'text-muted-foreground', bgColor: 'bg-muted' };
+            };
+            
+            const metaStatus = getMetaStatus();
+            
+            return (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Meta mensal mínima</p>
+                    <p className="text-xl font-bold">{formatCurrency(faturamentoNecessario)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Para custos fixos ≤ 20% do faturamento
+                    </p>
+                  </div>
+                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${metaStatus.bgColor}`}>
+                    <span className={`text-sm font-medium ${metaStatus.color}`}>
+                      {metaStatus.label}
+                    </span>
+                  </div>
                 </div>
-                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${healthStatus.bgColor}`}>
-                  <HealthIcon className={`h-4 w-4 ${healthStatus.color}`} />
-                  <span className={`text-sm font-medium ${healthStatus.color}`}>
-                    {healthStatus.label}
-                  </span>
+                
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Progresso no período</span>
+                    <span className="font-medium">{progressoMeta.toFixed(0)}%</span>
+                  </div>
+                  <Progress value={progressoMeta} className="h-2" />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Faturado: {formatCurrency(receitaBruta)}</span>
+                    {faltaParaMeta > 0 ? (
+                      <span className="text-amber-600 font-medium">
+                        Falta: {formatCurrency(faltaParaMeta)}
+                      </span>
+                    ) : (
+                      <span className="text-green-600 font-medium">
+                        +{formatCurrency(Math.abs(faltaParaMeta))} acima
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-              
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">
-                    {faturamentoMensal > 0 
-                      ? `${percentualCustoFixo.toFixed(1)}% do faturamento (${formatCurrency(faturamentoMensal)})`
-                      : 'Informe o faturamento em Custos Fixos'}
-                  </span>
-                </div>
-                <div className="relative h-2 w-full rounded-full bg-muted overflow-hidden">
-                  <div 
-                    className={`absolute left-0 top-0 h-full transition-all duration-500 ${
-                      faturamentoMensal === 0 ? 'bg-muted' :
-                      percentualCustoFixo <= 20 ? 'bg-green-500' :
-                      percentualCustoFixo <= 25 ? 'bg-yellow-500' : 'bg-red-500'
-                    }`}
-                    style={{ width: `${Math.min(percentualCustoFixo, 100)}%` }}
-                  />
-                  <div className="absolute left-[20%] top-0 h-full w-px bg-green-600/50" />
-                  <div className="absolute left-[25%] top-0 h-full w-px bg-red-600/50" />
-                </div>
-                <div className="flex justify-between text-[10px] text-muted-foreground">
-                  <span>0%</span>
-                  <span className="text-green-600">20%</span>
-                  <span className="text-red-600">25%</span>
-                  <span>50%+</span>
-                </div>
-              </div>
-            </div>
-          </div>
+            );
+          })()}
         </CardContent>
       </Card>
 
