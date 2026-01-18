@@ -67,11 +67,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   const custoInsumos = React.useMemo(() => {
     if (!produto.fichas_tecnicas || produto.fichas_tecnicas.length === 0) return 0;
-    return produto.fichas_tecnicas.reduce((sum, ft) => {
+    const custo = produto.fichas_tecnicas.reduce((sum, ft) => {
       const quantidade = Number(ft.quantidade) || 0;
       const custoUnitario = Number(ft.insumos?.custo_unitario) || 0;
       return sum + quantidade * custoUnitario;
     }, 0);
+    return custo;
   }, [produto.fichas_tecnicas]);
 
   const precoVenda = Number(produto.preco_venda) || 0;
@@ -94,6 +95,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   const temFichaTecnica = (produto.fichas_tecnicas?.length || 0) > 0;
   const qtdInsumos = produto.fichas_tecnicas?.length || 0;
+  
+  // Debug logs
+  console.log(`[${produto.nome}] custoInsumos: ${custoInsumos}, margemAlvo: ${margemAlvo}, precoSugerido: ${precoSugerido}, temFicha: ${temFichaTecnica}`);
 
   const lucroTextClass = lucro >= 0 ? "text-success" : "text-destructive";
   const margemTextClass =
