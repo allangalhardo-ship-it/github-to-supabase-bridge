@@ -10,7 +10,11 @@ import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { 
   AlertTriangle, 
   TrendingUp, 
@@ -20,10 +24,10 @@ import {
   CheckCircle2, 
   Calculator,
   Percent,
+  Search,
+  History,
   ArrowRight,
-  RefreshCw,
-  Filter,
-  Search
+  Clock
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -50,6 +54,20 @@ interface Config {
   cmv_alvo: number;
 }
 
+interface HistoricoPreco {
+  id: string;
+  produto_id: string;
+  preco_anterior: number | null;
+  preco_novo: number;
+  variacao_percentual: number | null;
+  origem: string;
+  observacao: string | null;
+  created_at: string;
+  produtos?: {
+    nome: string;
+  };
+}
+
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -68,6 +86,8 @@ const Precificacao = () => {
   const [produtoSimulador, setProdutoSimulador] = useState<Produto | null>(null);
   const [markupSimulado, setMarkupSimulado] = useState<number>(100);
   const [precosEditados, setPrecosEditados] = useState<Record<string, string>>({});
+  const [historicoDialogOpen, setHistoricoDialogOpen] = useState(false);
+  const [produtoHistoricoId, setProdutoHistoricoId] = useState<string | null>(null);
 
   // Buscar produtos com ficha técnica
   const { data: produtos, isLoading: loadingProdutos } = useQuery({
@@ -118,19 +138,86 @@ const Precificacao = () => {
     enabled: !!usuario?.empresa_id,
   });
 
-  // Mutation para atualizar preço
+  // Buscar histórico geral (últimas 50 alterações)
+  const { data: historicoGeral } = useQuery({
+    queryKey: ['historico-precos-produtos', usuario?.empresa_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('historico_precos_produtos')
+        .select(`
+          id,
+          produto_id,
+          preco_anterior,
+          preco_novo,
+          variacao_percentual,
+          origem,
+          observacao,
+          created_at,
+          produtos (nome)
+        `)
+        .eq('empresa_id', usuario?.empresa_id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      
+      if (error) throw error;
+      return data as HistoricoPreco[];
+    },
+    enabled: !!usuario?.empresa_id,
+  });
+
+  // Buscar histórico de um produto específico
+  const { data: historicoProduto } = useQuery({
+    queryKey: ['historico-precos-produto', produtoHistoricoId],
+    queryFn: async () => {
+      if (!produtoHistoricoId) return [];
+      const { data, error } = await supabase
+        .from('historico_precos_produtos')
+        .select('*')
+        .eq('produto_id', produtoHistoricoId)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      
+      if (error) throw error;
+      return data as HistoricoPreco[];
+    },
+    enabled: !!produtoHistoricoId,
+  });
+
+  // Mutation para atualizar preço (com histórico)
   const updatePrecoMutation = useMutation({
-    mutationFn: async ({ produtoId, novoPreco }: { produtoId: string; novoPreco: number }) => {
-      const { error } = await supabase
+    mutationFn: async ({ produtoId, novoPreco, precoAnterior }: { produtoId: string; novoPreco: number; precoAnterior: number }) => {
+      // Atualizar o preço do produto
+      const { error: updateError } = await supabase
         .from('produtos')
         .update({ preco_venda: novoPreco })
         .eq('id', produtoId);
       
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // Calcular variação percentual
+      const variacao = precoAnterior > 0 
+        ? ((novoPreco - precoAnterior) / precoAnterior) * 100 
+        : null;
+
+      // Registrar no histórico
+      const { error: historicoError } = await supabase
+        .from('historico_precos_produtos')
+        .insert({
+          empresa_id: usuario?.empresa_id,
+          produto_id: produtoId,
+          preco_anterior: precoAnterior,
+          preco_novo: novoPreco,
+          variacao_percentual: variacao,
+          origem: 'precificacao',
+        });
+      
+      if (historicoError) throw historicoError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['produtos-precificacao'] });
       queryClient.invalidateQueries({ queryKey: ['produtos'] });
+      queryClient.invalidateQueries({ queryKey: ['historico-precos-produtos'] });
+      queryClient.invalidateQueries({ queryKey: ['historico-precos-produto'] });
       toast({
         title: 'Preço atualizado',
         description: 'O preço de venda foi atualizado com sucesso.',
@@ -227,8 +314,8 @@ const Precificacao = () => {
     return { custoInsumos, novoPreco, lucroUnitario, cmv };
   }, [produtoSimulador, markupSimulado]);
 
-  const handleAplicarPreco = (produtoId: string, novoPreco: number) => {
-    updatePrecoMutation.mutate({ produtoId, novoPreco });
+  const handleAplicarPreco = (produtoId: string, novoPreco: number, precoAnterior: number) => {
+    updatePrecoMutation.mutate({ produtoId, novoPreco, precoAnterior });
     setPrecosEditados(prev => {
       const next = { ...prev };
       delete next[produtoId];
@@ -238,10 +325,21 @@ const Precificacao = () => {
 
   const handleAplicarDoSimulador = () => {
     if (produtoSimulador && simuladorCalcs) {
-      handleAplicarPreco(produtoSimulador.id, simuladorCalcs.novoPreco);
+      handleAplicarPreco(produtoSimulador.id, simuladorCalcs.novoPreco, produtoSimulador.preco_venda);
       setProdutoSimulador(null);
     }
   };
+
+  const handleVerHistorico = (produtoId: string) => {
+    setProdutoHistoricoId(produtoId);
+    setHistoricoDialogOpen(true);
+  };
+
+  const produtoHistoricoNome = useMemo(() => {
+    if (!produtoHistoricoId || !produtos) return '';
+    const produto = produtos.find(p => p.id === produtoHistoricoId);
+    return produto?.nome || '';
+  }, [produtoHistoricoId, produtos]);
 
   if (loadingProdutos) {
     return (
@@ -258,12 +356,113 @@ const Precificacao = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Precificação</h1>
-        <p className="text-muted-foreground">
-          Gerencie os preços dos seus produtos com base no markup desejado de {markupAlvo}%
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Precificação</h1>
+          <p className="text-muted-foreground">
+            Gerencie os preços dos seus produtos com base no markup desejado de {markupAlvo}%
+          </p>
+        </div>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="gap-2">
+              <History className="h-4 w-4" />
+              Ver Histórico
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <History className="h-5 w-5" />
+                Histórico de Alterações de Preço
+              </DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="max-h-[60vh]">
+              {!historicoGeral || historicoGeral.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Clock className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                  <p>Nenhuma alteração de preço registrada</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {historicoGeral.map(h => (
+                    <div key={h.id} className="p-3 border rounded-lg">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="font-medium">{h.produtos?.nome}</p>
+                          <div className="flex items-center gap-2 text-sm mt-1">
+                            <span className="text-muted-foreground">
+                              {h.preco_anterior ? formatCurrency(h.preco_anterior) : 'Sem preço'}
+                            </span>
+                            <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                            <span className="font-medium">{formatCurrency(h.preco_novo)}</span>
+                            {h.variacao_percentual !== null && (
+                              <Badge 
+                                variant={h.variacao_percentual >= 0 ? 'default' : 'destructive'}
+                                className={h.variacao_percentual >= 0 ? 'bg-success text-success-foreground' : ''}
+                              >
+                                {h.variacao_percentual >= 0 ? '+' : ''}{h.variacao_percentual.toFixed(1)}%
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {format(new Date(h.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
       </div>
+
+      {/* Dialog de histórico de produto específico */}
+      <Dialog open={historicoDialogOpen} onOpenChange={setHistoricoDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5" />
+              Histórico: {produtoHistoricoNome}
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[50vh]">
+            {!historicoProduto || historicoProduto.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Clock className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                <p>Nenhuma alteração registrada</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {historicoProduto.map((h, index) => (
+                  <div key={h.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground text-sm">
+                        {h.preco_anterior ? formatCurrency(h.preco_anterior) : '—'}
+                      </span>
+                      <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                      <span className="font-medium">{formatCurrency(h.preco_novo)}</span>
+                      {h.variacao_percentual !== null && (
+                        <Badge 
+                          variant={h.variacao_percentual >= 0 ? 'default' : 'destructive'}
+                          className={h.variacao_percentual >= 0 ? 'bg-success text-success-foreground' : ''}
+                        >
+                          {h.variacao_percentual >= 0 ? '+' : ''}{h.variacao_percentual.toFixed(1)}%
+                        </Badge>
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date(h.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
 
       {/* Alerta para produtos sem ficha técnica */}
       {produtosSemFicha.length > 0 && (
@@ -397,7 +596,6 @@ const Precificacao = () => {
                 ) : (
                   produtosFiltrados.map(produto => {
                     const precoEditado = precosEditados[produto.id];
-                    const precoAtual = precoEditado !== undefined ? parseFloat(precoEditado) || 0 : produto.preco_venda;
                     
                     return (
                       <div key={produto.id} className="p-4 hover:bg-muted/50 transition-colors">
@@ -444,7 +642,7 @@ const Precificacao = () => {
                             {precoEditado !== undefined && parseFloat(precoEditado) !== produto.preco_venda && (
                               <Button 
                                 size="sm"
-                                onClick={() => handleAplicarPreco(produto.id, parseFloat(precoEditado))}
+                                onClick={() => handleAplicarPreco(produto.id, parseFloat(precoEditado), produto.preco_venda)}
                                 disabled={updatePrecoMutation.isPending}
                               >
                                 Salvar
@@ -455,7 +653,7 @@ const Precificacao = () => {
                               <Button 
                                 size="sm" 
                                 variant="outline"
-                                onClick={() => handleAplicarPreco(produto.id, produto.precoSugerido)}
+                                onClick={() => handleAplicarPreco(produto.id, produto.precoSugerido, produto.preco_venda)}
                                 disabled={updatePrecoMutation.isPending}
                               >
                                 Aplicar sugerido
@@ -465,10 +663,20 @@ const Precificacao = () => {
                             <Button
                               size="sm"
                               variant="ghost"
+                              onClick={() => handleVerHistorico(produto.id)}
+                              title="Ver histórico de preços"
+                            >
+                              <History className="h-4 w-4" />
+                            </Button>
+                            
+                            <Button
+                              size="sm"
+                              variant="ghost"
                               onClick={() => {
                                 setProdutoSimulador(produto);
                                 setMarkupSimulado(produto.markupAtual);
                               }}
+                              title="Abrir simulador"
                             >
                               <Calculator className="h-4 w-4" />
                             </Button>
