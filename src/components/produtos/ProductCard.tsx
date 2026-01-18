@@ -72,6 +72,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const cmvAlvo = config?.cmv_alvo ?? 35;
   const margemAlvo = config?.margem_desejada_padrao ?? 30;
 
+  // Calcula preço sugerido com base na margem desejada
+  // Fórmula: Preço Sugerido = Custo / (1 - Margem%)
+  const precoSugerido = React.useMemo(() => {
+    if (custoInsumos <= 0 || margemAlvo >= 100) return 0;
+    return custoInsumos / (1 - margemAlvo / 100);
+  }, [custoInsumos, margemAlvo]);
+
+  const diferencaPreco = precoVenda - precoSugerido;
+  const precoAbaixoSugerido = precoSugerido > 0 && precoVenda < precoSugerido;
+
   const temFichaTecnica = (produto.fichas_tecnicas?.length || 0) > 0;
   const qtdInsumos = produto.fichas_tecnicas?.length || 0;
 
@@ -151,6 +161,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 <span className={`${margemTextClass} font-medium`}>
                   Margem: <span className="font-bold">{margemPercent.toFixed(0)}%</span>
                 </span>
+                {temFichaTecnica && precoSugerido > 0 && (
+                  <span className={precoAbaixoSugerido ? "text-warning" : "text-muted-foreground"}>
+                    Sugerido: <span className="font-medium">{formatCurrency(precoSugerido)}</span>
+                  </span>
+                )}
                 {produto.rendimento_padrao && produto.rendimento_padrao > 0 && (
                   <span className="text-muted-foreground">
                     Rende: <span className="font-medium text-foreground">{produto.rendimento_padrao}</span>
@@ -228,6 +243,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 <span className="text-muted-foreground">Margem </span>
                 <span className={`font-bold text-sm ${margemTextClass}`}>{margemPercent.toFixed(1)}%</span>
               </div>
+              {temFichaTecnica && precoSugerido > 0 && (
+                <div>
+                  <span className="text-muted-foreground">Sugerido </span>
+                  <span className={`font-bold text-sm ${precoAbaixoSugerido ? "text-warning" : "text-success"}`}>
+                    {formatCurrency(precoSugerido)}
+                  </span>
+                </div>
+              )}
               {produto.rendimento_padrao && produto.rendimento_padrao > 0 && (
                 <div className="text-muted-foreground">
                   Rende <span className="font-medium text-foreground">{produto.rendimento_padrao}</span>
