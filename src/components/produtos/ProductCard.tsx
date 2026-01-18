@@ -77,11 +77,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   const precoVenda = Number(produto.preco_venda) || 0;
   const lucro = precoVenda - custoInsumos;
-  const margemPercent = precoVenda > 0 ? (lucro / precoVenda) * 100 : 0;
   const cmvAtual = precoVenda > 0 ? (custoInsumos / precoVenda) * 100 : 0;
 
   const cmvAlvo = Number(config?.cmv_alvo ?? 35);
   const markupAlvo = Number(config?.margem_desejada_padrao ?? 100);
+
+  // Markup atual: quanto % acima do custo está o preço de venda
+  const markupAtual = custoInsumos > 0 ? ((precoVenda - custoInsumos) / custoInsumos) * 100 : 0;
 
   // Calcula preço sugerido com base no markup desejado
   // Fórmula: Preço Sugerido = Custo × (1 + Markup%)
@@ -98,17 +100,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const qtdInsumos = produto.fichas_tecnicas?.length || 0;
 
   const lucroTextClass = lucro >= 0 ? "text-success" : "text-destructive";
-  const markupAtual = custoInsumos > 0 ? ((precoVenda - custoInsumos) / custoInsumos) * 100 : 0;
   
-  const margemTextClass =
-    margemPercent < 0
+  const markupTextClass =
+    markupAtual < 0
       ? "text-destructive"
       : markupAtual >= markupAlvo
         ? "text-success"
         : "text-warning";
 
-  const margemBarClass =
-    margemPercent < 0
+  const markupBarClass =
+    markupAtual < 0
       ? "bg-destructive"
       : markupAtual >= markupAlvo
         ? "bg-success"
@@ -172,8 +173,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 <span className={`${lucroTextClass} font-medium`}>
                   Lucro: <span className="font-bold">{formatCurrency(lucro)}</span>
                 </span>
-                <span className={`${margemTextClass} font-medium`}>
-                  Margem: <span className="font-bold">{margemPercent.toFixed(0)}%</span>
+                <span className={`${markupTextClass} font-medium`}>
+                  Markup: <span className="font-bold">{markupAtual.toFixed(0)}%</span>
                 </span>
                 {temFichaTecnica && precoSugeridoValido && (
                   <span className={precoAbaixoSugerido ? "text-warning" : "text-muted-foreground"}>
@@ -273,8 +274,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 <span className={`font-bold text-sm ${lucroTextClass}`}>{formatCurrency(lucro)}</span>
               </div>
               <div>
-                <span className="text-muted-foreground">Margem </span>
-                <span className={`font-bold text-sm ${margemTextClass}`}>{margemPercent.toFixed(1)}%</span>
+                <span className="text-muted-foreground">Markup </span>
+                <span className={`font-bold text-sm ${markupTextClass}`}>{markupAtual.toFixed(1)}%</span>
               </div>
               {temFichaTecnica && precoSugeridoValido && (
                 <div className="flex items-center gap-1.5">
@@ -369,8 +370,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 </div>
                 <div className="h-1 bg-muted rounded-full overflow-hidden">
                   <div
-                    className={`h-full ${margemBarClass}`}
-                    style={{ width: `${Math.min(Math.max(margemPercent, 0), 100)}%` }}
+                    className={`h-full ${markupBarClass}`}
+                    style={{ width: `${Math.min(Math.max((markupAtual / Math.max(markupAlvo, 1)) * 100, 0), 100)}%` }}
                   />
                 </div>
               </div>
