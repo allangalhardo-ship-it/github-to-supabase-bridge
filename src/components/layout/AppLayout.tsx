@@ -35,10 +35,10 @@ import { cn } from '@/lib/utils';
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/insumos', icon: Carrot, label: 'Insumos' },
   { to: '/produtos', icon: UtensilsCrossed, label: 'Produtos' },
   { to: '/precificacao', icon: Tags, label: 'Precificação' },
   { to: '/receitas', icon: ChefHat, label: 'Receitas' },
-  { to: '/insumos', icon: Carrot, label: 'Insumos' },
   { to: '/estoque', icon: PackageOpen, label: 'Estoque' },
   { to: '/producao', icon: Factory, label: 'Produção' },
   { to: '/compras', icon: FileSpreadsheet, label: 'Compras' },
