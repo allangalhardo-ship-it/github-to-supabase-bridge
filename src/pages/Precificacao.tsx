@@ -12,6 +12,9 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -27,7 +30,12 @@ import {
   Search,
   History,
   ArrowRight,
-  Clock
+  Clock,
+  Info,
+  PieChart,
+  Building2,
+  Receipt,
+  Smartphone
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -52,6 +60,21 @@ interface Produto {
 interface Config {
   margem_desejada_padrao: number;
   cmv_alvo: number;
+  faturamento_mensal: number;
+  imposto_medio_sobre_vendas: number;
+}
+
+interface CustoFixo {
+  id: string;
+  nome: string;
+  valor_mensal: number;
+}
+
+interface TaxaApp {
+  id: string;
+  nome_app: string;
+  taxa_percentual: number;
+  ativo: boolean;
 }
 
 interface HistoricoPreco {
@@ -75,6 +98,10 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
+const formatPercent = (value: number) => {
+  return `${value.toFixed(1)}%`;
+};
+
 const Precificacao = () => {
   const { usuario } = useAuth();
   const { toast } = useToast();
@@ -84,7 +111,8 @@ const Precificacao = () => {
   const [filtroStatus, setFiltroStatus] = useState<string>('todos');
   const [busca, setBusca] = useState('');
   const [produtoSimulador, setProdutoSimulador] = useState<Produto | null>(null);
-  const [markupSimulado, setMarkupSimulado] = useState<number>(100);
+  const [margemDesejada, setMargemDesejada] = useState<number>(30);
+  const [incluirTaxaApp, setIncluirTaxaApp] = useState<boolean>(false);
   const [precosEditados, setPrecosEditados] = useState<Record<string, string>>({});
   const [historicoDialogOpen, setHistoricoDialogOpen] = useState(false);
   const [produtoHistoricoId, setProdutoHistoricoId] = useState<string | null>(null);
@@ -122,18 +150,49 @@ const Precificacao = () => {
     enabled: !!usuario?.empresa_id,
   });
 
-  // Buscar configurações
+  // Buscar configurações completas
   const { data: config } = useQuery({
-    queryKey: ['config', usuario?.empresa_id],
+    queryKey: ['config-precificacao', usuario?.empresa_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('configuracoes')
-        .select('margem_desejada_padrao, cmv_alvo')
+        .select('margem_desejada_padrao, cmv_alvo, faturamento_mensal, imposto_medio_sobre_vendas')
         .eq('empresa_id', usuario?.empresa_id)
         .single();
       
       if (error) throw error;
       return data as Config;
+    },
+    enabled: !!usuario?.empresa_id,
+  });
+
+  // Buscar custos fixos
+  const { data: custosFixos } = useQuery({
+    queryKey: ['custos-fixos-precificacao', usuario?.empresa_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('custos_fixos')
+        .select('id, nome, valor_mensal')
+        .eq('empresa_id', usuario?.empresa_id);
+      
+      if (error) throw error;
+      return data as CustoFixo[];
+    },
+    enabled: !!usuario?.empresa_id,
+  });
+
+  // Buscar taxas de apps
+  const { data: taxasApps } = useQuery({
+    queryKey: ['taxas-apps-precificacao', usuario?.empresa_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('taxas_apps')
+        .select('id, nome_app, taxa_percentual, ativo')
+        .eq('empresa_id', usuario?.empresa_id)
+        .eq('ativo', true);
+      
+      if (error) throw error;
+      return data as TaxaApp[];
     },
     enabled: !!usuario?.empresa_id,
   });
@@ -232,7 +291,56 @@ const Precificacao = () => {
     },
   });
 
-  const markupAlvo = config?.margem_desejada_padrao ?? 100;
+  // Calcular percentuais de custos
+  const custosPercentuais = useMemo(() => {
+    const faturamento = config?.faturamento_mensal || 0;
+    const totalCustosFixos = custosFixos?.reduce((acc, cf) => acc + cf.valor_mensal, 0) || 0;
+    const taxaAppMedia = taxasApps && taxasApps.length > 0
+      ? taxasApps.reduce((acc, t) => acc + t.taxa_percentual, 0) / taxasApps.length
+      : 0;
+    
+    const percCustoFixo = faturamento > 0 ? (totalCustosFixos / faturamento) * 100 : 0;
+    const percImposto = config?.imposto_medio_sobre_vendas || 0;
+    const percTaxaApp = taxaAppMedia;
+    const margemDesejadaPadrao = config?.margem_desejada_padrao || 30;
+    
+    return {
+      percCustoFixo,
+      percImposto,
+      percTaxaApp,
+      margemDesejadaPadrao,
+      totalCustosFixos,
+      faturamento,
+    };
+  }, [config, custosFixos, taxasApps]);
+
+  // Inicializar margem desejada quando config carregar
+  React.useEffect(() => {
+    if (config?.margem_desejada_padrao) {
+      setMargemDesejada(config.margem_desejada_padrao);
+    }
+  }, [config?.margem_desejada_padrao]);
+
+  // Função para calcular preço sugerido baseado na margem líquida desejada
+  const calcularPrecoSugerido = (custoInsumos: number, comTaxaApp: boolean = false) => {
+    const { percCustoFixo, percImposto, percTaxaApp, margemDesejadaPadrao } = custosPercentuais;
+    
+    // Fórmula: Preço = Custo / (1 - margem% - impostos% - custoFixo% - taxaApp%)
+    // Onde todos os % são em decimal (ex: 30% = 0.30)
+    const margem = margemDesejadaPadrao / 100;
+    const imposto = percImposto / 100;
+    const custoFixo = percCustoFixo / 100;
+    const taxaApp = comTaxaApp ? (percTaxaApp / 100) : 0;
+    
+    const divisor = 1 - margem - imposto - custoFixo - taxaApp;
+    
+    // Se o divisor for <= 0, os custos são inviáveis
+    if (divisor <= 0) {
+      return custoInsumos * 3; // Fallback: markup de 200%
+    }
+    
+    return custoInsumos / divisor;
+  };
 
   // Separar produtos com e sem ficha técnica
   const { produtosComFicha, produtosSemFicha } = useMemo(() => {
@@ -252,35 +360,47 @@ const Precificacao = () => {
       }, 0) || 0;
       
       const precoVenda = produto.preco_venda || 0;
-      const lucro = precoVenda - custoInsumos;
+      const precoSugerido = calcularPrecoSugerido(custoInsumos, false);
+      const precoSugeridoComApp = calcularPrecoSugerido(custoInsumos, true);
+      
+      // Calcular margem líquida atual
+      const { percCustoFixo, percImposto } = custosPercentuais;
+      const custoFixoValor = precoVenda * (percCustoFixo / 100);
+      const impostoValor = precoVenda * (percImposto / 100);
+      const lucroLiquido = precoVenda - custoInsumos - custoFixoValor - impostoValor;
+      const margemLiquida = precoVenda > 0 ? (lucroLiquido / precoVenda) * 100 : 0;
+      
+      // Markup tradicional (apenas sobre custo de insumos)
       const markupAtual = custoInsumos > 0 ? ((precoVenda - custoInsumos) / custoInsumos) * 100 : 0;
-      const precoSugerido = custoInsumos * (1 + markupAlvo / 100);
+      
       const diferencaPreco = precoVenda - precoSugerido;
       
       return {
         ...produto,
         custoInsumos,
-        lucro,
+        lucroLiquido,
+        margemLiquida,
         markupAtual,
         precoSugerido,
+        precoSugeridoComApp,
         diferencaPreco,
         statusPreco: diferencaPreco < -0.01 ? 'abaixo' : diferencaPreco > 0.01 ? 'acima' : 'ideal',
       };
     });
-  }, [produtosComFicha, markupAlvo]);
+  }, [produtosComFicha, custosPercentuais]);
 
   // Métricas gerais
   const metricas = useMemo(() => {
     if (produtosComMetricas.length === 0) {
-      return { markupMedio: 0, produtosAbaixo: 0, produtosAcima: 0, produtosIdeais: 0 };
+      return { margemMedia: 0, produtosAbaixo: 0, produtosAcima: 0, produtosIdeais: 0 };
     }
     
-    const markupMedio = produtosComMetricas.reduce((acc, p) => acc + p.markupAtual, 0) / produtosComMetricas.length;
+    const margemMedia = produtosComMetricas.reduce((acc, p) => acc + p.margemLiquida, 0) / produtosComMetricas.length;
     const produtosAbaixo = produtosComMetricas.filter(p => p.statusPreco === 'abaixo').length;
     const produtosAcima = produtosComMetricas.filter(p => p.statusPreco === 'acima').length;
     const produtosIdeais = produtosComMetricas.filter(p => p.statusPreco === 'ideal').length;
     
-    return { markupMedio, produtosAbaixo, produtosAcima, produtosIdeais };
+    return { margemMedia, produtosAbaixo, produtosAcima, produtosIdeais };
   }, [produtosComMetricas]);
 
   // Categorias únicas
@@ -299,7 +419,7 @@ const Precificacao = () => {
     });
   }, [produtosComMetricas, filtroCategoria, filtroStatus, busca]);
 
-  // Cálculos do simulador
+  // Cálculos do simulador com decomposição completa
   const simuladorCalcs = useMemo(() => {
     if (!produtoSimulador) return null;
     
@@ -307,12 +427,43 @@ const Precificacao = () => {
       return acc + (ft.quantidade * ft.insumos.custo_unitario);
     }, 0) || 0;
     
-    const novoPreco = custoInsumos * (1 + markupSimulado / 100);
-    const lucroUnitario = novoPreco - custoInsumos;
+    const { percCustoFixo, percImposto, percTaxaApp } = custosPercentuais;
+    
+    // Calcular preço baseado na margem desejada
+    const margem = margemDesejada / 100;
+    const imposto = percImposto / 100;
+    const custoFixo = percCustoFixo / 100;
+    const taxaApp = incluirTaxaApp ? (percTaxaApp / 100) : 0;
+    
+    const divisor = 1 - margem - imposto - custoFixo - taxaApp;
+    const novoPreco = divisor > 0 ? custoInsumos / divisor : custoInsumos * 3;
+    
+    // Decomposição do preço
+    const valorImposto = novoPreco * imposto;
+    const valorCustoFixo = novoPreco * custoFixo;
+    const valorTaxaApp = novoPreco * taxaApp;
+    const lucroLiquido = novoPreco - custoInsumos - valorImposto - valorCustoFixo - valorTaxaApp;
+    
+    // CMV (custo de mercadoria vendida)
     const cmv = novoPreco > 0 ? (custoInsumos / novoPreco) * 100 : 0;
     
-    return { custoInsumos, novoPreco, lucroUnitario, cmv };
-  }, [produtoSimulador, markupSimulado]);
+    // Verificar se é viável
+    const isViavel = divisor > 0 && lucroLiquido > 0;
+    
+    return { 
+      custoInsumos, 
+      novoPreco, 
+      valorImposto,
+      valorCustoFixo,
+      valorTaxaApp,
+      lucroLiquido, 
+      cmv,
+      isViavel,
+      percImposto,
+      percCustoFixo,
+      percTaxaApp: incluirTaxaApp ? percTaxaApp : 0,
+    };
+  }, [produtoSimulador, margemDesejada, incluirTaxaApp, custosPercentuais]);
 
   const handleAplicarPreco = (produtoId: string, novoPreco: number, precoAnterior: number) => {
     updatePrecoMutation.mutate({ produtoId, novoPreco, precoAnterior });
@@ -360,7 +511,7 @@ const Precificacao = () => {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Precificação</h1>
           <p className="text-muted-foreground">
-            Gerencie os preços dos seus produtos com base no markup desejado de {markupAlvo}%
+            Preços sugeridos com margem de {custosPercentuais.margemDesejadaPadrao}% considerando todos os custos
           </p>
         </div>
         <Dialog>
@@ -464,6 +615,58 @@ const Precificacao = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Card de Custos Considerados */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="pt-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-full bg-primary/10">
+              <PieChart className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-medium mb-2">Custos considerados na precificação</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-muted-foreground">Insumos (CMV)</p>
+                    <p className="font-medium">Custo direto</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-muted-foreground">Custos Fixos</p>
+                    <p className="font-medium">{formatPercent(custosPercentuais.percCustoFixo)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Receipt className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-muted-foreground">Impostos</p>
+                    <p className="font-medium">{formatPercent(custosPercentuais.percImposto)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Smartphone className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-muted-foreground">Taxa Apps</p>
+                    <p className="font-medium">{formatPercent(custosPercentuais.percTaxaApp)}</p>
+                  </div>
+                </div>
+              </div>
+              {custosPercentuais.faturamento === 0 && (
+                <Alert variant="default" className="mt-3 border-warning bg-warning/10">
+                  <AlertTriangle className="h-4 w-4 text-warning" />
+                  <AlertDescription className="text-warning">
+                    Configure seu faturamento mensal em <Link to="/configuracoes" className="underline">Configurações</Link> para calcular o % de custo fixo corretamente.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Alerta para produtos sem ficha técnica */}
       {produtosSemFicha.length > 0 && (
         <Alert variant="default" className="border-warning bg-warning/10">
@@ -489,8 +692,8 @@ const Precificacao = () => {
                 <Percent className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Markup Médio</p>
-                <p className="text-xl font-bold">{metricas.markupMedio.toFixed(0)}%</p>
+                <p className="text-xs text-muted-foreground">Margem Líq. Média</p>
+                <p className="text-xl font-bold">{metricas.margemMedia.toFixed(1)}%</p>
               </div>
             </div>
           </CardContent>
@@ -621,7 +824,7 @@ const Precificacao = () => {
                             </div>
                             <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
                               <span>Custo: {formatCurrency(produto.custoInsumos)}</span>
-                              <span>Markup: {produto.markupAtual.toFixed(0)}%</span>
+                              <span>Margem: {produto.margemLiquida.toFixed(1)}%</span>
                               <span>Sugerido: {formatCurrency(produto.precoSugerido)}</span>
                             </div>
                           </div>
@@ -674,7 +877,7 @@ const Precificacao = () => {
                               variant="ghost"
                               onClick={() => {
                                 setProdutoSimulador(produto);
-                                setMarkupSimulado(produto.markupAtual);
+                                setMargemDesejada(custosPercentuais.margemDesejadaPadrao);
                               }}
                               title="Abrir simulador"
                             >
@@ -700,7 +903,7 @@ const Precificacao = () => {
                 Simulador de Preço
               </CardTitle>
               <CardDescription>
-                Selecione um produto e ajuste o markup para simular o preço
+                Simule o preço baseado na margem líquida desejada
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -714,49 +917,110 @@ const Precificacao = () => {
                   <div className="p-3 bg-muted rounded-lg">
                     <p className="font-medium">{produtoSimulador.nome}</p>
                     <p className="text-sm text-muted-foreground">
-                      Custo: {formatCurrency(simuladorCalcs?.custoInsumos || 0)}
+                      Custo de insumos: {formatCurrency(simuladorCalcs?.custoInsumos || 0)}
                     </p>
                   </div>
 
+                  {/* Slider de margem */}
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span>Markup desejado</span>
-                      <span className="font-medium">{markupSimulado.toFixed(0)}%</span>
+                      <span>Margem líquida desejada</span>
+                      <span className="font-medium">{margemDesejada.toFixed(0)}%</span>
                     </div>
                     <Slider
-                      value={[markupSimulado]}
-                      onValueChange={([value]) => setMarkupSimulado(value)}
-                      min={0}
-                      max={300}
-                      step={5}
+                      value={[margemDesejada]}
+                      onValueChange={([value]) => setMargemDesejada(value)}
+                      min={5}
+                      max={60}
+                      step={1}
                       className="py-2"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>0%</span>
-                      <span>150%</span>
-                      <span>300%</span>
+                      <span>5%</span>
+                      <span>30%</span>
+                      <span>60%</span>
                     </div>
                   </div>
 
-                  <div className="space-y-3 pt-2">
-                    <div className="flex justify-between items-center p-3 bg-primary/10 rounded-lg">
-                      <span className="text-sm font-medium">Novo Preço</span>
-                      <span className="text-xl font-bold text-primary">
+                  {/* Toggle taxa de app */}
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="incluir-taxa" className="text-sm">
+                      Incluir taxa de app ({formatPercent(custosPercentuais.percTaxaApp)})
+                    </Label>
+                    <Switch
+                      id="incluir-taxa"
+                      checked={incluirTaxaApp}
+                      onCheckedChange={setIncluirTaxaApp}
+                    />
+                  </div>
+
+                  <Separator />
+
+                  {/* Decomposição do preço */}
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium flex items-center gap-1">
+                      <PieChart className="h-4 w-4" />
+                      Decomposição do Preço
+                    </h4>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between py-1">
+                        <span className="text-muted-foreground">Custo Insumos</span>
+                        <span>{formatCurrency(simuladorCalcs?.custoInsumos || 0)}</span>
+                      </div>
+                      <div className="flex justify-between py-1">
+                        <span className="text-muted-foreground">Custo Fixo ({formatPercent(simuladorCalcs?.percCustoFixo || 0)})</span>
+                        <span>{formatCurrency(simuladorCalcs?.valorCustoFixo || 0)}</span>
+                      </div>
+                      <div className="flex justify-between py-1">
+                        <span className="text-muted-foreground">Impostos ({formatPercent(simuladorCalcs?.percImposto || 0)})</span>
+                        <span>{formatCurrency(simuladorCalcs?.valorImposto || 0)}</span>
+                      </div>
+                      {incluirTaxaApp && (
+                        <div className="flex justify-between py-1">
+                          <span className="text-muted-foreground">Taxa App ({formatPercent(simuladorCalcs?.percTaxaApp || 0)})</span>
+                          <span>{formatCurrency(simuladorCalcs?.valorTaxaApp || 0)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between py-1 border-t pt-2">
+                        <span className="text-muted-foreground">Lucro Líquido ({formatPercent(margemDesejada)})</span>
+                        <span className={simuladorCalcs?.lucroLiquido && simuladorCalcs.lucroLiquido > 0 ? 'text-success font-medium' : 'text-destructive'}>
+                          {formatCurrency(simuladorCalcs?.lucroLiquido || 0)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Preço calculado */}
+                  <div className="space-y-3">
+                    <div className={`flex justify-between items-center p-3 rounded-lg ${simuladorCalcs?.isViavel ? 'bg-primary/10' : 'bg-destructive/10'}`}>
+                      <span className="text-sm font-medium">Preço Calculado</span>
+                      <span className={`text-xl font-bold ${simuladorCalcs?.isViavel ? 'text-primary' : 'text-destructive'}`}>
                         {formatCurrency(simuladorCalcs?.novoPreco || 0)}
                       </span>
                     </div>
 
+                    {!simuladorCalcs?.isViavel && (
+                      <Alert variant="destructive">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertDescription>
+                          A margem desejada é inviável com os custos atuais. Reduza a margem ou revise seus custos.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="p-2 bg-muted rounded">
-                        <p className="text-muted-foreground">Lucro/un</p>
-                        <p className="font-medium text-success">
-                          {formatCurrency(simuladorCalcs?.lucroUnitario || 0)}
-                        </p>
-                      </div>
                       <div className="p-2 bg-muted rounded">
                         <p className="text-muted-foreground">CMV</p>
                         <p className="font-medium">
                           {simuladorCalcs?.cmv.toFixed(1)}%
+                        </p>
+                      </div>
+                      <div className="p-2 bg-muted rounded">
+                        <p className="text-muted-foreground">Preço Atual</p>
+                        <p className="font-medium">
+                          {formatCurrency(produtoSimulador.preco_venda)}
                         </p>
                       </div>
                     </div>
@@ -765,7 +1029,7 @@ const Precificacao = () => {
                       <Button 
                         className="flex-1"
                         onClick={handleAplicarDoSimulador}
-                        disabled={updatePrecoMutation.isPending}
+                        disabled={updatePrecoMutation.isPending || !simuladorCalcs?.isViavel}
                       >
                         Aplicar Preço
                       </Button>
@@ -785,13 +1049,16 @@ const Precificacao = () => {
           {/* Dica */}
           <Card className="bg-muted/50">
             <CardContent className="pt-4">
-              <h4 className="font-medium text-sm mb-2">💡 Dica</h4>
+              <h4 className="font-medium text-sm mb-2 flex items-center gap-1">
+                <Info className="h-4 w-4" />
+                Como funciona
+              </h4>
               <p className="text-xs text-muted-foreground">
-                O <strong>markup de {markupAlvo}%</strong> está configurado nas suas configurações. 
-                Produtos com preço abaixo do sugerido aparecem em vermelho.
+                O preço é calculado pela fórmula: <strong>Preço = Custo ÷ (1 - Margem - Impostos - CustoFixo - TaxaApp)</strong>. 
+                Isso garante que sua margem líquida seja respeitada após todos os custos.
               </p>
               <Button variant="link" size="sm" className="px-0 mt-1" asChild>
-                <Link to="/configuracoes">Alterar markup padrão →</Link>
+                <Link to="/configuracoes">Ajustar configurações →</Link>
               </Button>
             </CardContent>
           </Card>
