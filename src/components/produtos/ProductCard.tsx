@@ -7,9 +7,15 @@ import {
   ImageIcon,
   Pencil,
   Trash2,
+  Zap,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import FichaTecnicaDialog from "./FichaTecnicaDialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface FichaTecnicaItem {
   id: string;
@@ -39,6 +45,8 @@ interface ProductCardProps {
   } | null;
   onEdit: () => void;
   onDelete: () => void;
+  onApplyPrice?: (produtoId: string, novoPreco: number) => void;
+  isApplyingPrice?: boolean;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({
@@ -46,6 +54,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
   config,
   onEdit,
   onDelete,
+  onApplyPrice,
+  isApplyingPrice,
 }) => {
   const isMobile = useIsMobile();
 
@@ -176,6 +186,25 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </div>
 
           <div className="mt-3 flex gap-2">
+            {temFichaTecnica && precoSugerido > 0 && precoAbaixoSugerido && onApplyPrice && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="default" 
+                    size="sm" 
+                    className="h-8 px-2 text-xs gap-1.5"
+                    onClick={() => onApplyPrice(produto.id, precoSugerido)}
+                    disabled={isApplyingPrice}
+                  >
+                    <Zap className="h-3.5 w-3.5" />
+                    Aplicar
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Aplicar preço sugerido: {formatCurrency(precoSugerido)}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
             <FichaTecnicaDialog
               produtoId={produto.id}
               produtoNome={produto.nome}
@@ -244,11 +273,29 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 <span className={`font-bold text-sm ${margemTextClass}`}>{margemPercent.toFixed(1)}%</span>
               </div>
               {temFichaTecnica && precoSugerido > 0 && (
-                <div>
+                <div className="flex items-center gap-1.5">
                   <span className="text-muted-foreground">Sugerido </span>
                   <span className={`font-bold text-sm ${precoAbaixoSugerido ? "text-warning" : "text-success"}`}>
                     {formatCurrency(precoSugerido)}
                   </span>
+                  {precoAbaixoSugerido && onApplyPrice && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-5 w-5 text-primary hover:text-primary"
+                          onClick={() => onApplyPrice(produto.id, precoSugerido)}
+                          disabled={isApplyingPrice}
+                        >
+                          <Zap className="h-3 w-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Aplicar preço sugerido</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </div>
               )}
               {produto.rendimento_padrao && produto.rendimento_padrao > 0 && (
