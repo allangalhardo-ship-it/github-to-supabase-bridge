@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,9 +12,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Key, QrCode, Loader2, ImageIcon, Calculator, Pencil, AlertTriangle } from 'lucide-react';
+import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Key, QrCode, Loader2, ImageIcon, Calculator, Pencil, AlertTriangle, Lightbulb } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
+import { normalizeString, findBestMatch } from '@/lib/importUtils';
 
 interface XmlItem {
   produto_descricao: string;
@@ -690,6 +691,98 @@ const XmlImport = () => {
   const itensMapeados = parsedNota?.itens.filter(i => i.mapeado).length || 0;
   const totalItens = parsedNota?.itens.length || 0;
 
+  // Componente para criar insumo com sugestão inteligente
+  const NewInsumoWithSuggestion = ({
+    newInsumoNome,
+    setNewInsumoNome,
+    insumos: insumosList,
+    createInsumoMutation: mutation,
+    onSelectExisting,
+  }: {
+    newInsumoNome: string;
+    setNewInsumoNome: (value: string) => void;
+    insumos: typeof insumos extends (infer T)[] ? T[] : never[];
+    createInsumoMutation: typeof createInsumoMutation;
+    onSelectExisting: (insumoId: string) => void;
+  }) => {
+    // Buscar sugestão de insumo similar
+    const sugestao = useMemo(() => {
+      if (!newInsumoNome || newInsumoNome.length < 3 || !insumosList?.length) return null;
+      
+      const match = findBestMatch(newInsumoNome, insumosList);
+      // Retorna sugestão se score >= 40 (match razoável)
+      return match && match.score >= 40 ? match : null;
+    }, [newInsumoNome, insumosList]);
+
+    const handleCreateOrSuggest = () => {
+      if (sugestao && sugestao.score >= 70) {
+        // Se score alto, perguntar antes
+        return;
+      }
+      mutation.mutate(newInsumoNome);
+    };
+
+    return (
+      <div className="space-y-2">
+        <Label>Criar novo insumo</Label>
+        <div className="flex gap-2">
+          <Input
+            placeholder="Nome do insumo"
+            value={newInsumoNome}
+            onChange={(e) => setNewInsumoNome(e.target.value)}
+          />
+          <Button
+            type="button"
+            onClick={() => mutation.mutate(newInsumoNome)}
+            disabled={!newInsumoNome || mutation.isPending}
+            title={sugestao && sugestao.score >= 70 ? "Insumo similar encontrado - verifique abaixo" : "Criar insumo"}
+          >
+            {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          </Button>
+        </div>
+
+        {/* Sugestão de insumo similar */}
+        {sugestao && (
+          <div className="p-3 bg-warning/10 border border-warning/30 rounded-lg space-y-2">
+            <div className="flex items-start gap-2">
+              <Lightbulb className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">
+                  Insumo similar encontrado!
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Você quis dizer <strong>"{sugestao.item.nome}"</strong>?
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 ml-6">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onSelectExisting(sugestao.item.id)}
+                className="border-warning text-warning hover:bg-warning/10"
+              >
+                <Check className="h-3.5 w-3.5 mr-1" />
+                Usar existente
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => mutation.mutate(newInsumoNome)}
+                disabled={mutation.isPending}
+              >
+                {mutation.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : null}
+                Criar novo mesmo assim
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <div>
@@ -1253,24 +1346,18 @@ const XmlImport = () => {
               </div>
             </div>
 
-            {/* Criar Novo Insumo */}
-            <div className="space-y-2">
-              <Label>Criar novo insumo</Label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Nome do insumo"
-                  value={newInsumoNome}
-                  onChange={(e) => setNewInsumoNome(e.target.value)}
-                />
-                <Button
-                  type="button"
-                  onClick={() => createInsumoMutation.mutate(newInsumoNome)}
-                  disabled={!newInsumoNome || createInsumoMutation.isPending}
-                >
-                  {createInsumoMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
+            {/* Criar Novo Insumo com Sugestão Inteligente */}
+            <NewInsumoWithSuggestion
+              newInsumoNome={newInsumoNome}
+              setNewInsumoNome={setNewInsumoNome}
+              insumos={insumos || []}
+              createInsumoMutation={createInsumoMutation}
+              onSelectExisting={(insumoId) => {
+                setSelectedInsumoId(insumoId);
+                setNewInsumoNome('');
+                setFatorConversao('1');
+              }}
+            />
 
             {/* Conversão de Unidade - só aparece se insumo selecionado */}
             {selectedInsumoId && insumoSelecionadoParaMapeamento && (
