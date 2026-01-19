@@ -94,10 +94,22 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
         </Badge>
       );
     }
+    if (subscription?.status === 'trialing') {
+      const daysText = subscription.trialDaysRemaining === 1 
+        ? '1 dia' 
+        : `${subscription.trialDaysRemaining} dias`;
+      return (
+        <NavLink to="/assinatura" onClick={onNavigate}>
+          <Badge className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-0 gap-1 cursor-pointer">
+            Teste ({daysText})
+          </Badge>
+        </NavLink>
+      );
+    }
     return (
       <NavLink to="/assinatura" onClick={onNavigate}>
         <Badge variant="outline" className="border-sidebar-border text-sidebar-foreground/60 hover:bg-sidebar-accent cursor-pointer">
-          Grátis
+          Assinar
         </Badge>
       </NavLink>
     );
