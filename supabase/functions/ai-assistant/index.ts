@@ -194,7 +194,7 @@ ${insumos?.slice(0, 15).map(i =>
 ).join("\n") || "Nenhum insumo cadastrado"}
 `;
 
-    const systemPrompt = `Você é o Assistente de IA do sistema, uma plataforma de gestão de custos e precificação para restaurantes, confeitarias e food services.
+    const systemPrompt = `Você é o Assistente de IA do Gastro Gestor, uma plataforma de gestão de custos e precificação para restaurantes, confeitarias e food services.
 
 ## SEU PAPEL
 - Ajudar o usuário a entender e usar o sistema
