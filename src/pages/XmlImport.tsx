@@ -89,6 +89,28 @@ const XmlImport = () => {
     enabled: !!usuario?.empresa_id,
   });
 
+  // Fetch notas já importadas para verificar duplicidade
+  const { data: notasImportadas } = useQuery({
+    queryKey: ['notas-importadas', usuario?.empresa_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('xml_notas')
+        .select('numero, fornecedor')
+        .eq('empresa_id', usuario!.empresa_id);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!usuario?.empresa_id,
+  });
+
+  // Verificar se nota atual já foi importada
+  const notaJaImportada = parsedNota && parsedNota.numero && parsedNota.fornecedor
+    ? notasImportadas?.some(n => 
+        n.numero === parsedNota.numero && 
+        n.fornecedor?.toLowerCase() === parsedNota.fornecedor?.toLowerCase()
+      )
+    : false;
+
   // Fetch unidades de compra para o insumo selecionado no mapeamento
   const { data: unidadesCompra } = useQuery({
     queryKey: ['unidades-compra', selectedInsumoId],
@@ -434,11 +456,25 @@ const XmlImport = () => {
 
   const createInsumoMutation = useMutation({
     mutationFn: async (nome: string) => {
+      // VERIFICAR SE JÁ EXISTE um insumo com nome similar antes de criar
+      const nomeNormalizado = nome.trim().toLowerCase();
+      const { data: existente } = await supabase
+        .from('insumos')
+        .select('id, nome')
+        .eq('empresa_id', usuario!.empresa_id)
+        .ilike('nome', nomeNormalizado)
+        .maybeSingle();
+
+      if (existente) {
+        // Insumo já existe - retornar o existente ao invés de criar duplicado
+        return existente;
+      }
+
       const { data, error } = await supabase
         .from('insumos')
         .insert({
           empresa_id: usuario!.empresa_id,
-          nome,
+          nome: nome.trim(),
           unidade_medida: selectedItem?.unidade || 'un',
           custo_unitario: 0, // Será calculado na importação
         })
@@ -452,7 +488,7 @@ const XmlImport = () => {
       setSelectedInsumoId(data.id);
       setFatorConversao('1'); // Reset fator para 1:1 já que unidade do insumo = unidade da nota
       setNewInsumoNome('');
-      toast({ title: 'Insumo criado! Configure a conversão abaixo.' });
+      toast({ title: 'Insumo configurado! Continue com o mapeamento.' });
     },
   });
 
@@ -536,6 +572,21 @@ const XmlImport = () => {
   const importarNotaMutation = useMutation({
     mutationFn: async () => {
       if (!parsedNota) throw new Error('Nenhuma nota para importar');
+
+      // VERIFICAR SE NOTA JÁ FOI IMPORTADA (por número + fornecedor)
+      if (parsedNota.numero && parsedNota.fornecedor) {
+        const { data: notaExistente } = await supabase
+          .from('xml_notas')
+          .select('id, numero')
+          .eq('empresa_id', usuario!.empresa_id)
+          .eq('numero', parsedNota.numero)
+          .ilike('fornecedor', parsedNota.fornecedor)
+          .maybeSingle();
+
+        if (notaExistente) {
+          throw new Error(`Esta nota (Nº ${parsedNota.numero}) já foi importada anteriormente. Verifique no histórico de notas.`);
+        }
+      }
 
       // 1. Create xml_nota
       const { data: nota, error: notaError } = await supabase
@@ -977,11 +1028,19 @@ const XmlImport = () => {
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold">{formatCurrency(parsedNota.valor_total)}</p>
-                {totalItens > 0 && (
-                  <Badge variant={itensMapeados === totalItens ? 'default' : 'secondary'}>
-                    {itensMapeados}/{totalItens} itens mapeados
-                  </Badge>
-                )}
+                <div className="flex flex-col items-end gap-1">
+                  {totalItens > 0 && (
+                    <Badge variant={itensMapeados === totalItens ? 'default' : 'secondary'}>
+                      {itensMapeados}/{totalItens} itens mapeados
+                    </Badge>
+                  )}
+                  {notaJaImportada && (
+                    <Badge variant="destructive" className="gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      Nota já importada
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
           </CardHeader>
@@ -1120,7 +1179,7 @@ const XmlImport = () => {
               <Button variant="outline" onClick={() => setParsedNota(null)}>
                 Cancelar
               </Button>
-              {parsedNota.itens.length > 0 && (
+              {parsedNota.itens.length > 0 && !notaJaImportada && (
                 <Button
                   onClick={() => importarNotaMutation.mutate()}
                   disabled={importarNotaMutation.isPending}
@@ -1132,6 +1191,12 @@ const XmlImport = () => {
                   )}
                   Importar Nota
                 </Button>
+              )}
+              {notaJaImportada && (
+                <div className="flex items-center gap-2 text-destructive text-sm">
+                  <AlertTriangle className="h-4 w-4" />
+                  Esta nota já foi importada anteriormente
+                </div>
               )}
             </div>
           </CardContent>
