@@ -27,6 +27,7 @@ import Compras from "@/pages/Compras";
 import Receitas from "@/pages/Receitas";
 import Caixa from "@/pages/Caixa";
 import Precificacao from "@/pages/Precificacao";
+import Relatorios from "@/pages/Relatorios";
 import Admin from "@/pages/Admin";
 import MeusDados from "@/pages/MeusDados";
 import NotFound from "@/pages/NotFound";
@@ -125,6 +126,7 @@ const AppRoutes = () => {
         <Route path="xml-import" element={<XmlImport />} />
         <Route path="receitas" element={<Receitas />} />
         <Route path="precificacao" element={<Precificacao />} />
+        <Route path="relatorios" element={<Relatorios />} />
         <Route path="admin" element={<Admin />} />
         <Route path="meus-dados" element={<MeusDados />} />
       </Route>
