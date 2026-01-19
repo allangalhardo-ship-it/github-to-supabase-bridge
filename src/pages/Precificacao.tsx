@@ -123,6 +123,8 @@ const Precificacao = () => {
   const [precosEditados, setPrecosEditados] = useState<Record<string, string>>({});
   const [historicoDialogOpen, setHistoricoDialogOpen] = useState(false);
   const [produtoHistoricoId, setProdutoHistoricoId] = useState<string | null>(null);
+  const [precoManual, setPrecoManual] = useState<string>('');
+  const [modoPreco, setModoPreco] = useState<'margem' | 'manual'>('margem');
 
   // Buscar produtos com ficha técnica
   const { data: produtos, isLoading: loadingProdutos } = useQuery({
@@ -489,8 +491,14 @@ const Precificacao = () => {
 
   const handleAplicarDoSimulador = () => {
     if (produtoSimulador && simuladorCalcs) {
-      handleAplicarPreco(produtoSimulador.id, simuladorCalcs.novoPreco, produtoSimulador.preco_venda);
+      const precoFinal = modoPreco === 'manual' && precoManual 
+        ? parseFloat(precoManual) 
+        : simuladorCalcs.novoPreco;
+      
+      handleAplicarPreco(produtoSimulador.id, precoFinal, produtoSimulador.preco_venda);
       setProdutoSimulador(null);
+      setPrecoManual('');
+      setModoPreco('margem');
     }
   };
 
@@ -803,6 +811,10 @@ const Precificacao = () => {
                     setSimuladorOpen(false);
                     setProdutoSimulador(null);
                   }}
+                  precoManual={precoManual}
+                  setPrecoManual={setPrecoManual}
+                  modoPreco={modoPreco}
+                  setModoPreco={setModoPreco}
                 />
               )}
             </ScrollArea>
@@ -1036,6 +1048,10 @@ const Precificacao = () => {
                     handleAplicarDoSimulador={handleAplicarDoSimulador}
                     updatePrecoMutation={updatePrecoMutation}
                     onClose={() => setProdutoSimulador(null)}
+                    precoManual={precoManual}
+                    setPrecoManual={setPrecoManual}
+                    modoPreco={modoPreco}
+                    setModoPreco={setModoPreco}
                   />
                 )}
               </CardContent>
@@ -1059,6 +1075,10 @@ interface SimuladorContentProps {
   handleAplicarDoSimulador: () => void;
   updatePrecoMutation: any;
   onClose: () => void;
+  precoManual: string;
+  setPrecoManual: (value: string) => void;
+  modoPreco: 'margem' | 'manual';
+  setModoPreco: (value: 'margem' | 'manual') => void;
 }
 
 const SimuladorContent: React.FC<SimuladorContentProps> = ({
@@ -1072,7 +1092,39 @@ const SimuladorContent: React.FC<SimuladorContentProps> = ({
   handleAplicarDoSimulador,
   updatePrecoMutation,
   onClose,
+  precoManual,
+  setPrecoManual,
+  modoPreco,
+  setModoPreco,
 }) => {
+  // Calcular margem reversa quando o preço é digitado manualmente
+  const calcularMargemDoPreco = (preco: number, custoInsumos: number, percCustoFixo: number, percImposto: number, percTaxaApp: number) => {
+    if (preco <= 0) return 0;
+    const custoFixoValor = preco * (percCustoFixo / 100);
+    const impostoValor = preco * (percImposto / 100);
+    const taxaAppValor = preco * (percTaxaApp / 100);
+    const lucro = preco - custoInsumos - custoFixoValor - impostoValor - taxaAppValor;
+    return (lucro / preco) * 100;
+  };
+
+  const precoFinal = modoPreco === 'manual' && precoManual 
+    ? parseFloat(precoManual) || 0 
+    : simuladorCalcs?.novoPreco || 0;
+
+  const margemCalculada = modoPreco === 'manual' && precoManual 
+    ? calcularMargemDoPreco(
+        parseFloat(precoManual) || 0,
+        simuladorCalcs?.custoInsumos || 0,
+        simuladorCalcs?.percCustoFixo || 0,
+        simuladorCalcs?.percImposto || 0,
+        simuladorCalcs?.percTaxaApp || 0
+      )
+    : margemDesejada;
+
+  const isPrecoViavel = modoPreco === 'manual' 
+    ? margemCalculada > 0 
+    : simuladorCalcs?.isViavel;
+
   return (
     <div className="space-y-4">
       <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
@@ -1111,25 +1163,80 @@ const SimuladorContent: React.FC<SimuladorContentProps> = ({
         </div>
       </div>
 
-      {/* Slider de margem */}
-      <div className="space-y-2">
-        <div className="flex justify-between text-sm">
-          <span>Margem líquida</span>
-          <span className="font-bold text-primary text-lg">{margemDesejada.toFixed(0)}%</span>
+      {/* Toggle entre Margem e Preço Manual */}
+      <div className="space-y-3">
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant={modoPreco === 'margem' ? 'default' : 'outline'}
+            onClick={() => setModoPreco('margem')}
+            className="flex-1 gap-1"
+          >
+            <Percent className="h-3 w-3" />
+            Por Margem
+          </Button>
+          <Button
+            size="sm"
+            variant={modoPreco === 'manual' ? 'default' : 'outline'}
+            onClick={() => setModoPreco('manual')}
+            className="flex-1 gap-1"
+          >
+            <DollarSign className="h-3 w-3" />
+            Digitar Preço
+          </Button>
         </div>
-        <Slider
-          value={[margemDesejada]}
-          onValueChange={([value]) => setMargemDesejada(value)}
-          min={5}
-          max={60}
-          step={1}
-          className="py-2"
-        />
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>5%</span>
-          <span>30%</span>
-          <span>60%</span>
-        </div>
+
+        {modoPreco === 'margem' ? (
+          <>
+            {/* Slider de margem */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Margem líquida</span>
+                <span className="font-bold text-primary text-lg">{margemDesejada.toFixed(0)}%</span>
+              </div>
+              <Slider
+                value={[margemDesejada]}
+                onValueChange={([value]) => setMargemDesejada(value)}
+                min={5}
+                max={60}
+                step={1}
+                className="py-2"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>5%</span>
+                <span>30%</span>
+                <span>60%</span>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Input de preço manual */}
+            <div className="space-y-2">
+              <Label className="text-sm">Digite o preço desejado</Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0,00"
+                  value={precoManual}
+                  onChange={(e) => setPrecoManual(e.target.value)}
+                  className="pl-9 text-lg font-semibold h-12"
+                />
+              </div>
+              {precoManual && (
+                <div className={`p-2 rounded-lg text-sm ${margemCalculada >= 0 ? 'bg-success/10' : 'bg-destructive/10'}`}>
+                  <span className="text-muted-foreground">Margem resultante: </span>
+                  <span className={`font-bold ${margemCalculada >= 0 ? 'text-success' : 'text-destructive'}`}>
+                    {formatPercent(margemCalculada)}
+                  </span>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       <Separator />
@@ -1174,10 +1281,12 @@ const SimuladorContent: React.FC<SimuladorContentProps> = ({
           <div className="flex justify-between py-1.5 items-center border-t pt-2">
             <span className="text-muted-foreground flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-emerald-500" />
-              Lucro ({formatPercent(margemDesejada)})
+              Lucro ({formatPercent(modoPreco === 'manual' ? margemCalculada : margemDesejada)})
             </span>
-            <span className={simuladorCalcs?.lucroLiquido > 0 ? 'text-success font-medium' : 'text-destructive font-medium'}>
-              {formatCurrency(simuladorCalcs?.lucroLiquido || 0)}
+            <span className={margemCalculada > 0 ? 'text-success font-medium' : 'text-destructive font-medium'}>
+              {formatCurrency(modoPreco === 'manual' 
+                ? (precoFinal - (simuladorCalcs?.custoInsumos || 0) - (precoFinal * (simuladorCalcs?.percCustoFixo || 0) / 100) - (precoFinal * (simuladorCalcs?.percImposto || 0) / 100) - (precoFinal * (simuladorCalcs?.percTaxaApp || 0) / 100))
+                : simuladorCalcs?.lucroLiquido || 0)}
             </span>
           </div>
         </div>
@@ -1186,23 +1295,27 @@ const SimuladorContent: React.FC<SimuladorContentProps> = ({
       <Separator />
 
       {/* Preço calculado */}
-      <div className={`flex justify-between items-center p-4 rounded-lg ${simuladorCalcs?.isViavel ? 'bg-primary/10 border border-primary/30' : 'bg-destructive/10 border border-destructive/30'}`}>
+      <div className={`flex justify-between items-center p-4 rounded-lg ${isPrecoViavel ? 'bg-primary/10 border border-primary/30' : 'bg-destructive/10 border border-destructive/30'}`}>
         <div>
-          <p className="text-xs text-muted-foreground">Preço Sugerido</p>
+          <p className="text-xs text-muted-foreground">
+            {modoPreco === 'manual' ? 'Preço Definido' : 'Preço Sugerido'}
+          </p>
           <p className="text-sm text-muted-foreground">
             {appSelecionado === 'balcao' ? 'Venda direta' : taxasApps?.find(a => a.id === appSelecionado)?.nome_app}
           </p>
         </div>
-        <span className={`text-2xl font-bold ${simuladorCalcs?.isViavel ? 'text-primary' : 'text-destructive'}`}>
-          {formatCurrency(simuladorCalcs?.novoPreco || 0)}
+        <span className={`text-2xl font-bold ${isPrecoViavel ? 'text-primary' : 'text-destructive'}`}>
+          {formatCurrency(precoFinal)}
         </span>
       </div>
 
-      {!simuladorCalcs?.isViavel && (
+      {!isPrecoViavel && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            Margem inviável! Reduza a margem ou revise custos.
+            {modoPreco === 'manual' 
+              ? 'Preço muito baixo! A margem está negativa.' 
+              : 'Margem inviável! Reduza a margem ou revise custos.'}
           </AlertDescription>
         </Alert>
       )}
@@ -1238,7 +1351,11 @@ const SimuladorContent: React.FC<SimuladorContentProps> = ({
       <div className="grid grid-cols-2 gap-2 text-sm">
         <div className="p-2 bg-muted rounded text-center">
           <p className="text-xs text-muted-foreground">CMV</p>
-          <p className="font-medium">{simuladorCalcs?.cmv.toFixed(1)}%</p>
+          <p className="font-medium">
+            {precoFinal > 0 
+              ? ((simuladorCalcs?.custoInsumos || 0) / precoFinal * 100).toFixed(1)
+              : simuladorCalcs?.cmv?.toFixed(1) || '0'}%
+          </p>
         </div>
         <div className="p-2 bg-muted rounded text-center">
           <p className="text-xs text-muted-foreground">Preço Atual</p>
@@ -1250,9 +1367,9 @@ const SimuladorContent: React.FC<SimuladorContentProps> = ({
         <Button 
           className="flex-1"
           onClick={handleAplicarDoSimulador}
-          disabled={updatePrecoMutation.isPending || !simuladorCalcs?.isViavel}
+          disabled={updatePrecoMutation.isPending || !isPrecoViavel || (modoPreco === 'manual' && !precoManual)}
         >
-          Aplicar Preço
+          Aplicar {formatCurrency(precoFinal)}
         </Button>
         <Button 
           variant="outline"
