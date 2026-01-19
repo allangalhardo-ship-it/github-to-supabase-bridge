@@ -427,14 +427,23 @@ const MeusDados = () => {
         <CardContent>
           <div className="flex flex-col gap-4">
             <div className="space-y-1">
-              <p className="font-medium">GastroGestor Pro</p>
-              <p className="text-sm text-muted-foreground">R$ 39,90/mês</p>
+              {(() => {
+                const effectivePlan = subscription.plan === 'pro' ? 'pro' : 'standard';
+                const planName = effectivePlan === 'pro' ? 'GastroGestor Pro' : 'GastroGestor Standard';
+                const planPrice = effectivePlan === 'pro' ? 'R$ 59,90/mês' : 'R$ 39,90/mês';
+
+                return (
+                  <>
+                    <p className="font-medium">{planName}</p>
+                    <p className="text-sm text-muted-foreground">{planPrice}</p>
+                  </>
+                );
+              })()}
               {subscription.status === 'trialing' && subscription.trialEnd && (
                 <p className="text-xs text-muted-foreground">
-                  {subscription.subscribed 
+                  {subscription.subscribed
                     ? `Cobrança inicia em ${new Date(subscription.trialEnd).toLocaleDateString('pt-BR')}`
-                    : `Teste expira em ${new Date(subscription.trialEnd).toLocaleDateString('pt-BR')}`
-                  }
+                    : `Teste expira em ${new Date(subscription.trialEnd).toLocaleDateString('pt-BR')}`}
                 </p>
               )}
               {subscription.status === 'trialing' && !subscription.trialEnd && subscription.trialDaysRemaining > 0 && (
