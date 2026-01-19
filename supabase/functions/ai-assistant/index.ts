@@ -407,7 +407,32 @@ serve(async (req) => {
       });
     }
 
-    const { messages } = await req.json();
+    const { messages, executeAction, pendingAction } = await req.json();
+    
+    // If executing a confirmed action
+    if (executeAction && pendingAction) {
+      console.log("Executing confirmed action:", pendingAction.toolName);
+      const { data: usuario } = await supabase
+        .from("usuarios")
+        .select("empresa_id")
+        .eq("id", user.id)
+        .single();
+      
+      if (!usuario?.empresa_id) {
+        return new Response(JSON.stringify({ error: "Empresa não encontrada" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
+      const result = await executeTool(supabase, usuario.empresa_id, pendingAction.toolName, pendingAction.args);
+      return new Response(JSON.stringify({ 
+        actionResult: result,
+        executed: true,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     
     if (!messages || !Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "Mensagens inválidas" }), {
@@ -645,59 +670,54 @@ ${userContext}
     if (assistantMessage?.tool_calls && assistantMessage.tool_calls.length > 0) {
       console.log("AI requested tool calls:", assistantMessage.tool_calls.length);
 
-      const toolResults: string[] = [];
-
-      // Execute each tool call
-      for (const toolCall of assistantMessage.tool_calls) {
-        const toolName = toolCall.function.name;
-        const args = JSON.parse(toolCall.function.arguments);
+      // Build pending actions for confirmation
+      const pendingActions = assistantMessage.tool_calls.map((tc: any) => {
+        const toolName = tc.function.name;
+        const args = JSON.parse(tc.function.arguments);
         
-        const toolResult = await executeTool(supabase, empresaId, toolName, args);
-        toolResults.push(toolResult.message);
-      }
-
-      // Build messages with tool results for follow-up
-      const followUpMessages = [
-        { role: "system", content: systemPrompt },
-        ...messages,
-        { 
-          role: "assistant", 
-          content: null,
-          tool_calls: assistantMessage.tool_calls 
-        },
-        ...assistantMessage.tool_calls.map((tc: any, i: number) => ({
-          role: "tool",
-          tool_call_id: tc.id,
-          content: toolResults[i],
-        })),
-      ];
-
-      // Get final response after tool execution
-      const finalResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
-          messages: followUpMessages,
-          stream: true,
-        }),
+        // Generate human-readable description
+        let description = "";
+        switch (toolName) {
+          case "criar_insumo":
+            description = `Cadastrar insumo "${args.nome}" a R$ ${args.custo_unitario?.toFixed(2) || '0.00'}/${args.unidade_medida || 'g'}`;
+            break;
+          case "criar_produto":
+            description = `Cadastrar produto "${args.nome}" por R$ ${args.preco_venda?.toFixed(2) || '0.00'}`;
+            break;
+          case "criar_produto_com_ficha_tecnica":
+            description = `Cadastrar produto "${args.nome_produto}" com ${args.ingredientes?.length || 0} ingredientes`;
+            break;
+          case "registrar_venda":
+            description = `Registrar venda: ${args.quantidade}x ${args.nome_produto} = R$ ${args.valor_total?.toFixed(2) || '0.00'}`;
+            break;
+          case "atualizar_preco_insumo":
+            description = `Atualizar preço de "${args.nome_insumo}" para R$ ${args.novo_custo?.toFixed(2) || '0.00'}`;
+            break;
+          case "atualizar_estoque":
+            description = `${args.tipo === 'entrada' ? 'Adicionar' : 'Remover'} ${Math.abs(args.quantidade)} de "${args.nome_insumo}"`;
+            break;
+          case "cadastrar_custo_fixo":
+            description = `Cadastrar custo fixo "${args.nome}": R$ ${args.valor_mensal?.toFixed(2) || '0.00'}/mês`;
+            break;
+          default:
+            description = `Executar: ${toolName}`;
+        }
+        
+        return {
+          id: tc.id,
+          toolName,
+          args,
+          description,
+        };
       });
 
-      if (!finalResponse.ok) {
-        // Return tool results directly if follow-up fails
-        return new Response(JSON.stringify({ 
-          content: toolResults.join("\n\n"),
-          tool_executed: true,
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      return new Response(finalResponse.body, {
-        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      // Return pending actions for confirmation
+      return new Response(JSON.stringify({ 
+        pendingActions,
+        requiresConfirmation: true,
+        assistantPreview: assistantMessage.content || "Entendi! Vou executar as seguintes ações:",
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
