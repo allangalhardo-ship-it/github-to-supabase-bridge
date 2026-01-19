@@ -28,6 +28,7 @@ import Receitas from "@/pages/Receitas";
 import Caixa from "@/pages/Caixa";
 import Precificacao from "@/pages/Precificacao";
 import Relatorios from "@/pages/Relatorios";
+import Assistente from "@/pages/Assistente";
 import Admin from "@/pages/Admin";
 import MeusDados from "@/pages/MeusDados";
 import NotFound from "@/pages/NotFound";
@@ -127,6 +128,7 @@ const AppRoutes = () => {
         <Route path="receitas" element={<Receitas />} />
         <Route path="precificacao" element={<Precificacao />} />
         <Route path="relatorios" element={<Relatorios />} />
+        <Route path="assistente" element={<Assistente />} />
         <Route path="admin" element={<Admin />} />
         <Route path="meus-dados" element={<MeusDados />} />
       </Route>

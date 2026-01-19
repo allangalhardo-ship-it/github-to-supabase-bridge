@@ -31,6 +31,7 @@ import {
   MessageSquare,
   Tags,
   BarChart3,
+  Bot,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -40,6 +41,7 @@ const navItems = [
   { to: '/produtos', icon: UtensilsCrossed, label: 'Produtos' },
   { to: '/precificacao', icon: Tags, label: 'Precificação' },
   { to: '/relatorios', icon: BarChart3, label: 'Relatórios' },
+  { to: '/assistente', icon: Bot, label: 'Assistente IA' },
   { to: '/receitas', icon: ChefHat, label: 'Receitas' },
   { to: '/estoque', icon: PackageOpen, label: 'Estoque' },
   { to: '/producao', icon: Factory, label: 'Produção' },
