@@ -566,13 +566,17 @@ const Producao = () => {
       )}
 
       <Tabs defaultValue="estoque" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="estoque" className="flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Estoque Acabado
+        <TabsList className="grid w-full max-w-lg grid-cols-3">
+          <TabsTrigger value="estoque" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+            <Package className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Estoque</span> Acabado
           </TabsTrigger>
-          <TabsTrigger value="historico" className="flex items-center gap-2">
-            <Factory className="h-4 w-4" />
+          <TabsTrigger value="receitas" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+            <FlaskConical className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Estoque</span> Receitas
+          </TabsTrigger>
+          <TabsTrigger value="historico" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+            <Factory className="h-3 w-3 sm:h-4 sm:w-4" />
             Histórico
           </TabsTrigger>
         </TabsList>
@@ -636,6 +640,76 @@ const Producao = () => {
                   </h3>
                   <p className="text-muted-foreground">
                     {buscaProduto ? 'Tente outra busca' : 'Cadastre produtos na página de Produtos'}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Aba Estoque de Receitas */}
+        <TabsContent value="receitas" className="mt-6">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <CardTitle>Estoque de Receitas Base</CardTitle>
+                <Badge variant="secondary">{receitas?.length || 0} receita(s)</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {loadingReceitas ? (
+                <div className="p-6">
+                  <Skeleton className="h-64" />
+                </div>
+              ) : receitas && receitas.length > 0 ? (
+                <MobileDataView
+                  data={receitas}
+                  keyExtractor={(receita) => receita.id}
+                  columns={[
+                    { key: 'nome', header: 'Receita', mobilePriority: 1, render: (r) => (
+                      <div className="flex items-center gap-2">
+                        <FlaskConical className="h-4 w-4 text-orange-500 flex-shrink-0" />
+                        <span className="font-medium truncate block max-w-[120px] sm:max-w-none">{r.nome}</span>
+                      </div>
+                    )},
+                    { key: 'estoque', header: 'Estoque', align: 'right', mobilePriority: 2, render: (r) => {
+                      const estoque = Number(r.estoque_atual) || 0;
+                      return <span className={estoque === 0 ? 'text-muted-foreground' : 'font-semibold text-orange-600'}>{estoque} {r.unidade_medida}</span>;
+                    }},
+                    { key: 'rendimento', header: 'Rend./Lote', align: 'right', mobilePriority: 4, render: (r) => (
+                      <span className="text-muted-foreground">{r.rendimento_receita || 1} {r.unidade_medida}</span>
+                    )},
+                    { key: 'custo', header: 'Custo/Un', align: 'right', mobilePriority: 3, render: (r) => (
+                      <span className="text-muted-foreground">{formatCurrency(Number(r.custo_unitario))}</span>
+                    )},
+                    { key: 'status', header: 'Status', align: 'center', mobilePriority: 5, render: (r) => {
+                      const estoque = Number(r.estoque_atual) || 0;
+                      return estoque > 0 ? (
+                        <Badge variant="outline" className="text-orange-600 border-orange-600">Em estoque</Badge>
+                      ) : (
+                        <Badge variant="secondary">Sem estoque</Badge>
+                      );
+                    }},
+                  ]}
+                  renderMobileHeader={(r) => (
+                    <div className="flex items-center gap-2">
+                      <FlaskConical className="h-4 w-4 text-orange-500" />
+                      <span className="truncate block max-w-[150px]">{r.nome}</span>
+                    </div>
+                  )}
+                  renderMobileSubtitle={(r) => <span className="text-muted-foreground">{formatCurrency(Number(r.custo_unitario))}/{r.unidade_medida}</span>}
+                  renderMobileHighlight={(r) => {
+                    const estoque = Number(r.estoque_atual) || 0;
+                    return <span className={estoque === 0 ? 'text-muted-foreground' : 'font-semibold text-orange-600'}>{estoque} {r.unidade_medida}</span>;
+                  }}
+                  emptyMessage="Nenhuma receita com estoque"
+                />
+              ) : (
+                <div className="p-12 text-center">
+                  <FlaskConical className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">Nenhuma receita cadastrada</h3>
+                  <p className="text-muted-foreground">
+                    Cadastre receitas base na página de Receitas para produzi-las aqui.
                   </p>
                 </div>
               )}
