@@ -80,7 +80,7 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
   const getPlanBadge = () => {
     if (subscription?.plan === 'pro') {
       return (
-        <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 gap-1">
+        <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 gap-1 text-xs">
           <Crown className="h-3 w-3" />
           Pro
         </Badge>
@@ -88,28 +88,21 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
     }
     if (subscription?.plan === 'standard') {
       return (
-        <Badge className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-0 gap-1">
+        <Badge className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-0 gap-1 text-xs">
           <Sparkles className="h-3 w-3" />
           Standard
         </Badge>
       );
     }
-    if (subscription?.status === 'trialing') {
-      const daysText = subscription.trialDaysRemaining === 1 
-        ? '1 dia' 
-        : `${subscription.trialDaysRemaining} dias`;
-      return (
-        <NavLink to="/assinatura" onClick={onNavigate}>
-          <Badge className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-0 gap-1 cursor-pointer">
-            Teste ({daysText})
-          </Badge>
-        </NavLink>
-      );
-    }
+    // Default: Teste (trial period or expired - both show as Teste)
+    const daysRemaining = subscription?.trialDaysRemaining ?? 0;
+    const daysText = daysRemaining > 0 
+      ? `${daysRemaining} ${daysRemaining === 1 ? 'dia' : 'dias'}`
+      : 'expirado';
     return (
       <NavLink to="/assinatura" onClick={onNavigate}>
-        <Badge variant="outline" className="border-sidebar-border text-sidebar-foreground/60 hover:bg-sidebar-accent cursor-pointer">
-          Assinar
+        <Badge className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-0 gap-1 text-xs cursor-pointer hover:opacity-90">
+          Teste ({daysText})
         </Badge>
       </NavLink>
     );
@@ -119,15 +112,15 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
     <div className="flex flex-col h-full bg-sidebar text-sidebar-foreground">
       {/* Header com logo */}
       <div className="p-5 border-b border-sidebar-border">
-        <div className="flex items-center justify-between">
-          <Logo size="sm" theme="dark" />
+        <Logo size="sm" theme="dark" />
+        <div className="flex items-center justify-between mt-2">
+          {usuario?.nome && (
+            <p className="text-xs text-sidebar-foreground/60 truncate flex-1 mr-2">
+              {usuario.nome}
+            </p>
+          )}
           {getPlanBadge()}
         </div>
-        {usuario?.nome && (
-          <p className="text-xs text-sidebar-foreground/60 mt-2 truncate">
-            {usuario.nome}
-          </p>
-        )}
       </div>
 
       {/* Navigation */}
