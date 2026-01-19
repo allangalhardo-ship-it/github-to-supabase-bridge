@@ -238,6 +238,9 @@ const Assistente: React.FC = () => {
       const data = await resp.json();
       
       if (data.actionResult) {
+        // Remove this action from pending
+        setPendingActions(prev => prev.filter(a => a.id !== action.id));
+        
         // Remove confirmation message and add result
         setMessages(prev => {
           const filtered = prev.filter(m => !m.isConfirmation);
@@ -246,7 +249,6 @@ const Assistente: React.FC = () => {
             content: data.actionResult.message 
           }];
         });
-        setPendingActions([]);
         
         if (data.actionResult.success) {
           toast({
@@ -259,6 +261,69 @@ const Assistente: React.FC = () => {
       toast({
         title: "Erro",
         description: error instanceof Error ? error.message : "Erro ao executar ação",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const executeAllActions = async (actions: PendingAction[]) => {
+    const session = await getSession();
+    if (!session) return;
+
+    setIsLoading(true);
+    const results: string[] = [];
+    let successCount = 0;
+    
+    try {
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ 
+          executeAction: true,
+          pendingActions: actions.map(a => ({
+            toolName: a.toolName,
+            args: a.args,
+          }))
+        }),
+      });
+
+      if (!resp.ok) {
+        throw new Error("Erro ao executar ações");
+      }
+
+      const data = await resp.json();
+      
+      if (data.actionResults) {
+        for (const result of data.actionResults) {
+          results.push(result.message);
+          if (result.success) successCount++;
+        }
+        
+        // Remove confirmation message and add results
+        setMessages(prev => {
+          const filtered = prev.filter(m => !m.isConfirmation);
+          return [...filtered, { 
+            role: "assistant", 
+            content: results.join('\n\n')
+          }];
+        });
+        setPendingActions([]);
+        
+        toast({
+          title: `${successCount} de ${actions.length} ações executadas!`,
+          description: successCount === actions.length ? "Todas as ações foram concluídas" : "Algumas ações falharam",
+          variant: successCount === actions.length ? "default" : "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Erro ao executar ações",
         variant: "destructive",
       });
     } finally {
@@ -451,26 +516,61 @@ const Assistente: React.FC = () => {
                     {msg.isConfirmation && msg.pendingActions && msg.pendingActions.length > 0 && (
                       <div className="ml-11 mt-3 space-y-3">
                         <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-                          <div className="flex items-center gap-2 mb-3 text-amber-700 dark:text-amber-400">
-                            <AlertCircle className="h-4 w-4" />
-                            <span className="font-medium text-sm">Confirme a ação:</span>
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                              <AlertCircle className="h-4 w-4" />
+                              <span className="font-medium text-sm">
+                                {msg.pendingActions.length === 1 ? 'Confirme a ação:' : `Confirme as ${msg.pendingActions.length} ações:`}
+                              </span>
+                            </div>
+                            
+                            {/* Buttons for multiple actions */}
+                            {msg.pendingActions.length > 1 && (
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={cancelAction}
+                                  disabled={isLoading}
+                                  className="gap-1"
+                                >
+                                  <X className="h-3 w-3" />
+                                  Cancelar Todas
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() => executeAllActions(msg.pendingActions!)}
+                                  disabled={isLoading}
+                                  className="gap-1 bg-green-600 hover:bg-green-700"
+                                >
+                                  {isLoading ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <Check className="h-3 w-3" />
+                                  )}
+                                  Confirmar Todas
+                                </Button>
+                              </div>
+                            )}
                           </div>
                           
                           <div className="space-y-2">
                             {msg.pendingActions.map((action, actionIndex) => (
                               <div key={actionIndex} className="flex items-center justify-between bg-white dark:bg-background rounded-md p-3 border">
-                                <span className="text-sm">{action.description}</span>
-                                <div className="flex gap-2">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={cancelAction}
-                                    disabled={isLoading}
-                                    className="gap-1"
-                                  >
-                                    <X className="h-3 w-3" />
-                                    Cancelar
-                                  </Button>
+                                <span className="text-sm flex-1">{action.description}</span>
+                                <div className="flex gap-2 ml-2">
+                                  {msg.pendingActions!.length === 1 && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={cancelAction}
+                                      disabled={isLoading}
+                                      className="gap-1"
+                                    >
+                                      <X className="h-3 w-3" />
+                                      Cancelar
+                                    </Button>
+                                  )}
                                   <Button
                                     size="sm"
                                     onClick={() => executeAction(action)}
@@ -482,7 +582,7 @@ const Assistente: React.FC = () => {
                                     ) : (
                                       <Check className="h-3 w-3" />
                                     )}
-                                    Confirmar
+                                    {msg.pendingActions!.length === 1 ? 'Confirmar' : 'Executar'}
                                   </Button>
                                 </div>
                               </div>

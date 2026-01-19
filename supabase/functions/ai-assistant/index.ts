@@ -407,9 +407,39 @@ serve(async (req) => {
       });
     }
 
-    const { messages, executeAction, pendingAction } = await req.json();
+    const { messages, executeAction, pendingAction, pendingActions } = await req.json();
     
-    // If executing a confirmed action
+    // If executing multiple confirmed actions
+    if (executeAction && pendingActions && Array.isArray(pendingActions)) {
+      console.log("Executing multiple confirmed actions:", pendingActions.length);
+      const { data: usuario } = await supabase
+        .from("usuarios")
+        .select("empresa_id")
+        .eq("id", user.id)
+        .single();
+      
+      if (!usuario?.empresa_id) {
+        return new Response(JSON.stringify({ error: "Empresa não encontrada" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
+      const results = [];
+      for (const action of pendingActions) {
+        const result = await executeTool(supabase, usuario.empresa_id, action.toolName, action.args);
+        results.push(result);
+      }
+      
+      return new Response(JSON.stringify({ 
+        actionResults: results,
+        executed: true,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    
+    // If executing a single confirmed action
     if (executeAction && pendingAction) {
       console.log("Executing confirmed action:", pendingAction.toolName);
       const { data: usuario } = await supabase
