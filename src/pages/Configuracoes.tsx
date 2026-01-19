@@ -113,17 +113,18 @@ const Configuracoes = () => {
           <CardContent className="space-y-6">
             <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="margem_desejada_padrao">Markup Desejado (%)</Label>
+                <Label htmlFor="margem_desejada_padrao">Margem Desejada (%)</Label>
                 <Input
                   id="margem_desejada_padrao"
                   type="number"
                   step="0.01"
                   min="0"
+                  max="100"
                   value={formData.margem_desejada_padrao}
                   onChange={(e) => setFormData({ ...formData, margem_desejada_padrao: e.target.value })}
                 />
                 <p className="text-xs text-muted-foreground">
-                  % sobre o custo. Ex: 100% = dobrar o preço (custo R$10 → venda R$20)
+                  % de lucro sobre o preço de venda. Ex: 30% = R$10 de custo → R$14,29 de venda
                 </p>
               </div>
 
@@ -184,8 +185,8 @@ const Configuracoes = () => {
         <CardContent className="space-y-4 text-sm text-muted-foreground">
           <div>
             <h4 className="font-medium text-foreground">Preço Sugerido</h4>
-            <p>Custo dos insumos × (1 + Markup%)</p>
-            <p className="text-xs">Exemplo: R$ 10,00 de custo com 100% de markup = R$ 20,00</p>
+            <p>Custo dos insumos ÷ (1 - Margem%)</p>
+            <p className="text-xs">Exemplo: R$ 10,00 de custo com 30% de margem = R$ 14,29</p>
           </div>
           <div>
             <h4 className="font-medium text-foreground">CMV (Custo da Mercadoria Vendida)</h4>
