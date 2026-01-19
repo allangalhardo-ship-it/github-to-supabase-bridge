@@ -21,6 +21,7 @@ interface SubscriptionContextType {
   openCustomerPortal: () => Promise<void>;
   hasAccess: boolean;
   isPro: boolean;
+  isAdmin: boolean;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
@@ -36,6 +37,7 @@ export const useSubscription = () => {
 export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, session } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [subscription, setSubscription] = useState<SubscriptionStatus>({
     subscribed: false,
     status: 'loading',
@@ -44,6 +46,32 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     subscriptionEnd: null,
     trialEnd: null,
   });
+
+  // Check if user is admin
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
+
+        setIsAdmin(!!data && !error);
+      } catch (err) {
+        console.error('Error checking admin status:', err);
+        setIsAdmin(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, [user?.id]);
 
   const checkSubscription = useCallback(async () => {
     // If user isn't available yet, we can't determine access.
@@ -191,11 +219,11 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const { usuario } = useAuth();
   const isTestUser = usuario?.is_test_user === true;
 
-  // User has access if: test user OR subscribed OR in trial period OR still loading (prevent flicker redirect)
-  const hasAccess = isTestUser || loading || subscription.subscribed || subscription.status === 'trialing';
+  // User has access if: admin OR test user OR subscribed OR in trial period OR still loading (prevent flicker redirect)
+  const hasAccess = isAdmin || isTestUser || loading || subscription.subscribed || subscription.status === 'trialing';
 
-  // User is Pro ONLY if has Pro plan (test users do NOT get Pro features)
-  const isPro = subscription.plan === 'pro';
+  // User is Pro ONLY if has Pro plan OR is admin (admins get Pro features)
+  const isPro = subscription.plan === 'pro' || isAdmin;
 
   return (
     <SubscriptionContext.Provider
@@ -207,6 +235,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         openCustomerPortal,
         hasAccess,
         isPro,
+        isAdmin,
       }}
     >
       {children}
