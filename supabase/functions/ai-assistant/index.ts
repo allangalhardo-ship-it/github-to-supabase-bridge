@@ -409,6 +409,45 @@ serve(async (req) => {
 
     const { messages, executeAction, pendingAction, pendingActions } = await req.json();
     
+    const DAILY_LIMIT = 50;
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Helper function to check and update usage
+    async function checkAndUpdateUsage(userId: string, empresaId: string): Promise<{ allowed: boolean; remaining: number }> {
+      // Get current usage
+      const { data: usageData } = await supabase
+        .from("ai_usage")
+        .select("id, message_count")
+        .eq("user_id", userId)
+        .eq("date", today)
+        .maybeSingle();
+      
+      const currentCount = usageData?.message_count || 0;
+      
+      if (currentCount >= DAILY_LIMIT) {
+        return { allowed: false, remaining: 0 };
+      }
+      
+      // Update or insert usage
+      if (usageData) {
+        await supabase
+          .from("ai_usage")
+          .update({ message_count: currentCount + 1 })
+          .eq("id", usageData.id);
+      } else {
+        await supabase
+          .from("ai_usage")
+          .insert({
+            user_id: userId,
+            empresa_id: empresaId,
+            date: today,
+            message_count: 1,
+          });
+      }
+      
+      return { allowed: true, remaining: DAILY_LIMIT - currentCount - 1 };
+    }
+    
     // If executing multiple confirmed actions
     if (executeAction && pendingActions && Array.isArray(pendingActions)) {
       console.log("Executing multiple confirmed actions:", pendingActions.length);
@@ -485,7 +524,21 @@ serve(async (req) => {
     }
 
     const empresaId = usuario.empresa_id;
-    console.log(`Fetching context for empresa: ${empresaId}`);
+    
+    // Check usage limit before processing message
+    const usageCheck = await checkAndUpdateUsage(user.id, empresaId);
+    if (!usageCheck.allowed) {
+      return new Response(JSON.stringify({ 
+        error: "Limite diário atingido",
+        limitReached: true,
+        remaining: 0,
+      }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    
+    console.log(`Fetching context for empresa: ${empresaId}, remaining: ${usageCheck.remaining}`);
 
     // Fetch user context data in parallel
     const [

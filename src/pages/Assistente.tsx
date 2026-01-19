@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Bot, 
@@ -21,7 +22,8 @@ import {
   Package,
   Check,
   X,
-  AlertCircle
+  AlertCircle,
+  Zap
 } from 'lucide-react';
 
 interface Message {
@@ -37,6 +39,14 @@ interface PendingAction {
   args: any;
   description: string;
 }
+
+interface UsageInfo {
+  messageCount: number;
+  limit: number;
+  remaining: number;
+}
+
+const DAILY_LIMIT = 50;
 
 const suggestedQuestions = [
   { icon: TrendingUp, text: "Qual produto tem a melhor margem?", category: "Análise" },
@@ -54,14 +64,39 @@ const suggestedActions = [
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
 
 const Assistente: React.FC = () => {
-  const { usuario } = useAuth();
+  const { usuario, user } = useAuth();
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
+  const [usage, setUsage] = useState<UsageInfo>({ messageCount: 0, limit: DAILY_LIMIT, remaining: DAILY_LIMIT });
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Fetch usage on mount
+  useEffect(() => {
+    const fetchUsage = async () => {
+      if (!user?.id) return;
+      
+      const today = new Date().toISOString().split('T')[0];
+      const { data } = await supabase
+        .from('ai_usage')
+        .select('message_count')
+        .eq('user_id', user.id)
+        .eq('date', today)
+        .maybeSingle();
+      
+      const count = data?.message_count || 0;
+      setUsage({
+        messageCount: count,
+        limit: DAILY_LIMIT,
+        remaining: Math.max(0, DAILY_LIMIT - count)
+      });
+    };
+    
+    fetchUsage();
+  }, [user?.id]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -346,6 +381,16 @@ const Assistente: React.FC = () => {
     const text = messageText || input.trim();
     if (!text || isLoading) return;
 
+    // Check daily limit
+    if (usage.remaining <= 0) {
+      toast({
+        title: "Limite diário atingido",
+        description: "Você atingiu o limite de 50 mensagens hoje. O limite será renovado amanhã.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Clear pending actions if any
     if (pendingActions.length > 0) {
       setPendingActions([]);
@@ -358,6 +403,12 @@ const Assistente: React.FC = () => {
 
     try {
       await sendMessage(text);
+      // Update usage count locally
+      setUsage(prev => ({
+        ...prev,
+        messageCount: prev.messageCount + 1,
+        remaining: Math.max(0, prev.remaining - 1)
+      }));
     } catch (error) {
       console.error("Chat error:", error);
       toast({
@@ -398,9 +449,19 @@ const Assistente: React.FC = () => {
                 <Sparkles className="h-3 w-3" />
                 Gemini 3 Flash
               </Badge>
-              <span className="text-xs text-muted-foreground">
-                Pode executar ações no sistema
-              </span>
+              {/* Usage counter */}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 text-xs">
+                  <Zap className={`h-3 w-3 ${usage.remaining > 10 ? 'text-green-500' : usage.remaining > 0 ? 'text-amber-500' : 'text-red-500'}`} />
+                  <span className={usage.remaining > 10 ? 'text-muted-foreground' : usage.remaining > 0 ? 'text-amber-600' : 'text-red-600'}>
+                    {usage.remaining}/{usage.limit} restantes
+                  </span>
+                </div>
+                <Progress 
+                  value={(usage.remaining / usage.limit) * 100} 
+                  className="w-16 h-1.5"
+                />
+              </div>
             </div>
             {messages.length > 0 && (
               <Button 
