@@ -2,9 +2,12 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
+export type PlanType = 'standard' | 'pro' | null;
+
 interface SubscriptionStatus {
   subscribed: boolean;
   status: 'active' | 'trialing' | 'expired' | 'canceled' | 'loading';
+  plan: PlanType;
   trialDaysRemaining: number;
   subscriptionEnd: string | null;
   trialEnd: string | null;
@@ -14,9 +17,10 @@ interface SubscriptionContextType {
   subscription: SubscriptionStatus;
   loading: boolean;
   checkSubscription: () => Promise<void>;
-  openCheckout: () => Promise<void>;
+  openCheckout: (plan?: PlanType) => Promise<void>;
   openCustomerPortal: () => Promise<void>;
   hasAccess: boolean;
+  isPro: boolean;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
@@ -35,6 +39,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [subscription, setSubscription] = useState<SubscriptionStatus>({
     subscribed: false,
     status: 'loading',
+    plan: null,
     trialDaysRemaining: 7,
     subscriptionEnd: null,
     trialEnd: null,
@@ -46,6 +51,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setSubscription({
         subscribed: false,
         status: 'expired',
+        plan: null,
         trialDaysRemaining: 0,
         subscriptionEnd: null,
         trialEnd: null,
@@ -75,6 +81,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
           return {
             subscribed: false,
             status: trialDaysRemaining > 0 ? 'trialing' : 'expired',
+            plan: null,
             trialDaysRemaining,
             subscriptionEnd: null,
             trialEnd: null,
@@ -86,6 +93,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       return {
         subscribed: false,
         status: 'trialing',
+        plan: null,
         trialDaysRemaining: 7,
         subscriptionEnd: null,
         trialEnd: null,
@@ -106,6 +114,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setSubscription({
         subscribed: Boolean(data.subscribed),
         status: data.status,
+        plan: data.plan || null,
         trialDaysRemaining: data.trial_days_remaining || 0,
         subscriptionEnd: data.subscription_end,
         trialEnd: data.trial_end,
@@ -118,9 +127,11 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, [session?.access_token, user]);
 
-  const openCheckout = async () => {
+  const openCheckout = async (plan: PlanType = 'standard') => {
     try {
-      const { data, error } = await supabase.functions.invoke('create-checkout');
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { plan: plan || 'standard' },
+      });
 
       if (error) {
         console.error('Error creating checkout:', error);
@@ -183,6 +194,9 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   // User has access if: test user OR subscribed OR in trial period OR still loading (prevent flicker redirect)
   const hasAccess = isTestUser || loading || subscription.subscribed || subscription.status === 'trialing';
 
+  // User is Pro if: has Pro plan OR is test user (test users get all features)
+  const isPro = isTestUser || subscription.plan === 'pro';
+
   return (
     <SubscriptionContext.Provider
       value={{
@@ -192,6 +206,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         openCheckout,
         openCustomerPortal,
         hasAccess,
+        isPro,
       }}
     >
       {children}

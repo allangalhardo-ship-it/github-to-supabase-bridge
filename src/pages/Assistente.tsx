@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import ProFeatureGate from '@/components/subscription/ProFeatureGate';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -430,123 +431,125 @@ const Assistente: React.FC = () => {
   };
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col">
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Bot className="h-7 w-7 text-primary" />
-          Assistente IA
-        </h1>
-        <p className="text-muted-foreground">
-          Tire dúvidas sobre o sistema, peça análises dos seus dados ou dicas de gestão
-        </p>
-      </div>
+    <ProFeatureGate
+      featureName="Assistente IA"
+      featureDescription="Converse com a inteligência artificial para analisar seus dados, tirar dúvidas e automatizar tarefas como cadastros e atualizações."
+    >
+      <div className="h-[calc(100vh-8rem)] flex flex-col">
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Bot className="h-7 w-7 text-primary" />
+            Assistente IA
+          </h1>
+          <p className="text-muted-foreground">
+            Tire dúvidas sobre o sistema, peça análises dos seus dados ou dicas de gestão
+          </p>
+        </div>
 
-      <Card className="flex-1 flex flex-col overflow-hidden">
-        <CardHeader className="py-3 border-b">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="gap-1 bg-primary/5">
-                <Sparkles className="h-3 w-3" />
-                Gemini 3 Flash
-              </Badge>
-              {/* Usage counter */}
+        <Card className="flex-1 flex flex-col overflow-hidden">
+          <CardHeader className="py-3 border-b">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 text-xs">
-                  <Zap className={`h-3 w-3 ${usage.remaining > 10 ? 'text-green-500' : usage.remaining > 0 ? 'text-amber-500' : 'text-red-500'}`} />
-                  <span className={usage.remaining > 10 ? 'text-muted-foreground' : usage.remaining > 0 ? 'text-amber-600' : 'text-red-600'}>
-                    {usage.remaining}/{usage.limit} restantes
-                  </span>
+                <Badge variant="outline" className="gap-1 bg-primary/5">
+                  <Sparkles className="h-3 w-3" />
+                  Gemini 3 Flash
+                </Badge>
+                {/* Usage counter */}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <Zap className={`h-3 w-3 ${usage.remaining > 10 ? 'text-green-500' : usage.remaining > 0 ? 'text-amber-500' : 'text-red-500'}`} />
+                    <span className={usage.remaining > 10 ? 'text-muted-foreground' : usage.remaining > 0 ? 'text-amber-600' : 'text-red-600'}>
+                      {usage.remaining}/{usage.limit} restantes
+                    </span>
+                  </div>
+                  <Progress 
+                    value={(usage.remaining / usage.limit) * 100} 
+                    className="w-16 h-1.5"
+                  />
                 </div>
-                <Progress 
-                  value={(usage.remaining / usage.limit) * 100} 
-                  className="w-16 h-1.5"
-                />
               </div>
+              {messages.length > 0 && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => {
+                    setMessages([]);
+                    setPendingActions([]);
+                  }}
+                >
+                  Limpar conversa
+                </Button>
+              )}
             </div>
-            {messages.length > 0 && (
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => {
-                  setMessages([]);
-                  setPendingActions([]);
-                }}
-              >
-                Limpar conversa
-              </Button>
-            )}
-          </div>
-        </CardHeader>
+          </CardHeader>
 
-        <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
-          <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-            {messages.length === 0 ? (
-              <div className="space-y-6">
-                <div className="text-center py-8">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-                    <Bot className="h-8 w-8 text-primary" />
+          <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
+            <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+              {messages.length === 0 ? (
+                <div className="space-y-6">
+                  <div className="text-center py-8">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+                      <Bot className="h-8 w-8 text-primary" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-2">
+                      Olá, {usuario?.nome?.split(' ')[0] || 'usuário'}! 👋
+                    </h3>
+                    <p className="text-muted-foreground max-w-md mx-auto">
+                      Sou seu assistente de gestão. Posso analisar seus dados, 
+                      ajudar com precificação e <strong>executar ações</strong> como cadastros e atualizações.
+                    </p>
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">
-                    Olá, {usuario?.nome?.split(' ')[0] || 'usuário'}! 👋
-                  </h3>
-                  <p className="text-muted-foreground max-w-md mx-auto">
-                    Sou seu assistente de gestão. Posso analisar seus dados, 
-                    ajudar com precificação e <strong>executar ações</strong> como cadastros e atualizações.
-                  </p>
-                </div>
 
-                <div>
-                  <p className="text-sm font-medium mb-3 flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4" />
-                    Perguntas:
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {suggestedQuestions.map((q, i) => (
-                      <Button
-                        key={i}
-                        variant="outline"
-                        className="h-auto py-3 px-4 justify-start text-left"
-                        onClick={() => handleSend(q.text)}
-                      >
-                        <q.icon className="h-4 w-4 mr-3 shrink-0 text-primary" />
-                        <div>
-                          <span className="block text-sm">{q.text}</span>
-                          <span className="text-xs text-muted-foreground">{q.category}</span>
-                        </div>
-                      </Button>
-                    ))}
+                  <div>
+                    <p className="text-sm font-medium mb-3 flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      Perguntas sugeridas
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {suggestedQuestions.map((q, i) => (
+                        <Button
+                          key={i}
+                          variant="outline"
+                          className="justify-start h-auto py-3 px-4"
+                          onClick={() => handleSend(q.text)}
+                          disabled={isLoading}
+                        >
+                          <q.icon className="h-4 w-4 mr-2 text-primary shrink-0" />
+                          <span className="text-left text-sm">{q.text}</span>
+                        </Button>
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                <div>
-                  <p className="text-sm font-medium mb-3 flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    Ações que posso executar:
-                  </p>
-                  <div className="grid grid-cols-1 gap-2">
-                    {suggestedActions.map((q, i) => (
-                      <Button
-                        key={i}
-                        variant="outline"
-                        className="h-auto py-3 px-4 justify-start text-left border-primary/20 bg-primary/5 hover:bg-primary/10"
-                        onClick={() => handleSend(q.text)}
-                      >
-                        <q.icon className="h-4 w-4 mr-3 shrink-0 text-primary" />
-                        <div>
-                          <span className="block text-sm">{q.text}</span>
-                          <span className="text-xs text-muted-foreground">{q.category}</span>
-                        </div>
-                      </Button>
-                    ))}
+                  <div>
+                    <p className="text-sm font-medium mb-3 flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                      Ações rápidas (você pode simplesmente digitar!)
+                    </p>
+                    <div className="grid grid-cols-1 gap-2">
+                      {suggestedActions.map((a, i) => (
+                        <Button
+                          key={i}
+                          variant="outline"
+                          className="justify-start h-auto py-3 px-4 border-primary/20 bg-primary/5"
+                          onClick={() => handleSend(a.text)}
+                          disabled={isLoading}
+                        >
+                          <Badge variant="secondary" className="mr-2 shrink-0">{a.category}</Badge>
+                          <span className="text-left text-sm truncate">{a.text}</span>
+                        </Button>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {messages.map((msg, i) => (
-                  <div key={i}>
-                    <div className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      {msg.role === 'assistant' && (
+              ) : (
+                <div className="space-y-4">
+                  {messages.map((message, index) => (
+                    <div
+                      key={index}
+                      className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      {message.role === 'assistant' && (
                         <Avatar className="h-8 w-8 shrink-0">
                           <AvatarFallback className="bg-primary text-primary-foreground">
                             <Bot className="h-4 w-4" />
@@ -554,17 +557,66 @@ const Assistente: React.FC = () => {
                         </Avatar>
                       )}
                       <div
-                        className={`max-w-[80%] rounded-lg px-4 py-3 ${
-                          msg.role === 'user'
+                        className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                          message.role === 'user'
                             ? 'bg-primary text-primary-foreground'
                             : 'bg-muted'
                         }`}
                       >
-                        <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                          {msg.content}
-                        </div>
+                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                        
+                        {/* Show confirmation buttons for pending actions */}
+                        {message.isConfirmation && message.pendingActions && message.pendingActions.length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
+                              <AlertCircle className="h-3.5 w-3.5" />
+                              Confirme para executar:
+                            </div>
+                            {message.pendingActions.map((action) => (
+                              <div key={action.id} className="bg-background/50 rounded p-2 space-y-2">
+                                <p className="text-xs font-medium">{action.description}</p>
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    className="h-7 text-xs"
+                                    onClick={() => executeAction(action)}
+                                    disabled={isLoading}
+                                  >
+                                    <Check className="h-3 w-3 mr-1" />
+                                    Confirmar
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 text-xs"
+                                    onClick={cancelAction}
+                                    disabled={isLoading}
+                                  >
+                                    <X className="h-3 w-3 mr-1" />
+                                    Cancelar
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                            {message.pendingActions.length > 1 && (
+                              <div className="flex gap-2 pt-1">
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  className="h-7 text-xs"
+                                  onClick={() => executeAllActions(message.pendingActions!)}
+                                  disabled={isLoading}
+                                >
+                                  <Check className="h-3 w-3 mr-1" />
+                                  Confirmar Todas ({message.pendingActions.length})
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      {msg.role === 'user' && (
+                      {message.role === 'user' && (
                         <Avatar className="h-8 w-8 shrink-0">
                           <AvatarFallback className="bg-secondary">
                             <User className="h-4 w-4" />
@@ -572,136 +624,56 @@ const Assistente: React.FC = () => {
                         </Avatar>
                       )}
                     </div>
-
-                    {/* Confirmation UI for pending actions */}
-                    {msg.isConfirmation && msg.pendingActions && msg.pendingActions.length > 0 && (
-                      <div className="ml-11 mt-3 space-y-3">
-                        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-                              <AlertCircle className="h-4 w-4" />
-                              <span className="font-medium text-sm">
-                                {msg.pendingActions.length === 1 ? 'Confirme a ação:' : `Confirme as ${msg.pendingActions.length} ações:`}
-                              </span>
-                            </div>
-                            
-                            {/* Buttons for multiple actions */}
-                            {msg.pendingActions.length > 1 && (
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={cancelAction}
-                                  disabled={isLoading}
-                                  className="gap-1"
-                                >
-                                  <X className="h-3 w-3" />
-                                  Cancelar Todas
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  onClick={() => executeAllActions(msg.pendingActions!)}
-                                  disabled={isLoading}
-                                  className="gap-1 bg-green-600 hover:bg-green-700"
-                                >
-                                  {isLoading ? (
-                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                  ) : (
-                                    <Check className="h-3 w-3" />
-                                  )}
-                                  Confirmar Todas
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                          
-                          <div className="space-y-2">
-                            {msg.pendingActions.map((action, actionIndex) => (
-                              <div key={actionIndex} className="flex items-center justify-between bg-white dark:bg-background rounded-md p-3 border">
-                                <span className="text-sm flex-1">{action.description}</span>
-                                <div className="flex gap-2 ml-2">
-                                  {msg.pendingActions!.length === 1 && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={cancelAction}
-                                      disabled={isLoading}
-                                      className="gap-1"
-                                    >
-                                      <X className="h-3 w-3" />
-                                      Cancelar
-                                    </Button>
-                                  )}
-                                  <Button
-                                    size="sm"
-                                    onClick={() => executeAction(action)}
-                                    disabled={isLoading}
-                                    className="gap-1"
-                                  >
-                                    {isLoading ? (
-                                      <Loader2 className="h-3 w-3 animate-spin" />
-                                    ) : (
-                                      <Check className="h-3 w-3" />
-                                    )}
-                                    {msg.pendingActions!.length === 1 ? 'Confirmar' : 'Executar'}
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+                  ))}
+                  {isLoading && (
+                    <div className="flex gap-3 justify-start">
+                      <Avatar className="h-8 w-8 shrink-0">
+                        <AvatarFallback className="bg-primary text-primary-foreground">
+                          <Bot className="h-4 w-4" />
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="bg-muted rounded-lg px-4 py-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
                       </div>
-                    )}
-                  </div>
-                ))}
-                {isLoading && messages[messages.length - 1]?.role === 'user' && (
-                  <div className="flex gap-3 justify-start">
-                    <Avatar className="h-8 w-8 shrink-0">
-                      <AvatarFallback className="bg-primary text-primary-foreground">
-                        <Bot className="h-4 w-4" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="bg-muted rounded-lg px-4 py-3">
-                      <Loader2 className="h-4 w-4 animate-spin" />
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </ScrollArea>
+                  )}
+                </div>
+              )}
+            </ScrollArea>
 
-          {/* Input area */}
-          <div className="p-4 border-t bg-background">
-            <div className="flex gap-2">
-              <Textarea
-                ref={textareaRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Digite sua pergunta ou peça para cadastrar algo..."
-                className="min-h-[44px] max-h-32 resize-none"
-                disabled={isLoading}
-              />
-              <Button 
-                onClick={() => handleSend()} 
-                disabled={!input.trim() || isLoading}
-                size="icon"
-                className="h-[44px] w-[44px] shrink-0"
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
+            <div className="p-4 border-t">
+              <div className="flex gap-2">
+                <Textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Digite sua mensagem ou uma ação para executar..."
+                  className="min-h-[44px] max-h-32 resize-none"
+                  rows={1}
+                  disabled={isLoading || usage.remaining <= 0}
+                />
+                <Button 
+                  onClick={() => handleSend()} 
+                  disabled={!input.trim() || isLoading || usage.remaining <= 0}
+                  size="icon"
+                  className="shrink-0"
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                💡 Posso cadastrar produtos, insumos, registrar vendas e atualizar preços
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground mt-2 text-center">
-              💡 Posso cadastrar produtos, insumos, registrar vendas e atualizar preços
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+          </CardContent>
+        </Card>
+      </div>
+    </ProFeatureGate>
   );
 };
 

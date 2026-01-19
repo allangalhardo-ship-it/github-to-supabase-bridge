@@ -7,6 +7,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Mapeamento de price_id para plano
+const PLANS = {
+  // Standard - R$39,90/mês
+  "price_1SrH5yJJFSKyfswgikoVQaB7": "standard",
+  // Pro - R$59,90/mês
+  "price_1SrH6AJJFSKyfswgGqVwFLMq": "pro",
+  // Plano antigo (manter compatibilidade como standard)
+  "price_1SpYGQJJFSKyfswgoBtbkbxN": "standard",
+} as const;
+
+type PlanType = "standard" | "pro" | null;
+
 const logStep = (step: string, details?: Record<string, unknown>) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : "";
   console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
@@ -22,6 +34,11 @@ const safeUnixToIso = (value: unknown): string | null => {
   } catch {
     return null;
   }
+};
+
+const getPlanFromPriceId = (priceId: string | undefined): PlanType => {
+  if (!priceId) return null;
+  return PLANS[priceId as keyof typeof PLANS] || "standard";
 };
 
 serve(async (req) => {
@@ -101,6 +118,7 @@ serve(async (req) => {
         JSON.stringify({
           subscribed: false,
           status: isInTrial ? "trialing" : "expired",
+          plan: null, // Sem plano durante trial gratuito
           trial_days_remaining: trialDaysRemaining,
           subscription_end: null,
         }),
@@ -130,6 +148,10 @@ serve(async (req) => {
       const subscriptionEnd = safeUnixToIso((activeSubscription as any).current_period_end);
       const trialEnd = safeUnixToIso((activeSubscription as any).trial_end);
 
+      // Get plan from price_id
+      const priceId = (activeSubscription as any).items?.data?.[0]?.price?.id;
+      const plan = getPlanFromPriceId(priceId);
+
       let trialDaysRemaining = 0;
       if ((activeSubscription as any).status === "trialing" && trialEnd) {
         const trialEndMs = Date.parse(trialEnd);
@@ -144,6 +166,8 @@ serve(async (req) => {
       logStep("Active subscription found", {
         subscriptionId: (activeSubscription as any).id,
         status: (activeSubscription as any).status,
+        plan,
+        priceId,
         subscriptionEnd,
         trialEnd,
         trialDaysRemaining,
@@ -151,11 +175,11 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({
-          // Importante: trialing aqui significa que o usuário JÁ assinou, só que a cobrança começa no fim do teste.
           subscribed:
             (activeSubscription as any).status === "active" ||
             (activeSubscription as any).status === "trialing",
           status: (activeSubscription as any).status,
+          plan,
           subscription_end: subscriptionEnd,
           trial_end: trialEnd,
           trial_days_remaining: trialDaysRemaining,
@@ -190,6 +214,7 @@ serve(async (req) => {
       JSON.stringify({
         subscribed: false,
         status: isInTrial ? "trialing" : "expired",
+        plan: null,
         trial_days_remaining: trialDaysRemaining,
         subscription_end: null,
       }),
