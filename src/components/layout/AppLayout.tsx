@@ -114,11 +114,19 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
       <div className="p-5 border-b border-sidebar-border">
         <Logo size="sm" theme="dark" />
         <div className="flex items-center justify-between mt-2">
-          {usuario?.nome && (
-            <p className="text-xs text-sidebar-foreground/60 truncate flex-1 mr-2">
-              {usuario.nome}
-            </p>
-          )}
+          <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
+            {usuario?.nome && (
+              <p className="text-xs text-sidebar-foreground/60 truncate">
+                {usuario.nome}
+              </p>
+            )}
+            {isAdmin && (
+              <Badge className="bg-gradient-to-r from-red-500 to-rose-600 text-white border-0 gap-1 text-xs flex-shrink-0">
+                <Shield className="h-3 w-3" />
+                Admin
+              </Badge>
+            )}
+          </div>
           {getPlanBadge()}
         </div>
       </div>
