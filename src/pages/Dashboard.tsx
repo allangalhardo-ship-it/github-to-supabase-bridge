@@ -187,48 +187,38 @@ const Dashboard = () => {
   const faturamentoMensal = config?.faturamento_mensal || 0;
   const percentualCustoFixo = faturamentoMensal > 0 ? (custoFixoMensal / faturamentoMensal) * 100 : 0;
 
-  // Calcular custo fixo proporcional à receita em relação à meta de faturamento
-  // REGRA: Custo fixo é "absorvido" proporcionalmente às vendas, com limite máximo de 100%
-  const calcularCustoFixoProporcional = () => {
-    // Sem receita = sem custo fixo proporcional a deduzir
-    if (receitaBruta <= 0 || custoFixoMensal <= 0) {
+  // Calcular custo fixo para o período
+  // REGRA: Custo fixo é FIXO - se não cobrir, está no prejuízo
+  const calcularCustoFixoPeriodo = () => {
+    if (custoFixoMensal <= 0) {
       return 0;
     }
     
-    // Se há faturamento configurado (meta), usa proporcional à receita COM LIMITE
-    if (faturamentoMensal > 0) {
-      // Percentual da meta atingido (máximo 100%)
-      const percentualAtingido = Math.min(receitaBruta / faturamentoMensal, 1);
-      // Custo fixo absorvido = percentual atingido × custo fixo mensal
-      return custoFixoMensal * percentualAtingido;
-    }
-    
-    // Fallback: se não tem faturamento configurado, usa proporcional ao tempo
     const hoje = new Date();
     const diasNoMes = getDaysInMonth(hoje);
     const custoDiario = custoFixoMensal / diasNoMes;
     
     switch (periodo) {
       case 'hoje':
+        // Para "hoje", mostra o custo fixo proporcional ao dia
         return custoDiario;
       case 'semana': {
+        // Para "semana", mostra proporcional aos dias da semana
         const inicioSemana = startOfWeek(hoje, { locale: ptBR });
         const diasNaSemana = differenceInDays(hoje, inicioSemana) + 1;
         return custoDiario * diasNaSemana;
       }
-      case 'mes': {
-        const inicioMes = startOfMonth(hoje);
-        const diasNoMesAtual = differenceInDays(hoje, inicioMes) + 1;
-        return custoDiario * diasNoMesAtual;
-      }
+      case 'mes':
       case 'ultimos30':
+        // Para "este mês" ou "últimos 30 dias", usa o custo fixo MENSAL INTEIRO
+        // Porque é o compromisso real que será pago
         return custoFixoMensal;
       default:
         return custoFixoMensal;
     }
   };
   
-  const custoFixoTotal = calcularCustoFixoProporcional();
+  const custoFixoTotal = calcularCustoFixoPeriodo();
   const impostoPercent = config?.imposto_medio_sobre_vendas ?? 10;
   const impostos = receitaBruta * (impostoPercent / 100);
   
@@ -409,7 +399,7 @@ const Dashboard = () => {
                       <span className="text-red-500">-{formatCurrency(cmvTotal)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Custos fixos ({faturamentoMensal > 0 ? `${Math.min((receitaBruta / faturamentoMensal) * 100, 100).toFixed(0)}% absorvido` : 'proporcional'})</span>
+                      <span>Custos fixos {periodo === 'mes' || periodo === 'ultimos30' ? '(mensal)' : '(proporcional)'}</span>
                       <span className="text-red-500">-{formatCurrency(custoFixoTotal)}</span>
                     </div>
                     {impostos > 0 && (
@@ -432,7 +422,9 @@ const Dashboard = () => {
                     </div>
                   </div>
                   <p className="text-muted-foreground text-[10px] pt-1">
-                    O custo fixo é absorvido proporcionalmente às vendas em relação à meta de faturamento (máx. 100%).
+                    {periodo === 'mes' || periodo === 'ultimos30' 
+                      ? 'Custo fixo mensal inteiro é deduzido, pois é o compromisso real a pagar.'
+                      : 'Custo fixo proporcional ao período selecionado.'}
                   </p>
                 </div>
               </TooltipContent>
@@ -454,7 +446,11 @@ const Dashboard = () => {
                   {formatCurrency(lucroEstimado)}
                 </div>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                  CF {faturamentoMensal > 0 ? `${Math.min((receitaBruta / faturamentoMensal) * 100, 100).toFixed(0)}%` : ''} ({formatCurrency(custoFixoTotal)}){impostos > 0 ? ` + imp. (${formatCurrency(impostos)})` : ''}{taxaAppTotal > 0 ? ` + taxas (${formatCurrency(taxaAppTotal)})` : ''}
+                  {lucroEstimado < 0 && margemContribuicao < custoFixoMensal ? (
+                    <span className="text-destructive">Falta {formatCurrency(custoFixoMensal - margemContribuicao)} de lucro bruto p/ cobrir CF</span>
+                  ) : (
+                    <>CF ({formatCurrency(custoFixoTotal)}){impostos > 0 ? ` + imp. (${formatCurrency(impostos)})` : ''}{taxaAppTotal > 0 ? ` + taxas (${formatCurrency(taxaAppTotal)})` : ''}</>
+                  )}
                 </p>
               </>
             )}
