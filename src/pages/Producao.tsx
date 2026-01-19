@@ -18,6 +18,7 @@ import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { AlertaVencimento } from '@/components/producao/AlertaVencimento';
+import { inserirMovimentoEstoque } from '@/lib/estoqueUtils';
 
 type TipoProducao = 'produto' | 'receita';
 
@@ -209,34 +210,26 @@ const Producao = () => {
       for (const ing of ingredientes || []) {
         const quantidadeUsada = ing.quantidade * quantidade;
 
-        // Registrar movimento de saída - trigger atualizar_estoque_insumo cuida do estoque
-        const { error: movError } = await supabase
-          .from('estoque_movimentos')
-          .insert({
-            empresa_id: usuario!.empresa_id,
-            insumo_id: ing.insumo_ingrediente?.id,
-            quantidade: quantidadeUsada, // Positivo - o trigger subtrai para 'saida'
-            tipo: 'saida',
-            origem: 'producao_receita',
-            observacao: `Produção de ${receita.nome}`,
-          });
-
-        if (movError) throw movError;
+        // Registrar movimento de saída - usa helper que normaliza quantidade
+        await inserirMovimentoEstoque({
+          empresa_id: usuario!.empresa_id,
+          insumo_id: ing.insumo_ingrediente?.id!,
+          quantidade: quantidadeUsada,
+          tipo: 'saida',
+          origem: 'producao_receita',
+          observacao: `Produção de ${receita.nome}`,
+        });
       }
 
-      // Registrar movimento de entrada na receita - trigger atualizar_estoque_insumo cuida do estoque
-      const { error: movEntradaError } = await supabase
-        .from('estoque_movimentos')
-        .insert({
-          empresa_id: usuario!.empresa_id,
-          insumo_id: data.receita_id,
-          quantidade: quantidadeProduzida, // Positivo - o trigger soma para 'entrada'
-          tipo: 'entrada',
-          origem: 'producao_receita',
-          observacao: data.observacao || `Produção de ${quantidade} lote(s)`,
-        });
-
-      if (movEntradaError) throw movEntradaError;
+      // Registrar movimento de entrada na receita - usa helper que normaliza quantidade
+      await inserirMovimentoEstoque({
+        empresa_id: usuario!.empresa_id,
+        insumo_id: data.receita_id,
+        quantidade: quantidadeProduzida,
+        tipo: 'entrada',
+        origem: 'producao_receita',
+        observacao: data.observacao || `Produção de ${quantidade} lote(s)`,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['receitas-producao'] });
