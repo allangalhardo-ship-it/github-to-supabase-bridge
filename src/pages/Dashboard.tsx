@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -14,6 +15,7 @@ import {
   Package,
   AlertTriangle,
   Receipt,
+  HelpCircle,
 } from 'lucide-react';
 import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysInMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -387,7 +389,54 @@ const Dashboard = () => {
 
         <Card className="p-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
-            <CardTitle className="text-sm sm:text-base font-medium">Lucro Estimado</CardTitle>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <CardTitle className="text-sm sm:text-base font-medium cursor-help flex items-center gap-1">
+                  Lucro Estimado
+                  <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                </CardTitle>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs p-3">
+                <div className="space-y-2 text-xs">
+                  <p className="font-medium">Cálculo do Lucro Estimado:</p>
+                  <div className="space-y-1 font-mono text-[11px]">
+                    <div className="flex justify-between">
+                      <span>Receita Bruta</span>
+                      <span className="text-green-600">+{formatCurrency(receitaBruta)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>CMV (insumos)</span>
+                      <span className="text-red-500">-{formatCurrency(cmvTotal)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Custos fixos ({faturamentoMensal > 0 ? `${Math.min((receitaBruta / faturamentoMensal) * 100, 100).toFixed(0)}% absorvido` : 'proporcional'})</span>
+                      <span className="text-red-500">-{formatCurrency(custoFixoTotal)}</span>
+                    </div>
+                    {impostos > 0 && (
+                      <div className="flex justify-between">
+                        <span>Impostos ({impostoPercent}%)</span>
+                        <span className="text-red-500">-{formatCurrency(impostos)}</span>
+                      </div>
+                    )}
+                    {taxaAppTotal > 0 && (
+                      <div className="flex justify-between">
+                        <span>Taxas apps</span>
+                        <span className="text-red-500">-{formatCurrency(taxaAppTotal)}</span>
+                      </div>
+                    )}
+                    <div className="border-t pt-1 flex justify-between font-bold">
+                      <span>Lucro Estimado</span>
+                      <span className={lucroEstimado >= 0 ? 'text-green-600' : 'text-red-500'}>
+                        {formatCurrency(lucroEstimado)}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground text-[10px] pt-1">
+                    O custo fixo é absorvido proporcionalmente às vendas em relação à meta de faturamento (máx. 100%).
+                  </p>
+                </div>
+              </TooltipContent>
+            </Tooltip>
             <div className={`h-10 w-10 sm:h-8 sm:w-8 rounded-full flex items-center justify-center ${lucroEstimado >= 0 ? 'bg-green-500/10' : 'bg-destructive/10'}`}>
               {lucroEstimado >= 0 ? (
                 <TrendingUp className="h-5 w-5 sm:h-4 sm:w-4 text-green-600" />
@@ -405,7 +454,7 @@ const Dashboard = () => {
                   {formatCurrency(lucroEstimado)}
                 </div>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                  Custos fixos proporcionais ({formatCurrency(custoFixoTotal)}){impostos > 0 ? `, impostos (${formatCurrency(impostos)})` : ''}{taxaAppTotal > 0 ? `, taxas (${formatCurrency(taxaAppTotal)})` : ''}
+                  CF {faturamentoMensal > 0 ? `${Math.min((receitaBruta / faturamentoMensal) * 100, 100).toFixed(0)}%` : ''} ({formatCurrency(custoFixoTotal)}){impostos > 0 ? ` + imp. (${formatCurrency(impostos)})` : ''}{taxaAppTotal > 0 ? ` + taxas (${formatCurrency(taxaAppTotal)})` : ''}
                 </p>
               </>
             )}
