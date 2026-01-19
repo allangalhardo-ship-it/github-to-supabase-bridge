@@ -185,22 +185,23 @@ const Dashboard = () => {
   const faturamentoMensal = config?.faturamento_mensal || 0;
   const percentualCustoFixo = faturamentoMensal > 0 ? (custoFixoMensal / faturamentoMensal) * 100 : 0;
 
-  // Calcular custo fixo proporcional baseado no percentual sobre faturamento
-  // REGRA: Se não há receita no período, não há custo fixo proporcional a deduzir
+  // Calcular custo fixo proporcional à receita em relação à meta de faturamento
+  // REGRA: Custo fixo é "absorvido" proporcionalmente às vendas, com limite máximo de 100%
   const calcularCustoFixoProporcional = () => {
-    // Sem receita = sem custo fixo proporcional (o custo fixo é proporcional à receita)
-    if (receitaBruta <= 0) {
+    // Sem receita = sem custo fixo proporcional a deduzir
+    if (receitaBruta <= 0 || custoFixoMensal <= 0) {
       return 0;
     }
     
-    // Se há faturamento configurado, usa o percentual sobre a receita do período
+    // Se há faturamento configurado (meta), usa proporcional à receita COM LIMITE
     if (faturamentoMensal > 0) {
-      // O custo fixo proporcional = receita do período × (custos fixos / faturamento mensal)
-      return receitaBruta * (custoFixoMensal / faturamentoMensal);
+      // Percentual da meta atingido (máximo 100%)
+      const percentualAtingido = Math.min(receitaBruta / faturamentoMensal, 1);
+      // Custo fixo absorvido = percentual atingido × custo fixo mensal
+      return custoFixoMensal * percentualAtingido;
     }
     
-    // Fallback: se não tem faturamento configurado, usa proporcional por dias
-    // mas apenas se houver receita
+    // Fallback: se não tem faturamento configurado, usa proporcional ao tempo
     const hoje = new Date();
     const diasNoMes = getDaysInMonth(hoje);
     const custoDiario = custoFixoMensal / diasNoMes;
