@@ -7,6 +7,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Mapeamento de planos para price_id
+const PLAN_PRICES = {
+  standard: "price_1SrH5yJJFSKyfswgikoVQaB7", // R$39,90/mês
+  pro: "price_1SrH6AJJFSKyfswgGqVwFLMq", // R$59,90/mês
+} as const;
+
+type PlanType = keyof typeof PLAN_PRICES;
+
 const logStep = (step: string, details?: Record<string, unknown>) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
   console.log(`[CREATE-CHECKOUT] ${step}${detailsStr}`);
@@ -24,6 +32,19 @@ serve(async (req) => {
 
   try {
     logStep("Function started");
+
+    // Parse request body
+    let plan: PlanType = "standard";
+    try {
+      const body = await req.json();
+      if (body.plan && (body.plan === "standard" || body.plan === "pro")) {
+        plan = body.plan;
+      }
+    } catch {
+      // No body or invalid JSON - use default plan
+    }
+
+    logStep("Plan selected", { plan });
 
     const authHeader = req.headers.get("Authorization")!;
     const token = authHeader.replace("Bearer ", "");
@@ -51,7 +72,6 @@ serve(async (req) => {
     const origin = req.headers.get("origin") || "https://lovable.dev";
 
     // Regras de teste: 7 dias no total desde a criação da conta.
-    // Se o usuário já passou do período, não cria trial no Stripe (assinatura fica ativa imediatamente).
     const createdAtStr = (user as any)?.created_at as string | undefined;
     let trialDaysRemaining = 7;
 
@@ -67,13 +87,17 @@ serve(async (req) => {
 
     logStep("Trial days remaining computed", { trialDaysRemaining });
 
+    // Get price_id based on plan
+    const priceId = PLAN_PRICES[plan];
+    logStep("Using price", { plan, priceId });
+
     // Create checkout session
     const sessionParams: Record<string, unknown> = {
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
       line_items: [
         {
-          price: "price_1SpYGQJJFSKyfswgoBtbkbxN", // GastroGestor R$ 39,90/mês
+          price: priceId,
           quantity: 1,
         },
       ],
@@ -91,7 +115,7 @@ serve(async (req) => {
 
     const session = await stripe.checkout.sessions.create(sessionParams as any);
 
-    logStep("Checkout session created", { sessionId: session.id });
+    logStep("Checkout session created", { sessionId: session.id, plan });
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
