@@ -194,8 +194,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   // User has access if: test user OR subscribed OR in trial period OR still loading (prevent flicker redirect)
   const hasAccess = isTestUser || loading || subscription.subscribed || subscription.status === 'trialing';
 
-  // User is Pro if: has Pro plan OR is test user (test users get all features)
-  const isPro = isTestUser || subscription.plan === 'pro';
+  // User is Pro ONLY if has Pro plan (test users do NOT get Pro features)
+  const isPro = subscription.plan === 'pro';
 
   return (
     <SubscriptionContext.Provider
