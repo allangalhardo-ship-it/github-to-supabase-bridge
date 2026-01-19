@@ -205,25 +205,17 @@ const Producao = () => {
 
       if (ingError) throw ingError;
 
-      // Baixar estoque dos ingredientes
+      // Baixar estoque dos ingredientes via movimento (trigger atualiza estoque_atual)
       for (const ing of ingredientes || []) {
         const quantidadeUsada = ing.quantidade * quantidade;
-        const novoEstoque = (ing.insumo_ingrediente?.estoque_atual || 0) - quantidadeUsada;
 
-        const { error: updateError } = await supabase
-          .from('insumos')
-          .update({ estoque_atual: Math.max(0, novoEstoque) })
-          .eq('id', ing.insumo_ingrediente?.id);
-
-        if (updateError) throw updateError;
-
-        // Registrar movimento de estoque
+        // Registrar movimento de saída - trigger atualizar_estoque_insumo cuida do estoque
         const { error: movError } = await supabase
           .from('estoque_movimentos')
           .insert({
             empresa_id: usuario!.empresa_id,
             insumo_id: ing.insumo_ingrediente?.id,
-            quantidade: -quantidadeUsada,
+            quantidade: quantidadeUsada, // Positivo - o trigger subtrai para 'saida'
             tipo: 'saida',
             origem: 'producao_receita',
             observacao: `Produção de ${receita.nome}`,
@@ -232,23 +224,13 @@ const Producao = () => {
         if (movError) throw movError;
       }
 
-      // Adicionar ao estoque da receita (insumo intermediário)
-      const { error: updateReceitaError } = await supabase
-        .from('insumos')
-        .update({ 
-          estoque_atual: (receita.estoque_atual || 0) + quantidadeProduzida 
-        })
-        .eq('id', data.receita_id);
-
-      if (updateReceitaError) throw updateReceitaError;
-
-      // Registrar movimento de entrada no estoque da receita
+      // Registrar movimento de entrada na receita - trigger atualizar_estoque_insumo cuida do estoque
       const { error: movEntradaError } = await supabase
         .from('estoque_movimentos')
         .insert({
           empresa_id: usuario!.empresa_id,
           insumo_id: data.receita_id,
-          quantidade: quantidadeProduzida,
+          quantidade: quantidadeProduzida, // Positivo - o trigger soma para 'entrada'
           tipo: 'entrada',
           origem: 'producao_receita',
           observacao: data.observacao || `Produção de ${quantidade} lote(s)`,
