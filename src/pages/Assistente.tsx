@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -19,53 +19,36 @@ import {
   TrendingUp,
   Calculator,
   Package,
-  HelpCircle
+  Check,
+  X,
+  AlertCircle
 } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  pendingActions?: PendingAction[];
+  isConfirmation?: boolean;
+}
+
+interface PendingAction {
+  id: string;
+  toolName: string;
+  args: any;
+  description: string;
 }
 
 const suggestedQuestions = [
-  {
-    icon: TrendingUp,
-    text: "Qual produto tem a melhor margem?",
-    category: "Análise"
-  },
-  {
-    icon: Calculator,
-    text: "Como calcular o preço ideal para delivery?",
-    category: "Precificação"
-  },
-  {
-    icon: Package,
-    text: "Quais insumos estão com estoque baixo?",
-    category: "Estoque"
-  },
-  {
-    icon: Lightbulb,
-    text: "Dicas para reduzir meu CMV",
-    category: "Gestão"
-  },
+  { icon: TrendingUp, text: "Qual produto tem a melhor margem?", category: "Análise" },
+  { icon: Calculator, text: "Como calcular o preço ideal para delivery?", category: "Precificação" },
+  { icon: Package, text: "Quais insumos estão com estoque baixo?", category: "Estoque" },
+  { icon: Lightbulb, text: "Dicas para reduzir meu CMV", category: "Gestão" },
 ];
 
 const suggestedActions = [
-  {
-    icon: Package,
-    text: "Cadastra: Brigadeiro - 100g leite condensado, 20g chocolate, 10g manteiga. Preço: R$ 5",
-    category: "📝 Cadastrar"
-  },
-  {
-    icon: TrendingUp,
-    text: "Registra venda: 10 brigadeiros por R$ 50 no iFood",
-    category: "💰 Venda"
-  },
-  {
-    icon: Calculator,
-    text: "Atualiza o preço da farinha de trigo para R$ 6,50/kg",
-    category: "🔄 Atualizar"
-  },
+  { icon: Package, text: "Cadastra: Brigadeiro - 100g leite condensado, 20g chocolate, 10g manteiga. Preço: R$ 5", category: "📝 Cadastrar" },
+  { icon: TrendingUp, text: "Registra venda: 10 brigadeiros por R$ 50 no iFood", category: "💰 Venda" },
+  { icon: Calculator, text: "Atualiza o preço da farinha de trigo para R$ 6,50/kg", category: "🔄 Atualizar" },
 ];
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
@@ -76,49 +59,31 @@ const Assistente: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, pendingActions]);
 
-  const streamChat = async (userMessage: string) => {
+  const getSession = async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    
     if (!session?.access_token) {
       toast({
         title: "Sessão expirada",
         description: "Por favor, faça login novamente.",
         variant: "destructive",
       });
-      return;
+      return null;
     }
+    return session;
+  };
 
-    const allMessages = [...messages, { role: 'user' as const, content: userMessage }];
-    
-    const resp = await fetch(CHAT_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ 
-        messages: allMessages.map(m => ({ role: m.role, content: m.content }))
-      }),
-    });
-
-    if (!resp.ok) {
-      const errorData = await resp.json().catch(() => ({}));
-      throw new Error(errorData.error || `Erro ${resp.status}`);
-    }
-
-    if (!resp.body) {
-      throw new Error("Resposta sem conteúdo");
-    }
+  const streamResponse = async (resp: Response) => {
+    if (!resp.body) return;
 
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
@@ -150,7 +115,7 @@ const Assistente: React.FC = () => {
             assistantContent += content;
             setMessages(prev => {
               const last = prev[prev.length - 1];
-              if (last?.role === "assistant") {
+              if (last?.role === "assistant" && !last.isConfirmation) {
                 return prev.map((m, i) => 
                   i === prev.length - 1 ? { ...m, content: assistantContent } : m
                 );
@@ -181,7 +146,7 @@ const Assistente: React.FC = () => {
             assistantContent += content;
             setMessages(prev => {
               const last = prev[prev.length - 1];
-              if (last?.role === "assistant") {
+              if (last?.role === "assistant" && !last.isConfirmation) {
                 return prev.map((m, i) => 
                   i === prev.length - 1 ? { ...m, content: assistantContent } : m
                 );
@@ -194,16 +159,140 @@ const Assistente: React.FC = () => {
     }
   };
 
+  const sendMessage = async (userMessage: string) => {
+    const session = await getSession();
+    if (!session) return;
+
+    const allMessages = [...messages.filter(m => !m.isConfirmation), { role: 'user' as const, content: userMessage }];
+    
+    const resp = await fetch(CHAT_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ 
+        messages: allMessages.map(m => ({ role: m.role, content: m.content }))
+      }),
+    });
+
+    if (!resp.ok) {
+      const errorData = await resp.json().catch(() => ({}));
+      throw new Error(errorData.error || `Erro ${resp.status}`);
+    }
+
+    const contentType = resp.headers.get("content-type") || "";
+    
+    // Check if it's a JSON response (confirmation needed) or stream
+    if (contentType.includes("application/json")) {
+      const data = await resp.json();
+      
+      if (data.requiresConfirmation && data.pendingActions) {
+        // Show confirmation UI
+        setPendingActions(data.pendingActions);
+        setMessages(prev => [...prev, { 
+          role: "assistant", 
+          content: data.assistantPreview || "Entendi! Vou executar as seguintes ações:",
+          pendingActions: data.pendingActions,
+          isConfirmation: true,
+        }]);
+        return;
+      }
+      
+      // Handle direct response
+      if (data.content) {
+        setMessages(prev => [...prev, { role: "assistant", content: data.content }]);
+      }
+    } else {
+      // Stream response
+      await streamResponse(resp);
+    }
+  };
+
+  const executeAction = async (action: PendingAction) => {
+    const session = await getSession();
+    if (!session) return;
+
+    setIsLoading(true);
+    
+    try {
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ 
+          executeAction: true,
+          pendingAction: {
+            toolName: action.toolName,
+            args: action.args,
+          }
+        }),
+      });
+
+      if (!resp.ok) {
+        throw new Error("Erro ao executar ação");
+      }
+
+      const data = await resp.json();
+      
+      if (data.actionResult) {
+        // Remove confirmation message and add result
+        setMessages(prev => {
+          const filtered = prev.filter(m => !m.isConfirmation);
+          return [...filtered, { 
+            role: "assistant", 
+            content: data.actionResult.message 
+          }];
+        });
+        setPendingActions([]);
+        
+        if (data.actionResult.success) {
+          toast({
+            title: "Ação executada!",
+            description: action.description,
+          });
+        }
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Erro ao executar ação",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const cancelAction = () => {
+    setPendingActions([]);
+    setMessages(prev => {
+      const filtered = prev.filter(m => !m.isConfirmation);
+      return [...filtered, { 
+        role: "assistant", 
+        content: "Ok, ação cancelada. Como posso ajudar?" 
+      }];
+    });
+  };
+
   const handleSend = async (messageText?: string) => {
     const text = messageText || input.trim();
     if (!text || isLoading) return;
+
+    // Clear pending actions if any
+    if (pendingActions.length > 0) {
+      setPendingActions([]);
+      setMessages(prev => prev.filter(m => !m.isConfirmation));
+    }
 
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: text }]);
     setIsLoading(true);
 
     try {
-      await streamChat(text);
+      await sendMessage(text);
     } catch (error) {
       console.error("Chat error:", error);
       toast({
@@ -211,7 +300,6 @@ const Assistente: React.FC = () => {
         description: error instanceof Error ? error.message : "Erro ao enviar mensagem",
         variant: "destructive",
       });
-      // Remove the user message if there was an error
       setMessages(prev => prev.slice(0, -1));
     } finally {
       setIsLoading(false);
@@ -253,7 +341,10 @@ const Assistente: React.FC = () => {
               <Button 
                 variant="ghost" 
                 size="sm"
-                onClick={() => setMessages([])}
+                onClick={() => {
+                  setMessages([]);
+                  setPendingActions([]);
+                }}
               >
                 Limpar conversa
               </Button>
@@ -327,34 +418,78 @@ const Assistente: React.FC = () => {
             ) : (
               <div className="space-y-4">
                 {messages.map((msg, i) => (
-                  <div
-                    key={i}
-                    className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    {msg.role === 'assistant' && (
-                      <Avatar className="h-8 w-8 shrink-0">
-                        <AvatarFallback className="bg-primary text-primary-foreground">
-                          <Bot className="h-4 w-4" />
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
-                    <div
-                      className={`max-w-[80%] rounded-lg px-4 py-3 ${
-                        msg.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted'
-                      }`}
-                    >
-                      <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                        {msg.content}
+                  <div key={i}>
+                    <div className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      {msg.role === 'assistant' && (
+                        <Avatar className="h-8 w-8 shrink-0">
+                          <AvatarFallback className="bg-primary text-primary-foreground">
+                            <Bot className="h-4 w-4" />
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                      <div
+                        className={`max-w-[80%] rounded-lg px-4 py-3 ${
+                          msg.role === 'user'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted'
+                        }`}
+                      >
+                        <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                          {msg.content}
+                        </div>
                       </div>
+                      {msg.role === 'user' && (
+                        <Avatar className="h-8 w-8 shrink-0">
+                          <AvatarFallback className="bg-secondary">
+                            <User className="h-4 w-4" />
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
                     </div>
-                    {msg.role === 'user' && (
-                      <Avatar className="h-8 w-8 shrink-0">
-                        <AvatarFallback className="bg-secondary">
-                          <User className="h-4 w-4" />
-                        </AvatarFallback>
-                      </Avatar>
+
+                    {/* Confirmation UI for pending actions */}
+                    {msg.isConfirmation && msg.pendingActions && msg.pendingActions.length > 0 && (
+                      <div className="ml-11 mt-3 space-y-3">
+                        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                          <div className="flex items-center gap-2 mb-3 text-amber-700 dark:text-amber-400">
+                            <AlertCircle className="h-4 w-4" />
+                            <span className="font-medium text-sm">Confirme a ação:</span>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            {msg.pendingActions.map((action, actionIndex) => (
+                              <div key={actionIndex} className="flex items-center justify-between bg-white dark:bg-background rounded-md p-3 border">
+                                <span className="text-sm">{action.description}</span>
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={cancelAction}
+                                    disabled={isLoading}
+                                    className="gap-1"
+                                  >
+                                    <X className="h-3 w-3" />
+                                    Cancelar
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => executeAction(action)}
+                                    disabled={isLoading}
+                                    className="gap-1"
+                                  >
+                                    {isLoading ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <Check className="h-3 w-3" />
+                                    )}
+                                    Confirmar
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </div>
                 ))}
