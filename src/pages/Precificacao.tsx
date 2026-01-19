@@ -13,8 +13,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -35,7 +36,10 @@ import {
   PieChart,
   Building2,
   Receipt,
-  Smartphone
+  Smartphone,
+  Store,
+  HelpCircle,
+  ChevronRight
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -112,7 +116,7 @@ const Precificacao = () => {
   const [busca, setBusca] = useState('');
   const [produtoSimulador, setProdutoSimulador] = useState<Produto | null>(null);
   const [margemDesejada, setMargemDesejada] = useState<number>(30);
-  const [incluirTaxaApp, setIncluirTaxaApp] = useState<boolean>(false);
+  const [appSelecionado, setAppSelecionado] = useState<string>('balcao');
   const [precosEditados, setPrecosEditados] = useState<Record<string, string>>({});
   const [historicoDialogOpen, setHistoricoDialogOpen] = useState(false);
   const [produtoHistoricoId, setProdutoHistoricoId] = useState<string | null>(null);
@@ -245,7 +249,6 @@ const Precificacao = () => {
   // Mutation para atualizar preço (com histórico)
   const updatePrecoMutation = useMutation({
     mutationFn: async ({ produtoId, novoPreco, precoAnterior }: { produtoId: string; novoPreco: number; precoAnterior: number }) => {
-      // Atualizar o preço do produto
       const { error: updateError } = await supabase
         .from('produtos')
         .update({ preco_venda: novoPreco })
@@ -253,12 +256,10 @@ const Precificacao = () => {
       
       if (updateError) throw updateError;
 
-      // Calcular variação percentual
       const variacao = precoAnterior > 0 
         ? ((novoPreco - precoAnterior) / precoAnterior) * 100 
         : null;
 
-      // Registrar no histórico
       const { error: historicoError } = await supabase
         .from('historico_precos_produtos')
         .insert({
@@ -295,24 +296,19 @@ const Precificacao = () => {
   const custosPercentuais = useMemo(() => {
     const faturamento = config?.faturamento_mensal || 0;
     const totalCustosFixos = custosFixos?.reduce((acc, cf) => acc + cf.valor_mensal, 0) || 0;
-    const taxaAppMedia = taxasApps && taxasApps.length > 0
-      ? taxasApps.reduce((acc, t) => acc + t.taxa_percentual, 0) / taxasApps.length
-      : 0;
     
     const percCustoFixo = faturamento > 0 ? (totalCustosFixos / faturamento) * 100 : 0;
     const percImposto = config?.imposto_medio_sobre_vendas || 0;
-    const percTaxaApp = taxaAppMedia;
     const margemDesejadaPadrao = config?.margem_desejada_padrao || 30;
     
     return {
       percCustoFixo,
       percImposto,
-      percTaxaApp,
       margemDesejadaPadrao,
       totalCustosFixos,
       faturamento,
     };
-  }, [config, custosFixos, taxasApps]);
+  }, [config, custosFixos]);
 
   // Inicializar margem desejada quando config carregar
   React.useEffect(() => {
@@ -322,24 +318,21 @@ const Precificacao = () => {
   }, [config?.margem_desejada_padrao]);
 
   // Função para calcular preço sugerido baseado na margem líquida desejada
-  const calcularPrecoSugerido = (custoInsumos: number, comTaxaApp: boolean = false) => {
-    const { percCustoFixo, percImposto, percTaxaApp, margemDesejadaPadrao } = custosPercentuais;
+  const calcularPrecoSugerido = (custoInsumos: number, taxaApp: number = 0) => {
+    const { percCustoFixo, percImposto, margemDesejadaPadrao } = custosPercentuais;
     
-    // Fórmula: Preço = Custo / (1 - margem% - impostos% - custoFixo% - taxaApp%)
-    // Onde todos os % são em decimal (ex: 30% = 0.30)
     const margem = margemDesejadaPadrao / 100;
     const imposto = percImposto / 100;
     const custoFixo = percCustoFixo / 100;
-    const taxaApp = comTaxaApp ? (percTaxaApp / 100) : 0;
+    const taxa = taxaApp / 100;
     
-    const divisor = 1 - margem - imposto - custoFixo - taxaApp;
+    const divisor = 1 - margem - imposto - custoFixo - taxa;
     
-    // Se o divisor for <= 0, os custos são inviáveis
     if (divisor <= 0) {
-      return custoInsumos * 3; // Fallback: markup de 200%
+      return { preco: custoInsumos * 3, viavel: false };
     }
     
-    return custoInsumos / divisor;
+    return { preco: custoInsumos / divisor, viavel: true };
   };
 
   // Separar produtos com e sem ficha técnica
@@ -360,34 +353,35 @@ const Precificacao = () => {
       }, 0) || 0;
       
       const precoVenda = produto.preco_venda || 0;
-      const precoSugerido = calcularPrecoSugerido(custoInsumos, false);
-      const precoSugeridoComApp = calcularPrecoSugerido(custoInsumos, true);
+      const precoBalcao = calcularPrecoSugerido(custoInsumos, 0);
       
-      // Calcular margem líquida atual
+      // Preços por app
+      const precosApps = taxasApps?.map(app => ({
+        ...app,
+        ...calcularPrecoSugerido(custoInsumos, app.taxa_percentual)
+      })) || [];
+      
+      // Calcular margem líquida atual (sem taxa de app)
       const { percCustoFixo, percImposto } = custosPercentuais;
       const custoFixoValor = precoVenda * (percCustoFixo / 100);
       const impostoValor = precoVenda * (percImposto / 100);
       const lucroLiquido = precoVenda - custoInsumos - custoFixoValor - impostoValor;
       const margemLiquida = precoVenda > 0 ? (lucroLiquido / precoVenda) * 100 : 0;
       
-      // Markup tradicional (apenas sobre custo de insumos)
-      const markupAtual = custoInsumos > 0 ? ((precoVenda - custoInsumos) / custoInsumos) * 100 : 0;
-      
-      const diferencaPreco = precoVenda - precoSugerido;
+      const diferencaPreco = precoVenda - precoBalcao.preco;
       
       return {
         ...produto,
         custoInsumos,
         lucroLiquido,
         margemLiquida,
-        markupAtual,
-        precoSugerido,
-        precoSugeridoComApp,
+        precoBalcao: precoBalcao.preco,
+        precosApps,
         diferencaPreco,
         statusPreco: diferencaPreco < -0.01 ? 'abaixo' : diferencaPreco > 0.01 ? 'acima' : 'ideal',
       };
     });
-  }, [produtosComFicha, custosPercentuais]);
+  }, [produtosComFicha, custosPercentuais, taxasApps]);
 
   // Métricas gerais
   const metricas = useMemo(() => {
@@ -427,13 +421,18 @@ const Precificacao = () => {
       return acc + (ft.quantidade * ft.insumos.custo_unitario);
     }, 0) || 0;
     
-    const { percCustoFixo, percImposto, percTaxaApp } = custosPercentuais;
+    const { percCustoFixo, percImposto } = custosPercentuais;
+    
+    // Taxa do app selecionado
+    const taxaAppAtual = appSelecionado === 'balcao' 
+      ? 0 
+      : (taxasApps?.find(a => a.id === appSelecionado)?.taxa_percentual || 0);
     
     // Calcular preço baseado na margem desejada
     const margem = margemDesejada / 100;
     const imposto = percImposto / 100;
     const custoFixo = percCustoFixo / 100;
-    const taxaApp = incluirTaxaApp ? (percTaxaApp / 100) : 0;
+    const taxaApp = taxaAppAtual / 100;
     
     const divisor = 1 - margem - imposto - custoFixo - taxaApp;
     const novoPreco = divisor > 0 ? custoInsumos / divisor : custoInsumos * 3;
@@ -444,11 +443,21 @@ const Precificacao = () => {
     const valorTaxaApp = novoPreco * taxaApp;
     const lucroLiquido = novoPreco - custoInsumos - valorImposto - valorCustoFixo - valorTaxaApp;
     
-    // CMV (custo de mercadoria vendida)
+    // CMV
     const cmv = novoPreco > 0 ? (custoInsumos / novoPreco) * 100 : 0;
     
-    // Verificar se é viável
     const isViavel = divisor > 0 && lucroLiquido > 0;
+    
+    // Calcular preços para todos os canais
+    const precoBalcao = calcularPrecoSugerido(custoInsumos, 0);
+    const precosCanais = [
+      { nome: 'Balcão/Próprio', taxa: 0, ...precoBalcao },
+      ...(taxasApps?.map(app => ({
+        nome: app.nome_app,
+        taxa: app.taxa_percentual,
+        ...calcularPrecoSugerido(custoInsumos, app.taxa_percentual)
+      })) || [])
+    ];
     
     return { 
       custoInsumos, 
@@ -461,9 +470,10 @@ const Precificacao = () => {
       isViavel,
       percImposto,
       percCustoFixo,
-      percTaxaApp: incluirTaxaApp ? percTaxaApp : 0,
+      percTaxaApp: taxaAppAtual,
+      precosCanais,
     };
-  }, [produtoSimulador, margemDesejada, incluirTaxaApp, custosPercentuais]);
+  }, [produtoSimulador, margemDesejada, appSelecionado, custosPercentuais, taxasApps]);
 
   const handleAplicarPreco = (produtoId: string, novoPreco: number, precoAnterior: number) => {
     updatePrecoMutation.mutate({ produtoId, novoPreco, precoAnterior });
@@ -509,16 +519,16 @@ const Precificacao = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Precificação</h1>
+          <h1 className="text-2xl font-bold text-foreground">Precificação Inteligente</h1>
           <p className="text-muted-foreground">
-            Preços sugeridos com margem de {custosPercentuais.margemDesejadaPadrao}% considerando todos os custos
+            Preços calculados para garantir sua margem de lucro
           </p>
         </div>
         <Dialog>
           <DialogTrigger asChild>
             <Button variant="outline" className="gap-2">
               <History className="h-4 w-4" />
-              Ver Histórico
+              Histórico
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
@@ -587,7 +597,7 @@ const Precificacao = () => {
               </div>
             ) : (
               <div className="space-y-2">
-                {historicoProduto.map((h, index) => (
+                {historicoProduto.map(h => (
                   <div key={h.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground text-sm">
@@ -615,55 +625,108 @@ const Precificacao = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Card de Custos Considerados */}
-      <Card className="border-primary/20 bg-primary/5">
-        <CardContent className="pt-4">
-          <div className="flex items-start gap-3">
-            <div className="p-2 rounded-full bg-primary/10">
-              <PieChart className="h-5 w-5 text-primary" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-medium mb-2">Custos considerados na precificação</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <Package className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-muted-foreground">Insumos (CMV)</p>
-                    <p className="font-medium">Custo direto</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-muted-foreground">Custos Fixos</p>
-                    <p className="font-medium">{formatPercent(custosPercentuais.percCustoFixo)}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Receipt className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-muted-foreground">Impostos</p>
-                    <p className="font-medium">{formatPercent(custosPercentuais.percImposto)}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Smartphone className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-muted-foreground">Taxa Apps</p>
-                    <p className="font-medium">{formatPercent(custosPercentuais.percTaxaApp)}</p>
-                  </div>
-                </div>
-              </div>
-              {custosPercentuais.faturamento === 0 && (
-                <Alert variant="default" className="mt-3 border-warning bg-warning/10">
-                  <AlertTriangle className="h-4 w-4 text-warning" />
-                  <AlertDescription className="text-warning">
-                    Configure seu faturamento mensal em <Link to="/configuracoes" className="underline">Configurações</Link> para calcular o % de custo fixo corretamente.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
+      {/* Card Explicativo - Fórmula de Precificação */}
+      <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Calculator className="h-5 w-5 text-primary" />
+            Como calculamos o preço ideal
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-background/80 rounded-lg p-4 mb-4">
+            <p className="text-center font-mono text-sm mb-2">
+              <span className="font-bold text-primary">Preço de Venda</span> = Custo dos Insumos ÷ (1 - Margem - Impostos - Custo Fixo - Taxa App)
+            </p>
           </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <TooltipProvider>
+              <div className="bg-background rounded-lg p-3 text-center">
+                <Tooltip>
+                  <TooltipTrigger className="w-full">
+                    <Package className="h-5 w-5 mx-auto mb-1 text-orange-500" />
+                    <p className="text-xs text-muted-foreground">Insumos (CMV)</p>
+                    <p className="font-semibold text-sm">Custo direto</p>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Custo dos ingredientes/materiais do produto</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              
+              <div className="bg-background rounded-lg p-3 text-center">
+                <Tooltip>
+                  <TooltipTrigger className="w-full">
+                    <Percent className="h-5 w-5 mx-auto mb-1 text-emerald-500" />
+                    <p className="text-xs text-muted-foreground">Margem Desejada</p>
+                    <p className="font-semibold text-sm">{formatPercent(custosPercentuais.margemDesejadaPadrao)}</p>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Lucro líquido desejado sobre o preço de venda</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              
+              <div className="bg-background rounded-lg p-3 text-center">
+                <Tooltip>
+                  <TooltipTrigger className="w-full">
+                    <Building2 className="h-5 w-5 mx-auto mb-1 text-blue-500" />
+                    <p className="text-xs text-muted-foreground">Custos Fixos</p>
+                    <p className="font-semibold text-sm">{formatPercent(custosPercentuais.percCustoFixo)}</p>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Aluguel, salários, contas - rateados pelo faturamento</p>
+                    <p className="text-xs opacity-70">Total: {formatCurrency(custosPercentuais.totalCustosFixos)}/mês</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              
+              <div className="bg-background rounded-lg p-3 text-center">
+                <Tooltip>
+                  <TooltipTrigger className="w-full">
+                    <Receipt className="h-5 w-5 mx-auto mb-1 text-red-500" />
+                    <p className="text-xs text-muted-foreground">Impostos</p>
+                    <p className="font-semibold text-sm">{formatPercent(custosPercentuais.percImposto)}</p>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Imposto médio sobre vendas (Simples, etc)</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              
+              <div className="bg-background rounded-lg p-3 text-center">
+                <Tooltip>
+                  <TooltipTrigger className="w-full">
+                    <Smartphone className="h-5 w-5 mx-auto mb-1 text-purple-500" />
+                    <p className="text-xs text-muted-foreground">Taxa de Apps</p>
+                    <p className="font-semibold text-sm">Variável</p>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>iFood, Rappi, etc - cada app tem sua taxa</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
+          </div>
+          
+          {custosPercentuais.faturamento === 0 && (
+            <Alert variant="default" className="mt-4 border-warning bg-warning/10">
+              <AlertTriangle className="h-4 w-4 text-warning" />
+              <AlertDescription className="text-warning">
+                Configure seu faturamento mensal em <Link to="/configuracoes" className="underline font-medium">Configurações</Link> para calcular o % de custo fixo.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {(!taxasApps || taxasApps.length === 0) && (
+            <Alert variant="default" className="mt-4 border-muted">
+              <Smartphone className="h-4 w-4" />
+              <AlertDescription>
+                Cadastre seus apps de delivery em <Link to="/configuracoes" className="underline font-medium">Configurações</Link> para ver preços sugeridos por plataforma.
+              </AlertDescription>
+            </Alert>
+          )}
         </CardContent>
       </Card>
 
@@ -743,7 +806,7 @@ const Precificacao = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Tabela de Produtos */}
+        {/* Lista de Produtos */}
         <div className="lg:col-span-2 space-y-4">
           {/* Filtros */}
           <Card>
@@ -788,6 +851,9 @@ const Precificacao = () => {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg">Produtos ({produtosFiltrados.length})</CardTitle>
+              <CardDescription>
+                Clique em um produto para ver preços sugeridos por canal
+              </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y">
@@ -799,46 +865,93 @@ const Precificacao = () => {
                 ) : (
                   produtosFiltrados.map(produto => {
                     const precoEditado = precosEditados[produto.id];
+                    const isSelected = produtoSimulador?.id === produto.id;
                     
                     return (
-                      <div key={produto.id} className="p-4 hover:bg-muted/50 transition-colors">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                          {/* Info do produto */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-medium truncate">{produto.nome}</h3>
-                              <Badge 
-                                variant={
-                                  produto.statusPreco === 'abaixo' ? 'destructive' : 
-                                  produto.statusPreco === 'acima' ? 'default' : 
-                                  'secondary'
-                                }
-                                className={
-                                  produto.statusPreco === 'ideal' ? 'bg-success text-success-foreground' : ''
-                                }
-                              >
-                                {produto.statusPreco === 'abaixo' && '↓ Abaixo'}
-                                {produto.statusPreco === 'acima' && '↑ Acima'}
-                                {produto.statusPreco === 'ideal' && '✓ Ideal'}
-                              </Badge>
+                      <div 
+                        key={produto.id} 
+                        className={`p-4 transition-colors cursor-pointer ${
+                          isSelected 
+                            ? 'bg-primary/10 border-l-4 border-l-primary' 
+                            : 'hover:bg-muted/50'
+                        }`}
+                        onClick={() => {
+                          setProdutoSimulador(produto);
+                          setMargemDesejada(custosPercentuais.margemDesejadaPadrao);
+                          setAppSelecionado('balcao');
+                        }}
+                      >
+                        <div className="flex flex-col gap-3">
+                          {/* Linha 1: Nome e Status */}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="font-medium">{produto.nome}</h3>
+                                <Badge 
+                                  variant={
+                                    produto.statusPreco === 'abaixo' ? 'destructive' : 
+                                    produto.statusPreco === 'acima' ? 'default' : 
+                                    'secondary'
+                                  }
+                                  className={
+                                    produto.statusPreco === 'ideal' ? 'bg-success text-success-foreground' : ''
+                                  }
+                                >
+                                  {produto.statusPreco === 'abaixo' && '↓ Abaixo'}
+                                  {produto.statusPreco === 'acima' && '↑ Acima'}
+                                  {produto.statusPreco === 'ideal' && '✓ Ideal'}
+                                </Badge>
+                              </div>
                             </div>
-                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
-                              <span>Custo: {formatCurrency(produto.custoInsumos)}</span>
-                              <span>Margem: {produto.margemLiquida.toFixed(1)}%</span>
-                              <span>Sugerido: {formatCurrency(produto.precoSugerido)}</span>
+                            <ChevronRight className={`h-5 w-5 text-muted-foreground transition-transform ${isSelected ? 'rotate-90' : ''}`} />
+                          </div>
+                          
+                          {/* Linha 2: Métricas */}
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+                            <div className="bg-muted/50 rounded px-2 py-1">
+                              <p className="text-xs text-muted-foreground">Custo</p>
+                              <p className="font-medium">{formatCurrency(produto.custoInsumos)}</p>
+                            </div>
+                            <div className="bg-muted/50 rounded px-2 py-1">
+                              <p className="text-xs text-muted-foreground">Preço Atual</p>
+                              <p className="font-medium">{formatCurrency(produto.preco_venda)}</p>
+                            </div>
+                            <div className="bg-muted/50 rounded px-2 py-1">
+                              <p className="text-xs text-muted-foreground">Margem Atual</p>
+                              <p className={`font-medium ${produto.margemLiquida >= custosPercentuais.margemDesejadaPadrao ? 'text-success' : 'text-destructive'}`}>
+                                {formatPercent(produto.margemLiquida)}
+                              </p>
+                            </div>
+                            <div className="bg-primary/10 rounded px-2 py-1">
+                              <p className="text-xs text-muted-foreground">Sugerido (Balcão)</p>
+                              <p className="font-semibold text-primary">{formatCurrency(produto.precoBalcao)}</p>
                             </div>
                           </div>
-
-                          {/* Preço e ações */}
-                          <div className="flex items-center gap-2">
-                            <div className="relative">
+                          
+                          {/* Linha 3: Preços por App (se houver) */}
+                          {produto.precosApps.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {produto.precosApps.map(app => (
+                                <div key={app.id} className="inline-flex items-center gap-1.5 bg-purple-500/10 text-purple-700 dark:text-purple-300 rounded-full px-3 py-1 text-xs">
+                                  <Smartphone className="h-3 w-3" />
+                                  <span className="font-medium">{app.nome_app}:</span>
+                                  <span>{formatCurrency(app.preco)}</span>
+                                  <span className="opacity-60">({formatPercent(app.taxa_percentual)})</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* Ações rápidas */}
+                          <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                            <div className="relative flex-1">
                               <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                               <Input
                                 type="number"
                                 step="0.01"
                                 value={precoEditado ?? produto.preco_venda.toFixed(2)}
                                 onChange={(e) => setPrecosEditados(prev => ({ ...prev, [produto.id]: e.target.value }))}
-                                className="w-28 pl-7 text-right"
+                                className="pl-7 text-right"
                               />
                             </div>
                             
@@ -855,8 +968,8 @@ const Precificacao = () => {
                             {produto.statusPreco === 'abaixo' && precoEditado === undefined && (
                               <Button 
                                 size="sm" 
-                                variant="outline"
-                                onClick={() => handleAplicarPreco(produto.id, produto.precoSugerido, produto.preco_venda)}
+                                variant="secondary"
+                                onClick={() => handleAplicarPreco(produto.id, produto.precoBalcao, produto.preco_venda)}
                                 disabled={updatePrecoMutation.isPending}
                               >
                                 Aplicar sugerido
@@ -864,24 +977,12 @@ const Precificacao = () => {
                             )}
                             
                             <Button
-                              size="sm"
+                              size="icon"
                               variant="ghost"
                               onClick={() => handleVerHistorico(produto.id)}
                               title="Ver histórico de preços"
                             >
                               <History className="h-4 w-4" />
-                            </Button>
-                            
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => {
-                                setProdutoSimulador(produto);
-                                setMargemDesejada(custosPercentuais.margemDesejadaPadrao);
-                              }}
-                              title="Abrir simulador"
-                            >
-                              <Calculator className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
@@ -896,36 +997,59 @@ const Precificacao = () => {
 
         {/* Simulador de Preço */}
         <div className="space-y-4">
-          <Card>
+          <Card className="sticky top-4">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Calculator className="h-5 w-5" />
                 Simulador de Preço
               </CardTitle>
               <CardDescription>
-                Simule o preço baseado na margem líquida desejada
+                Simule diferentes margens e canais de venda
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {!produtoSimulador ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Calculator className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                  <p className="text-sm">Clique no ícone <Calculator className="inline h-4 w-4" /> em um produto para simular</p>
+                  <p className="text-sm">Selecione um produto da lista para simular</p>
                 </div>
               ) : (
                 <>
-                  <div className="p-3 bg-muted rounded-lg">
+                  <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
                     <p className="font-medium">{produtoSimulador.nome}</p>
                     <p className="text-sm text-muted-foreground">
-                      Custo de insumos: {formatCurrency(simuladorCalcs?.custoInsumos || 0)}
+                      Custo: {formatCurrency(simuladorCalcs?.custoInsumos || 0)}
                     </p>
+                  </div>
+
+                  {/* Seletor de Canal */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Canal de Venda</Label>
+                    <Tabs value={appSelecionado} onValueChange={setAppSelecionado} className="w-full">
+                      <TabsList className="w-full flex-wrap h-auto gap-1 p-1">
+                        <TabsTrigger value="balcao" className="flex-1 min-w-[80px] gap-1 text-xs">
+                          <Store className="h-3 w-3" />
+                          Balcão
+                        </TabsTrigger>
+                        {taxasApps?.map(app => (
+                          <TabsTrigger 
+                            key={app.id} 
+                            value={app.id}
+                            className="flex-1 min-w-[80px] gap-1 text-xs"
+                          >
+                            <Smartphone className="h-3 w-3" />
+                            {app.nome_app}
+                          </TabsTrigger>
+                        ))}
+                      </TabsList>
+                    </Tabs>
                   </div>
 
                   {/* Slider de margem */}
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Margem líquida desejada</span>
-                      <span className="font-medium">{margemDesejada.toFixed(0)}%</span>
+                      <span className="font-medium text-primary">{margemDesejada.toFixed(0)}%</span>
                     </div>
                     <Slider
                       value={[margemDesejada]}
@@ -942,48 +1066,51 @@ const Precificacao = () => {
                     </div>
                   </div>
 
-                  {/* Toggle taxa de app */}
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="incluir-taxa" className="text-sm">
-                      Incluir taxa de app ({formatPercent(custosPercentuais.percTaxaApp)})
-                    </Label>
-                    <Switch
-                      id="incluir-taxa"
-                      checked={incluirTaxaApp}
-                      onCheckedChange={setIncluirTaxaApp}
-                    />
-                  </div>
-
                   <Separator />
 
                   {/* Decomposição do preço */}
                   <div className="space-y-2">
                     <h4 className="text-sm font-medium flex items-center gap-1">
                       <PieChart className="h-4 w-4" />
-                      Decomposição do Preço
+                      Composição do Preço
                     </h4>
                     <div className="space-y-1 text-sm">
-                      <div className="flex justify-between py-1">
-                        <span className="text-muted-foreground">Custo Insumos</span>
-                        <span>{formatCurrency(simuladorCalcs?.custoInsumos || 0)}</span>
+                      <div className="flex justify-between py-1.5 items-center">
+                        <span className="text-muted-foreground flex items-center gap-1.5">
+                          <div className="w-2 h-2 rounded-full bg-orange-500" />
+                          Custo Insumos
+                        </span>
+                        <span className="font-medium">{formatCurrency(simuladorCalcs?.custoInsumos || 0)}</span>
                       </div>
-                      <div className="flex justify-between py-1">
-                        <span className="text-muted-foreground">Custo Fixo ({formatPercent(simuladorCalcs?.percCustoFixo || 0)})</span>
+                      <div className="flex justify-between py-1.5 items-center">
+                        <span className="text-muted-foreground flex items-center gap-1.5">
+                          <div className="w-2 h-2 rounded-full bg-blue-500" />
+                          Custo Fixo ({formatPercent(simuladorCalcs?.percCustoFixo || 0)})
+                        </span>
                         <span>{formatCurrency(simuladorCalcs?.valorCustoFixo || 0)}</span>
                       </div>
-                      <div className="flex justify-between py-1">
-                        <span className="text-muted-foreground">Impostos ({formatPercent(simuladorCalcs?.percImposto || 0)})</span>
+                      <div className="flex justify-between py-1.5 items-center">
+                        <span className="text-muted-foreground flex items-center gap-1.5">
+                          <div className="w-2 h-2 rounded-full bg-red-500" />
+                          Impostos ({formatPercent(simuladorCalcs?.percImposto || 0)})
+                        </span>
                         <span>{formatCurrency(simuladorCalcs?.valorImposto || 0)}</span>
                       </div>
-                      {incluirTaxaApp && (
-                        <div className="flex justify-between py-1">
-                          <span className="text-muted-foreground">Taxa App ({formatPercent(simuladorCalcs?.percTaxaApp || 0)})</span>
+                      {simuladorCalcs?.percTaxaApp > 0 && (
+                        <div className="flex justify-between py-1.5 items-center">
+                          <span className="text-muted-foreground flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full bg-purple-500" />
+                            Taxa App ({formatPercent(simuladorCalcs?.percTaxaApp || 0)})
+                          </span>
                           <span>{formatCurrency(simuladorCalcs?.valorTaxaApp || 0)}</span>
                         </div>
                       )}
-                      <div className="flex justify-between py-1 border-t pt-2">
-                        <span className="text-muted-foreground">Lucro Líquido ({formatPercent(margemDesejada)})</span>
-                        <span className={simuladorCalcs?.lucroLiquido && simuladorCalcs.lucroLiquido > 0 ? 'text-success font-medium' : 'text-destructive'}>
+                      <div className="flex justify-between py-1.5 items-center border-t pt-2">
+                        <span className="text-muted-foreground flex items-center gap-1.5">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                          Lucro Líquido ({formatPercent(margemDesejada)})
+                        </span>
+                        <span className={simuladorCalcs?.lucroLiquido && simuladorCalcs.lucroLiquido > 0 ? 'text-success font-medium' : 'text-destructive font-medium'}>
                           {formatCurrency(simuladorCalcs?.lucroLiquido || 0)}
                         </span>
                       </div>
@@ -994,9 +1121,14 @@ const Precificacao = () => {
 
                   {/* Preço calculado */}
                   <div className="space-y-3">
-                    <div className={`flex justify-between items-center p-3 rounded-lg ${simuladorCalcs?.isViavel ? 'bg-primary/10' : 'bg-destructive/10'}`}>
-                      <span className="text-sm font-medium">Preço Calculado</span>
-                      <span className={`text-xl font-bold ${simuladorCalcs?.isViavel ? 'text-primary' : 'text-destructive'}`}>
+                    <div className={`flex justify-between items-center p-4 rounded-lg ${simuladorCalcs?.isViavel ? 'bg-primary/10 border border-primary/30' : 'bg-destructive/10 border border-destructive/30'}`}>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Preço Calculado</p>
+                        <p className="text-sm text-muted-foreground">
+                          {appSelecionado === 'balcao' ? 'Venda direta' : taxasApps?.find(a => a.id === appSelecionado)?.nome_app}
+                        </p>
+                      </div>
+                      <span className={`text-2xl font-bold ${simuladorCalcs?.isViavel ? 'text-primary' : 'text-destructive'}`}>
                         {formatCurrency(simuladorCalcs?.novoPreco || 0)}
                       </span>
                     </div>
@@ -1005,20 +1137,49 @@ const Precificacao = () => {
                       <Alert variant="destructive">
                         <AlertTriangle className="h-4 w-4" />
                         <AlertDescription>
-                          A margem desejada é inviável com os custos atuais. Reduza a margem ou revise seus custos.
+                          Margem inviável! Reduza a margem ou revise custos.
                         </AlertDescription>
                       </Alert>
                     )}
 
+                    {/* Comparativo de canais */}
+                    {simuladorCalcs?.precosCanais && simuladorCalcs.precosCanais.length > 1 && (
+                      <div className="space-y-2">
+                        <h4 className="text-xs font-medium text-muted-foreground">Comparativo por Canal</h4>
+                        <div className="space-y-1">
+                          {simuladorCalcs.precosCanais.map((canal, idx) => (
+                            <div 
+                              key={idx}
+                              className={`flex justify-between items-center p-2 rounded text-sm ${
+                                (appSelecionado === 'balcao' && canal.taxa === 0) ||
+                                (taxasApps?.find(a => a.id === appSelecionado)?.taxa_percentual === canal.taxa)
+                                  ? 'bg-primary/5 border border-primary/20'
+                                  : 'bg-muted/50'
+                              }`}
+                            >
+                              <span className="flex items-center gap-1.5">
+                                {canal.taxa === 0 ? <Store className="h-3 w-3" /> : <Smartphone className="h-3 w-3" />}
+                                {canal.nome}
+                                {canal.taxa > 0 && <span className="text-xs text-muted-foreground">({formatPercent(canal.taxa)})</span>}
+                              </span>
+                              <span className={`font-medium ${canal.viavel ? '' : 'text-destructive'}`}>
+                                {formatCurrency(canal.preco)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="p-2 bg-muted rounded">
-                        <p className="text-muted-foreground">CMV</p>
+                      <div className="p-2 bg-muted rounded text-center">
+                        <p className="text-xs text-muted-foreground">CMV</p>
                         <p className="font-medium">
                           {simuladorCalcs?.cmv.toFixed(1)}%
                         </p>
                       </div>
-                      <div className="p-2 bg-muted rounded">
-                        <p className="text-muted-foreground">Preço Atual</p>
+                      <div className="p-2 bg-muted rounded text-center">
+                        <p className="text-xs text-muted-foreground">Preço Atual</p>
                         <p className="font-medium">
                           {formatCurrency(produtoSimulador.preco_venda)}
                         </p>
@@ -1043,23 +1204,6 @@ const Precificacao = () => {
                   </div>
                 </>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Dica */}
-          <Card className="bg-muted/50">
-            <CardContent className="pt-4">
-              <h4 className="font-medium text-sm mb-2 flex items-center gap-1">
-                <Info className="h-4 w-4" />
-                Como funciona
-              </h4>
-              <p className="text-xs text-muted-foreground">
-                O preço é calculado pela fórmula: <strong>Preço = Custo ÷ (1 - Margem - Impostos - CustoFixo - TaxaApp)</strong>. 
-                Isso garante que sua margem líquida seja respeitada após todos os custos.
-              </p>
-              <Button variant="link" size="sm" className="px-0 mt-1" asChild>
-                <Link to="/configuracoes">Ajustar configurações →</Link>
-              </Button>
             </CardContent>
           </Card>
         </div>
