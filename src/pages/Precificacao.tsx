@@ -11,12 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
@@ -32,14 +34,13 @@ import {
   History,
   ArrowRight,
   Clock,
-  Info,
   PieChart,
   Building2,
   Receipt,
   Smartphone,
   Store,
-  HelpCircle,
-  ChevronRight
+  ChevronRight,
+  X
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -110,11 +111,13 @@ const Precificacao = () => {
   const { usuario } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   
   const [filtroCategoria, setFiltroCategoria] = useState<string>('todas');
   const [filtroStatus, setFiltroStatus] = useState<string>('todos');
   const [busca, setBusca] = useState('');
   const [produtoSimulador, setProdutoSimulador] = useState<Produto | null>(null);
+  const [simuladorOpen, setSimuladorOpen] = useState(false);
   const [margemDesejada, setMargemDesejada] = useState<number>(30);
   const [appSelecionado, setAppSelecionado] = useState<string>('balcao');
   const [precosEditados, setPrecosEditados] = useState<Record<string, string>>({});
@@ -625,105 +628,69 @@ const Precificacao = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Card Explicativo - Fórmula de Precificação */}
+      {/* Card Explicativo - Fórmula de Precificação - Compacto no mobile */}
       <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Calculator className="h-5 w-5 text-primary" />
+        <CardHeader className="pb-2 sm:pb-3">
+          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+            <Calculator className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             Como calculamos o preço ideal
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="bg-background/80 rounded-lg p-4 mb-4">
-            <p className="text-center font-mono text-sm mb-2">
-              <span className="font-bold text-primary">Preço de Venda</span> = Custo dos Insumos ÷ (1 - Margem - Impostos - Custo Fixo - Taxa App)
+        <CardContent className="pt-0">
+          <div className="bg-background/80 rounded-lg p-2 sm:p-4 mb-3 sm:mb-4 overflow-x-auto">
+            <p className="text-center font-mono text-xs sm:text-sm whitespace-nowrap">
+              <span className="font-bold text-primary">Preço</span> = Custo ÷ (1 - Margem - Imposto - CF - Taxa)
             </p>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-5 gap-1 sm:gap-3">
             <TooltipProvider>
-              <div className="bg-background rounded-lg p-3 text-center">
-                <Tooltip>
-                  <TooltipTrigger className="w-full">
-                    <Package className="h-5 w-5 mx-auto mb-1 text-orange-500" />
-                    <p className="text-xs text-muted-foreground">Insumos (CMV)</p>
-                    <p className="font-semibold text-sm">Custo direto</p>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Custo dos ingredientes/materiais do produto</p>
-                  </TooltipContent>
-                </Tooltip>
+              <div className="bg-background rounded-lg p-1.5 sm:p-3 text-center">
+                <Package className="h-4 w-4 sm:h-5 sm:w-5 mx-auto mb-0.5 sm:mb-1 text-orange-500" />
+                <p className="text-[9px] sm:text-xs text-muted-foreground leading-tight">Insumos</p>
+                <p className="font-semibold text-[10px] sm:text-sm">CMV</p>
               </div>
               
-              <div className="bg-background rounded-lg p-3 text-center">
-                <Tooltip>
-                  <TooltipTrigger className="w-full">
-                    <Percent className="h-5 w-5 mx-auto mb-1 text-emerald-500" />
-                    <p className="text-xs text-muted-foreground">Margem Desejada</p>
-                    <p className="font-semibold text-sm">{formatPercent(custosPercentuais.margemDesejadaPadrao)}</p>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Lucro líquido desejado sobre o preço de venda</p>
-                  </TooltipContent>
-                </Tooltip>
+              <div className="bg-background rounded-lg p-1.5 sm:p-3 text-center">
+                <Percent className="h-4 w-4 sm:h-5 sm:w-5 mx-auto mb-0.5 sm:mb-1 text-emerald-500" />
+                <p className="text-[9px] sm:text-xs text-muted-foreground leading-tight">Margem</p>
+                <p className="font-semibold text-[10px] sm:text-sm">{formatPercent(custosPercentuais.margemDesejadaPadrao)}</p>
               </div>
               
-              <div className="bg-background rounded-lg p-3 text-center">
-                <Tooltip>
-                  <TooltipTrigger className="w-full">
-                    <Building2 className="h-5 w-5 mx-auto mb-1 text-blue-500" />
-                    <p className="text-xs text-muted-foreground">Custos Fixos</p>
-                    <p className="font-semibold text-sm">{formatPercent(custosPercentuais.percCustoFixo)}</p>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Aluguel, salários, contas - rateados pelo faturamento</p>
-                    <p className="text-xs opacity-70">Total: {formatCurrency(custosPercentuais.totalCustosFixos)}/mês</p>
-                  </TooltipContent>
-                </Tooltip>
+              <div className="bg-background rounded-lg p-1.5 sm:p-3 text-center">
+                <Building2 className="h-4 w-4 sm:h-5 sm:w-5 mx-auto mb-0.5 sm:mb-1 text-blue-500" />
+                <p className="text-[9px] sm:text-xs text-muted-foreground leading-tight">C. Fixo</p>
+                <p className="font-semibold text-[10px] sm:text-sm">{formatPercent(custosPercentuais.percCustoFixo)}</p>
               </div>
               
-              <div className="bg-background rounded-lg p-3 text-center">
-                <Tooltip>
-                  <TooltipTrigger className="w-full">
-                    <Receipt className="h-5 w-5 mx-auto mb-1 text-red-500" />
-                    <p className="text-xs text-muted-foreground">Impostos</p>
-                    <p className="font-semibold text-sm">{formatPercent(custosPercentuais.percImposto)}</p>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Imposto médio sobre vendas (Simples, etc)</p>
-                  </TooltipContent>
-                </Tooltip>
+              <div className="bg-background rounded-lg p-1.5 sm:p-3 text-center">
+                <Receipt className="h-4 w-4 sm:h-5 sm:w-5 mx-auto mb-0.5 sm:mb-1 text-red-500" />
+                <p className="text-[9px] sm:text-xs text-muted-foreground leading-tight">Imposto</p>
+                <p className="font-semibold text-[10px] sm:text-sm">{formatPercent(custosPercentuais.percImposto)}</p>
               </div>
               
-              <div className="bg-background rounded-lg p-3 text-center">
-                <Tooltip>
-                  <TooltipTrigger className="w-full">
-                    <Smartphone className="h-5 w-5 mx-auto mb-1 text-purple-500" />
-                    <p className="text-xs text-muted-foreground">Taxa de Apps</p>
-                    <p className="font-semibold text-sm">Variável</p>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>iFood, Rappi, etc - cada app tem sua taxa</p>
-                  </TooltipContent>
-                </Tooltip>
+              <div className="bg-background rounded-lg p-1.5 sm:p-3 text-center">
+                <Smartphone className="h-4 w-4 sm:h-5 sm:w-5 mx-auto mb-0.5 sm:mb-1 text-purple-500" />
+                <p className="text-[9px] sm:text-xs text-muted-foreground leading-tight">Apps</p>
+                <p className="font-semibold text-[10px] sm:text-sm">Var.</p>
               </div>
             </TooltipProvider>
           </div>
           
           {custosPercentuais.faturamento === 0 && (
-            <Alert variant="default" className="mt-4 border-warning bg-warning/10">
+            <Alert variant="default" className="mt-3 sm:mt-4 border-warning bg-warning/10">
               <AlertTriangle className="h-4 w-4 text-warning" />
-              <AlertDescription className="text-warning">
-                Configure seu faturamento mensal em <Link to="/configuracoes" className="underline font-medium">Configurações</Link> para calcular o % de custo fixo.
+              <AlertDescription className="text-warning text-xs sm:text-sm">
+                Configure faturamento em <Link to="/configuracoes" className="underline font-medium">Configurações</Link> para % custo fixo.
               </AlertDescription>
             </Alert>
           )}
           
           {(!taxasApps || taxasApps.length === 0) && (
-            <Alert variant="default" className="mt-4 border-muted">
+            <Alert variant="default" className="mt-3 sm:mt-4 border-muted">
               <Smartphone className="h-4 w-4" />
-              <AlertDescription>
-                Cadastre seus apps de delivery em <Link to="/configuracoes" className="underline font-medium">Configurações</Link> para ver preços sugeridos por plataforma.
+              <AlertDescription className="text-xs sm:text-sm">
+                Cadastre apps em <Link to="/configuracoes" className="underline font-medium">Configurações</Link> para preços por plataforma.
               </AlertDescription>
             </Alert>
           )}
@@ -746,64 +713,102 @@ const Precificacao = () => {
         </Alert>
       )}
 
-      {/* Cards de Métricas */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Cards de Métricas - Compactos no mobile */}
+      <div className="grid grid-cols-4 gap-2 sm:gap-4">
         <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-full bg-primary/10">
-                <Percent className="h-4 w-4 text-primary" />
+          <CardContent className="p-2 sm:pt-4 sm:p-4">
+            <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-center sm:text-left">
+              <div className="p-1.5 sm:p-2 rounded-full bg-primary/10">
+                <Percent className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Margem Líq. Média</p>
-                <p className="text-xl font-bold">{metricas.margemMedia.toFixed(1)}%</p>
+                <p className="text-[9px] sm:text-xs text-muted-foreground">Margem Média</p>
+                <p className="text-base sm:text-xl font-bold">{metricas.margemMedia.toFixed(1)}%</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-full bg-destructive/10">
-                <TrendingDown className="h-4 w-4 text-destructive" />
+          <CardContent className="p-2 sm:pt-4 sm:p-4">
+            <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-center sm:text-left">
+              <div className="p-1.5 sm:p-2 rounded-full bg-destructive/10">
+                <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4 text-destructive" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Abaixo do Ideal</p>
-                <p className="text-xl font-bold text-destructive">{metricas.produtosAbaixo}</p>
+                <p className="text-[9px] sm:text-xs text-muted-foreground">Abaixo</p>
+                <p className="text-base sm:text-xl font-bold text-destructive">{metricas.produtosAbaixo}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-full bg-success/10">
-                <CheckCircle2 className="h-4 w-4 text-success" />
+          <CardContent className="p-2 sm:pt-4 sm:p-4">
+            <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-center sm:text-left">
+              <div className="p-1.5 sm:p-2 rounded-full bg-success/10">
+                <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-success" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Preço Ideal</p>
-                <p className="text-xl font-bold text-success">{metricas.produtosIdeais}</p>
+                <p className="text-[9px] sm:text-xs text-muted-foreground">Ideal</p>
+                <p className="text-base sm:text-xl font-bold text-success">{metricas.produtosIdeais}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-full bg-blue-500/10">
-                <TrendingUp className="h-4 w-4 text-blue-500" />
+          <CardContent className="p-2 sm:pt-4 sm:p-4">
+            <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-center sm:text-left">
+              <div className="p-1.5 sm:p-2 rounded-full bg-blue-500/10">
+                <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Acima do Ideal</p>
-                <p className="text-xl font-bold text-blue-500">{metricas.produtosAcima}</p>
+                <p className="text-[9px] sm:text-xs text-muted-foreground">Acima</p>
+                <p className="text-base sm:text-xl font-bold text-blue-500">{metricas.produtosAcima}</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Simulador Mobile - Drawer */}
+      {isMobile && (
+        <Drawer open={simuladorOpen} onOpenChange={setSimuladorOpen}>
+          <DrawerContent className="max-h-[90vh]">
+            <DrawerHeader className="pb-2">
+              <DrawerTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Calculator className="h-5 w-5" />
+                  Simulador de Preço
+                </span>
+                <Button variant="ghost" size="icon" onClick={() => setSimuladorOpen(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </DrawerTitle>
+            </DrawerHeader>
+            <ScrollArea className="px-4 pb-4 max-h-[75vh]">
+              {produtoSimulador && (
+                <SimuladorContent 
+                  produtoSimulador={produtoSimulador}
+                  simuladorCalcs={simuladorCalcs}
+                  margemDesejada={margemDesejada}
+                  setMargemDesejada={setMargemDesejada}
+                  appSelecionado={appSelecionado}
+                  setAppSelecionado={setAppSelecionado}
+                  taxasApps={taxasApps}
+                  handleAplicarDoSimulador={handleAplicarDoSimulador}
+                  updatePrecoMutation={updatePrecoMutation}
+                  onClose={() => {
+                    setSimuladorOpen(false);
+                    setProdutoSimulador(null);
+                  }}
+                />
+              )}
+            </ScrollArea>
+          </DrawerContent>
+        </Drawer>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Lista de Produtos */}
@@ -811,8 +816,8 @@ const Precificacao = () => {
           {/* Filtros */}
           <Card>
             <CardContent className="pt-4">
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="relative flex-1">
+              <div className="flex flex-col gap-3">
+                <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Buscar produto..."
@@ -821,28 +826,30 @@ const Precificacao = () => {
                     className="pl-9"
                   />
                 </div>
-                <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
-                  <SelectTrigger className="w-full sm:w-40">
-                    <SelectValue placeholder="Categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todas">Todas</SelectItem>
-                    {categorias.map(cat => (
-                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={filtroStatus} onValueChange={setFiltroStatus}>
-                  <SelectTrigger className="w-full sm:w-40">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos</SelectItem>
-                    <SelectItem value="abaixo">Abaixo do ideal</SelectItem>
-                    <SelectItem value="ideal">Preço ideal</SelectItem>
-                    <SelectItem value="acima">Acima do ideal</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todas">Todas</SelectItem>
+                      {categorias.map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      <SelectItem value="abaixo">Abaixo</SelectItem>
+                      <SelectItem value="ideal">Ideal</SelectItem>
+                      <SelectItem value="acima">Acima</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -851,8 +858,8 @@ const Precificacao = () => {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg">Produtos ({produtosFiltrados.length})</CardTitle>
-              <CardDescription>
-                Clique em um produto para ver preços sugeridos por canal
+              <CardDescription className="text-xs">
+                {isMobile ? 'Toque em um produto para simular preço' : 'Clique para ver preços por canal'}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -870,121 +877,124 @@ const Precificacao = () => {
                     return (
                       <div 
                         key={produto.id} 
-                        className={`p-4 transition-colors cursor-pointer ${
-                          isSelected 
+                        className={`p-3 sm:p-4 transition-colors cursor-pointer ${
+                          isSelected && !isMobile
                             ? 'bg-primary/10 border-l-4 border-l-primary' 
-                            : 'hover:bg-muted/50'
+                            : 'hover:bg-muted/50 active:bg-muted'
                         }`}
                         onClick={() => {
                           setProdutoSimulador(produto);
                           setMargemDesejada(custosPercentuais.margemDesejadaPadrao);
                           setAppSelecionado('balcao');
+                          if (isMobile) {
+                            setSimuladorOpen(true);
+                          }
                         }}
                       >
-                        <div className="flex flex-col gap-3">
+                        <div className="flex flex-col gap-2">
                           {/* Linha 1: Nome e Status */}
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <h3 className="font-medium">{produto.nome}</h3>
-                                <Badge 
-                                  variant={
-                                    produto.statusPreco === 'abaixo' ? 'destructive' : 
-                                    produto.statusPreco === 'acima' ? 'default' : 
-                                    'secondary'
-                                  }
-                                  className={
-                                    produto.statusPreco === 'ideal' ? 'bg-success text-success-foreground' : ''
-                                  }
-                                >
-                                  {produto.statusPreco === 'abaixo' && '↓ Abaixo'}
-                                  {produto.statusPreco === 'acima' && '↑ Acima'}
-                                  {produto.statusPreco === 'ideal' && '✓ Ideal'}
-                                </Badge>
-                              </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <h3 className="font-medium truncate text-sm sm:text-base">{produto.nome}</h3>
+                              <Badge 
+                                variant={
+                                  produto.statusPreco === 'abaixo' ? 'destructive' : 
+                                  produto.statusPreco === 'acima' ? 'default' : 
+                                  'secondary'
+                                }
+                                className={`text-[10px] px-1.5 ${
+                                  produto.statusPreco === 'ideal' ? 'bg-success text-success-foreground' : ''
+                                }`}
+                              >
+                                {produto.statusPreco === 'abaixo' && '↓'}
+                                {produto.statusPreco === 'acima' && '↑'}
+                                {produto.statusPreco === 'ideal' && '✓'}
+                              </Badge>
                             </div>
-                            <ChevronRight className={`h-5 w-5 text-muted-foreground transition-transform ${isSelected ? 'rotate-90' : ''}`} />
+                            <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                           </div>
                           
-                          {/* Linha 2: Métricas */}
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
-                            <div className="bg-muted/50 rounded px-2 py-1">
-                              <p className="text-xs text-muted-foreground">Custo</p>
+                          {/* Linha 2: Métricas compactas */}
+                          <div className="grid grid-cols-4 gap-1 text-xs">
+                            <div className="bg-muted/50 rounded px-1.5 py-1 text-center">
+                              <p className="text-[10px] text-muted-foreground">Custo</p>
                               <p className="font-medium">{formatCurrency(produto.custoInsumos)}</p>
                             </div>
-                            <div className="bg-muted/50 rounded px-2 py-1">
-                              <p className="text-xs text-muted-foreground">Preço Atual</p>
+                            <div className="bg-muted/50 rounded px-1.5 py-1 text-center">
+                              <p className="text-[10px] text-muted-foreground">Atual</p>
                               <p className="font-medium">{formatCurrency(produto.preco_venda)}</p>
                             </div>
-                            <div className="bg-muted/50 rounded px-2 py-1">
-                              <p className="text-xs text-muted-foreground">Margem Atual</p>
+                            <div className="bg-muted/50 rounded px-1.5 py-1 text-center">
+                              <p className="text-[10px] text-muted-foreground">Margem</p>
                               <p className={`font-medium ${produto.margemLiquida >= custosPercentuais.margemDesejadaPadrao ? 'text-success' : 'text-destructive'}`}>
                                 {formatPercent(produto.margemLiquida)}
                               </p>
                             </div>
-                            <div className="bg-primary/10 rounded px-2 py-1">
-                              <p className="text-xs text-muted-foreground">Sugerido (Balcão)</p>
+                            <div className="bg-primary/10 rounded px-1.5 py-1 text-center">
+                              <p className="text-[10px] text-muted-foreground">Sugerido</p>
                               <p className="font-semibold text-primary">{formatCurrency(produto.precoBalcao)}</p>
                             </div>
                           </div>
                           
-                          {/* Linha 3: Preços por App (se houver) */}
-                          {produto.precosApps.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
+                          {/* Linha 3: Preços por App - apenas em telas maiores ou ao expandir */}
+                          {!isMobile && produto.precosApps.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
                               {produto.precosApps.map(app => (
-                                <div key={app.id} className="inline-flex items-center gap-1.5 bg-purple-500/10 text-purple-700 dark:text-purple-300 rounded-full px-3 py-1 text-xs">
-                                  <Smartphone className="h-3 w-3" />
+                                <div key={app.id} className="inline-flex items-center gap-1 bg-purple-500/10 text-purple-700 dark:text-purple-300 rounded-full px-2 py-0.5 text-[10px]">
+                                  <Smartphone className="h-2.5 w-2.5" />
                                   <span className="font-medium">{app.nome_app}:</span>
                                   <span>{formatCurrency(app.preco)}</span>
-                                  <span className="opacity-60">({formatPercent(app.taxa_percentual)})</span>
                                 </div>
                               ))}
                             </div>
                           )}
                           
-                          {/* Ações rápidas */}
-                          <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                            <div className="relative flex-1">
-                              <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={precoEditado ?? produto.preco_venda.toFixed(2)}
-                                onChange={(e) => setPrecosEditados(prev => ({ ...prev, [produto.id]: e.target.value }))}
-                                className="pl-7 text-right"
-                              />
+                          {/* Ações rápidas - apenas desktop ou quando expandido */}
+                          {!isMobile && (
+                            <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                              <div className="relative flex-1">
+                                <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={precoEditado ?? produto.preco_venda.toFixed(2)}
+                                  onChange={(e) => setPrecosEditados(prev => ({ ...prev, [produto.id]: e.target.value }))}
+                                  className="pl-7 text-right h-9"
+                                />
+                              </div>
+                              
+                              {precoEditado !== undefined && parseFloat(precoEditado) !== produto.preco_venda && (
+                                <Button 
+                                  size="sm"
+                                  onClick={() => handleAplicarPreco(produto.id, parseFloat(precoEditado), produto.preco_venda)}
+                                  disabled={updatePrecoMutation.isPending}
+                                >
+                                  Salvar
+                                </Button>
+                              )}
+                              
+                              {produto.statusPreco === 'abaixo' && precoEditado === undefined && (
+                                <Button 
+                                  size="sm" 
+                                  variant="secondary"
+                                  onClick={() => handleAplicarPreco(produto.id, produto.precoBalcao, produto.preco_venda)}
+                                  disabled={updatePrecoMutation.isPending}
+                                >
+                                  Aplicar
+                                </Button>
+                              )}
+                              
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-9 w-9"
+                                onClick={() => handleVerHistorico(produto.id)}
+                                title="Ver histórico de preços"
+                              >
+                                <History className="h-4 w-4" />
+                              </Button>
                             </div>
-                            
-                            {precoEditado !== undefined && parseFloat(precoEditado) !== produto.preco_venda && (
-                              <Button 
-                                size="sm"
-                                onClick={() => handleAplicarPreco(produto.id, parseFloat(precoEditado), produto.preco_venda)}
-                                disabled={updatePrecoMutation.isPending}
-                              >
-                                Salvar
-                              </Button>
-                            )}
-                            
-                            {produto.statusPreco === 'abaixo' && precoEditado === undefined && (
-                              <Button 
-                                size="sm" 
-                                variant="secondary"
-                                onClick={() => handleAplicarPreco(produto.id, produto.precoBalcao, produto.preco_venda)}
-                                disabled={updatePrecoMutation.isPending}
-                              >
-                                Aplicar sugerido
-                              </Button>
-                            )}
-                            
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => handleVerHistorico(produto.id)}
-                              title="Ver histórico de preços"
-                            >
-                              <History className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -995,218 +1005,261 @@ const Precificacao = () => {
           </Card>
         </div>
 
-        {/* Simulador de Preço */}
-        <div className="space-y-4">
-          <Card className="sticky top-4">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Calculator className="h-5 w-5" />
-                Simulador de Preço
-              </CardTitle>
-              <CardDescription>
-                Simule diferentes margens e canais de venda
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {!produtoSimulador ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Calculator className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                  <p className="text-sm">Selecione um produto da lista para simular</p>
-                </div>
-              ) : (
-                <>
-                  <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
-                    <p className="font-medium">{produtoSimulador.nome}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Custo: {formatCurrency(simuladorCalcs?.custoInsumos || 0)}
-                    </p>
+        {/* Simulador de Preço - Desktop */}
+        {!isMobile && (
+          <div className="space-y-4">
+            <Card className="sticky top-4">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Calculator className="h-5 w-5" />
+                  Simulador de Preço
+                </CardTitle>
+                <CardDescription>
+                  Simule diferentes margens e canais
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!produtoSimulador ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Calculator className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                    <p className="text-sm">Selecione um produto para simular</p>
                   </div>
+                ) : (
+                  <SimuladorContent 
+                    produtoSimulador={produtoSimulador}
+                    simuladorCalcs={simuladorCalcs}
+                    margemDesejada={margemDesejada}
+                    setMargemDesejada={setMargemDesejada}
+                    appSelecionado={appSelecionado}
+                    setAppSelecionado={setAppSelecionado}
+                    taxasApps={taxasApps}
+                    handleAplicarDoSimulador={handleAplicarDoSimulador}
+                    updatePrecoMutation={updatePrecoMutation}
+                    onClose={() => setProdutoSimulador(null)}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
-                  {/* Seletor de Canal */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Canal de Venda</Label>
-                    <Tabs value={appSelecionado} onValueChange={setAppSelecionado} className="w-full">
-                      <TabsList className="w-full flex-wrap h-auto gap-1 p-1">
-                        <TabsTrigger value="balcao" className="flex-1 min-w-[80px] gap-1 text-xs">
-                          <Store className="h-3 w-3" />
-                          Balcão
-                        </TabsTrigger>
-                        {taxasApps?.map(app => (
-                          <TabsTrigger 
-                            key={app.id} 
-                            value={app.id}
-                            className="flex-1 min-w-[80px] gap-1 text-xs"
-                          >
-                            <Smartphone className="h-3 w-3" />
-                            {app.nome_app}
-                          </TabsTrigger>
-                        ))}
-                      </TabsList>
-                    </Tabs>
-                  </div>
+// Componente do Simulador extraído para reutilização
+interface SimuladorContentProps {
+  produtoSimulador: Produto;
+  simuladorCalcs: any;
+  margemDesejada: number;
+  setMargemDesejada: (value: number) => void;
+  appSelecionado: string;
+  setAppSelecionado: (value: string) => void;
+  taxasApps: TaxaApp[] | undefined;
+  handleAplicarDoSimulador: () => void;
+  updatePrecoMutation: any;
+  onClose: () => void;
+}
 
-                  {/* Slider de margem */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Margem líquida desejada</span>
-                      <span className="font-medium text-primary">{margemDesejada.toFixed(0)}%</span>
-                    </div>
-                    <Slider
-                      value={[margemDesejada]}
-                      onValueChange={([value]) => setMargemDesejada(value)}
-                      min={5}
-                      max={60}
-                      step={1}
-                      className="py-2"
-                    />
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>5%</span>
-                      <span>30%</span>
-                      <span>60%</span>
-                    </div>
-                  </div>
+const SimuladorContent: React.FC<SimuladorContentProps> = ({
+  produtoSimulador,
+  simuladorCalcs,
+  margemDesejada,
+  setMargemDesejada,
+  appSelecionado,
+  setAppSelecionado,
+  taxasApps,
+  handleAplicarDoSimulador,
+  updatePrecoMutation,
+  onClose,
+}) => {
+  return (
+    <div className="space-y-4">
+      <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+        <p className="font-medium">{produtoSimulador.nome}</p>
+        <p className="text-sm text-muted-foreground">
+          Custo: {formatCurrency(simuladorCalcs?.custoInsumos || 0)}
+        </p>
+      </div>
 
-                  <Separator />
-
-                  {/* Decomposição do preço */}
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium flex items-center gap-1">
-                      <PieChart className="h-4 w-4" />
-                      Composição do Preço
-                    </h4>
-                    <div className="space-y-1 text-sm">
-                      <div className="flex justify-between py-1.5 items-center">
-                        <span className="text-muted-foreground flex items-center gap-1.5">
-                          <div className="w-2 h-2 rounded-full bg-orange-500" />
-                          Custo Insumos
-                        </span>
-                        <span className="font-medium">{formatCurrency(simuladorCalcs?.custoInsumos || 0)}</span>
-                      </div>
-                      <div className="flex justify-between py-1.5 items-center">
-                        <span className="text-muted-foreground flex items-center gap-1.5">
-                          <div className="w-2 h-2 rounded-full bg-blue-500" />
-                          Custo Fixo ({formatPercent(simuladorCalcs?.percCustoFixo || 0)})
-                        </span>
-                        <span>{formatCurrency(simuladorCalcs?.valorCustoFixo || 0)}</span>
-                      </div>
-                      <div className="flex justify-between py-1.5 items-center">
-                        <span className="text-muted-foreground flex items-center gap-1.5">
-                          <div className="w-2 h-2 rounded-full bg-red-500" />
-                          Impostos ({formatPercent(simuladorCalcs?.percImposto || 0)})
-                        </span>
-                        <span>{formatCurrency(simuladorCalcs?.valorImposto || 0)}</span>
-                      </div>
-                      {simuladorCalcs?.percTaxaApp > 0 && (
-                        <div className="flex justify-between py-1.5 items-center">
-                          <span className="text-muted-foreground flex items-center gap-1.5">
-                            <div className="w-2 h-2 rounded-full bg-purple-500" />
-                            Taxa App ({formatPercent(simuladorCalcs?.percTaxaApp || 0)})
-                          </span>
-                          <span>{formatCurrency(simuladorCalcs?.valorTaxaApp || 0)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between py-1.5 items-center border-t pt-2">
-                        <span className="text-muted-foreground flex items-center gap-1.5">
-                          <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                          Lucro Líquido ({formatPercent(margemDesejada)})
-                        </span>
-                        <span className={simuladorCalcs?.lucroLiquido && simuladorCalcs.lucroLiquido > 0 ? 'text-success font-medium' : 'text-destructive font-medium'}>
-                          {formatCurrency(simuladorCalcs?.lucroLiquido || 0)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Preço calculado */}
-                  <div className="space-y-3">
-                    <div className={`flex justify-between items-center p-4 rounded-lg ${simuladorCalcs?.isViavel ? 'bg-primary/10 border border-primary/30' : 'bg-destructive/10 border border-destructive/30'}`}>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Preço Calculado</p>
-                        <p className="text-sm text-muted-foreground">
-                          {appSelecionado === 'balcao' ? 'Venda direta' : taxasApps?.find(a => a.id === appSelecionado)?.nome_app}
-                        </p>
-                      </div>
-                      <span className={`text-2xl font-bold ${simuladorCalcs?.isViavel ? 'text-primary' : 'text-destructive'}`}>
-                        {formatCurrency(simuladorCalcs?.novoPreco || 0)}
-                      </span>
-                    </div>
-
-                    {!simuladorCalcs?.isViavel && (
-                      <Alert variant="destructive">
-                        <AlertTriangle className="h-4 w-4" />
-                        <AlertDescription>
-                          Margem inviável! Reduza a margem ou revise custos.
-                        </AlertDescription>
-                      </Alert>
-                    )}
-
-                    {/* Comparativo de canais */}
-                    {simuladorCalcs?.precosCanais && simuladorCalcs.precosCanais.length > 1 && (
-                      <div className="space-y-2">
-                        <h4 className="text-xs font-medium text-muted-foreground">Comparativo por Canal</h4>
-                        <div className="space-y-1">
-                          {simuladorCalcs.precosCanais.map((canal, idx) => (
-                            <div 
-                              key={idx}
-                              className={`flex justify-between items-center p-2 rounded text-sm ${
-                                (appSelecionado === 'balcao' && canal.taxa === 0) ||
-                                (taxasApps?.find(a => a.id === appSelecionado)?.taxa_percentual === canal.taxa)
-                                  ? 'bg-primary/5 border border-primary/20'
-                                  : 'bg-muted/50'
-                              }`}
-                            >
-                              <span className="flex items-center gap-1.5">
-                                {canal.taxa === 0 ? <Store className="h-3 w-3" /> : <Smartphone className="h-3 w-3" />}
-                                {canal.nome}
-                                {canal.taxa > 0 && <span className="text-xs text-muted-foreground">({formatPercent(canal.taxa)})</span>}
-                              </span>
-                              <span className={`font-medium ${canal.viavel ? '' : 'text-destructive'}`}>
-                                {formatCurrency(canal.preco)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="p-2 bg-muted rounded text-center">
-                        <p className="text-xs text-muted-foreground">CMV</p>
-                        <p className="font-medium">
-                          {simuladorCalcs?.cmv.toFixed(1)}%
-                        </p>
-                      </div>
-                      <div className="p-2 bg-muted rounded text-center">
-                        <p className="text-xs text-muted-foreground">Preço Atual</p>
-                        <p className="font-medium">
-                          {formatCurrency(produtoSimulador.preco_venda)}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button 
-                        className="flex-1"
-                        onClick={handleAplicarDoSimulador}
-                        disabled={updatePrecoMutation.isPending || !simuladorCalcs?.isViavel}
-                      >
-                        Aplicar Preço
-                      </Button>
-                      <Button 
-                        variant="outline"
-                        onClick={() => setProdutoSimulador(null)}
-                      >
-                        Fechar
-                      </Button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+      {/* Seletor de Canal */}
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">Canal de Venda</Label>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant={appSelecionado === 'balcao' ? 'default' : 'outline'}
+            onClick={() => setAppSelecionado('balcao')}
+            className="gap-1"
+          >
+            <Store className="h-3 w-3" />
+            Balcão
+          </Button>
+          {taxasApps?.map(app => (
+            <Button
+              key={app.id}
+              size="sm"
+              variant={appSelecionado === app.id ? 'default' : 'outline'}
+              onClick={() => setAppSelecionado(app.id)}
+              className="gap-1"
+            >
+              <Smartphone className="h-3 w-3" />
+              {app.nome_app}
+              <span className="text-xs opacity-70">({app.taxa_percentual}%)</span>
+            </Button>
+          ))}
         </div>
+      </div>
+
+      {/* Slider de margem */}
+      <div className="space-y-2">
+        <div className="flex justify-between text-sm">
+          <span>Margem líquida</span>
+          <span className="font-bold text-primary text-lg">{margemDesejada.toFixed(0)}%</span>
+        </div>
+        <Slider
+          value={[margemDesejada]}
+          onValueChange={([value]) => setMargemDesejada(value)}
+          min={5}
+          max={60}
+          step={1}
+          className="py-2"
+        />
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>5%</span>
+          <span>30%</span>
+          <span>60%</span>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Decomposição do preço */}
+      <div className="space-y-2">
+        <h4 className="text-sm font-medium flex items-center gap-1">
+          <PieChart className="h-4 w-4" />
+          Composição do Preço
+        </h4>
+        <div className="space-y-1 text-sm">
+          <div className="flex justify-between py-1 items-center">
+            <span className="text-muted-foreground flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-orange-500" />
+              Insumos
+            </span>
+            <span className="font-medium">{formatCurrency(simuladorCalcs?.custoInsumos || 0)}</span>
+          </div>
+          <div className="flex justify-between py-1 items-center">
+            <span className="text-muted-foreground flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-blue-500" />
+              C. Fixo ({formatPercent(simuladorCalcs?.percCustoFixo || 0)})
+            </span>
+            <span>{formatCurrency(simuladorCalcs?.valorCustoFixo || 0)}</span>
+          </div>
+          <div className="flex justify-between py-1 items-center">
+            <span className="text-muted-foreground flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-red-500" />
+              Imposto ({formatPercent(simuladorCalcs?.percImposto || 0)})
+            </span>
+            <span>{formatCurrency(simuladorCalcs?.valorImposto || 0)}</span>
+          </div>
+          {simuladorCalcs?.percTaxaApp > 0 && (
+            <div className="flex justify-between py-1 items-center">
+              <span className="text-muted-foreground flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-purple-500" />
+                Taxa App ({formatPercent(simuladorCalcs?.percTaxaApp || 0)})
+              </span>
+              <span>{formatCurrency(simuladorCalcs?.valorTaxaApp || 0)}</span>
+            </div>
+          )}
+          <div className="flex justify-between py-1.5 items-center border-t pt-2">
+            <span className="text-muted-foreground flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              Lucro ({formatPercent(margemDesejada)})
+            </span>
+            <span className={simuladorCalcs?.lucroLiquido > 0 ? 'text-success font-medium' : 'text-destructive font-medium'}>
+              {formatCurrency(simuladorCalcs?.lucroLiquido || 0)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Preço calculado */}
+      <div className={`flex justify-between items-center p-4 rounded-lg ${simuladorCalcs?.isViavel ? 'bg-primary/10 border border-primary/30' : 'bg-destructive/10 border border-destructive/30'}`}>
+        <div>
+          <p className="text-xs text-muted-foreground">Preço Sugerido</p>
+          <p className="text-sm text-muted-foreground">
+            {appSelecionado === 'balcao' ? 'Venda direta' : taxasApps?.find(a => a.id === appSelecionado)?.nome_app}
+          </p>
+        </div>
+        <span className={`text-2xl font-bold ${simuladorCalcs?.isViavel ? 'text-primary' : 'text-destructive'}`}>
+          {formatCurrency(simuladorCalcs?.novoPreco || 0)}
+        </span>
+      </div>
+
+      {!simuladorCalcs?.isViavel && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Margem inviável! Reduza a margem ou revise custos.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Comparativo de canais */}
+      {simuladorCalcs?.precosCanais && simuladorCalcs.precosCanais.length > 1 && (
+        <div className="space-y-2">
+          <h4 className="text-xs font-medium text-muted-foreground">Todos os Canais</h4>
+          <div className="grid grid-cols-2 gap-2">
+            {simuladorCalcs.precosCanais.map((canal: any, idx: number) => (
+              <div 
+                key={idx}
+                className={`p-2 rounded text-center ${
+                  (appSelecionado === 'balcao' && canal.taxa === 0) ||
+                  (taxasApps?.find(a => a.id === appSelecionado)?.taxa_percentual === canal.taxa)
+                    ? 'bg-primary/10 border border-primary/30'
+                    : 'bg-muted/50'
+                }`}
+              >
+                <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                  {canal.taxa === 0 ? <Store className="h-3 w-3" /> : <Smartphone className="h-3 w-3" />}
+                  {canal.nome}
+                </p>
+                <p className={`font-bold ${canal.viavel ? '' : 'text-destructive'}`}>
+                  {formatCurrency(canal.preco)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        <div className="p-2 bg-muted rounded text-center">
+          <p className="text-xs text-muted-foreground">CMV</p>
+          <p className="font-medium">{simuladorCalcs?.cmv.toFixed(1)}%</p>
+        </div>
+        <div className="p-2 bg-muted rounded text-center">
+          <p className="text-xs text-muted-foreground">Preço Atual</p>
+          <p className="font-medium">{formatCurrency(produtoSimulador.preco_venda)}</p>
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        <Button 
+          className="flex-1"
+          onClick={handleAplicarDoSimulador}
+          disabled={updatePrecoMutation.isPending || !simuladorCalcs?.isViavel}
+        >
+          Aplicar Preço
+        </Button>
+        <Button 
+          variant="outline"
+          onClick={onClose}
+        >
+          Fechar
+        </Button>
       </div>
     </div>
   );
