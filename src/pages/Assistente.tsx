@@ -44,20 +44,28 @@ const suggestedQuestions = [
     category: "Estoque"
   },
   {
-    icon: HelpCircle,
-    text: "Como importar uma nota fiscal?",
-    category: "Sistema"
-  },
-  {
     icon: Lightbulb,
     text: "Dicas para reduzir meu CMV",
     category: "Gestão"
   },
+];
+
+const suggestedActions = [
   {
-    icon: Sparkles,
-    text: "Analise meu faturamento do último mês",
-    category: "Relatório"
-  }
+    icon: Package,
+    text: "Cadastra: Brigadeiro - 100g leite condensado, 20g chocolate, 10g manteiga. Preço: R$ 5",
+    category: "📝 Cadastrar"
+  },
+  {
+    icon: TrendingUp,
+    text: "Registra venda: 10 brigadeiros por R$ 50 no iFood",
+    category: "💰 Venda"
+  },
+  {
+    icon: Calculator,
+    text: "Atualiza o preço da farinha de trigo para R$ 6,50/kg",
+    category: "🔄 Atualizar"
+  },
 ];
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
@@ -233,12 +241,12 @@ const Assistente: React.FC = () => {
         <CardHeader className="py-3 border-b">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="gap-1">
+              <Badge variant="outline" className="gap-1 bg-primary/5">
                 <Sparkles className="h-3 w-3" />
-                Gemini Flash
+                Gemini 3 Flash
               </Badge>
               <span className="text-xs text-muted-foreground">
-                Acesso aos seus dados em tempo real
+                Pode executar ações no sistema
               </span>
             </div>
             {messages.length > 0 && (
@@ -266,14 +274,14 @@ const Assistente: React.FC = () => {
                   </h3>
                   <p className="text-muted-foreground max-w-md mx-auto">
                     Sou seu assistente de gestão. Posso analisar seus dados, 
-                    ajudar com precificação e responder dúvidas sobre o sistema.
+                    ajudar com precificação e <strong>executar ações</strong> como cadastros e atualizações.
                   </p>
                 </div>
 
                 <div>
                   <p className="text-sm font-medium mb-3 flex items-center gap-2">
                     <MessageSquare className="h-4 w-4" />
-                    Sugestões para começar:
+                    Perguntas:
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {suggestedQuestions.map((q, i) => (
@@ -281,6 +289,29 @@ const Assistente: React.FC = () => {
                         key={i}
                         variant="outline"
                         className="h-auto py-3 px-4 justify-start text-left"
+                        onClick={() => handleSend(q.text)}
+                      >
+                        <q.icon className="h-4 w-4 mr-3 shrink-0 text-primary" />
+                        <div>
+                          <span className="block text-sm">{q.text}</span>
+                          <span className="text-xs text-muted-foreground">{q.category}</span>
+                        </div>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium mb-3 flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    Ações que posso executar:
+                  </p>
+                  <div className="grid grid-cols-1 gap-2">
+                    {suggestedActions.map((q, i) => (
+                      <Button
+                        key={i}
+                        variant="outline"
+                        className="h-auto py-3 px-4 justify-start text-left border-primary/20 bg-primary/5 hover:bg-primary/10"
                         onClick={() => handleSend(q.text)}
                       >
                         <q.icon className="h-4 w-4 mr-3 shrink-0 text-primary" />
@@ -351,7 +382,7 @@ const Assistente: React.FC = () => {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Digite sua pergunta..."
+                placeholder="Digite sua pergunta ou peça para cadastrar algo..."
                 className="min-h-[44px] max-h-32 resize-none"
                 disabled={isLoading}
               />
@@ -369,7 +400,7 @@ const Assistente: React.FC = () => {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-2 text-center">
-              O assistente tem acesso aos seus dados para respostas personalizadas
+              💡 Posso cadastrar produtos, insumos, registrar vendas e atualizar preços
             </p>
           </div>
         </CardContent>

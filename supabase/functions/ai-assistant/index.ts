@@ -7,12 +7,370 @@ const corsHeaders = {
 };
 
 interface ChatMessage {
-  role: "user" | "assistant" | "system";
+  role: "user" | "assistant" | "system" | "tool";
   content: string;
+  tool_call_id?: string;
+}
+
+// Define available tools
+const tools = [
+  {
+    type: "function",
+    function: {
+      name: "criar_insumo",
+      description: "Cria um novo insumo/ingrediente no sistema. Use quando o usuário pedir para cadastrar um insumo.",
+      parameters: {
+        type: "object",
+        properties: {
+          nome: { type: "string", description: "Nome do insumo (ex: Farinha de trigo, Açúcar)" },
+          custo_unitario: { type: "number", description: "Custo por unidade de medida em reais (ex: 5.50)" },
+          unidade_medida: { type: "string", description: "Unidade de medida: g, kg, ml, L, un" },
+          estoque_atual: { type: "number", description: "Quantidade atual em estoque (opcional, padrão: 0)" },
+          estoque_minimo: { type: "number", description: "Estoque mínimo para alerta (opcional, padrão: 0)" },
+        },
+        required: ["nome", "custo_unitario", "unidade_medida"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "criar_produto",
+      description: "Cria um novo produto no sistema. Use quando o usuário pedir para cadastrar um produto.",
+      parameters: {
+        type: "object",
+        properties: {
+          nome: { type: "string", description: "Nome do produto (ex: Brigadeiro, Bolo de chocolate)" },
+          preco_venda: { type: "number", description: "Preço de venda em reais" },
+          categoria: { type: "string", description: "Categoria do produto (ex: Doces, Salgados, Bolos)" },
+        },
+        required: ["nome", "preco_venda"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "criar_produto_com_ficha_tecnica",
+      description: "Cria um produto completo com sua ficha técnica (receita/ingredientes). Use quando o usuário fornecer um produto com seus ingredientes.",
+      parameters: {
+        type: "object",
+        properties: {
+          nome_produto: { type: "string", description: "Nome do produto" },
+          preco_venda: { type: "number", description: "Preço de venda em reais (0 se não informado)" },
+          categoria: { type: "string", description: "Categoria do produto" },
+          ingredientes: {
+            type: "array",
+            description: "Lista de ingredientes com quantidades",
+            items: {
+              type: "object",
+              properties: {
+                nome_insumo: { type: "string", description: "Nome do insumo" },
+                quantidade: { type: "number", description: "Quantidade usada na receita" },
+                unidade_medida: { type: "string", description: "Unidade: g, kg, ml, L, un" },
+                custo_unitario: { type: "number", description: "Custo por unidade (se conhecido)" },
+              },
+              required: ["nome_insumo", "quantidade"],
+            },
+          },
+        },
+        required: ["nome_produto", "ingredientes"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "registrar_venda",
+      description: "Registra uma venda no sistema. Use quando o usuário informar uma venda realizada.",
+      parameters: {
+        type: "object",
+        properties: {
+          nome_produto: { type: "string", description: "Nome do produto vendido" },
+          quantidade: { type: "number", description: "Quantidade vendida" },
+          valor_total: { type: "number", description: "Valor total da venda em reais" },
+          canal: { type: "string", description: "Canal de venda: balcao, ifood, rappi, whatsapp, etc." },
+        },
+        required: ["nome_produto", "quantidade", "valor_total"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "atualizar_preco_insumo",
+      description: "Atualiza o preço de um insumo existente. Use quando o usuário informar novo preço de um ingrediente.",
+      parameters: {
+        type: "object",
+        properties: {
+          nome_insumo: { type: "string", description: "Nome do insumo a atualizar" },
+          novo_custo: { type: "number", description: "Novo custo unitário em reais" },
+        },
+        required: ["nome_insumo", "novo_custo"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "atualizar_estoque",
+      description: "Atualiza o estoque de um insumo. Use para entrada ou saída manual de estoque.",
+      parameters: {
+        type: "object",
+        properties: {
+          nome_insumo: { type: "string", description: "Nome do insumo" },
+          quantidade: { type: "number", description: "Quantidade a adicionar (positivo) ou remover (negativo)" },
+          tipo: { type: "string", enum: ["entrada", "saida"], description: "Tipo de movimentação" },
+          observacao: { type: "string", description: "Motivo da movimentação" },
+        },
+        required: ["nome_insumo", "quantidade", "tipo"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "cadastrar_custo_fixo",
+      description: "Cadastra um custo fixo mensal. Use quando o usuário informar despesas fixas como aluguel, luz, etc.",
+      parameters: {
+        type: "object",
+        properties: {
+          nome: { type: "string", description: "Nome do custo (ex: Aluguel, Energia, Internet)" },
+          valor_mensal: { type: "number", description: "Valor mensal em reais" },
+          categoria: { type: "string", description: "Categoria: Infraestrutura, Serviços, Pessoal, Outros" },
+        },
+        required: ["nome", "valor_mensal"],
+      },
+    },
+  },
+];
+
+// Tool execution functions
+async function executeTool(
+  supabase: any,
+  empresaId: string,
+  toolName: string,
+  args: any
+): Promise<{ success: boolean; message: string; data?: any }> {
+  console.log(`Executing tool: ${toolName}`, args);
+
+  try {
+    switch (toolName) {
+      case "criar_insumo": {
+        const { data, error } = await supabase.from("insumos").insert({
+          empresa_id: empresaId,
+          nome: args.nome,
+          custo_unitario: args.custo_unitario,
+          unidade_medida: args.unidade_medida || "g",
+          estoque_atual: args.estoque_atual || 0,
+          estoque_minimo: args.estoque_minimo || 0,
+        }).select().single();
+        
+        if (error) throw error;
+        return { success: true, message: `✅ Insumo "${args.nome}" cadastrado com sucesso!`, data };
+      }
+
+      case "criar_produto": {
+        const { data, error } = await supabase.from("produtos").insert({
+          empresa_id: empresaId,
+          nome: args.nome,
+          preco_venda: args.preco_venda || 0,
+          categoria: args.categoria || null,
+        }).select().single();
+        
+        if (error) throw error;
+        return { success: true, message: `✅ Produto "${args.nome}" cadastrado com sucesso!`, data };
+      }
+
+      case "criar_produto_com_ficha_tecnica": {
+        // 1. Create or find insumos
+        const insumosIds: { [key: string]: string } = {};
+        
+        for (const ing of args.ingredientes) {
+          // Try to find existing insumo
+          const { data: existingInsumo } = await supabase
+            .from("insumos")
+            .select("id")
+            .eq("empresa_id", empresaId)
+            .ilike("nome", ing.nome_insumo)
+            .limit(1)
+            .single();
+
+          if (existingInsumo) {
+            insumosIds[ing.nome_insumo] = existingInsumo.id;
+          } else {
+            // Create new insumo
+            const { data: newInsumo, error } = await supabase.from("insumos").insert({
+              empresa_id: empresaId,
+              nome: ing.nome_insumo,
+              custo_unitario: ing.custo_unitario || 0,
+              unidade_medida: ing.unidade_medida || "g",
+              estoque_atual: 0,
+              estoque_minimo: 0,
+            }).select().single();
+            
+            if (error) throw error;
+            insumosIds[ing.nome_insumo] = newInsumo.id;
+          }
+        }
+
+        // 2. Create produto
+        const { data: produto, error: prodError } = await supabase.from("produtos").insert({
+          empresa_id: empresaId,
+          nome: args.nome_produto,
+          preco_venda: args.preco_venda || 0,
+          categoria: args.categoria || null,
+        }).select().single();
+        
+        if (prodError) throw prodError;
+
+        // 3. Create ficha técnica
+        const fichaItems = args.ingredientes.map((ing: any) => ({
+          produto_id: produto.id,
+          insumo_id: insumosIds[ing.nome_insumo],
+          quantidade: ing.quantidade,
+        }));
+
+        const { error: fichaError } = await supabase.from("fichas_tecnicas").insert(fichaItems);
+        if (fichaError) throw fichaError;
+
+        const newInsumos = args.ingredientes.filter((ing: any) => !insumosIds[ing.nome_insumo]);
+        return { 
+          success: true, 
+          message: `✅ Produto "${args.nome_produto}" cadastrado com ${args.ingredientes.length} ingredientes!${newInsumos.length > 0 ? ` (${newInsumos.length} novos insumos criados)` : ''}`,
+          data: produto 
+        };
+      }
+
+      case "registrar_venda": {
+        // Find produto by name
+        const { data: produto } = await supabase
+          .from("produtos")
+          .select("id, preco_venda")
+          .eq("empresa_id", empresaId)
+          .ilike("nome", `%${args.nome_produto}%`)
+          .limit(1)
+          .single();
+
+        const { data, error } = await supabase.from("vendas").insert({
+          empresa_id: empresaId,
+          produto_id: produto?.id || null,
+          descricao_produto: produto ? null : args.nome_produto,
+          quantidade: args.quantidade,
+          valor_total: args.valor_total,
+          canal: args.canal || "balcao",
+          data_venda: new Date().toISOString().split('T')[0],
+          tipo_venda: "produto",
+        }).select().single();
+        
+        if (error) throw error;
+        return { 
+          success: true, 
+          message: `✅ Venda registrada: ${args.quantidade}x ${args.nome_produto} = R$ ${args.valor_total.toFixed(2)}`,
+          data 
+        };
+      }
+
+      case "atualizar_preco_insumo": {
+        const { data: insumo } = await supabase
+          .from("insumos")
+          .select("id, nome, custo_unitario")
+          .eq("empresa_id", empresaId)
+          .ilike("nome", `%${args.nome_insumo}%`)
+          .limit(1)
+          .single();
+
+        if (!insumo) {
+          return { success: false, message: `❌ Insumo "${args.nome_insumo}" não encontrado.` };
+        }
+
+        const precoAnterior = insumo.custo_unitario;
+        const { error } = await supabase
+          .from("insumos")
+          .update({ custo_unitario: args.novo_custo })
+          .eq("id", insumo.id);
+
+        if (error) throw error;
+
+        // Register price history
+        await supabase.from("historico_precos").insert({
+          empresa_id: empresaId,
+          insumo_id: insumo.id,
+          preco_anterior: precoAnterior,
+          preco_novo: args.novo_custo,
+          origem: "assistente_ia",
+          variacao_percentual: precoAnterior > 0 ? ((args.novo_custo - precoAnterior) / precoAnterior) * 100 : null,
+        });
+
+        return { 
+          success: true, 
+          message: `✅ Preço de "${insumo.nome}" atualizado: R$ ${precoAnterior.toFixed(2)} → R$ ${args.novo_custo.toFixed(2)}` 
+        };
+      }
+
+      case "atualizar_estoque": {
+        const { data: insumo } = await supabase
+          .from("insumos")
+          .select("id, nome, estoque_atual, unidade_medida")
+          .eq("empresa_id", empresaId)
+          .ilike("nome", `%${args.nome_insumo}%`)
+          .limit(1)
+          .single();
+
+        if (!insumo) {
+          return { success: false, message: `❌ Insumo "${args.nome_insumo}" não encontrado.` };
+        }
+
+        const { error } = await supabase.from("estoque_movimentos").insert({
+          empresa_id: empresaId,
+          insumo_id: insumo.id,
+          tipo: args.tipo,
+          quantidade: Math.abs(args.quantidade),
+          origem: "assistente_ia",
+          observacao: args.observacao || "Ajuste via Assistente IA",
+        });
+
+        if (error) throw error;
+
+        const novoEstoque = args.tipo === "entrada" 
+          ? insumo.estoque_atual + Math.abs(args.quantidade)
+          : insumo.estoque_atual - Math.abs(args.quantidade);
+
+        return { 
+          success: true, 
+          message: `✅ Estoque de "${insumo.nome}" atualizado: ${args.tipo === "entrada" ? "+" : "-"}${Math.abs(args.quantidade)} ${insumo.unidade_medida} (agora: ${novoEstoque.toFixed(2)} ${insumo.unidade_medida})` 
+        };
+      }
+
+      case "cadastrar_custo_fixo": {
+        const { data, error } = await supabase.from("custos_fixos").insert({
+          empresa_id: empresaId,
+          nome: args.nome,
+          valor_mensal: args.valor_mensal,
+          categoria: args.categoria || "Outros",
+        }).select().single();
+        
+        if (error) throw error;
+        return { 
+          success: true, 
+          message: `✅ Custo fixo "${args.nome}" cadastrado: R$ ${args.valor_mensal.toFixed(2)}/mês`,
+          data 
+        };
+      }
+
+      default:
+        return { success: false, message: `Ferramenta "${toolName}" não reconhecida.` };
+    }
+  } catch (error) {
+    console.error(`Tool error (${toolName}):`, error);
+    return { 
+      success: false, 
+      message: `❌ Erro ao executar ação: ${error instanceof Error ? error.message : "Erro desconhecido"}` 
+    };
+  }
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -26,7 +384,6 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     
-    // Get auth header
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
@@ -35,12 +392,10 @@ serve(async (req) => {
       });
     }
 
-    // Create client with user's token for RLS
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    // Validate user
     const { data: { user }, error: authError } = await supabase.auth.getUser(
       authHeader.replace("Bearer ", "")
     );
@@ -61,7 +416,6 @@ serve(async (req) => {
       });
     }
 
-    // Get user's empresa_id
     const { data: usuario } = await supabase
       .from("usuarios")
       .select("empresa_id, nome")
@@ -124,18 +478,16 @@ serve(async (req) => {
         .eq("ativo", true),
     ]);
 
-    // Calculate some key metrics
+    // Calculate metrics
     const totalProdutos = produtos?.length || 0;
     const totalInsumos = insumos?.length || 0;
     
-    // Calculate sales metrics for last 30 days
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const vendasRecentes = vendas?.filter(v => new Date(v.data_venda) >= thirtyDaysAgo) || [];
     const faturamentoMensal = vendasRecentes.reduce((sum, v) => sum + (v.valor_total || 0), 0);
     const totalVendasMes = vendasRecentes.length;
 
-    // Calculate cost per product
     const produtosComCusto = produtos?.map(p => {
       const fichas = p.fichas_tecnicas as any[] || [];
       const custoInsumos = fichas.reduce((sum, f) => {
@@ -152,13 +504,9 @@ serve(async (req) => {
       };
     }) || [];
 
-    // Insumos com estoque baixo
     const insumosEstoqueBaixo = insumos?.filter(i => i.estoque_atual <= i.estoque_minimo) || [];
-
-    // Total custos fixos
     const totalCustosFixos = custosFixos?.reduce((sum, c) => sum + c.valor_mensal, 0) || 0;
 
-    // Build context
     const userContext = `
 ## DADOS DO NEGÓCIO DO USUÁRIO (${usuario.nome})
 
@@ -188,7 +536,7 @@ ${insumosEstoqueBaixo.length > 0
   ? `⚠️ ${insumosEstoqueBaixo.length} insumos com estoque baixo: ${insumosEstoqueBaixo.map(i => i.nome).join(", ")}`
   : "✅ Nenhum alerta de estoque"}
 
-### Insumos Principais (primeiros 15)
+### Insumos Cadastrados (${insumos?.length || 0})
 ${insumos?.slice(0, 15).map(i => 
   `- ${i.nome}: R$ ${i.custo_unitario.toFixed(4)}/${i.unidade_medida} | Estoque: ${i.estoque_atual} ${i.unidade_medida}`
 ).join("\n") || "Nenhum insumo cadastrado"}
@@ -199,58 +547,71 @@ ${insumos?.slice(0, 15).map(i =>
 ## SEU PAPEL
 - Ajudar o usuário a entender e usar o sistema
 - Responder dúvidas sobre precificação, custos, margens e gestão
-- Analisar os dados do negócio do usuário e dar insights personalizados
-- Sugerir melhorias baseadas nos dados reais
+- Analisar os dados do negócio e dar insights personalizados
+- **EXECUTAR AÇÕES no sistema quando o usuário pedir** (cadastros, atualizações, etc.)
+
+## FERRAMENTAS DISPONÍVEIS
+Você tem acesso a ferramentas para executar ações reais no sistema:
+- criar_insumo: Cadastrar novos ingredientes
+- criar_produto: Cadastrar novos produtos
+- criar_produto_com_ficha_tecnica: Cadastrar produto COM receita/ingredientes
+- registrar_venda: Registrar vendas
+- atualizar_preco_insumo: Atualizar preço de ingrediente
+- atualizar_estoque: Entrada ou saída de estoque
+- cadastrar_custo_fixo: Cadastrar custos fixos mensais
+
+## QUANDO USAR FERRAMENTAS
+USE as ferramentas quando o usuário:
+- Pedir para cadastrar algo (insumo, produto, venda, custo)
+- Enviar uma ficha técnica/receita
+- Informar preços novos de ingredientes
+- Pedir para registrar uma venda
+- Quiser atualizar estoque
+
+## COMO INTERPRETAR FICHAS TÉCNICAS
+Quando o usuário enviar algo como:
+"Brigadeiro: 100g leite condensado, 20g chocolate em pó, 10g manteiga"
+Você deve usar criar_produto_com_ficha_tecnica com os ingredientes extraídos.
 
 ## CONHECIMENTO DO SISTEMA
-O sistema permite:
-1. **Insumos**: Cadastrar ingredientes com custo unitário e controle de estoque
-2. **Produtos**: Cadastrar produtos finais com ficha técnica (receita)
-3. **Ficha Técnica**: Vincular insumos aos produtos com quantidades
-4. **Precificação**: Calcular preço ideal baseado em margem, CMV alvo e taxas de delivery
-5. **Vendas**: Registrar vendas manuais ou importar de apps (iFood, Rappi, etc.)
-6. **Compras**: Importar notas fiscais XML ou foto para atualizar custos
-7. **Relatórios**: Visualizar rentabilidade por produto e canal
-8. **Custos Fixos**: Cadastrar despesas fixas mensais
+1. **Insumos**: Ingredientes com custo unitário e estoque
+2. **Produtos**: Produtos finais com ficha técnica
+3. **Ficha Técnica**: Receita = quais insumos e quantidades
+4. **Precificação**: Preço = Custo / (1 - Margem - Taxas)
+5. **Vendas**: Por canal (balcão, iFood, Rappi, etc.)
 
-## FÓRMULAS IMPORTANTES
-- **CMV (Custo Mercadoria Vendida)** = Custo dos Insumos / Preço de Venda × 100
-- **Margem de Contribuição** = (Preço - Custo - Taxas) / Preço × 100
-- **Preço Sugerido** = Custo / (1 - Margem Desejada/100 - Taxa App/100)
-
-## DICAS DE MERCADO ALIMENTÍCIO
-- CMV ideal: 25-35% (confeitaria pode ser menor, restaurante pode ser maior)
-- Considerar sazonalidade de ingredientes
-- Delivery tem taxa que impacta margem
-- Embalagens são custo importante no delivery
+## FÓRMULAS
+- **CMV** = Custo / Preço × 100
+- **Margem** = (Preço - Custo) / Preço × 100
+- **Preço Sugerido** = Custo / (1 - MargemDesejada/100)
 
 ${userContext}
 
 ## INSTRUÇÕES
-1. Sempre use os dados reais do usuário quando relevante
-2. Seja direto e prático nas respostas
-3. Use emojis para tornar a leitura mais agradável
-4. Quando der sugestões de preço, mostre os cálculos
-5. Se não souber algo específico do sistema, oriente a explorar o menu
-6. Responda sempre em português brasileiro
-7. Seja amigável e encorajador`;
+1. Quando o usuário pedir uma ação, USE A FERRAMENTA apropriada
+2. Após executar, confirme o que foi feito
+3. Se faltar informação, pergunte antes de executar
+4. Seja direto e use emojis
+5. Responda em português brasileiro
+6. Se não tiver certeza do que fazer, pergunte`;
 
-    console.log("Calling Lovable AI gateway...");
+    console.log("Calling AI with tools...");
 
-    // Call Lovable AI
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // First call - may return tool calls
+    let response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
           ...messages,
         ],
-        stream: true,
+        tools,
+        tool_choice: "auto",
       }),
     });
 
@@ -259,13 +620,13 @@ ${userContext}
       console.error("AI gateway error:", response.status, errorText);
       
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Muitas requisições. Aguarde um momento e tente novamente." }), {
+        return new Response(JSON.stringify({ error: "Muitas requisições. Aguarde um momento." }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos de IA esgotados. Contate o suporte." }), {
+        return new Response(JSON.stringify({ error: "Créditos de IA esgotados." }), {
           status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -277,10 +638,88 @@ ${userContext}
       });
     }
 
-    console.log("Streaming response back to client");
+    let result = await response.json();
+    let assistantMessage = result.choices?.[0]?.message;
 
-    // Stream the response
-    return new Response(response.body, {
+    // Check if AI wants to call tools
+    if (assistantMessage?.tool_calls && assistantMessage.tool_calls.length > 0) {
+      console.log("AI requested tool calls:", assistantMessage.tool_calls.length);
+
+      const toolResults: string[] = [];
+
+      // Execute each tool call
+      for (const toolCall of assistantMessage.tool_calls) {
+        const toolName = toolCall.function.name;
+        const args = JSON.parse(toolCall.function.arguments);
+        
+        const toolResult = await executeTool(supabase, empresaId, toolName, args);
+        toolResults.push(toolResult.message);
+      }
+
+      // Build messages with tool results for follow-up
+      const followUpMessages = [
+        { role: "system", content: systemPrompt },
+        ...messages,
+        { 
+          role: "assistant", 
+          content: null,
+          tool_calls: assistantMessage.tool_calls 
+        },
+        ...assistantMessage.tool_calls.map((tc: any, i: number) => ({
+          role: "tool",
+          tool_call_id: tc.id,
+          content: toolResults[i],
+        })),
+      ];
+
+      // Get final response after tool execution
+      const finalResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: followUpMessages,
+          stream: true,
+        }),
+      });
+
+      if (!finalResponse.ok) {
+        // Return tool results directly if follow-up fails
+        return new Response(JSON.stringify({ 
+          content: toolResults.join("\n\n"),
+          tool_executed: true,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(finalResponse.body, {
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      });
+    }
+
+    // No tool calls - stream regular response
+    // Need to make a new streaming request
+    const streamResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...messages,
+        ],
+        stream: true,
+      }),
+    });
+
+    return new Response(streamResponse.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
 
