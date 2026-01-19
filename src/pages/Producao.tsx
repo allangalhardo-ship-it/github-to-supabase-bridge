@@ -674,20 +674,27 @@ const Producao = () => {
                     )},
                     { key: 'estoque', header: 'Estoque', align: 'right', mobilePriority: 2, render: (r) => {
                       const estoque = Number(r.estoque_atual) || 0;
-                      return <span className={estoque === 0 ? 'text-muted-foreground' : 'font-semibold text-orange-600'}>{estoque} {r.unidade_medida}</span>;
+                      return <span className={estoque <= 0 ? 'text-destructive font-semibold' : 'font-semibold text-green-600'}>{estoque} {r.unidade_medida}</span>;
                     }},
-                    { key: 'rendimento', header: 'Rend./Lote', align: 'right', mobilePriority: 4, render: (r) => (
+                    { key: 'lotes', header: 'Lotes', align: 'right', mobilePriority: 3, render: (r) => {
+                      const estoque = Number(r.estoque_atual) || 0;
+                      const rendimento = r.rendimento_receita || 1;
+                      const lotes = Math.floor(estoque / rendimento);
+                      return <span className="text-muted-foreground">{lotes} lote(s)</span>;
+                    }},
+                    { key: 'rendimento', header: 'Rend./Lote', align: 'right', mobilePriority: 5, render: (r) => (
                       <span className="text-muted-foreground">{r.rendimento_receita || 1} {r.unidade_medida}</span>
                     )},
-                    { key: 'custo', header: 'Custo/Un', align: 'right', mobilePriority: 3, render: (r) => (
-                      <span className="text-muted-foreground">{formatCurrency(Number(r.custo_unitario))}</span>
-                    )},
-                    { key: 'status', header: 'Status', align: 'center', mobilePriority: 5, render: (r) => {
+                    { key: 'custoLote', header: 'Custo/Lote', align: 'right', mobilePriority: 4, render: (r) => {
+                      const custoLote = Number(r.custo_unitario) * (r.rendimento_receita || 1);
+                      return <span className="text-muted-foreground">{formatCurrency(custoLote)}</span>;
+                    }},
+                    { key: 'status', header: 'Status', align: 'center', mobilePriority: 6, render: (r) => {
                       const estoque = Number(r.estoque_atual) || 0;
                       return estoque > 0 ? (
-                        <Badge variant="outline" className="text-orange-600 border-orange-600">Em estoque</Badge>
+                        <Badge variant="outline" className="text-green-600 border-green-600">Em estoque</Badge>
                       ) : (
-                        <Badge variant="secondary">Sem estoque</Badge>
+                        <Badge variant="outline" className="text-destructive border-destructive">Sem estoque</Badge>
                       );
                     }},
                   ]}
@@ -697,10 +704,15 @@ const Producao = () => {
                       <span className="truncate block max-w-[150px]">{r.nome}</span>
                     </div>
                   )}
-                  renderMobileSubtitle={(r) => <span className="text-muted-foreground">{formatCurrency(Number(r.custo_unitario))}/{r.unidade_medida}</span>}
+                  renderMobileSubtitle={(r) => {
+                    const estoque = Number(r.estoque_atual) || 0;
+                    const rendimento = r.rendimento_receita || 1;
+                    const lotes = Math.floor(estoque / rendimento);
+                    return <span className="text-muted-foreground">{lotes} lote(s) • {formatCurrency(Number(r.custo_unitario) * rendimento)}/lote</span>;
+                  }}
                   renderMobileHighlight={(r) => {
                     const estoque = Number(r.estoque_atual) || 0;
-                    return <span className={estoque === 0 ? 'text-muted-foreground' : 'font-semibold text-orange-600'}>{estoque} {r.unidade_medida}</span>;
+                    return <span className={estoque <= 0 ? 'text-destructive font-semibold' : 'font-semibold text-green-600'}>{estoque} {r.unidade_medida}</span>;
                   }}
                   emptyMessage="Nenhuma receita com estoque"
                 />
