@@ -182,11 +182,11 @@ serve(async (req) => {
       });
     }
 
-    // Add default admin role (best-effort)
+    // Add default user role (best-effort) - NEVER add admin role automatically
     try {
-      await admin.from("user_roles").insert({ user_id: user.id, role: "admin" });
+      await admin.from("user_roles").insert({ user_id: user.id, role: "user" });
     } catch (_) {
-      // ignore
+      // ignore - role may already exist
     }
 
     // Create default configuracoes (best-effort)
