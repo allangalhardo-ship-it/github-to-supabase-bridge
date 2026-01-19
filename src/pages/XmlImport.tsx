@@ -16,6 +16,7 @@ import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Key, QrCode,
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
 import { normalizeString, findBestMatch } from '@/lib/importUtils';
+import { inserirMovimentoEstoque } from '@/lib/estoqueUtils';
 
 interface XmlItem {
   produto_descricao: string;
@@ -636,10 +637,10 @@ const XmlImport = () => {
             ? ((custoConv - custoAnterior) / custoAnterior) * 100 
             : 0;
 
-          // Insert stock movement with conversion info
-          await supabase.from('estoque_movimentos').insert({
+          // Insert stock movement with conversion info - uses helper that normalizes qty
+          await inserirMovimentoEstoque({
             empresa_id: usuario!.empresa_id,
-            insumo_id: item.insumo_id,
+            insumo_id: item.insumo_id!,
             tipo: 'entrada',
             quantidade: quantidadeConv,
             quantidade_original: item.quantidade,

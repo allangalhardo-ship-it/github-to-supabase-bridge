@@ -17,6 +17,7 @@ import { Plus, ArrowUp, ArrowDown, Warehouse, Package, AlertTriangle, Search, Fi
 import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { format, startOfMonth, endOfMonth, subMonths, differenceInDays, isBefore } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { inserirMovimentoEstoque, calcularEstoqueDeMovimentos } from '@/lib/estoqueUtils';
 const Estoque = () => {
   const { usuario } = useAuth();
   const { toast } = useToast();
@@ -197,8 +198,8 @@ const Estoque = () => {
     mutationFn: async (data: typeof formData) => {
       const quantidade = parseFloat(data.quantidade) || 0;
       
-      // Insert the movement
-      const { error } = await supabase.from('estoque_movimentos').insert({
+      // Insert the movement using helper that normalizes quantity
+      await inserirMovimentoEstoque({
         empresa_id: usuario!.empresa_id,
         insumo_id: data.insumo_id,
         tipo: data.tipo,
@@ -206,9 +207,8 @@ const Estoque = () => {
         origem: 'manual',
         observacao: data.observacao || null,
       });
-      if (error) throw error;
 
-      // Get current stock
+      // Get current stock - trigger already updated, but we verify
       const { data: insumo, error: insumoError } = await supabase
         .from('insumos')
         .select('estoque_atual')
@@ -217,20 +217,6 @@ const Estoque = () => {
       
       if (insumoError) throw insumoError;
       if (!insumo) throw new Error('Insumo não encontrado');
-
-      // Calculate new stock based on movement type
-      const estoqueAtual = Number(insumo.estoque_atual) || 0;
-      const novoEstoque = data.tipo === 'entrada' 
-        ? estoqueAtual + quantidade 
-        : Math.max(0, estoqueAtual - quantidade);
-
-      // Update the insumo stock
-      const { error: updateError } = await supabase
-        .from('insumos')
-        .update({ estoque_atual: novoEstoque })
-        .eq('id', data.insumo_id);
-      
-      if (updateError) throw updateError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['estoque-movimentos'] });

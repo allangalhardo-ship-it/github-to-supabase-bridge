@@ -20,6 +20,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
 import { format } from 'date-fns';
 import RegistrarCompraDialog from '@/components/compras/RegistrarCompraDialog';
+import { inserirMovimentoEstoque, calcularEstoqueDeMovimentos } from '@/lib/estoqueUtils';
 
 interface XmlItem {
   produto_descricao: string;
@@ -495,7 +496,7 @@ const Compras = () => {
           const custoAnterior = insumoAtual?.custo_unitario || 0;
           const variacao = custoAnterior > 0 ? ((item.custo_unitario - custoAnterior) / custoAnterior) * 100 : 0;
 
-          await supabase.from('estoque_movimentos').insert({
+          await inserirMovimentoEstoque({
             empresa_id: usuario!.empresa_id,
             insumo_id: item.insumo_id,
             tipo: 'entrada',
@@ -571,20 +572,16 @@ const Compras = () => {
       // For each mapped item, create a reverse stock movement (saida)
       for (const item of notaItens || []) {
         if (item.insumo_id && item.quantidade) {
-          // Create exit movement to reverse the entry
-          const { error: movError } = await supabase
-            .from('estoque_movimentos')
-            .insert({
-              empresa_id: usuario?.empresa_id,
-              insumo_id: item.insumo_id,
-              tipo: 'saida',
-              quantidade: item.quantidade,
-              origem: 'nfe_exclusao',
-              referencia: notaId,
-              observacao: `Reversão - Exclusão da NF-e`,
-            });
-          
-          if (movError) throw movError;
+          // Create exit movement to reverse the entry - uses helper that normalizes qty
+          await inserirMovimentoEstoque({
+            empresa_id: usuario!.empresa_id,
+            insumo_id: item.insumo_id,
+            tipo: 'saida',
+            quantidade: item.quantidade,
+            origem: 'nfe_exclusao',
+            referencia: notaId,
+            observacao: `Reversão - Exclusão da NF-e`,
+          });
 
           // Update insumo stock
           const { data: insumo, error: insumoError } = await supabase
@@ -639,8 +636,8 @@ const Compras = () => {
       const custoAnterior = insumoAtual?.custo_unitario || 0;
       const variacao = custoAnterior > 0 ? ((custoUnitario - custoAnterior) / custoAnterior) * 100 : 0;
       
-      // Insert stock movement
-      const { error: movError } = await supabase.from('estoque_movimentos').insert({
+      // Insert stock movement using helper that normalizes quantity
+      await inserirMovimentoEstoque({
         empresa_id: usuario!.empresa_id,
         insumo_id: data.insumo_id,
         tipo: 'entrada',
@@ -648,7 +645,6 @@ const Compras = () => {
         origem: 'manual',
         observacao: data.fornecedor ? `Compra - ${data.fornecedor}` : data.observacao || 'Compra manual',
       });
-      if (movError) throw movError;
 
       // Record price history
       await supabase.from('historico_precos').insert({
@@ -669,11 +665,8 @@ const Compras = () => {
       
       if (movimentosError) throw movimentosError;
 
-      // Calculate correct stock from movements
-      const novoEstoque = (movimentos || []).reduce((acc, mov) => {
-        const qty = Number(mov.quantidade) || 0;
-        return mov.tipo === 'entrada' ? acc + qty : acc - qty;
-      }, 0);
+      // Calculate correct stock from movements using helper
+      const novoEstoque = calcularEstoqueDeMovimentos(movimentos || []);
 
       // Update the insumo stock and cost
       const { error: updateError } = await supabase

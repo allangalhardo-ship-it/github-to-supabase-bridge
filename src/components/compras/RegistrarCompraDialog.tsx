@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Calculator, Package, ArrowRight, Loader2 } from 'lucide-react';
 import { SearchableSelect, SearchableSelectOption } from '@/components/ui/searchable-select';
+import { inserirMovimentoEstoque } from '@/lib/estoqueUtils';
 
 interface Insumo {
   id: string;
@@ -154,8 +155,8 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
         ? ((custoUnitarioProducao - custoAnterior) / custoAnterior) * 100 
         : 0;
 
-      // Insert stock movement with conversion info
-      const { error: movError } = await supabase.from('estoque_movimentos').insert({
+      // Insert stock movement with conversion info - uses helper that normalizes qty
+      await inserirMovimentoEstoque({
         empresa_id: usuario!.empresa_id,
         insumo_id: formData.insumo_id,
         tipo: 'entrada',
@@ -169,7 +170,6 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
           ? `Compra - ${formData.fornecedor}` 
           : 'Compra manual',
       });
-      if (movError) throw movError;
 
       // Record price history
       await supabase.from('historico_precos').insert({
