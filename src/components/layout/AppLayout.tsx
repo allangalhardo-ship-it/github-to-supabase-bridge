@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Logo, LogoMark } from '@/components/brand/Logo';
@@ -34,6 +36,7 @@ import {
   Bot,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Crown, Sparkles } from 'lucide-react';
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -62,6 +65,7 @@ const helpItems = [
 
 const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAdmin: boolean }) => {
   const { usuario, signOut } = useAuth();
+  const { subscription } = useSubscription();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -73,11 +77,40 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
     ? [...navItems, { to: '/admin', icon: Shield, label: 'Admin' }]
     : navItems;
 
+  const getPlanBadge = () => {
+    if (subscription?.plan === 'pro') {
+      return (
+        <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 gap-1">
+          <Crown className="h-3 w-3" />
+          Pro
+        </Badge>
+      );
+    }
+    if (subscription?.plan === 'standard') {
+      return (
+        <Badge className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-0 gap-1">
+          <Sparkles className="h-3 w-3" />
+          Standard
+        </Badge>
+      );
+    }
+    return (
+      <NavLink to="/assinatura" onClick={onNavigate}>
+        <Badge variant="outline" className="border-sidebar-border text-sidebar-foreground/60 hover:bg-sidebar-accent cursor-pointer">
+          Grátis
+        </Badge>
+      </NavLink>
+    );
+  };
+
   return (
     <div className="flex flex-col h-full bg-sidebar text-sidebar-foreground">
       {/* Header com logo */}
       <div className="p-5 border-b border-sidebar-border">
-        <Logo size="sm" theme="dark" />
+        <div className="flex items-center justify-between">
+          <Logo size="sm" theme="dark" />
+          {getPlanBadge()}
+        </div>
         {usuario?.nome && (
           <p className="text-xs text-sidebar-foreground/60 mt-2 truncate">
             {usuario.nome}
