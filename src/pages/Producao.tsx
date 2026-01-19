@@ -13,11 +13,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Factory, Package, Search, ChefHat, AlertTriangle, Clock } from 'lucide-react';
+import { Plus, Factory, Package, Search, ChefHat, AlertTriangle, Clock, FlaskConical } from 'lucide-react';
 import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { AlertaVencimento } from '@/components/producao/AlertaVencimento';
+
+type TipoProducao = 'produto' | 'receita';
 
 const Producao = () => {
   const { usuario } = useAuth();
@@ -25,12 +27,18 @@ const Producao = () => {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [buscaProduto, setBuscaProduto] = useState('');
+  const [tipoProducao, setTipoProducao] = useState<TipoProducao>('produto');
   const [formData, setFormData] = useState({
     produto_id: '',
     quantidade: '1',
     observacao: '',
     shelf_life_dias: '',
     dias_alerta_vencimento: '3',
+  });
+  const [receitaFormData, setReceitaFormData] = useState({
+    receita_id: '',
+    quantidade: '1',
+    observacao: '',
   });
 
   // Fetch produtos com ficha técnica
@@ -49,6 +57,41 @@ const Producao = () => {
       if (error) throw error;
       // Filtra apenas produtos que têm ficha técnica
       return data.filter(p => p.fichas_tecnicas && p.fichas_tecnicas.length > 0);
+    },
+    enabled: !!usuario?.empresa_id,
+  });
+
+  // Fetch receitas (insumos intermediários) com ingredientes
+  const { data: receitas, isLoading: loadingReceitas } = useQuery({
+    queryKey: ['receitas-producao', usuario?.empresa_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('insumos')
+        .select(`
+          id, 
+          nome, 
+          unidade_medida, 
+          custo_unitario, 
+          estoque_atual,
+          rendimento_receita
+        `)
+        .eq('is_intermediario', true)
+        .order('nome');
+
+      if (error) throw error;
+      
+      // Buscar receitas que têm ingredientes cadastrados
+      const { data: receitasComIngredientes, error: ingError } = await supabase
+        .from('receitas_intermediarias')
+        .select('insumo_id')
+        .limit(1000);
+      
+      if (ingError) throw ingError;
+      
+      const idsComIngredientes = new Set(receitasComIngredientes?.map(r => r.insumo_id) || []);
+      
+      // Retorna apenas receitas que têm ingredientes
+      return data.filter(r => idsComIngredientes.has(r.id));
     },
     enabled: !!usuario?.empresa_id,
   });
@@ -106,6 +149,7 @@ const Producao = () => {
     return todosProdutos.filter(p => Number(p.estoque_acabado) > 0);
   }, [todosProdutos]);
 
+  // Mutation para produção de produtos
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const shelfLife = data.shelf_life_dias ? parseInt(data.shelf_life_dias) : null;
@@ -136,6 +180,95 @@ const Producao = () => {
     },
   });
 
+  // Mutation para produção de receitas
+  const createReceitaMutation = useMutation({
+    mutationFn: async (data: typeof receitaFormData) => {
+      const receita = receitas?.find(r => r.id === data.receita_id);
+      if (!receita) throw new Error('Receita não encontrada');
+
+      const quantidade = parseFloat(data.quantidade) || 1;
+      const rendimento = receita.rendimento_receita || 1;
+      const quantidadeProduzida = quantidade * rendimento;
+
+      // Buscar ingredientes da receita
+      const { data: ingredientes, error: ingError } = await supabase
+        .from('receitas_intermediarias')
+        .select(`
+          quantidade,
+          insumo_ingrediente:insumos!receitas_intermediarias_insumo_ingrediente_id_fkey (
+            id,
+            nome,
+            estoque_atual
+          )
+        `)
+        .eq('insumo_id', data.receita_id);
+
+      if (ingError) throw ingError;
+
+      // Baixar estoque dos ingredientes
+      for (const ing of ingredientes || []) {
+        const quantidadeUsada = ing.quantidade * quantidade;
+        const novoEstoque = (ing.insumo_ingrediente?.estoque_atual || 0) - quantidadeUsada;
+
+        const { error: updateError } = await supabase
+          .from('insumos')
+          .update({ estoque_atual: Math.max(0, novoEstoque) })
+          .eq('id', ing.insumo_ingrediente?.id);
+
+        if (updateError) throw updateError;
+
+        // Registrar movimento de estoque
+        const { error: movError } = await supabase
+          .from('estoque_movimentos')
+          .insert({
+            empresa_id: usuario!.empresa_id,
+            insumo_id: ing.insumo_ingrediente?.id,
+            quantidade: -quantidadeUsada,
+            tipo: 'saida',
+            origem: 'producao_receita',
+            observacao: `Produção de ${receita.nome}`,
+          });
+
+        if (movError) throw movError;
+      }
+
+      // Adicionar ao estoque da receita (insumo intermediário)
+      const { error: updateReceitaError } = await supabase
+        .from('insumos')
+        .update({ 
+          estoque_atual: (receita.estoque_atual || 0) + quantidadeProduzida 
+        })
+        .eq('id', data.receita_id);
+
+      if (updateReceitaError) throw updateReceitaError;
+
+      // Registrar movimento de entrada no estoque da receita
+      const { error: movEntradaError } = await supabase
+        .from('estoque_movimentos')
+        .insert({
+          empresa_id: usuario!.empresa_id,
+          insumo_id: data.receita_id,
+          quantidade: quantidadeProduzida,
+          tipo: 'entrada',
+          origem: 'producao_receita',
+          observacao: data.observacao || `Produção de ${quantidade} lote(s)`,
+        });
+
+      if (movEntradaError) throw movEntradaError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['receitas-producao'] });
+      queryClient.invalidateQueries({ queryKey: ['insumos'] });
+      queryClient.invalidateQueries({ queryKey: ['insumos-simples'] });
+      queryClient.invalidateQueries({ queryKey: ['estoque-movimentos'] });
+      toast({ title: 'Receita produzida!', description: 'Ingredientes baixados e estoque da receita atualizado.' });
+      resetForm();
+    },
+    onError: (error) => {
+      toast({ title: 'Erro ao produzir receita', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const resetForm = () => {
     setFormData({
       produto_id: '',
@@ -144,17 +277,36 @@ const Producao = () => {
       shelf_life_dias: '',
       dias_alerta_vencimento: '3',
     });
+    setReceitaFormData({
+      receita_id: '',
+      quantidade: '1',
+      observacao: '',
+    });
+    setTipoProducao('produto');
     setDialogOpen(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.produto_id) {
-      toast({ title: 'Selecione um produto', variant: 'destructive' });
-      return;
+    if (tipoProducao === 'produto') {
+      if (!formData.produto_id) {
+        toast({ title: 'Selecione um produto', variant: 'destructive' });
+        return;
+      }
+      createMutation.mutate(formData);
+    } else {
+      if (!receitaFormData.receita_id) {
+        toast({ title: 'Selecione uma receita', variant: 'destructive' });
+        return;
+      }
+      createReceitaMutation.mutate(receitaFormData);
     }
-    createMutation.mutate(formData);
   };
+
+  // Info da receita selecionada
+  const receitaSelecionada = useMemo(() => {
+    return receitas?.find(r => r.id === receitaFormData.receita_id);
+  }, [receitas, receitaFormData.receita_id]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -181,93 +333,195 @@ const Producao = () => {
               Nova Produção
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Registrar Produção</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Seletor de tipo */}
               <div className="space-y-2">
-                <Label htmlFor="produto">Produto</Label>
-                <SearchableSelect
-                  options={produtos?.map((produto) => ({
-                    value: produto.id,
-                    label: produto.nome,
-                    searchTerms: produto.nome,
-                    icon: <ChefHat className="h-3 w-3 text-primary" />,
-                  })) || []}
-                  value={formData.produto_id}
-                  onValueChange={(value) => setFormData({ ...formData, produto_id: value })}
-                  placeholder="Selecione um produto..."
-                  searchPlaceholder="Buscar produto..."
-                  emptyMessage="Nenhum produto com ficha técnica encontrado."
-                />
-                <p className="text-xs text-muted-foreground">
-                  Apenas produtos com ficha técnica podem ser produzidos
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="quantidade">Quantidade a Produzir</Label>
-                <Input
-                  id="quantidade"
-                  type="number"
-                  step="1"
-                  min="1"
-                  value={formData.quantidade}
-                  onChange={(e) => setFormData({ ...formData, quantidade: e.target.value })}
-                  required
-                />
-              </div>
-
-              {/* Campos de Shelf Life */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="shelf_life_dias" className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    Validade (dias)
-                  </Label>
-                  <Input
-                    id="shelf_life_dias"
-                    type="number"
-                    step="1"
-                    min="1"
-                    placeholder="Ex: 7"
-                    value={formData.shelf_life_dias}
-                    onChange={(e) => setFormData({ ...formData, shelf_life_dias: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="dias_alerta">Alertar antes de</Label>
-                  <Input
-                    id="dias_alerta"
-                    type="number"
-                    step="1"
-                    min="1"
-                    placeholder="Ex: 3"
-                    value={formData.dias_alerta_vencimento}
-                    onChange={(e) => setFormData({ ...formData, dias_alerta_vencimento: e.target.value })}
-                  />
+                <Label>O que você vai produzir?</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant={tipoProducao === 'produto' ? 'default' : 'outline'}
+                    className="h-auto py-3 flex flex-col items-center gap-1"
+                    onClick={() => setTipoProducao('produto')}
+                  >
+                    <ChefHat className="h-5 w-5" />
+                    <span className="text-xs">Produto Final</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={tipoProducao === 'receita' ? 'default' : 'outline'}
+                    className="h-auto py-3 flex flex-col items-center gap-1"
+                    onClick={() => setTipoProducao('receita')}
+                  >
+                    <FlaskConical className="h-5 w-5" />
+                    <span className="text-xs">Receita Base</span>
+                  </Button>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground -mt-2">
-                Defina o shelf life do produto e quantos dias antes do vencimento deseja ser notificado
-              </p>
 
-              <div className="space-y-2">
-                <Label htmlFor="observacao">Observação (opcional)</Label>
-                <Textarea
-                  id="observacao"
-                  value={formData.observacao}
-                  onChange={(e) => setFormData({ ...formData, observacao: e.target.value })}
-                  placeholder="Ex: Produção para evento de sábado"
-                  rows={2}
-                />
-              </div>
+              {tipoProducao === 'produto' ? (
+                <>
+                  {/* Formulário para Produto Final */}
+                  <div className="space-y-2">
+                    <Label htmlFor="produto">Produto</Label>
+                    <SearchableSelect
+                      options={produtos?.map((produto) => ({
+                        value: produto.id,
+                        label: produto.nome,
+                        searchTerms: produto.nome,
+                        icon: <ChefHat className="h-3 w-3 text-primary" />,
+                      })) || []}
+                      value={formData.produto_id}
+                      onValueChange={(value) => setFormData({ ...formData, produto_id: value })}
+                      placeholder="Selecione um produto..."
+                      searchPlaceholder="Buscar produto..."
+                      emptyMessage="Nenhum produto com ficha técnica encontrado."
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Apenas produtos com ficha técnica podem ser produzidos
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="quantidade">Quantidade a Produzir</Label>
+                    <Input
+                      id="quantidade"
+                      type="number"
+                      step="1"
+                      min="1"
+                      value={formData.quantidade}
+                      onChange={(e) => setFormData({ ...formData, quantidade: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  {/* Campos de Shelf Life */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="shelf_life_dias" className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Validade (dias)
+                      </Label>
+                      <Input
+                        id="shelf_life_dias"
+                        type="number"
+                        step="1"
+                        min="1"
+                        placeholder="Ex: 7"
+                        value={formData.shelf_life_dias}
+                        onChange={(e) => setFormData({ ...formData, shelf_life_dias: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="dias_alerta">Alertar antes de</Label>
+                      <Input
+                        id="dias_alerta"
+                        type="number"
+                        step="1"
+                        min="1"
+                        placeholder="Ex: 3"
+                        value={formData.dias_alerta_vencimento}
+                        onChange={(e) => setFormData({ ...formData, dias_alerta_vencimento: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground -mt-2">
+                    Defina o shelf life do produto e quantos dias antes do vencimento deseja ser notificado
+                  </p>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="observacao">Observação (opcional)</Label>
+                    <Textarea
+                      id="observacao"
+                      value={formData.observacao}
+                      onChange={(e) => setFormData({ ...formData, observacao: e.target.value })}
+                      placeholder="Ex: Produção para evento de sábado"
+                      rows={2}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Formulário para Receita Base */}
+                  <div className="space-y-2">
+                    <Label htmlFor="receita">Receita Base</Label>
+                    <SearchableSelect
+                      options={receitas?.map((receita) => ({
+                        value: receita.id,
+                        label: receita.nome,
+                        searchTerms: receita.nome,
+                        icon: <FlaskConical className="h-3 w-3 text-orange-500" />,
+                      })) || []}
+                      value={receitaFormData.receita_id}
+                      onValueChange={(value) => setReceitaFormData({ ...receitaFormData, receita_id: value })}
+                      placeholder="Selecione uma receita..."
+                      searchPlaceholder="Buscar receita..."
+                      emptyMessage="Nenhuma receita com ingredientes encontrada."
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Apenas receitas com ingredientes podem ser produzidas
+                    </p>
+                  </div>
+
+                  {receitaSelecionada && (
+                    <div className="bg-muted/50 p-3 rounded-lg space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Rendimento por lote:</span>
+                        <span className="font-medium">{receitaSelecionada.rendimento_receita || 1} {receitaSelecionada.unidade_medida}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Estoque atual:</span>
+                        <span className="font-medium">{receitaSelecionada.estoque_atual || 0} {receitaSelecionada.unidade_medida}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Custo por {receitaSelecionada.unidade_medida}:</span>
+                        <span className="font-medium">{formatCurrency(receitaSelecionada.custo_unitario)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="quantidade_receita">Quantidade de Lotes</Label>
+                    <Input
+                      id="quantidade_receita"
+                      type="number"
+                      step="1"
+                      min="1"
+                      value={receitaFormData.quantidade}
+                      onChange={(e) => setReceitaFormData({ ...receitaFormData, quantidade: e.target.value })}
+                      required
+                    />
+                    {receitaSelecionada && (
+                      <p className="text-xs text-muted-foreground">
+                        Produzirá {(parseFloat(receitaFormData.quantidade) || 1) * (receitaSelecionada.rendimento_receita || 1)} {receitaSelecionada.unidade_medida}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="observacao_receita">Observação (opcional)</Label>
+                    <Textarea
+                      id="observacao_receita"
+                      value={receitaFormData.observacao}
+                      onChange={(e) => setReceitaFormData({ ...receitaFormData, observacao: e.target.value })}
+                      placeholder="Ex: Massa para a semana"
+                      rows={2}
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="bg-muted/50 p-3 rounded-lg">
                 <p className="text-sm text-muted-foreground">
                   <AlertTriangle className="h-4 w-4 inline mr-1" />
-                  Ao registrar a produção, os insumos serão baixados automaticamente do estoque.
+                  {tipoProducao === 'produto' 
+                    ? 'Ao registrar a produção, os insumos serão baixados automaticamente do estoque.'
+                    : 'Ao produzir a receita, os ingredientes serão baixados e o estoque da receita será atualizado.'
+                  }
                 </p>
               </div>
 
@@ -275,9 +529,12 @@ const Producao = () => {
                 <Button type="button" variant="outline" onClick={resetForm}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={createMutation.isPending}>
+                <Button 
+                  type="submit" 
+                  disabled={createMutation.isPending || createReceitaMutation.isPending}
+                >
                   <Factory className="mr-2 h-4 w-4" />
-                  Registrar Produção
+                  {tipoProducao === 'produto' ? 'Registrar Produção' : 'Produzir Receita'}
                 </Button>
               </div>
             </form>
