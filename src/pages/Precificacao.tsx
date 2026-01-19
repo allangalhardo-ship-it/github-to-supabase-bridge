@@ -783,19 +783,19 @@ const Precificacao = () => {
       {/* Simulador Mobile - Drawer */}
       {isMobile && (
         <Drawer open={simuladorOpen} onOpenChange={setSimuladorOpen}>
-          <DrawerContent className="max-h-[90vh]">
-            <DrawerHeader className="pb-2">
+          <DrawerContent className="max-h-[92vh]">
+            <DrawerHeader className="pb-2 px-4">
               <DrawerTitle className="flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <Calculator className="h-5 w-5" />
+                <span className="flex items-center gap-2 text-base">
+                  <Calculator className="h-4 w-4" />
                   Simulador de Preço
                 </span>
-                <Button variant="ghost" size="icon" onClick={() => setSimuladorOpen(false)}>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSimuladorOpen(false)}>
                   <X className="h-4 w-4" />
                 </Button>
               </DrawerTitle>
             </DrawerHeader>
-            <ScrollArea className="px-4 pb-4 max-h-[75vh]">
+            <div className="px-4 pb-6 overflow-y-auto max-h-[calc(92vh-4rem)]">
               {produtoSimulador && (
                 <SimuladorContent 
                   produtoSimulador={produtoSimulador}
@@ -817,7 +817,7 @@ const Precificacao = () => {
                   setModoPreco={setModoPreco}
                 />
               )}
-            </ScrollArea>
+            </div>
           </DrawerContent>
         </Drawer>
       )}
@@ -1126,26 +1126,26 @@ const SimuladorContent: React.FC<SimuladorContentProps> = ({
     : simuladorCalcs?.isViavel;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-2">
       <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
-        <p className="font-medium">{produtoSimulador.nome}</p>
-        <p className="text-sm text-muted-foreground">
+        <p className="font-medium text-sm sm:text-base line-clamp-2">{produtoSimulador.nome}</p>
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Custo: {formatCurrency(simuladorCalcs?.custoInsumos || 0)}
         </p>
       </div>
 
       {/* Seletor de Canal */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium">Canal de Venda</Label>
-        <div className="flex flex-wrap gap-2">
+        <Label className="text-xs sm:text-sm font-medium">Canal de Venda</Label>
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-1.5 sm:gap-2">
           <Button
             size="sm"
             variant={appSelecionado === 'balcao' ? 'default' : 'outline'}
             onClick={() => setAppSelecionado('balcao')}
-            className="gap-1"
+            className="gap-1 h-8 text-xs sm:text-sm px-2 sm:px-3"
           >
-            <Store className="h-3 w-3" />
-            Balcão
+            <Store className="h-3 w-3 shrink-0" />
+            <span className="truncate">Balcão</span>
           </Button>
           {taxasApps?.map(app => (
             <Button
@@ -1153,11 +1153,11 @@ const SimuladorContent: React.FC<SimuladorContentProps> = ({
               size="sm"
               variant={appSelecionado === app.id ? 'default' : 'outline'}
               onClick={() => setAppSelecionado(app.id)}
-              className="gap-1"
+              className="gap-1 h-8 text-xs sm:text-sm px-2 sm:px-3"
             >
-              <Smartphone className="h-3 w-3" />
-              {app.nome_app}
-              <span className="text-xs opacity-70">({app.taxa_percentual}%)</span>
+              <Smartphone className="h-3 w-3 shrink-0" />
+              <span className="truncate">{app.nome_app}</span>
+              <span className="text-[10px] sm:text-xs opacity-70 shrink-0">({app.taxa_percentual}%)</span>
             </Button>
           ))}
         </div>
@@ -1165,24 +1165,24 @@ const SimuladorContent: React.FC<SimuladorContentProps> = ({
 
       {/* Toggle entre Margem e Preço Manual */}
       <div className="space-y-3">
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <Button
             size="sm"
             variant={modoPreco === 'margem' ? 'default' : 'outline'}
             onClick={() => setModoPreco('margem')}
-            className="flex-1 gap-1"
+            className="gap-1 h-9 text-xs sm:text-sm"
           >
-            <Percent className="h-3 w-3" />
-            Por Margem
+            <Percent className="h-3 w-3 shrink-0" />
+            <span className="truncate">% Por Margem</span>
           </Button>
           <Button
             size="sm"
             variant={modoPreco === 'manual' ? 'default' : 'outline'}
             onClick={() => setModoPreco('manual')}
-            className="flex-1 gap-1"
+            className="gap-1 h-9 text-xs sm:text-sm"
           >
-            <DollarSign className="h-3 w-3" />
-            Digitar Preço
+            <DollarSign className="h-3 w-3 shrink-0" />
+            <span className="truncate">$ Digitar Preço</span>
           </Button>
         </div>
 
@@ -1190,9 +1190,9 @@ const SimuladorContent: React.FC<SimuladorContentProps> = ({
           <>
             {/* Slider de margem */}
             <div className="space-y-2">
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-xs sm:text-sm items-center">
                 <span>Margem líquida</span>
-                <span className="font-bold text-primary text-lg">{margemDesejada.toFixed(0)}%</span>
+                <span className="font-bold text-primary text-base sm:text-lg">{margemDesejada.toFixed(0)}%</span>
               </div>
               <Slider
                 value={[margemDesejada]}
@@ -1202,7 +1202,7 @@ const SimuladorContent: React.FC<SimuladorContentProps> = ({
                 step={1}
                 className="py-2"
               />
-              <div className="flex justify-between text-xs text-muted-foreground">
+              <div className="flex justify-between text-[10px] sm:text-xs text-muted-foreground">
                 <span>5%</span>
                 <span>30%</span>
                 <span>60%</span>
@@ -1243,44 +1243,44 @@ const SimuladorContent: React.FC<SimuladorContentProps> = ({
 
       {/* Decomposição do preço */}
       <div className="space-y-2">
-        <h4 className="text-sm font-medium flex items-center gap-1">
-          <PieChart className="h-4 w-4" />
+        <h4 className="text-xs sm:text-sm font-medium flex items-center gap-1">
+          <PieChart className="h-3 w-3 sm:h-4 sm:w-4" />
           Composição do Preço
         </h4>
-        <div className="space-y-1 text-sm">
-          <div className="flex justify-between py-1 items-center">
-            <span className="text-muted-foreground flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-orange-500" />
+        <div className="space-y-0.5 text-xs sm:text-sm">
+          <div className="flex justify-between py-0.5 sm:py-1 items-center">
+            <span className="text-muted-foreground flex items-center gap-1 sm:gap-1.5">
+              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-orange-500 shrink-0" />
               Insumos
             </span>
             <span className="font-medium">{formatCurrency(simuladorCalcs?.custoInsumos || 0)}</span>
           </div>
-          <div className="flex justify-between py-1 items-center">
-            <span className="text-muted-foreground flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-blue-500" />
+          <div className="flex justify-between py-0.5 sm:py-1 items-center">
+            <span className="text-muted-foreground flex items-center gap-1 sm:gap-1.5">
+              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-500 shrink-0" />
               C. Fixo ({formatPercent(simuladorCalcs?.percCustoFixo || 0)})
             </span>
             <span>{formatCurrency(simuladorCalcs?.valorCustoFixo || 0)}</span>
           </div>
-          <div className="flex justify-between py-1 items-center">
-            <span className="text-muted-foreground flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-red-500" />
+          <div className="flex justify-between py-0.5 sm:py-1 items-center">
+            <span className="text-muted-foreground flex items-center gap-1 sm:gap-1.5">
+              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-red-500 shrink-0" />
               Imposto ({formatPercent(simuladorCalcs?.percImposto || 0)})
             </span>
             <span>{formatCurrency(simuladorCalcs?.valorImposto || 0)}</span>
           </div>
           {simuladorCalcs?.percTaxaApp > 0 && (
-            <div className="flex justify-between py-1 items-center">
-              <span className="text-muted-foreground flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-purple-500" />
+            <div className="flex justify-between py-0.5 sm:py-1 items-center">
+              <span className="text-muted-foreground flex items-center gap-1 sm:gap-1.5">
+                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-purple-500 shrink-0" />
                 Taxa App ({formatPercent(simuladorCalcs?.percTaxaApp || 0)})
               </span>
               <span>{formatCurrency(simuladorCalcs?.valorTaxaApp || 0)}</span>
             </div>
           )}
-          <div className="flex justify-between py-1.5 items-center border-t pt-2">
-            <span className="text-muted-foreground flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+          <div className="flex justify-between py-1 sm:py-1.5 items-center border-t pt-1.5 sm:pt-2">
+            <span className="text-muted-foreground flex items-center gap-1 sm:gap-1.5">
+              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 shrink-0" />
               Lucro ({formatPercent(modoPreco === 'manual' ? margemCalculada : margemDesejada)})
             </span>
             <span className={margemCalculada > 0 ? 'text-success font-medium' : 'text-destructive font-medium'}>
@@ -1295,24 +1295,24 @@ const SimuladorContent: React.FC<SimuladorContentProps> = ({
       <Separator />
 
       {/* Preço calculado */}
-      <div className={`flex justify-between items-center p-4 rounded-lg ${isPrecoViavel ? 'bg-primary/10 border border-primary/30' : 'bg-destructive/10 border border-destructive/30'}`}>
-        <div>
-          <p className="text-xs text-muted-foreground">
+      <div className={`flex justify-between items-center p-3 sm:p-4 rounded-lg ${isPrecoViavel ? 'bg-primary/10 border border-primary/30' : 'bg-destructive/10 border border-destructive/30'}`}>
+        <div className="min-w-0">
+          <p className="text-[10px] sm:text-xs text-muted-foreground">
             {modoPreco === 'manual' ? 'Preço Definido' : 'Preço Sugerido'}
           </p>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs sm:text-sm text-muted-foreground truncate">
             {appSelecionado === 'balcao' ? 'Venda direta' : taxasApps?.find(a => a.id === appSelecionado)?.nome_app}
           </p>
         </div>
-        <span className={`text-2xl font-bold ${isPrecoViavel ? 'text-primary' : 'text-destructive'}`}>
+        <span className={`text-xl sm:text-2xl font-bold shrink-0 ${isPrecoViavel ? 'text-primary' : 'text-destructive'}`}>
           {formatCurrency(precoFinal)}
         </span>
       </div>
 
       {!isPrecoViavel && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
+        <Alert variant="destructive" className="py-2">
+          <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4" />
+          <AlertDescription className="text-xs sm:text-sm">
             {modoPreco === 'manual' 
               ? 'Preço muito baixo! A margem está negativa.' 
               : 'Margem inviável! Reduza a margem ou revise custos.'}
@@ -1322,24 +1322,24 @@ const SimuladorContent: React.FC<SimuladorContentProps> = ({
 
       {/* Comparativo de canais */}
       {simuladorCalcs?.precosCanais && simuladorCalcs.precosCanais.length > 1 && (
-        <div className="space-y-2">
-          <h4 className="text-xs font-medium text-muted-foreground">Todos os Canais</h4>
-          <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1.5 sm:space-y-2">
+          <h4 className="text-[10px] sm:text-xs font-medium text-muted-foreground">Todos os Canais</h4>
+          <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
             {simuladorCalcs.precosCanais.map((canal: any, idx: number) => (
               <div 
                 key={idx}
-                className={`p-2 rounded text-center ${
+                className={`p-1.5 sm:p-2 rounded text-center ${
                   (appSelecionado === 'balcao' && canal.taxa === 0) ||
                   (taxasApps?.find(a => a.id === appSelecionado)?.taxa_percentual === canal.taxa)
                     ? 'bg-primary/10 border border-primary/30'
                     : 'bg-muted/50'
                 }`}
               >
-                <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-                  {canal.taxa === 0 ? <Store className="h-3 w-3" /> : <Smartphone className="h-3 w-3" />}
-                  {canal.nome}
+                <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center justify-center gap-0.5 sm:gap-1 truncate">
+                  {canal.taxa === 0 ? <Store className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0" /> : <Smartphone className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0" />}
+                  <span className="truncate">{canal.nome}</span>
                 </p>
-                <p className={`font-bold ${canal.viavel ? '' : 'text-destructive'}`}>
+                <p className={`font-bold text-sm sm:text-base ${canal.viavel ? '' : 'text-destructive'}`}>
                   {formatCurrency(canal.preco)}
                 </p>
               </div>
@@ -1348,24 +1348,24 @@ const SimuladorContent: React.FC<SimuladorContentProps> = ({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-2 text-sm">
-        <div className="p-2 bg-muted rounded text-center">
-          <p className="text-xs text-muted-foreground">CMV</p>
-          <p className="font-medium">
+      <div className="grid grid-cols-2 gap-1.5 sm:gap-2 text-xs sm:text-sm">
+        <div className="p-1.5 sm:p-2 bg-muted rounded text-center">
+          <p className="text-[10px] sm:text-xs text-muted-foreground">CMV</p>
+          <p className="font-medium text-sm sm:text-base">
             {precoFinal > 0 
               ? ((simuladorCalcs?.custoInsumos || 0) / precoFinal * 100).toFixed(1)
               : simuladorCalcs?.cmv?.toFixed(1) || '0'}%
           </p>
         </div>
-        <div className="p-2 bg-muted rounded text-center">
-          <p className="text-xs text-muted-foreground">Preço Atual</p>
-          <p className="font-medium">{formatCurrency(produtoSimulador.preco_venda)}</p>
+        <div className="p-1.5 sm:p-2 bg-muted rounded text-center">
+          <p className="text-[10px] sm:text-xs text-muted-foreground">Preço Atual</p>
+          <p className="font-medium text-sm sm:text-base">{formatCurrency(produtoSimulador.preco_venda)}</p>
         </div>
       </div>
 
-      <div className="flex gap-2">
+      <div className="grid grid-cols-2 gap-2 pt-1">
         <Button 
-          className="flex-1"
+          className="h-10 text-xs sm:text-sm"
           onClick={handleAplicarDoSimulador}
           disabled={updatePrecoMutation.isPending || !isPrecoViavel || (modoPreco === 'manual' && !precoManual)}
         >
@@ -1374,6 +1374,7 @@ const SimuladorContent: React.FC<SimuladorContentProps> = ({
         <Button 
           variant="outline"
           onClick={onClose}
+          className="h-10 text-xs sm:text-sm"
         >
           Fechar
         </Button>
