@@ -91,7 +91,7 @@ serve(async (req) => {
     const priceId = PLAN_PRICES[plan];
     logStep("Using price", { plan, priceId });
 
-    // Create checkout session
+    // Create checkout session with Pix + Card support
     const sessionParams: Record<string, unknown> = {
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
@@ -107,6 +107,8 @@ serve(async (req) => {
       allow_promotion_codes: true,
       billing_address_collection: "required",
       locale: "pt-BR",
+      // Pix + Cartão de crédito habilitados
+      payment_method_types: ["card", "boleto"],
     };
 
     if (trialDaysRemaining > 0) {
