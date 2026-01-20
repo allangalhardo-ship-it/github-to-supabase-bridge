@@ -155,13 +155,20 @@ serve(async (req) => {
     const sessionsMap: Record<string, SessionType[]> = {};
     const activeSessionsMap: Record<string, number> = {};
     
+    // Considerar "online" apenas se last_activity_at for nos últimos 5 minutos
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    
     userSessions?.forEach(session => {
       if (!sessionsMap[session.user_id]) {
         sessionsMap[session.user_id] = [];
       }
       sessionsMap[session.user_id]!.push(session);
       
-      if (session.is_active) {
+      // Sessão é realmente ativa se is_active E last_activity_at < 5 min
+      const lastActivity = new Date(session.last_activity_at);
+      const isReallyActive = session.is_active && lastActivity >= fiveMinutesAgo;
+      
+      if (isReallyActive) {
         activeSessionsMap[session.user_id] = (activeSessionsMap[session.user_id] || 0) + 1;
       }
     });
