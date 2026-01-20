@@ -13,6 +13,7 @@ import UpdateBanner, { useUpdateBanner } from "@/components/pwa/UpdateBanner";
 import Login from "@/pages/Login";
 import Cadastro from "@/pages/Cadastro";
 import Assinatura from "@/pages/Assinatura";
+import PagamentoSucesso from "@/pages/PagamentoSucesso";
 import Dashboard from "@/pages/Dashboard";
 import Produtos from "@/pages/Produtos";
 import Insumos from "@/pages/Insumos";
@@ -102,6 +103,7 @@ const AppRoutes = () => {
       
       {/* Página de assinatura - acessível para usuários logados, mesmo sem assinatura */}
       <Route path="/assinatura" element={<ProtectedRoute><Assinatura /></ProtectedRoute>} />
+      <Route path="/pagamento-sucesso" element={<ProtectedRoute><PagamentoSucesso /></ProtectedRoute>} />
       
       {/* Rotas protegidas por paywall */}
       <Route path="/" element={
