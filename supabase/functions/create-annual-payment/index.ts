@@ -86,7 +86,7 @@ serve(async (req) => {
         },
       ],
       mode: "payment",
-      success_url: `${origin}/dashboard?checkout=success&annual=true`,
+      success_url: `${origin}/pagamento-sucesso?annual=true&plan=${plan}`,
       cancel_url: `${origin}/assinatura?checkout=canceled`,
       billing_address_collection: "required",
       locale: "pt-BR",
