@@ -19,17 +19,21 @@ export const useOnboarding = () => {
   const { user, usuario } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [initialStep, setInitialStep] = useState(1);
+  const [checkedExistingData, setCheckedExistingData] = useState(false);
 
-  // Buscar progresso do onboarding
+  const userId = user?.id;
+  const empresaId = usuario?.empresa_id;
+
+  // Buscar progresso do onboarding - SEMPRE chamado
   const { data: progress, isLoading: progressLoading, refetch } = useQuery({
-    queryKey: ['onboarding-progress', user?.id],
+    queryKey: ['onboarding-progress', userId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!userId) return null;
 
       const { data, error } = await supabase
         .from('onboarding_progress')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .maybeSingle();
 
       if (error) {
@@ -39,91 +43,47 @@ export const useOnboarding = () => {
 
       return data as OnboardingProgress | null;
     },
-    enabled: !!user?.id,
+    enabled: !!userId,
   });
 
-  // Verificar se usuário já tem dados cadastrados (insumos, produtos, fichas)
+  // Verificar se usuário já tem dados cadastrados - SEMPRE chamado
   const { data: existingData, isLoading: dataLoading } = useQuery({
-    queryKey: ['onboarding-existing-data', usuario?.empresa_id],
+    queryKey: ['onboarding-existing-data', empresaId],
     queryFn: async () => {
-      if (!usuario?.empresa_id) return null;
+      if (!empresaId) return { hasInsumos: false, hasProdutos: false };
 
-      // Buscar contagem de insumos, produtos e fichas técnicas
-      const [insumosResult, produtosResult, fichasResult] = await Promise.all([
+      // Buscar contagem de insumos e produtos
+      const [insumosResult, produtosResult] = await Promise.all([
         supabase
           .from('insumos')
           .select('id', { count: 'exact', head: true })
-          .eq('empresa_id', usuario.empresa_id),
+          .eq('empresa_id', empresaId),
         supabase
           .from('produtos')
           .select('id', { count: 'exact', head: true })
-          .eq('empresa_id', usuario.empresa_id),
-        supabase
-          .from('fichas_tecnicas')
-          .select('id', { count: 'exact', head: true })
-          .eq('produto_id', usuario.empresa_id), // This will be filtered by RLS
+          .eq('empresa_id', empresaId),
       ]);
-
-      // Buscar fichas com join correto
-      const { count: fichasCount } = await supabase
-        .from('produtos')
-        .select('fichas_tecnicas(id)', { count: 'exact', head: true })
-        .eq('empresa_id', usuario.empresa_id)
-        .not('fichas_tecnicas', 'is', null);
 
       return {
         hasInsumos: (insumosResult.count || 0) > 0,
         hasProdutos: (produtosResult.count || 0) > 0,
-        hasFichas: (fichasCount || 0) > 0,
-        insumosCount: insumosResult.count || 0,
-        produtosCount: produtosResult.count || 0,
       };
     },
-    enabled: !!usuario?.empresa_id,
+    enabled: !!empresaId,
   });
 
-  const isLoading = progressLoading || dataLoading;
-
-  // Verificar se precisa mostrar onboarding
-  useEffect(() => {
-    if (isLoading || !user?.id) return;
-
-    // Se já completou o onboarding, não mostrar
-    if (progress?.completed) {
-      setShowOnboarding(false);
-      return;
-    }
-
-    // Se usuário já tem dados cadastrados, marcar onboarding como completo
-    if (existingData?.hasInsumos && existingData?.hasProdutos) {
-      // Usuário já tem insumos e produtos - pular onboarding
-      markOnboardingComplete();
-      setShowOnboarding(false);
-      return;
-    }
-
-    // Se não tem progresso e não tem dados, é usuário novo -> mostrar onboarding
-    if (!progress) {
-      setShowOnboarding(true);
-      setInitialStep(1);
-      return;
-    }
-
-    // Se tem progresso mas não completou, continuar de onde parou
-    setShowOnboarding(true);
-    setInitialStep(progress.current_step);
-  }, [progress, existingData, isLoading, user?.id]);
+  const isLoading = progressLoading || dataLoading || !checkedExistingData;
 
   // Marcar onboarding como completo (para usuários existentes)
   const markOnboardingComplete = async () => {
-    if (!user?.id || !usuario?.empresa_id) return;
+    if (!userId || !empresaId) return;
 
     try {
       await supabase
         .from('onboarding_progress')
         .upsert({
-          user_id: user.id,
-          empresa_id: usuario.empresa_id,
+          user_id: userId,
+          empresa_id: empresaId,
           current_step: 6,
           completed: true,
         }, { onConflict: 'user_id' });
@@ -132,18 +92,56 @@ export const useOnboarding = () => {
     }
   };
 
+  // Verificar se precisa mostrar onboarding
+  useEffect(() => {
+    // Aguardar dados carregarem
+    if (progressLoading || dataLoading) return;
+    if (!userId) {
+      setCheckedExistingData(true);
+      return;
+    }
+
+    // Se já completou o onboarding, não mostrar
+    if (progress?.completed) {
+      setShowOnboarding(false);
+      setCheckedExistingData(true);
+      return;
+    }
+
+    // Se usuário já tem dados cadastrados, marcar onboarding como completo
+    if (existingData?.hasInsumos && existingData?.hasProdutos) {
+      markOnboardingComplete();
+      setShowOnboarding(false);
+      setCheckedExistingData(true);
+      return;
+    }
+
+    // Se não tem progresso e não tem dados, é usuário novo -> mostrar onboarding
+    if (!progress) {
+      setShowOnboarding(true);
+      setInitialStep(1);
+      setCheckedExistingData(true);
+      return;
+    }
+
+    // Se tem progresso mas não completou, continuar de onde parou
+    setShowOnboarding(true);
+    setInitialStep(progress.current_step);
+    setCheckedExistingData(true);
+  }, [progress, existingData, progressLoading, dataLoading, userId, empresaId]);
+
   const completeOnboarding = async () => {
     setShowOnboarding(false);
     await refetch();
   };
 
   const resetOnboarding = async () => {
-    if (!user?.id) return;
+    if (!userId) return;
 
     await supabase
       .from('onboarding_progress')
       .delete()
-      .eq('user_id', user.id);
+      .eq('user_id', userId);
 
     await refetch();
     setShowOnboarding(true);
