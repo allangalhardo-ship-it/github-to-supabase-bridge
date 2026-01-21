@@ -281,18 +281,18 @@ const Estoque = () => {
       )}
 
       <Tabs defaultValue="insumos" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-auto p-1">
-          <TabsTrigger value="insumos" className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 text-xs sm:text-sm">
-            <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Insumos</span>
+        <TabsList className="grid w-full grid-cols-3 h-auto p-1 gap-1">
+          <TabsTrigger value="insumos" className="flex items-center justify-center gap-1.5 px-2 py-2.5 text-xs sm:text-sm">
+            <Package className="h-4 w-4 shrink-0" />
+            <span className="truncate">Insumos</span>
           </TabsTrigger>
-          <TabsTrigger value="acabados" className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 text-xs sm:text-sm">
-            <Factory className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Acabados</span>
+          <TabsTrigger value="acabados" className="flex items-center justify-center gap-1.5 px-2 py-2.5 text-xs sm:text-sm">
+            <Factory className="h-4 w-4 shrink-0" />
+            <span className="truncate">Acabados</span>
           </TabsTrigger>
-          <TabsTrigger value="movimentacoes" className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 text-xs sm:text-sm">
-            <Warehouse className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Movim.</span>
+          <TabsTrigger value="movimentacoes" className="flex items-center justify-center gap-1.5 px-2 py-2.5 text-xs sm:text-sm">
+            <Warehouse className="h-4 w-4 shrink-0" />
+            <span className="truncate">Movim.</span>
           </TabsTrigger>
         </TabsList>
 
@@ -482,60 +482,44 @@ const Estoque = () => {
 
         {/* Aba Movimentações */}
         <TabsContent value="movimentacoes" className="mt-6 space-y-4">
-          {/* Filtros */}
+          {/* Filtros compactos para mobile */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="py-3 px-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Filter className="h-4 w-4 text-muted-foreground" />
                   <CardTitle className="text-base">Filtros</CardTitle>
                 </div>
                 {temFiltrosAtivos && (
-                  <Button variant="ghost" size="sm" onClick={limparFiltros}>
+                  <Button variant="ghost" size="sm" onClick={limparFiltros} className="h-8 px-2">
                     <X className="h-4 w-4 mr-1" />
                     Limpar
                   </Button>
                 )}
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <Label>Período</Label>
+            <CardContent className="py-2 px-4">
+              {/* Mobile: 2x2 grid, Desktop: 4 columns */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs">Período</Label>
                   <Select value={filtroPeriodo} onValueChange={setFiltroPeriodo}>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-9 text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="mes">Este mês</SelectItem>
                       <SelectItem value="mesPassado">Mês passado</SelectItem>
-                      <SelectItem value="ultimos3meses">Últimos 3 meses</SelectItem>
+                      <SelectItem value="ultimos3meses">Últ. 3 meses</SelectItem>
                       <SelectItem value="todos">Todos</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Insumo</Label>
-                  <Select value={filtroInsumo} onValueChange={setFiltroInsumo}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todos">Todos</SelectItem>
-                      {insumos?.map((insumo) => (
-                        <SelectItem key={insumo.id} value={insumo.id}>
-                          {insumo.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Tipo</Label>
+                <div className="space-y-1">
+                  <Label className="text-xs">Tipo</Label>
                   <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-9 text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -546,11 +530,28 @@ const Estoque = () => {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Origem</Label>
+                <div className="space-y-1">
+                  <Label className="text-xs">Insumo</Label>
+                  <Select value={filtroInsumo} onValueChange={setFiltroInsumo}>
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      {insumos?.map((insumo) => (
+                        <SelectItem key={insumo.id} value={insumo.id}>
+                          <span className="truncate">{insumo.nome}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs">Origem</Label>
                   <Select value={filtroOrigem} onValueChange={setFiltroOrigem}>
-                    <SelectTrigger>
-                      <SelectValue />
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue placeholder="Todas" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="todos">Todas</SelectItem>
