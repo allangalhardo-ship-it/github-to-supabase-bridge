@@ -676,14 +676,14 @@ export default function Receitas() {
     },
     {
       key: 'unidade',
-      header: 'Unidade',
+      header: 'Und. Rend.',
       align: 'center',
       mobilePriority: 3,
       render: (receita) => receita.unidade_medida,
     },
     {
       key: 'rendimento',
-      header: 'Rendimento',
+      header: 'Quanto Rende',
       align: 'center',
       mobilePriority: 4,
       render: (receita) => receita.rendimento_receita ? `${receita.rendimento_receita} ${receita.unidade_medida}` : '-',
@@ -798,7 +798,7 @@ export default function Receitas() {
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="unidade_medida">Unidade de Medida</Label>
+                      <Label htmlFor="unidade_medida">Unidade do rendimento</Label>
                       <Select
                         value={receitaFormData.unidade_medida}
                         onValueChange={(value) => setReceitaFormData({ ...receitaFormData, unidade_medida: value })}
@@ -814,10 +814,13 @@ export default function Receitas() {
                           ))}
                         </SelectContent>
                       </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Em que unidade você mede essa receita?
+                      </p>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="rendimento_receita">Rendimento</Label>
+                      <Label htmlFor="rendimento_receita">Quanto rende</Label>
                       <Input
                         id="rendimento_receita"
                         type="number"
@@ -828,7 +831,7 @@ export default function Receitas() {
                         placeholder={`Ex: 0.5 ${receitaFormData.unidade_medida}`}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Quanto essa receita rende
+                        Quantidade que essa receita produz
                       </p>
                     </div>
                   </div>
