@@ -290,45 +290,48 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
         </div>
       </div>
 
-      {/* Resumo das diferenças */}
+      {/* Resumo das diferenças - Grid responsivo para mobile */}
       {precoFinal !== produto.preco_venda && (
-        <div className="flex items-center justify-center gap-4 py-2 px-3 rounded-lg bg-muted/30 text-xs">
-          <div className="flex items-center gap-1">
-            {diferencaPreco >= 0 ? (
-              <TrendingUp className="h-3.5 w-3.5 text-emerald-600" />
-            ) : (
-              <TrendingDown className="h-3.5 w-3.5 text-amber-600" />
-            )}
-            <span className={diferencaPreco >= 0 ? 'text-emerald-600 font-medium' : 'text-amber-600 font-medium'}>
-              {diferencaPreco >= 0 ? '+' : ''}{formatCurrency(diferencaPreco)}
-            </span>
+        <div className="grid grid-cols-3 gap-2 py-2 px-2 rounded-lg bg-muted/30 text-xs">
+          <div className="flex flex-col items-center gap-0.5">
+            <div className="flex items-center gap-1">
+              {diferencaPreco >= 0 ? (
+                <TrendingUp className="h-3 w-3 text-emerald-600" />
+              ) : (
+                <TrendingDown className="h-3 w-3 text-amber-600" />
+              )}
+              <span className={diferencaPreco >= 0 ? 'text-emerald-600 font-semibold' : 'text-amber-600 font-semibold'}>
+                {diferencaPreco >= 0 ? '+' : ''}{formatCurrency(diferencaPreco)}
+              </span>
+            </div>
+            <span className="text-[10px] text-muted-foreground">preço</span>
           </div>
-          <div className="w-px h-4 bg-border" />
-          <div className="flex items-center gap-1">
-            <span className={diferencaMargem >= 0 ? 'text-emerald-600 font-medium' : 'text-amber-600 font-medium'}>
-              {diferencaMargem >= 0 ? '+' : ''}{formatPercent(diferencaMargem)} margem
+          <div className="flex flex-col items-center gap-0.5 border-x border-border/50 px-2">
+            <span className={diferencaMargem >= 0 ? 'text-emerald-600 font-semibold' : 'text-amber-600 font-semibold'}>
+              {diferencaMargem >= 0 ? '+' : ''}{formatPercent(diferencaMargem)}
             </span>
+            <span className="text-[10px] text-muted-foreground">margem</span>
           </div>
-          <div className="w-px h-4 bg-border" />
-          <div className="flex items-center gap-1">
-            <span className={diferencaLucro >= 0 ? 'text-emerald-600 font-medium' : 'text-amber-600 font-medium'}>
-              {diferencaLucro >= 0 ? '+' : ''}{formatCurrency(diferencaLucro)} lucro
+          <div className="flex flex-col items-center gap-0.5">
+            <span className={diferencaLucro >= 0 ? 'text-emerald-600 font-semibold' : 'text-amber-600 font-semibold'}>
+              {diferencaLucro >= 0 ? '+' : ''}{formatCurrency(diferencaLucro)}
             </span>
+            <span className="text-[10px] text-muted-foreground">lucro</span>
           </div>
         </div>
       )}
 
-      {/* Seletor de Canal - Inline com scroll */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-        <span className="text-xs text-muted-foreground shrink-0">Canal:</span>
-        <div className="flex gap-1.5">
+      {/* Seletor de Canal - Scroll horizontal com melhor touch */}
+      <div className="space-y-1.5">
+        <span className="text-xs text-muted-foreground">Canal de venda:</span>
+        <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
           <Button
             size="sm"
             variant={appSelecionado === 'balcao' ? 'default' : 'outline'}
             onClick={() => setAppSelecionado('balcao')}
-            className="h-7 px-2.5 text-xs gap-1"
+            className="h-9 px-3 text-xs gap-1.5 shrink-0 touch-manipulation"
           >
-            <Store className="h-3 w-3" />
+            <Store className="h-3.5 w-3.5" />
             Balcão
           </Button>
           {taxasApps.map(app => (
@@ -337,11 +340,11 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
               size="sm"
               variant={appSelecionado === app.id ? 'default' : 'outline'}
               onClick={() => setAppSelecionado(app.id)}
-              className="h-7 px-2.5 text-xs gap-1 shrink-0"
+              className="h-9 px-3 text-xs gap-1.5 shrink-0 touch-manipulation"
             >
-              <Smartphone className="h-3 w-3" />
-              <span className="truncate max-w-[60px]">{app.nome_app}</span>
-              <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">{app.taxa_percentual}%</Badge>
+              <Smartphone className="h-3.5 w-3.5" />
+              <span className="truncate max-w-[70px]">{app.nome_app}</span>
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">{app.taxa_percentual}%</Badge>
             </Button>
           ))}
         </div>
@@ -558,11 +561,11 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
         }
       />
 
-      {/* Botão Aplicar - Fixo no final */}
+      {/* Botão Aplicar - Touch friendly */}
       <Button
         onClick={onApply}
         disabled={isApplying || !isPrecoViavel}
-        className="w-full gap-2 h-12 text-base font-semibold"
+        className="w-full gap-2 h-12 text-base font-semibold touch-manipulation active:scale-[0.98] transition-transform"
         size="lg"
       >
         <Zap className="h-5 w-5" />
