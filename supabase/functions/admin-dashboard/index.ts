@@ -92,11 +92,15 @@ serve(async (req) => {
         )
       `);
 
+    logStep("Fetched usuarios", { count: usuarios?.length || 0 });
+
     // Fetch all user sessions
     const { data: userSessions } = await supabaseAdmin
       .from("user_sessions")
       .select("*")
       .order("started_at", { ascending: false });
+
+    logStep("Fetched user sessions", { count: userSessions?.length || 0 });
 
     // Fetch recent access logs
     const { data: accessLogs } = await supabaseAdmin
@@ -105,10 +109,14 @@ serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(500);
 
+    logStep("Fetched access logs", { count: accessLogs?.length || 0 });
+
     // Fetch all user roles
     const { data: userRoles } = await supabaseAdmin
       .from("user_roles")
       .select("user_id, role");
+
+    logStep("Fetched user roles", { count: userRoles?.length || 0 });
 
     // Build a map of user roles
     const rolesMap: Record<string, string[]> = {};
@@ -119,11 +127,14 @@ serve(async (req) => {
       rolesMap[ur.user_id].push(ur.role);
     });
 
+    logStep("Built roles map", { userCount: Object.keys(rolesMap).length });
+
     // Check Stripe subscriptions
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     let subscriptionsMap: Record<string, { subscribed: boolean; status: string; endDate: string | null }> = {};
 
     if (stripeKey) {
+      logStep("Checking Stripe subscriptions");
       const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
       
       // Get all customers and their subscriptions
@@ -138,10 +149,15 @@ serve(async (req) => {
 
           if (subscriptions.data.length > 0) {
             const sub = subscriptions.data[0];
+
+            // current_period_end pode vir ausente em alguns cenários (ex.: dados incompletos)
+            const periodEnd = typeof sub.current_period_end === "number" ? sub.current_period_end : null;
+            const endDate = periodEnd !== null ? new Date(periodEnd * 1000).toISOString() : null;
+
             subscriptionsMap[customer.email.toLowerCase()] = {
               subscribed: sub.status === 'active' || sub.status === 'trialing',
               status: sub.status,
-              endDate: new Date(sub.current_period_end * 1000).toISOString(),
+              endDate,
             };
           }
         }
