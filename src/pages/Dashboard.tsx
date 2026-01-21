@@ -53,6 +53,23 @@ const Dashboard = () => {
 
   const { inicio, fim } = getDateRange();
 
+  // Fetch nome da empresa
+  const { data: empresa } = useQuery({
+    queryKey: ['empresa-nome', usuario?.empresa_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('empresas')
+        .select('nome')
+        .eq('id', usuario?.empresa_id)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!usuario?.empresa_id,
+    staleTime: 30 * 60 * 1000, // 30 minutos - nome da empresa raramente muda
+  });
+
   // Fetch vendas do período usando função otimizada
   const { data: vendas, isLoading: loadingVendas } = useQuery({
     queryKey: ['vendas-dashboard', usuario?.empresa_id, inicio, fim],
@@ -407,8 +424,12 @@ const Dashboard = () => {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Meu Negócio</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">Visão geral do seu negócio</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+            {empresa?.nome ? `Olá, ${empresa.nome}!` : 'Meu Negócio'}
+          </h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
+            Veja como está o seu negócio {periodo === 'hoje' ? 'hoje' : periodo === 'semana' ? 'esta semana' : periodo === 'mes' ? 'este mês' : 'nos últimos 30 dias'}
+          </p>
         </div>
         <Select value={periodo} onValueChange={(v) => setPeriodo(v as PeriodoType)}>
           <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10">
