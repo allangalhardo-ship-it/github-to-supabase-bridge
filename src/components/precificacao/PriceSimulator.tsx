@@ -467,15 +467,6 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
                 <span className="text-muted-foreground flex items-center gap-2">
                   <span className={`w-2 h-2 rounded-full ${isCmvSaudavel ? 'bg-emerald-500' : 'bg-orange-500'}`} />
                   CMV ({formatPercent(cmvNovo)})
-                  {isCmvSaudavel ? (
-                    <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-emerald-500/30 text-emerald-600">
-                      ≤ meta {formatPercent(cmvAlvo)}
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-amber-500/30 text-amber-600">
-                      &gt; meta {formatPercent(cmvAlvo)}
-                    </Badge>
-                  )}
                 </span>
                 <span className="font-medium">{formatCurrency(produto.custoInsumos)}</span>
               </div>
