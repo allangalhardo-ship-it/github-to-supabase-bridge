@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AnimatedCardContainer, StaggeredCard } from '@/components/ui/animated-card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
@@ -384,8 +385,8 @@ const Dashboard = () => {
       </div>
 
       {/* KPIs - empilhados verticalmente no mobile */}
-      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 animate-fade-in">
-        <Card className="p-1">
+      <AnimatedCardContainer className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5" staggerDelay={0.08}>
+        <StaggeredCard className="p-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
             <CardTitle className="text-sm sm:text-base font-medium">Receita Bruta</CardTitle>
             <div className="h-10 w-10 sm:h-8 sm:w-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -399,9 +400,9 @@ const Dashboard = () => {
               <div className="text-2xl sm:text-2xl font-bold">{formatCurrency(receitaBruta)}</div>
             )}
           </CardContent>
-        </Card>
+        </StaggeredCard>
 
-        <Card className="p-1">
+        <StaggeredCard className="p-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
             <CardTitle className="text-sm sm:text-base font-medium">Ticket Médio</CardTitle>
             <div className="h-10 w-10 sm:h-8 sm:w-8 rounded-full bg-purple-500/10 flex items-center justify-center">
@@ -435,9 +436,9 @@ const Dashboard = () => {
               </>
             )}
           </CardContent>
-        </Card>
+        </StaggeredCard>
 
-        <Card className="p-1">
+        <StaggeredCard className="p-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
             <CardTitle className="text-sm sm:text-base font-medium">CMV</CardTitle>
             <div className="h-10 w-10 sm:h-8 sm:w-8 rounded-full bg-amber-500/10 flex items-center justify-center">
@@ -456,9 +457,9 @@ const Dashboard = () => {
               </>
             )}
           </CardContent>
-        </Card>
+        </StaggeredCard>
 
-        <Card className="p-1">
+        <StaggeredCard className="p-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
             <CardTitle className="text-sm sm:text-base font-medium">Lucro Bruto</CardTitle>
             <div className="h-10 w-10 sm:h-8 sm:w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
@@ -477,9 +478,9 @@ const Dashboard = () => {
               </>
             )}
           </CardContent>
-        </Card>
+        </StaggeredCard>
 
-        <Card className="p-1">
+        <StaggeredCard className="p-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -557,8 +558,8 @@ const Dashboard = () => {
               </>
             )}
           </CardContent>
-        </Card>
-      </div>
+        </StaggeredCard>
+      </AnimatedCardContainer>
 
       {/* Insights Acionáveis */}
       <DashboardInsights
