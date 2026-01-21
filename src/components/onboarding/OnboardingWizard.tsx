@@ -310,10 +310,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, 
               <Sparkles className="w-10 h-10 text-primary" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-foreground">
-                Bem-vindo ao iFood Profit Buddy! 🎉
-              </h2>
-              <p className="text-muted-foreground mt-2">
+            <h2 className="text-2xl font-bold text-foreground">
+              Bem-vindo ao Gastro Gestor! 🎉
+            </h2>
+            <p className="text-muted-foreground mt-2">
                 Vamos configurar seu negócio em apenas <strong>3 passos simples</strong>.
                 Em menos de 2 minutos você estará pronto para controlar seus lucros!
               </p>
