@@ -101,7 +101,7 @@ const navCategories = [
 
 const helpItems = {
   label: 'Ajuda',
-  icon: LifeBuoy,
+  icon: HelpCircle,
   items: [
     { to: '/sobre', icon: Info, label: 'Sobre' },
     { to: '/faq', icon: HelpCircle, label: 'FAQ' },
