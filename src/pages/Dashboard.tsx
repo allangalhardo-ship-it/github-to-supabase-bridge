@@ -163,6 +163,35 @@ const Dashboard = () => {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Fetch histórico de preços de insumos (últimos 30 dias)
+  const { data: historicoPrecos } = useQuery({
+    queryKey: ['historico-precos-dashboard', usuario?.empresa_id],
+    queryFn: async () => {
+      const trintaDiasAtras = new Date();
+      trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 30);
+      
+      const { data, error } = await supabase
+        .from('historico_precos')
+        .select(`
+          insumo_id,
+          preco_anterior,
+          preco_novo,
+          variacao_percentual,
+          created_at,
+          insumos (
+            nome
+          )
+        `)
+        .gte('created_at', trintaDiasAtras.toISOString())
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!usuario?.empresa_id,
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Cálculos
   const receitaBruta = vendas?.reduce((sum, v) => sum + Number(v.valor_total), 0) || 0;
   const totalVendas = vendas?.length || 0;
@@ -573,6 +602,7 @@ const Dashboard = () => {
         taxasApps={taxasApps as any}
         config={config}
         custosFixos={custosFixos as any}
+        historicoPrecos={historicoPrecos as any}
         periodo={periodo}
         formatCurrency={formatCurrency}
       />
