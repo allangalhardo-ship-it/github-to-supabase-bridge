@@ -11,6 +11,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { DashboardInsights } from '@/components/dashboard/DashboardInsights';
 import { SmartInsights } from '@/components/dashboard/SmartInsights';
 import { BusinessCoach } from '@/components/dashboard/BusinessCoach';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Button } from '@/components/ui/button';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -20,6 +22,8 @@ import {
   AlertTriangle,
   Receipt,
   HelpCircle,
+  ChevronDown,
+  Lightbulb,
 } from 'lucide-react';
 import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysInMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -29,6 +33,7 @@ type PeriodoType = 'hoje' | 'semana' | 'mes' | 'ultimos30';
 const Dashboard = () => {
   const { usuario } = useAuth();
   const [periodo, setPeriodo] = useState<PeriodoType>('mes');
+  const [showSmartInsights, setShowSmartInsights] = useState(true);
 
   const getDateRange = () => {
     const hoje = new Date();
@@ -617,15 +622,38 @@ const Dashboard = () => {
       />
 
       {/* Smart Insights - Fase 1, 2 e 3 */}
-      <SmartInsights
-        vendas={vendas as any}
-        produtos={produtosAnalise as any}
-        taxasApps={taxasApps as any}
-        config={config}
-        custosFixos={custosFixos as any}
-        periodo={periodo}
-        formatCurrency={formatCurrency}
-      />
+      <Collapsible open={showSmartInsights} onOpenChange={setShowSmartInsights}>
+        <div className="flex items-center justify-between">
+          <CollapsibleTrigger asChild>
+            <Button 
+              variant="ghost" 
+              className="flex items-center gap-2 px-0 hover:bg-transparent text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Lightbulb className="h-4 w-4" />
+              <span className="text-sm font-medium">Smart Insights</span>
+              <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${showSmartInsights ? 'rotate-180' : ''}`} />
+            </Button>
+          </CollapsibleTrigger>
+          {!showSmartInsights && (
+            <span className="text-xs text-muted-foreground">
+              Clique para expandir análises detalhadas
+            </span>
+          )}
+        </div>
+        <CollapsibleContent className="animate-accordion-down">
+          <div className="pt-3">
+            <SmartInsights
+              vendas={vendas as any}
+              produtos={produtosAnalise as any}
+              taxasApps={taxasApps as any}
+              config={config}
+              custosFixos={custosFixos as any}
+              periodo={periodo}
+              formatCurrency={formatCurrency}
+            />
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       {/* Meta de Faturamento */}
       <Card className="animate-fade-in">
