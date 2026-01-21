@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DashboardInsights } from '@/components/dashboard/DashboardInsights';
+import { SmartInsights } from '@/components/dashboard/SmartInsights';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -144,7 +145,10 @@ const Dashboard = () => {
           categoria,
           fichas_tecnicas (
             quantidade,
+            insumo_id,
             insumos (
+              id,
+              nome,
               custo_unitario
             )
           )
@@ -567,6 +571,14 @@ const Dashboard = () => {
         impactoApps={impactoApps}
         melhorProduto={melhorProduto}
         lucroTotal={lucroEstimado}
+        formatCurrency={formatCurrency}
+      />
+
+      {/* Smart Insights - Fase 1 */}
+      <SmartInsights
+        vendas={vendas as any}
+        produtos={produtosAnalise as any}
+        taxasApps={taxasApps as any}
         formatCurrency={formatCurrency}
       />
 
