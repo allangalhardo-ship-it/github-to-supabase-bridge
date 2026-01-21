@@ -581,12 +581,14 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
               {'secondaryCount' in coachAnalysis && coachAnalysis.secondaryCount > 0 && (
                 <Popover open={insightsPopoverOpen} onOpenChange={setInsightsPopoverOpen}>
                   <PopoverTrigger asChild>
-                    <Badge 
-                      variant="secondary" 
-                      className="text-xs cursor-pointer hover:bg-secondary/80 transition-colors"
-                    >
-                      +{coachAnalysis.secondaryCount} {coachAnalysis.secondaryCount === 1 ? 'insight' : 'insights'}
-                    </Badge>
+                    <button className="focus:outline-none">
+                      <Badge 
+                        variant="secondary" 
+                        className="text-xs cursor-pointer hover:bg-secondary/80 transition-colors"
+                      >
+                        +{coachAnalysis.secondaryCount} {coachAnalysis.secondaryCount === 1 ? 'insight' : 'insights'}
+                      </Badge>
+                    </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-80 p-0" align="start">
                     <div className="p-3 border-b">
