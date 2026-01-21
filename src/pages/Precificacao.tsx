@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,6 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { format } from 'date-fns';
@@ -40,7 +41,9 @@ import {
   Smartphone,
   Store,
   ChevronRight,
-  X
+  ChevronDown,
+  X,
+  Plus
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -125,6 +128,15 @@ const Precificacao = () => {
   const [produtoHistoricoId, setProdutoHistoricoId] = useState<string | null>(null);
   const [precoManual, setPrecoManual] = useState<string>('');
   const [modoPreco, setModoPreco] = useState<'margem' | 'manual'>('margem');
+  const [formulaCardOpen, setFormulaCardOpen] = useState<boolean>(() => {
+    const stored = localStorage.getItem('precificacao-formula-open');
+    return stored !== null ? stored === 'true' : true;
+  });
+
+  // Persistir estado do card colapsável
+  useEffect(() => {
+    localStorage.setItem('precificacao-formula-open', String(formulaCardOpen));
+  }, [formulaCardOpen]);
 
   // Buscar produtos com ficha técnica
   const { data: produtos, isLoading: loadingProdutos } = useQuery({
@@ -636,89 +648,124 @@ const Precificacao = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Card Explicativo - Fórmula de Precificação - Compacto no mobile */}
-      <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10">
-        <CardHeader className="pb-2 sm:pb-3">
-          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-            <Calculator className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-            Como calculamos o preço ideal
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="bg-background/80 rounded-lg p-2 sm:p-4 mb-3 sm:mb-4 overflow-x-auto">
-            <p className="text-center font-mono text-xs sm:text-sm whitespace-nowrap">
-              <span className="font-bold text-primary">Preço</span> = Custo ÷ (1 - Margem - Imposto - CF - Taxa)
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-5 gap-1 sm:gap-3">
-            <TooltipProvider>
-              <div className="bg-background rounded-lg p-1.5 sm:p-3 text-center">
-                <Package className="h-4 w-4 sm:h-5 sm:w-5 mx-auto mb-0.5 sm:mb-1 text-orange-500" />
-                <p className="text-[9px] sm:text-xs text-muted-foreground leading-tight">Insumos</p>
-                <p className="font-semibold text-[10px] sm:text-sm">CMV</p>
+      {/* Card Explicativo - Fórmula de Precificação - Colapsável */}
+      <Collapsible open={formulaCardOpen} onOpenChange={setFormulaCardOpen}>
+        <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10">
+          <CollapsibleTrigger asChild>
+            <CardHeader className="pb-2 sm:pb-3 cursor-pointer hover:bg-primary/5 transition-colors">
+              <CardTitle className="text-base sm:text-lg flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Calculator className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                  Como calculamos o preço ideal
+                </span>
+                {formulaCardOpen ? (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform" />
+                )}
+              </CardTitle>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="pt-0">
+              <div className="bg-background/80 rounded-lg p-2 sm:p-4 mb-3 sm:mb-4 overflow-x-auto">
+                <p className="text-center font-mono text-xs sm:text-sm whitespace-nowrap">
+                  <span className="font-bold text-primary">Preço</span> = Custo ÷ (1 - Margem - Imposto - CF - Taxa)
+                </p>
               </div>
               
-              <div className="bg-background rounded-lg p-1.5 sm:p-3 text-center">
-                <Percent className="h-4 w-4 sm:h-5 sm:w-5 mx-auto mb-0.5 sm:mb-1 text-emerald-500" />
-                <p className="text-[9px] sm:text-xs text-muted-foreground leading-tight">Margem</p>
-                <p className="font-semibold text-[10px] sm:text-sm">{formatPercent(custosPercentuais.margemDesejadaPadrao)}</p>
+              <div className="grid grid-cols-5 gap-1 sm:gap-3">
+                <TooltipProvider>
+                  <div className="bg-background rounded-lg p-1.5 sm:p-3 text-center">
+                    <Package className="h-4 w-4 sm:h-5 sm:w-5 mx-auto mb-0.5 sm:mb-1 text-orange-500" />
+                    <p className="text-[9px] sm:text-xs text-muted-foreground leading-tight">Insumos</p>
+                    <p className="font-semibold text-[10px] sm:text-sm">CMV</p>
+                  </div>
+                  
+                  <div className="bg-background rounded-lg p-1.5 sm:p-3 text-center">
+                    <Percent className="h-4 w-4 sm:h-5 sm:w-5 mx-auto mb-0.5 sm:mb-1 text-emerald-500" />
+                    <p className="text-[9px] sm:text-xs text-muted-foreground leading-tight">Margem</p>
+                    <p className="font-semibold text-[10px] sm:text-sm">{formatPercent(custosPercentuais.margemDesejadaPadrao)}</p>
+                  </div>
+                  
+                  <div className="bg-background rounded-lg p-1.5 sm:p-3 text-center">
+                    <Building2 className="h-4 w-4 sm:h-5 sm:w-5 mx-auto mb-0.5 sm:mb-1 text-blue-500" />
+                    <p className="text-[9px] sm:text-xs text-muted-foreground leading-tight">C. Fixo</p>
+                    <p className="font-semibold text-[10px] sm:text-sm">{formatPercent(custosPercentuais.percCustoFixo)}</p>
+                  </div>
+                  
+                  <div className="bg-background rounded-lg p-1.5 sm:p-3 text-center">
+                    <Receipt className="h-4 w-4 sm:h-5 sm:w-5 mx-auto mb-0.5 sm:mb-1 text-red-500" />
+                    <p className="text-[9px] sm:text-xs text-muted-foreground leading-tight">Imposto</p>
+                    <p className="font-semibold text-[10px] sm:text-sm">{formatPercent(custosPercentuais.percImposto)}</p>
+                  </div>
+                  
+                  <div className="bg-background rounded-lg p-1.5 sm:p-3 text-center">
+                    <Smartphone className="h-4 w-4 sm:h-5 sm:w-5 mx-auto mb-0.5 sm:mb-1 text-purple-500" />
+                    <p className="text-[9px] sm:text-xs text-muted-foreground leading-tight">Apps</p>
+                    <p className="font-semibold text-[10px] sm:text-sm">Var.</p>
+                  </div>
+                </TooltipProvider>
               </div>
               
-              <div className="bg-background rounded-lg p-1.5 sm:p-3 text-center">
-                <Building2 className="h-4 w-4 sm:h-5 sm:w-5 mx-auto mb-0.5 sm:mb-1 text-blue-500" />
-                <p className="text-[9px] sm:text-xs text-muted-foreground leading-tight">C. Fixo</p>
-                <p className="font-semibold text-[10px] sm:text-sm">{formatPercent(custosPercentuais.percCustoFixo)}</p>
-              </div>
+              {custosPercentuais.faturamento === 0 && (
+                <Alert variant="default" className="mt-3 sm:mt-4 border-warning bg-warning/10">
+                  <AlertTriangle className="h-4 w-4 text-warning" />
+                  <AlertDescription className="text-warning text-xs sm:text-sm">
+                    Configure faturamento em <Link to="/configuracoes" className="underline font-medium">Configurações</Link> para % custo fixo.
+                  </AlertDescription>
+                </Alert>
+              )}
               
-              <div className="bg-background rounded-lg p-1.5 sm:p-3 text-center">
-                <Receipt className="h-4 w-4 sm:h-5 sm:w-5 mx-auto mb-0.5 sm:mb-1 text-red-500" />
-                <p className="text-[9px] sm:text-xs text-muted-foreground leading-tight">Imposto</p>
-                <p className="font-semibold text-[10px] sm:text-sm">{formatPercent(custosPercentuais.percImposto)}</p>
-              </div>
-              
-              <div className="bg-background rounded-lg p-1.5 sm:p-3 text-center">
-                <Smartphone className="h-4 w-4 sm:h-5 sm:w-5 mx-auto mb-0.5 sm:mb-1 text-purple-500" />
-                <p className="text-[9px] sm:text-xs text-muted-foreground leading-tight">Apps</p>
-                <p className="font-semibold text-[10px] sm:text-sm">Var.</p>
-              </div>
-            </TooltipProvider>
-          </div>
-          
-          {custosPercentuais.faturamento === 0 && (
-            <Alert variant="default" className="mt-3 sm:mt-4 border-warning bg-warning/10">
-              <AlertTriangle className="h-4 w-4 text-warning" />
-              <AlertDescription className="text-warning text-xs sm:text-sm">
-                Configure faturamento em <Link to="/configuracoes" className="underline font-medium">Configurações</Link> para % custo fixo.
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          {(!taxasApps || taxasApps.length === 0) && (
-            <Alert variant="default" className="mt-3 sm:mt-4 border-muted">
-              <Smartphone className="h-4 w-4" />
-              <AlertDescription className="text-xs sm:text-sm">
-                Cadastre apps em <Link to="/configuracoes" className="underline font-medium">Configurações</Link> para preços por plataforma.
-              </AlertDescription>
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
+              {(!taxasApps || taxasApps.length === 0) && (
+                <Alert variant="default" className="mt-3 sm:mt-4 border-muted">
+                  <Smartphone className="h-4 w-4" />
+                  <AlertDescription className="text-xs sm:text-sm">
+                    Cadastre apps em <Link to="/configuracoes" className="underline font-medium">Configurações</Link> para preços por plataforma.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
-      {/* Alerta para produtos sem ficha técnica */}
+      {/* Alerta para produtos sem ficha técnica - com botões inline */}
       {produtosSemFicha.length > 0 && (
-        <Alert variant="default" className="border-warning bg-warning/10">
-          <AlertTriangle className="h-4 w-4 text-warning" />
-          <AlertTitle className="text-warning">Produtos sem ficha técnica</AlertTitle>
-          <AlertDescription className="flex items-center justify-between">
-            <span>
-              {produtosSemFicha.length} produto(s) não aparecem aqui pois não têm ficha técnica configurada.
-            </span>
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/produtos">Configurar →</Link>
-            </Button>
-          </AlertDescription>
-        </Alert>
+        <Card className="border-warning bg-warning/10">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2 text-warning">
+              <AlertTriangle className="h-4 w-4" />
+              Produtos sem ficha técnica ({produtosSemFicha.length})
+            </CardTitle>
+            <CardDescription className="text-warning/80 text-sm">
+              Adicione ingredientes para calcular custos e preços
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+              {produtosSemFicha.slice(0, 10).map(produto => (
+                <Button
+                  key={produto.id}
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 text-xs h-7 bg-background hover:bg-primary/10 border-warning/50"
+                  asChild
+                >
+                  <Link to={`/produtos?edit=${produto.id}`}>
+                    <Plus className="h-3 w-3" />
+                    {produto.nome}
+                  </Link>
+                </Button>
+              ))}
+              {produtosSemFicha.length > 10 && (
+                <Button variant="outline" size="sm" className="text-xs h-7" asChild>
+                  <Link to="/produtos">+{produtosSemFicha.length - 10} mais</Link>
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Cards de Métricas - Compactos no mobile */}
@@ -1188,11 +1235,27 @@ const SimuladorContent: React.FC<SimuladorContentProps> = ({
 
         {modoPreco === 'margem' ? (
           <>
-            {/* Slider de margem */}
+            {/* Slider de margem com input numérico */}
             <div className="space-y-2">
-              <div className="flex justify-between text-xs sm:text-sm items-center">
+              <div className="flex justify-between text-xs sm:text-sm items-center gap-2">
                 <span>Margem líquida</span>
-                <span className="font-bold text-primary text-base sm:text-lg">{margemDesejada.toFixed(0)}%</span>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={5}
+                    max={60}
+                    step={1}
+                    value={margemDesejada.toFixed(0)}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      if (!isNaN(val) && val >= 5 && val <= 60) {
+                        setMargemDesejada(val);
+                      }
+                    }}
+                    className="w-16 h-8 text-center text-sm font-bold text-primary"
+                  />
+                  <span className="text-primary font-bold">%</span>
+                </div>
               </div>
               <Slider
                 value={[margemDesejada]}
