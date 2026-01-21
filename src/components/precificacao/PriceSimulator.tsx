@@ -363,7 +363,7 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
               <div className="flex justify-between py-1 items-center">
                 <span className="text-muted-foreground flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-orange-500" />
-                  Custo insumos
+                  CMV ({precoFinal > 0 ? formatPercent((produto.custoInsumos / precoFinal) * 100) : '0%'})
                 </span>
                 <span className="font-medium">{formatCurrency(produto.custoInsumos)}</span>
               </div>
