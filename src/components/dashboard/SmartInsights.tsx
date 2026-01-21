@@ -13,7 +13,9 @@ import {
   ChevronRight,
   TrendingUp,
   TrendingDown,
-  Percent,
+  AlertCircle,
+  DollarSign,
+  Zap,
 } from 'lucide-react';
 
 interface Venda {
@@ -50,15 +52,22 @@ interface TaxaApp {
   taxa_percentual: number;
 }
 
+interface Config {
+  margem_desejada_padrao?: number;
+  imposto_medio_sobre_vendas?: number;
+  cmv_alvo?: number;
+}
+
 interface SmartInsightsProps {
   vendas: Venda[] | null;
   produtos: Produto[] | null;
   taxasApps: TaxaApp[] | null;
+  config: Config | null;
   formatCurrency: (value: number) => string;
 }
 
 interface InsightData {
-  type: 'categoria' | 'canal' | 'promo' | 'insumo' | 'dia';
+  type: 'categoria' | 'canal' | 'promo' | 'insumo' | 'dia' | 'margem_baixa' | 'preco_canal' | 'margem_alta';
   icon: React.ElementType;
   title: string;
   value: string;
@@ -78,12 +87,181 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
   vendas,
   produtos,
   taxasApps,
+  config,
   formatCurrency,
 }) => {
   const navigate = useNavigate();
+  
+  const margemMeta = config?.margem_desejada_padrao ?? 30;
+  const impostoPercent = config?.imposto_medio_sobre_vendas ?? 10;
 
   const insights = useMemo(() => {
     const result: InsightData[] = [];
+
+    // ========== FASE 2: INSIGHTS DE PREÇO ==========
+    
+    // 6. PRODUTOS ABAIXO DA MARGEM META
+    if (produtos && produtos.length > 0) {
+      const produtosAbaixoMeta = produtos
+        .map((produto) => {
+          const custoInsumos = produto.fichas_tecnicas?.reduce((sum, ft) => {
+            return sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0));
+          }, 0) || 0;
+          
+          if (custoInsumos === 0) return null;
+          
+          const margemAtual = produto.preco_venda > 0 
+            ? ((produto.preco_venda - custoInsumos) / produto.preco_venda) * 100 
+            : 0;
+          
+          const diferenca = margemMeta - margemAtual;
+          
+          // Calcular preço sugerido para atingir a margem meta
+          // Preço = Custo / (1 - Margem%)
+          const precoSugerido = custoInsumos / (1 - margemMeta / 100);
+          const ajusteNecessario = precoSugerido - produto.preco_venda;
+          
+          return {
+            ...produto,
+            custoInsumos,
+            margemAtual,
+            diferenca,
+            precoSugerido,
+            ajusteNecessario,
+          };
+        })
+        .filter((p): p is NonNullable<typeof p> => p !== null && p.diferenca > 5); // Pelo menos 5% abaixo
+      
+      if (produtosAbaixoMeta.length > 0) {
+        const piorProduto = produtosAbaixoMeta.sort((a, b) => b.diferenca - a.diferenca)[0];
+        
+        result.push({
+          type: 'margem_baixa',
+          icon: AlertCircle,
+          title: 'Abaixo da margem meta',
+          value: `${produtosAbaixoMeta.length} produto${produtosAbaixoMeta.length > 1 ? 's' : ''}`,
+          description: `${piorProduto.nome} está com ${piorProduto.margemAtual.toFixed(0)}% (meta: ${margemMeta}%)`,
+          badge: `+${formatCurrency(piorProduto.ajusteNecessario)}`,
+          badgeVariant: 'destructive',
+          trend: 'down',
+          action: { label: 'Ajustar preços', route: '/precificacao' },
+        });
+      }
+      
+      // 7. PRODUTOS COM MARGEM EXCESSIVA (oportunidade de volume)
+      const produtosMargemAlta = produtos
+        .map((produto) => {
+          const custoInsumos = produto.fichas_tecnicas?.reduce((sum, ft) => {
+            return sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0));
+          }, 0) || 0;
+          
+          if (custoInsumos === 0) return null;
+          
+          const margemAtual = produto.preco_venda > 0 
+            ? ((produto.preco_venda - custoInsumos) / produto.preco_venda) * 100 
+            : 0;
+          
+          const excesso = margemAtual - margemMeta;
+          
+          // Contar vendas deste produto
+          const vendasProduto = vendas?.filter(v => v.produto_id === produto.id).length || 0;
+          
+          return {
+            ...produto,
+            custoInsumos,
+            margemAtual,
+            excesso,
+            vendasProduto,
+          };
+        })
+        .filter((p): p is NonNullable<typeof p> => p !== null && p.excesso > 20); // Margem 20% acima da meta
+      
+      if (produtosMargemAlta.length > 0) {
+        const melhorOportunidade = produtosMargemAlta.sort((a, b) => {
+          // Priorizar alta margem com baixas vendas
+          const scoreA = a.excesso * (a.vendasProduto === 0 ? 2 : 1 / Math.max(1, a.vendasProduto));
+          const scoreB = b.excesso * (b.vendasProduto === 0 ? 2 : 1 / Math.max(1, b.vendasProduto));
+          return scoreB - scoreA;
+        })[0];
+        
+        result.push({
+          type: 'margem_alta',
+          icon: Zap,
+          title: 'Oportunidade de volume',
+          value: melhorOportunidade.nome,
+          description: `Margem de ${melhorOportunidade.margemAtual.toFixed(0)}% permite desconto estratégico`,
+          badge: `${melhorOportunidade.excesso.toFixed(0)}% acima`,
+          badgeVariant: 'outline',
+          trend: 'neutral',
+          action: { label: 'Simular desconto', route: '/precificacao' },
+        });
+      }
+    }
+
+    // 8. SUGESTÃO DE PREÇO MÍNIMO POR CANAL
+    if (produtos && produtos.length > 0 && taxasApps && taxasApps.length > 0) {
+      // Encontrar produto com maior diferença de margem entre canais
+      const analiseCanais: Array<{
+        produto: string;
+        canalProblema: string;
+        taxaCanal: number;
+        margemCanal: number;
+        precoMinimo: number;
+        ajusteNecessario: number;
+      }> = [];
+
+      produtos.forEach((produto) => {
+        const custoInsumos = produto.fichas_tecnicas?.reduce((sum, ft) => {
+          return sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0));
+        }, 0) || 0;
+        
+        if (custoInsumos === 0 || produto.preco_venda === 0) return;
+        
+        taxasApps.forEach((taxa) => {
+          const taxaTotal = Number(taxa.taxa_percentual) + impostoPercent;
+          
+          // Margem líquida = (Preço - Custo - Taxas) / Preço
+          // Margem líquida = 1 - (Custo/Preço) - Taxa%
+          const margemNoCanal = ((produto.preco_venda - custoInsumos) / produto.preco_venda * 100) - taxaTotal;
+          
+          // Se margem no canal está abaixo da meta
+          if (margemNoCanal < margemMeta - 5) {
+            // Preço mínimo = Custo / (1 - Margem% - Taxa%)
+            const precoMinimo = custoInsumos / (1 - (margemMeta + taxaTotal) / 100);
+            const ajuste = precoMinimo - produto.preco_venda;
+            
+            if (ajuste > 0) {
+              analiseCanais.push({
+                produto: produto.nome,
+                canalProblema: taxa.nome_app,
+                taxaCanal: Number(taxa.taxa_percentual),
+                margemCanal: margemNoCanal,
+                precoMinimo,
+                ajusteNecessario: ajuste,
+              });
+            }
+          }
+        });
+      });
+
+      if (analiseCanais.length > 0) {
+        const piorCaso = analiseCanais.sort((a, b) => b.ajusteNecessario - a.ajusteNecessario)[0];
+        
+        result.push({
+          type: 'preco_canal',
+          icon: DollarSign,
+          title: 'Preço mínimo por canal',
+          value: `${piorCaso.produto} no ${piorCaso.canalProblema}`,
+          description: `Preço mínimo: ${formatCurrency(piorCaso.precoMinimo)} para manter ${margemMeta}% de margem`,
+          badge: `+${formatCurrency(piorCaso.ajusteNecessario)}`,
+          badgeVariant: 'destructive',
+          trend: 'down',
+          action: { label: 'Ajustar preço', route: '/precificacao' },
+        });
+      }
+    }
+
+    // ========== FASE 1: INSIGHTS ORIGINAIS ==========
 
     if (!vendas || vendas.length === 0) return result;
 
@@ -332,7 +510,7 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
     }
 
     return result;
-  }, [vendas, produtos, taxasApps, formatCurrency]);
+  }, [vendas, produtos, taxasApps, config, margemMeta, impostoPercent, formatCurrency]);
 
   if (insights.length === 0) {
     return null;
