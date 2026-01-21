@@ -574,12 +574,14 @@ const Dashboard = () => {
         formatCurrency={formatCurrency}
       />
 
-      {/* Smart Insights - Fase 1 e 2 */}
+      {/* Smart Insights - Fase 1, 2 e 3 */}
       <SmartInsights
         vendas={vendas as any}
         produtos={produtosAnalise as any}
         taxasApps={taxasApps as any}
         config={config}
+        custosFixos={custosFixos as any}
+        periodo={periodo}
         formatCurrency={formatCurrency}
       />
 

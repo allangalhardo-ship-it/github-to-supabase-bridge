@@ -16,6 +16,9 @@ import {
   AlertCircle,
   DollarSign,
   Zap,
+  Wallet,
+  Target,
+  Activity,
 } from 'lucide-react';
 
 interface Venda {
@@ -56,6 +59,11 @@ interface Config {
   margem_desejada_padrao?: number;
   imposto_medio_sobre_vendas?: number;
   cmv_alvo?: number;
+  faturamento_mensal?: number;
+}
+
+interface CustoFixo {
+  valor_mensal: number;
 }
 
 interface SmartInsightsProps {
@@ -63,11 +71,13 @@ interface SmartInsightsProps {
   produtos: Produto[] | null;
   taxasApps: TaxaApp[] | null;
   config: Config | null;
+  custosFixos: CustoFixo[] | null;
+  periodo: 'hoje' | 'semana' | 'mes' | 'ultimos30';
   formatCurrency: (value: number) => string;
 }
 
 interface InsightData {
-  type: 'categoria' | 'canal' | 'promo' | 'insumo' | 'dia' | 'margem_baixa' | 'preco_canal' | 'margem_alta';
+  type: 'categoria' | 'canal' | 'promo' | 'insumo' | 'dia' | 'margem_baixa' | 'preco_canal' | 'margem_alta' | 'ticket_canal' | 'tendencia' | 'ritmo_meta';
   icon: React.ElementType;
   title: string;
   value: string;
@@ -88,15 +98,170 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
   produtos,
   taxasApps,
   config,
+  custosFixos,
+  periodo,
   formatCurrency,
 }) => {
   const navigate = useNavigate();
   
   const margemMeta = config?.margem_desejada_padrao ?? 30;
   const impostoPercent = config?.imposto_medio_sobre_vendas ?? 10;
+  const custoFixoMensal = custosFixos?.reduce((sum, c) => sum + Number(c.valor_mensal), 0) || 0;
 
   const insights = useMemo(() => {
     const result: InsightData[] = [];
+
+    // ========== FASE 3: INSIGHTS DE COMPORTAMENTO ==========
+    
+    // 9. TICKET MÉDIO POR CANAL (diferença significativa)
+    if (vendas && vendas.length > 0) {
+      const ticketPorCanal: Record<string, { total: number; quantidade: number }> = {};
+      
+      vendas.forEach((venda) => {
+        const canal = venda.canal || 'Balcão';
+        if (!ticketPorCanal[canal]) {
+          ticketPorCanal[canal] = { total: 0, quantidade: 0 };
+        }
+        ticketPorCanal[canal].total += Number(venda.valor_total);
+        ticketPorCanal[canal].quantidade += 1;
+      });
+
+      const canaisTicket = Object.entries(ticketPorCanal)
+        .filter(([_, d]) => d.quantidade >= 2) // Pelo menos 2 vendas
+        .map(([canal, dados]) => ({
+          canal,
+          ticketMedio: dados.total / dados.quantidade,
+          quantidade: dados.quantidade,
+        }))
+        .sort((a, b) => b.ticketMedio - a.ticketMedio);
+
+      if (canaisTicket.length >= 2) {
+        const melhor = canaisTicket[0];
+        const pior = canaisTicket[canaisTicket.length - 1];
+        const diferenca = melhor.ticketMedio - pior.ticketMedio;
+        const diferencaPercent = pior.ticketMedio > 0 ? (diferenca / pior.ticketMedio) * 100 : 0;
+
+        if (diferencaPercent > 20) { // Diferença significativa (>20%)
+          result.push({
+            type: 'ticket_canal',
+            icon: Wallet,
+            title: 'Ticket médio por canal',
+            value: `${melhor.canal}: ${formatCurrency(melhor.ticketMedio)}`,
+            description: `${pior.canal} tem ticket ${diferencaPercent.toFixed(0)}% menor (${formatCurrency(pior.ticketMedio)})`,
+            badge: `+${formatCurrency(diferenca)}`,
+            badgeVariant: 'default',
+            trend: 'up',
+            action: { label: 'Ver vendas', route: '/vendas' },
+          });
+        }
+      }
+
+      // 10. TENDÊNCIA SEMANAL (comparando semanas)
+      const hoje = new Date();
+      const inicioSemanaAtual = new Date(hoje);
+      inicioSemanaAtual.setDate(hoje.getDate() - hoje.getDay());
+      
+      const inicioSemanaAnterior = new Date(inicioSemanaAtual);
+      inicioSemanaAnterior.setDate(inicioSemanaAnterior.getDate() - 7);
+
+      let receitaSemanaAtual = 0;
+      let receitaSemanaAnterior = 0;
+      let vendasSemanaAtual = 0;
+      let vendasSemanaAnterior = 0;
+
+      vendas.forEach((venda) => {
+        const dataVenda = new Date(venda.data_venda + 'T12:00:00');
+        
+        if (dataVenda >= inicioSemanaAtual) {
+          receitaSemanaAtual += Number(venda.valor_total);
+          vendasSemanaAtual += 1;
+        } else if (dataVenda >= inicioSemanaAnterior && dataVenda < inicioSemanaAtual) {
+          receitaSemanaAnterior += Number(venda.valor_total);
+          vendasSemanaAnterior += 1;
+        }
+      });
+
+      if (receitaSemanaAnterior > 0 && vendasSemanaAnterior >= 3) {
+        const variacao = ((receitaSemanaAtual - receitaSemanaAnterior) / receitaSemanaAnterior) * 100;
+        const isPositivo = variacao > 0;
+
+        if (Math.abs(variacao) > 10) { // Variação significativa (>10%)
+          result.push({
+            type: 'tendencia',
+            icon: Activity,
+            title: 'Tendência semanal',
+            value: `${isPositivo ? '+' : ''}${variacao.toFixed(0)}% vs semana anterior`,
+            description: `Esta semana: ${formatCurrency(receitaSemanaAtual)} (${vendasSemanaAtual} vendas)`,
+            badge: isPositivo ? 'Em alta' : 'Em queda',
+            badgeVariant: isPositivo ? 'default' : 'destructive',
+            trend: isPositivo ? 'up' : 'down',
+            action: { label: 'Ver relatórios', route: '/relatorios' },
+          });
+        }
+      }
+
+      // 11. RITMO PARA BATER META
+      if (custoFixoMensal > 0 && (periodo === 'mes' || periodo === 'ultimos30')) {
+        const metaMensal = custoFixoMensal / 0.20; // Meta para CF = 20% do faturamento
+        const receitaAtual = vendas.reduce((sum, v) => sum + Number(v.valor_total), 0);
+        
+        const diasNoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate();
+        const diaAtual = hoje.getDate();
+        const diasRestantes = diasNoMes - diaAtual;
+        
+        const progressoEsperado = (diaAtual / diasNoMes) * 100;
+        const progressoReal = (receitaAtual / metaMensal) * 100;
+        
+        const faltaParaMeta = metaMensal - receitaAtual;
+        const mediaDiariaAtual = diaAtual > 0 ? receitaAtual / diaAtual : 0;
+        const mediaNecessaria = diasRestantes > 0 ? faltaParaMeta / diasRestantes : 0;
+        
+        // Projeção de quando atingirá a meta
+        const diasParaMeta = mediaDiariaAtual > 0 ? Math.ceil(faltaParaMeta / mediaDiariaAtual) : Infinity;
+        
+        if (faltaParaMeta > 0) {
+          const atrasado = progressoReal < progressoEsperado - 10; // Mais de 10% atrasado
+          const adiantado = progressoReal > progressoEsperado + 10; // Mais de 10% adiantado
+          
+          if (atrasado) {
+            result.push({
+              type: 'ritmo_meta',
+              icon: Target,
+              title: 'Ritmo para meta',
+              value: `Necessário ${formatCurrency(mediaNecessaria)}/dia`,
+              description: `Faltam ${formatCurrency(faltaParaMeta)} em ${diasRestantes} dias (atual: ${formatCurrency(mediaDiariaAtual)}/dia)`,
+              badge: 'Acelerar',
+              badgeVariant: 'destructive',
+              trend: 'down',
+              action: { label: 'Ver meta', route: '/dashboard' },
+            });
+          } else if (adiantado) {
+            result.push({
+              type: 'ritmo_meta',
+              icon: Target,
+              title: 'Ritmo para meta',
+              value: `Meta em ~${diasParaMeta} dias`,
+              description: `Média de ${formatCurrency(mediaDiariaAtual)}/dia está acima do necessário`,
+              badge: 'No ritmo!',
+              badgeVariant: 'default',
+              trend: 'up',
+              action: { label: 'Ver meta', route: '/dashboard' },
+            });
+          }
+        } else {
+          result.push({
+            type: 'ritmo_meta',
+            icon: Target,
+            title: 'Meta atingida! 🎉',
+            value: formatCurrency(receitaAtual),
+            description: `${formatCurrency(Math.abs(faltaParaMeta))} acima da meta de ${formatCurrency(metaMensal)}`,
+            badge: 'Parabéns!',
+            badgeVariant: 'default',
+            trend: 'up',
+          });
+        }
+      }
+    }
 
     // ========== FASE 2: INSIGHTS DE PREÇO ==========
     
@@ -510,7 +675,7 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
     }
 
     return result;
-  }, [vendas, produtos, taxasApps, config, margemMeta, impostoPercent, formatCurrency]);
+  }, [vendas, produtos, taxasApps, config, custosFixos, periodo, margemMeta, impostoPercent, custoFixoMensal, formatCurrency]);
 
   if (insights.length === 0) {
     return null;
