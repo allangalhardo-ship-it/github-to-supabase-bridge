@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import FichaTecnicaDialog from "./FichaTecnicaDialog";
+import MissingFichaBadge from "./MissingFichaBadge";
 import {
   Tooltip,
   TooltipContent,
@@ -158,11 +159,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <h3 className="font-medium text-sm leading-tight line-clamp-2">{produto.nome}</h3>
-                  {produto.categoria && (
-                    <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 mt-0.5">
-                      {produto.categoria}
-                    </Badge>
-                  )}
+                  <div className="flex flex-wrap gap-1 mt-0.5">
+                    {produto.categoria && (
+                      <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
+                        {produto.categoria}
+                      </Badge>
+                    )}
+                    {!temFichaTecnica && <MissingFichaBadge />}
+                  </div>
                 </div>
                 <div className="text-right shrink-0">
                   <p className="text-[10px] text-muted-foreground">Preço</p>
@@ -170,24 +174,30 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 </div>
               </div>
 
-              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
-                <span className={`${lucroTextClass} font-medium`}>
-                  Lucro: <span className="font-bold">{formatCurrency(lucro)}</span>
-                </span>
-                <span className={`${margemTextClass} font-medium`}>
-                  Margem: <span className="font-bold">{margemBruta.toFixed(0)}%</span>
-                </span>
-                {temFichaTecnica && precoSugeridoValido && (
-                  <span className={precoAbaixoSugerido ? "text-warning" : "text-muted-foreground"}>
-                    Sugerido: <span className="font-medium">{formatCurrency(precoSugerido)}</span>
+              {temFichaTecnica ? (
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                  <span className={`${lucroTextClass} font-medium`}>
+                    Lucro: <span className="font-bold">{formatCurrency(lucro)}</span>
                   </span>
-                )}
-                {produto.rendimento_padrao && produto.rendimento_padrao > 0 && (
-                  <span className="text-muted-foreground">
-                    Rende: <span className="font-medium text-foreground">{produto.rendimento_padrao}</span>
+                  <span className={`${margemTextClass} font-medium`}>
+                    Margem: <span className="font-bold">{margemBruta.toFixed(0)}%</span>
                   </span>
-                )}
-              </div>
+                  {precoSugeridoValido && (
+                    <span className={precoAbaixoSugerido ? "text-warning" : "text-muted-foreground"}>
+                      Sugerido: <span className="font-medium">{formatCurrency(precoSugerido)}</span>
+                    </span>
+                  )}
+                  {produto.rendimento_padrao && produto.rendimento_padrao > 0 && (
+                    <span className="text-muted-foreground">
+                      Rende: <span className="font-medium text-foreground">{produto.rendimento_padrao}</span>
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-muted-foreground italic">
+                  Adicione ingredientes para ver custos e lucros
+                </p>
+              )}
             </div>
           </div>
 
@@ -254,63 +264,78 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </div>
 
           <div className="flex-1 min-w-0">
-            {/* Nome e categoria - sem botões ao lado */}
+            {/* Nome e categoria */}
             <div className="mb-1">
               <h3 className="font-medium text-sm leading-tight line-clamp-2">{produto.nome}</h3>
-              {produto.categoria && (
-                <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 mt-0.5">
-                  {produto.categoria}
-                </Badge>
-              )}
+              <div className="flex flex-wrap gap-1 mt-0.5">
+                {produto.categoria && (
+                  <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
+                    {produto.categoria}
+                  </Badge>
+                )}
+                {!temFichaTecnica && <MissingFichaBadge />}
+              </div>
             </div>
 
             {/* KPIs */}
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs">
-              <div>
-                <span className="text-muted-foreground">Preço </span>
-                <span className="font-bold text-sm">{formatCurrency(precoVenda)}</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Lucro </span>
-                <span className={`font-bold text-sm ${lucroTextClass}`}>{formatCurrency(lucro)}</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Margem </span>
-                <span className={`font-bold text-sm ${margemTextClass}`}>{margemBruta.toFixed(1)}%</span>
-              </div>
-              {temFichaTecnica && precoSugeridoValido && (
-                <div className="flex items-center gap-1.5">
-                  <span className="text-muted-foreground">Sugerido </span>
-                  <span className={`font-bold text-sm ${precoAbaixoSugerido ? "text-warning" : "text-success"}`}>
-                    {formatCurrency(precoSugerido)}
-                  </span>
-                  {precoAbaixoSugerido && onApplyPrice && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="h-5 px-1.5 text-[10px] gap-0.5 text-primary border-primary hover:bg-primary/10"
-                          onClick={() => onApplyPrice(produto.id, precoSugerido)}
-                          disabled={isApplyingPrice}
-                        >
-                          <Zap className="h-3 w-3" />
-                          Aplicar
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Aplicar preço sugerido de {formatCurrency(precoSugerido)}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
+            {temFichaTecnica ? (
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs">
+                <div>
+                  <span className="text-muted-foreground">Preço </span>
+                  <span className="font-bold text-sm">{formatCurrency(precoVenda)}</span>
                 </div>
-              )}
-              {produto.rendimento_padrao && produto.rendimento_padrao > 0 && (
-                <div className="text-muted-foreground">
-                  Rende <span className="font-medium text-foreground">{produto.rendimento_padrao}</span>
+                <div>
+                  <span className="text-muted-foreground">Lucro </span>
+                  <span className={`font-bold text-sm ${lucroTextClass}`}>{formatCurrency(lucro)}</span>
                 </div>
-              )}
-            </div>
+                <div>
+                  <span className="text-muted-foreground">Margem </span>
+                  <span className={`font-bold text-sm ${margemTextClass}`}>{margemBruta.toFixed(1)}%</span>
+                </div>
+                {precoSugeridoValido && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-muted-foreground">Sugerido </span>
+                    <span className={`font-bold text-sm ${precoAbaixoSugerido ? "text-warning" : "text-success"}`}>
+                      {formatCurrency(precoSugerido)}
+                    </span>
+                    {precoAbaixoSugerido && onApplyPrice && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-5 px-1.5 text-[10px] gap-0.5 text-primary border-primary hover:bg-primary/10"
+                            onClick={() => onApplyPrice(produto.id, precoSugerido)}
+                            disabled={isApplyingPrice}
+                          >
+                            <Zap className="h-3 w-3" />
+                            Aplicar
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Aplicar preço sugerido de {formatCurrency(precoSugerido)}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                )}
+                {produto.rendimento_padrao && produto.rendimento_padrao > 0 && (
+                  <div className="text-muted-foreground">
+                    Rende <span className="font-medium text-foreground">{produto.rendimento_padrao}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-baseline gap-3 text-xs">
+                <div>
+                  <span className="text-muted-foreground">Preço </span>
+                  <span className="font-bold text-sm">{formatCurrency(precoVenda)}</span>
+                </div>
+                <p className="text-muted-foreground italic">
+                  Adicione ingredientes para ver custos
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

@@ -17,6 +17,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import ProductCard from '@/components/produtos/ProductCard';
 import ImportProdutosDialog from '@/components/import/ImportProdutosDialog';
 import ImportFichaTecnicaDialog from '@/components/import/ImportFichaTecnicaDialog';
+import CategorySelect from '@/components/produtos/CategorySelect';
 
 interface Produto {
   id: string;
@@ -443,11 +444,11 @@ const Produtos = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="categoria">Categoria</Label>
-                <Input
-                  id="categoria"
+                <CategorySelect
                   value={formData.categoria}
-                  onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
-                  placeholder="Ex: Lanches"
+                  onChange={(value) => setFormData({ ...formData, categoria: value })}
+                  categories={categorias}
+                  placeholder="Selecione ou crie uma categoria"
                 />
               </div>
               <div className="space-y-2">

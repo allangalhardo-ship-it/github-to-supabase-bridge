@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, AlertTriangle, ShoppingBasket, ShoppingCart, Upload, TrendingUp } from 'lucide-react';
+import { Plus, Pencil, Trash2, AlertTriangle, ShoppingBasket, ShoppingCart, Upload, TrendingUp, Search, X } from 'lucide-react';
 import ListaCompras from '@/components/insumos/ListaCompras';
 import ImportInsumosDialog from '@/components/import/ImportInsumosDialog';
 import HistoricoPrecos from '@/components/insumos/HistoricoPrecos';
@@ -53,6 +53,7 @@ const Insumos = () => {
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [historicoDialogOpen, setHistoricoDialogOpen] = useState(false);
   const [historicoInsumo, setHistoricoInsumo] = useState<{ id: string; nome: string; custo: number } | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     nome: '',
     unidade_medida: 'kg',
@@ -388,7 +389,7 @@ const Insumos = () => {
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="unidade_medida">Unidade de Produção</Label>
+                  <Label htmlFor="unidade_medida">Como usa nas receitas?</Label>
                   <Select
                     value={formData.unidade_medida}
                     onValueChange={(value) => setFormData({ ...formData, unidade_medida: value })}
@@ -405,12 +406,12 @@ const Insumos = () => {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Unidade usada nas receitas (ex: gramas, ml)
+                    Ex: "100g de farinha" → escolha Grama
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="estoque_minimo">Estoque Mínimo</Label>
+                  <Label htmlFor="estoque_minimo">Avise quando faltar</Label>
                   <Input
                     id="estoque_minimo"
                     type="number"
@@ -418,10 +419,10 @@ const Insumos = () => {
                     min="0"
                     value={formData.estoque_minimo}
                     onChange={(e) => setFormData({ ...formData, estoque_minimo: e.target.value })}
-                    placeholder="0"
+                    placeholder="Ex: 5"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Alerta quando estoque baixar
+                    Você receberá alerta quando chegar nesse nível
                   </p>
                 </div>
               </div>
@@ -493,7 +494,43 @@ const Insumos = () => {
           </TabsList>
 
           <TabsContent value="todos">
-            {renderTable(insumos)}
+            {/* Busca de insumos */}
+            <div className="mb-4">
+              <div className="relative max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar insumo..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+                {searchTerm && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                    onClick={() => setSearchTerm('')}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+            {(() => {
+              const filteredInsumos = insumos.filter(i => 
+                i.nome.toLowerCase().includes(searchTerm.toLowerCase())
+              );
+              return filteredInsumos.length > 0 ? (
+                renderTable(filteredInsumos)
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>Nenhum insumo encontrado para "{searchTerm}"</p>
+                  <Button variant="link" onClick={() => setSearchTerm('')}>
+                    Limpar busca
+                  </Button>
+                </div>
+              );
+            })()}
           </TabsContent>
 
           <TabsContent value="lista-compras">
