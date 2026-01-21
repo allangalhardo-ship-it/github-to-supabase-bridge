@@ -11,6 +11,7 @@ import {
   AlertCircle,
   CheckCircle,
   Target,
+  Flame,
 } from 'lucide-react';
 
 interface Venda {
@@ -58,12 +59,24 @@ interface CustoFixo {
   valor_mensal: number;
 }
 
+interface HistoricoPreco {
+  insumo_id: string;
+  preco_anterior: number | null;
+  preco_novo: number;
+  variacao_percentual: number | null;
+  created_at: string;
+  insumos?: {
+    nome: string;
+  };
+}
+
 interface BusinessCoachProps {
   vendas: Venda[] | null;
   produtos: Produto[] | null;
   taxasApps: TaxaApp[] | null;
   config: Config | null;
   custosFixos: CustoFixo[] | null;
+  historicoPrecos: HistoricoPreco[] | null;
   periodo: 'hoje' | 'semana' | 'mes' | 'ultimos30';
   formatCurrency: (value: number) => string;
 }
@@ -87,6 +100,7 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
   taxasApps,
   config,
   custosFixos,
+  historicoPrecos,
   periodo,
   formatCurrency,
 }) => {
@@ -314,6 +328,61 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
         });
       }
     }
+    
+    // 6. INSUMOS COM CUSTO SUBINDO (histórico de preços)
+    if (historicoPrecos && historicoPrecos.length > 0) {
+      // Agrupar por insumo e calcular variação total recente
+      const variacaoPorInsumo: Record<string, { 
+        nome: string; 
+        variacaoTotal: number; 
+        alteracoes: number;
+        ultimoPreco: number;
+      }> = {};
+      
+      // Filtrar apenas últimos 30 dias
+      const trintaDiasAtras = new Date();
+      trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 30);
+      
+      historicoPrecos
+        .filter(h => new Date(h.created_at) >= trintaDiasAtras && h.variacao_percentual && h.variacao_percentual > 0)
+        .forEach((h) => {
+          const insumoId = h.insumo_id;
+          const nomeInsumo = h.insumos?.nome || 'Insumo';
+          
+          if (!variacaoPorInsumo[insumoId]) {
+            variacaoPorInsumo[insumoId] = { 
+              nome: nomeInsumo, 
+              variacaoTotal: 0, 
+              alteracoes: 0,
+              ultimoPreco: h.preco_novo,
+            };
+          }
+          
+          variacaoPorInsumo[insumoId].variacaoTotal += Number(h.variacao_percentual);
+          variacaoPorInsumo[insumoId].alteracoes += 1;
+          variacaoPorInsumo[insumoId].ultimoPreco = h.preco_novo;
+        });
+      
+      // Encontrar insumo com maior aumento
+      const insumosSubindo = Object.entries(variacaoPorInsumo)
+        .filter(([_, dados]) => dados.variacaoTotal >= 15) // Aumento de 15% ou mais
+        .sort((a, b) => b[1].variacaoTotal - a[1].variacaoTotal);
+      
+      if (insumosSubindo.length > 0) {
+        const [_, piorInsumo] = insumosSubindo[0];
+        const totalInsumosSubindo = insumosSubindo.length;
+        
+        messages.push({
+          status: 'alert',
+          headline: `🔥 ${piorInsumo.nome} subiu ${piorInsumo.variacaoTotal.toFixed(0)}%`,
+          detail: totalInsumosSubindo > 1 
+            ? `Mais ${totalInsumosSubindo - 1} insumo${totalInsumosSubindo > 2 ? 's' : ''} também subiram. Revise preços dos produtos afetados.`
+            : `O custo atual é ${formatCurrency(piorInsumo.ultimoPreco)}. Considere reajustar os produtos que usam este insumo.`,
+          action: { label: 'Ver insumos', route: '/insumos' },
+          priority: 8,
+        });
+      }
+    }
 
     // Ordenar por prioridade e pegar a mensagem mais importante
     if (messages.length === 0) {
@@ -337,7 +406,7 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
     }
     
     return main;
-  }, [vendas, produtos, taxasApps, config, custosFixos, periodo, margemMeta, custoFixoMensal, formatCurrency]);
+  }, [vendas, produtos, taxasApps, config, custosFixos, historicoPrecos, periodo, margemMeta, custoFixoMensal, formatCurrency]);
 
   const getStatusStyles = (status: CoachStatus) => {
     switch (status) {
