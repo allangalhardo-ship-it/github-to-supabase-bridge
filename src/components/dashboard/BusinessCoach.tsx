@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   GraduationCap,
@@ -127,6 +128,7 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
   const navigate = useNavigate();
   const { usuario } = useAuth();
   const queryClient = useQueryClient();
+  const [insightsPopoverOpen, setInsightsPopoverOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [lastSavedHeadline, setLastSavedHeadline] = useState<string | null>(null);
   
@@ -426,6 +428,7 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
       return {
         ...main,
         secondaryCount: outros.length,
+        secondaryMessages: outros,
       };
     }
     
@@ -576,9 +579,61 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
                 Coach do Negócio
               </Badge>
               {'secondaryCount' in coachAnalysis && coachAnalysis.secondaryCount > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  +{coachAnalysis.secondaryCount} {coachAnalysis.secondaryCount === 1 ? 'insight' : 'insights'}
-                </Badge>
+                <Popover open={insightsPopoverOpen} onOpenChange={setInsightsPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Badge 
+                      variant="secondary" 
+                      className="text-xs cursor-pointer hover:bg-secondary/80 transition-colors"
+                    >
+                      +{coachAnalysis.secondaryCount} {coachAnalysis.secondaryCount === 1 ? 'insight' : 'insights'}
+                    </Badge>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-0" align="start">
+                    <div className="p-3 border-b">
+                      <h4 className="font-medium text-sm">Outros Insights</h4>
+                      <p className="text-xs text-muted-foreground">Clique para navegar</p>
+                    </div>
+                    <ScrollArea className="max-h-64">
+                      <div className="p-2 space-y-2">
+                        {'secondaryMessages' in coachAnalysis && (coachAnalysis.secondaryMessages as CoachMessage[]).map((msg, idx) => (
+                          <div
+                            key={idx}
+                            className={`p-3 rounded-lg border cursor-pointer transition-colors hover:bg-muted/50 ${
+                              msg.status === 'success' ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' :
+                              msg.status === 'warning' ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800' :
+                              msg.status === 'alert' ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800' :
+                              'bg-muted/30 border-border'
+                            }`}
+                            onClick={() => {
+                              if (msg.action) {
+                                navigate(msg.action.route);
+                                setInsightsPopoverOpen(false);
+                              }
+                            }}
+                          >
+                            <div className="flex items-start gap-2">
+                              {getStatusIcon(msg.status)}
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-sm leading-tight">
+                                  {msg.headline}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                  {msg.detail}
+                                </p>
+                                {msg.action && (
+                                  <p className="text-xs text-primary mt-1 flex items-center">
+                                    {msg.action.label}
+                                    <ChevronRight className="h-3 w-3 ml-0.5" />
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </PopoverContent>
+                </Popover>
               )}
               
               {/* Botão de Histórico */}
