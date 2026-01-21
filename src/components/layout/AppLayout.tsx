@@ -34,27 +34,59 @@ import {
   Tags,
   BarChart3,
   Bot,
+  ChevronDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Crown, Sparkles } from 'lucide-react';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
-const navItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/insumos', icon: Carrot, label: 'Insumos' },
-  { to: '/produtos', icon: UtensilsCrossed, label: 'Produtos' },
-  { to: '/precificacao', icon: Tags, label: 'Precificação' },
-  { to: '/receitas', icon: ChefHat, label: 'Receitas' },
-  { to: '/estoque', icon: PackageOpen, label: 'Estoque' },
-  { to: '/producao', icon: Factory, label: 'Produção' },
-  { to: '/compras', icon: FileSpreadsheet, label: 'Compras' },
-  { to: '/movimentacoes', icon: ShoppingCart, label: 'Vendas' },
-  { to: '/relatorios', icon: BarChart3, label: 'Relatórios' },
-  { to: '/assistente', icon: Bot, label: 'Assistente IA' },
-  { to: '/caixa', icon: Wallet, label: 'Caixa' },
-  { to: '/clientes', icon: Users, label: 'Clientes' },
-  { to: '/custos-fixos', icon: Calculator, label: 'Custos Fixos' },
-  { to: '/configuracoes', icon: SlidersHorizontal, label: 'Configurações' },
-  { to: '/meus-dados', icon: Users, label: 'Meus Dados' },
+// Navigation structure with categories
+const navCategories = [
+  {
+    label: 'Início',
+    items: [
+      { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    ],
+  },
+  {
+    label: 'Catálogo',
+    items: [
+      { to: '/insumos', icon: Carrot, label: 'Insumos' },
+      { to: '/produtos', icon: UtensilsCrossed, label: 'Produtos' },
+      { to: '/receitas', icon: ChefHat, label: 'Receitas' },
+      { to: '/precificacao', icon: Tags, label: 'Precificação' },
+    ],
+  },
+  {
+    label: 'Operações',
+    items: [
+      { to: '/estoque', icon: PackageOpen, label: 'Estoque' },
+      { to: '/producao', icon: Factory, label: 'Produção' },
+      { to: '/compras', icon: FileSpreadsheet, label: 'Compras' },
+      { to: '/movimentacoes', icon: ShoppingCart, label: 'Vendas' },
+    ],
+  },
+  {
+    label: 'Análises',
+    items: [
+      { to: '/relatorios', icon: BarChart3, label: 'Relatórios' },
+      { to: '/caixa', icon: Wallet, label: 'Caixa' },
+      { to: '/assistente', icon: Bot, label: 'Assistente IA' },
+    ],
+  },
+  {
+    label: 'Configurar',
+    items: [
+      { to: '/clientes', icon: Users, label: 'Clientes' },
+      { to: '/custos-fixos', icon: Calculator, label: 'Custos Fixos' },
+      { to: '/configuracoes', icon: SlidersHorizontal, label: 'Configurações' },
+      { to: '/meus-dados', icon: Users, label: 'Meus Dados' },
+    ],
+  },
 ];
 
 const helpItems = [
@@ -67,15 +99,25 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
   const { usuario, signOut } = useAuth();
   const { subscription } = useSubscription();
   const navigate = useNavigate();
+  const location = window.location.pathname;
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/login');
   };
 
-  const allNavItems = isAdmin 
-    ? [...navItems, { to: '/admin', icon: Shield, label: 'Admin' }]
-    : navItems;
+  // Add admin item to the last category if user is admin
+  const allCategories = isAdmin 
+    ? navCategories.map((cat, idx) => 
+        idx === navCategories.length - 1 
+          ? { ...cat, items: [...cat.items, { to: '/admin', icon: Shield, label: 'Admin' }] }
+          : cat
+      )
+    : navCategories;
+
+  // Check if a category contains the active route
+  const isCategoryActive = (items: typeof navCategories[0]['items']) => 
+    items.some(item => location === item.to);
 
   const getPlanBadge = () => {
     if (subscription?.plan === 'pro') {
@@ -131,54 +173,93 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
         </div>
       </div>
 
-      {/* Navigation */}
+      {/* Navigation with collapsible categories */}
       <ScrollArea className="flex-1 py-4">
-        <nav className="px-3 space-y-1">
-          {allNavItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              onClick={onNavigate}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-sidebar-primary text-sidebar-primary-foreground'
-                    : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                )
-              }
-            >
-              <item.icon className="h-5 w-5" />
-              {item.label}
-            </NavLink>
-          ))}
+        <nav className="px-3 space-y-2">
+          {allCategories.map((category) => {
+            const isActive = isCategoryActive(category.items);
+            // Dashboard (Início) doesn't need collapsible
+            if (category.items.length === 1) {
+              const item = category.items[0];
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  onClick={onNavigate}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                        : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                    )
+                  }
+                >
+                  <item.icon className="h-5 w-5" />
+                  {item.label}
+                </NavLink>
+              );
+            }
+
+            return (
+              <Collapsible key={category.label} defaultOpen={isActive}>
+                <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-sidebar-foreground/60 uppercase tracking-wider hover:text-sidebar-foreground/80 transition-colors">
+                  {category.label}
+                  <ChevronDown className="h-4 w-4 transition-transform duration-200 [&[data-state=open]>svg]:rotate-180" />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-1 mt-1">
+                  {category.items.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      onClick={onNavigate}
+                      className={({ isActive }) =>
+                        cn(
+                          'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ml-2',
+                          isActive
+                            ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                            : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                        )
+                      }
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </CollapsibleContent>
+              </Collapsible>
+            );
+          })}
         </nav>
 
         {/* Seção de Ajuda */}
         <div className="px-3 mt-4 pt-4 border-t border-sidebar-border/50">
-          <p className="px-3 text-xs font-medium text-sidebar-foreground/50 uppercase tracking-wider mb-2">
-            Ajuda
-          </p>
-          <nav className="space-y-1">
-            {helpItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                onClick={onNavigate}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                    isActive
-                      ? 'bg-sidebar-primary text-sidebar-primary-foreground'
-                      : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                  )
-                }
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
+          <Collapsible>
+            <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-sidebar-foreground/60 uppercase tracking-wider hover:text-sidebar-foreground/80 transition-colors">
+              Ajuda
+              <ChevronDown className="h-4 w-4 transition-transform duration-200" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-1 mt-1">
+              {helpItems.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  onClick={onNavigate}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ml-2',
+                      isActive
+                        ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                        : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                    )
+                  }
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </NavLink>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       </ScrollArea>
 
