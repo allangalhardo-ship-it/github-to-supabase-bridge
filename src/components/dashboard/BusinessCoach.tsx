@@ -590,50 +590,48 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
                       </Badge>
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-80 p-0" align="start">
-                    <div className="p-3 border-b">
+                  <PopoverContent className="w-80 p-0 z-50" align="start">
+                    <div className="p-3 border-b bg-background">
                       <h4 className="font-medium text-sm">Outros Insights</h4>
                       <p className="text-xs text-muted-foreground">Clique para navegar</p>
                     </div>
-                    <ScrollArea className="max-h-64">
-                      <div className="p-2 space-y-2">
-                        {'secondaryMessages' in coachAnalysis && (coachAnalysis.secondaryMessages as CoachMessage[]).map((msg, idx) => (
-                          <div
-                            key={idx}
-                            className={`p-3 rounded-lg border cursor-pointer transition-colors hover:bg-muted/50 ${
-                              msg.status === 'success' ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' :
-                              msg.status === 'warning' ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800' :
-                              msg.status === 'alert' ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800' :
-                              'bg-muted/30 border-border'
-                            }`}
-                            onClick={() => {
-                              if (msg.action) {
-                                navigate(msg.action.route);
-                                setInsightsPopoverOpen(false);
-                              }
-                            }}
-                          >
-                            <div className="flex items-start gap-2">
-                              {getStatusIcon(msg.status)}
-                              <div className="min-w-0 flex-1">
-                                <p className="font-medium text-sm leading-tight">
-                                  {msg.headline}
+                    <div className="max-h-64 overflow-y-auto p-2 space-y-2">
+                      {'secondaryMessages' in coachAnalysis && (coachAnalysis.secondaryMessages as CoachMessage[]).map((msg, idx) => (
+                        <div
+                          key={idx}
+                          className={`p-3 rounded-lg border cursor-pointer transition-colors hover:bg-muted/50 ${
+                            msg.status === 'success' ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' :
+                            msg.status === 'warning' ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800' :
+                            msg.status === 'alert' ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800' :
+                            'bg-muted/30 border-border'
+                          }`}
+                          onClick={() => {
+                            if (msg.action) {
+                              navigate(msg.action.route);
+                              setInsightsPopoverOpen(false);
+                            }
+                          }}
+                        >
+                          <div className="flex items-start gap-2">
+                            {getStatusIcon(msg.status)}
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-sm leading-tight">
+                                {msg.headline}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                {msg.detail}
+                              </p>
+                              {msg.action && (
+                                <p className="text-xs text-primary mt-1 flex items-center">
+                                  {msg.action.label}
+                                  <ChevronRight className="h-3 w-3 ml-0.5" />
                                 </p>
-                                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                                  {msg.detail}
-                                </p>
-                                {msg.action && (
-                                  <p className="text-xs text-primary mt-1 flex items-center">
-                                    {msg.action.label}
-                                    <ChevronRight className="h-3 w-3 ml-0.5" />
-                                  </p>
-                                )}
-                              </div>
+                              )}
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
+                        </div>
+                      ))}
+                    </div>
                   </PopoverContent>
                 </Popover>
               )}
