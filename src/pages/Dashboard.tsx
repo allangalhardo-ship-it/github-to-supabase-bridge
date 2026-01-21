@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DashboardInsights } from '@/components/dashboard/DashboardInsights';
 import { SmartInsights } from '@/components/dashboard/SmartInsights';
+import { BusinessCoach } from '@/components/dashboard/BusinessCoach';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -564,6 +565,17 @@ const Dashboard = () => {
           </CardContent>
         </StaggeredCard>
       </AnimatedCardContainer>
+
+      {/* Business Coach - Resumo Inteligente */}
+      <BusinessCoach
+        vendas={vendas as any}
+        produtos={produtosAnalise as any}
+        taxasApps={taxasApps as any}
+        config={config}
+        custosFixos={custosFixos as any}
+        periodo={periodo}
+        formatCurrency={formatCurrency}
+      />
 
       {/* Insights Acionáveis */}
       <DashboardInsights
