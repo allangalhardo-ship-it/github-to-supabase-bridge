@@ -684,6 +684,7 @@ const Precificacao = () => {
                 }}
                 isApplying={updatePrecoMutation.isPending}
                 isDrawer
+                cmvAlvo={config?.cmv_alvo || 35}
               />
             </div>
           </DrawerContent>
@@ -732,6 +733,7 @@ const Precificacao = () => {
                   onApply={handleApplyFromSimulator}
                   onClose={() => setProdutoSimulador(null)}
                   isApplying={updatePrecoMutation.isPending}
+                  cmvAlvo={config?.cmv_alvo || 35}
                 />
               </CardContent>
             </Card>
