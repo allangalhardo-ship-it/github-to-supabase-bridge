@@ -481,15 +481,15 @@ const Insumos = () => {
         <Skeleton className="h-96" />
       ) : insumos && insumos.length > 0 ? (
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4 flex flex-wrap h-auto gap-1 p-1">
-            <TabsTrigger value="todos" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
-              <ShoppingBasket className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Todos</span>
-              <Badge variant="secondary" className="ml-0.5 sm:ml-1 text-[10px] sm:text-xs">{insumos.length}</Badge>
+          <TabsList className="mb-4 grid grid-cols-2 sm:flex sm:flex-wrap h-auto gap-1 p-1">
+            <TabsTrigger value="todos" className="gap-1.5 text-xs sm:text-sm px-3 py-2 justify-center">
+              <ShoppingBasket className="h-4 w-4" />
+              <span>Todos</span>
+              <Badge variant="secondary" className="ml-1 text-[10px] sm:text-xs">{insumos.length}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="lista-compras" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
-              <ShoppingCart className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600" />
-              <span className="hidden sm:inline">Lista Compras</span>
+            <TabsTrigger value="lista-compras" className="gap-1.5 text-xs sm:text-sm px-3 py-2 justify-center">
+              <ShoppingCart className="h-4 w-4 text-green-600" />
+              <span>Compras</span>
             </TabsTrigger>
           </TabsList>
 

@@ -554,50 +554,50 @@ const Vendas = () => {
           </div>
 
           {/* Filtros - Mobile First */}
-          <div className="bg-muted/30 rounded-lg p-2 sm:p-3 space-y-2">
+          <div className="bg-muted/30 rounded-lg p-3 space-y-2">
             <div className="flex items-center gap-1.5">
-              <Filter className="h-3 w-3 text-muted-foreground" />
-              <span className="text-[10px] font-medium text-muted-foreground">Filtros</span>
+              <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground">Filtros</span>
             </div>
             
-            {/* Linha 1: Datas */}
+            {/* Datas em linha */}
             <div className="flex items-center gap-2">
               <Input
                 type="date"
                 value={filtroDataInicio}
                 onChange={(e) => setFiltroDataInicio(e.target.value)}
-                className="h-8 text-xs flex-1"
+                className="h-9 text-sm flex-1"
               />
-              <span className="text-muted-foreground text-xs">a</span>
+              <span className="text-muted-foreground text-xs shrink-0">a</span>
               <Input
                 type="date"
                 value={filtroDataFim}
                 onChange={(e) => setFiltroDataFim(e.target.value)}
-                className="h-8 text-xs flex-1"
+                className="h-9 text-sm flex-1"
               />
             </div>
             
-            {/* Linha 2: Selects */}
-            <div className="flex gap-2">
+            {/* Selects em grid 2x2 no mobile */}
+            <div className="grid grid-cols-3 gap-2">
               <Select value={filtroProduto} onValueChange={setFiltroProduto}>
-                <SelectTrigger className="h-8 text-xs flex-1">
+                <SelectTrigger className="h-9 text-sm">
                   <SelectValue placeholder="Produto" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todos">Todos produtos</SelectItem>
+                  <SelectItem value="todos">Todos</SelectItem>
                   {produtos?.map((produto) => (
                     <SelectItem key={produto.id} value={produto.id}>
-                      {produto.nome}
+                      <span className="truncate">{produto.nome}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <Select value={filtroCanal} onValueChange={setFiltroCanal}>
-                <SelectTrigger className="h-8 text-xs flex-1">
+                <SelectTrigger className="h-9 text-sm">
                   <SelectValue placeholder="Canal" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todos">Todos canais</SelectItem>
+                  <SelectItem value="todos">Todos</SelectItem>
                   {canaisUnicos.map((canal) => (
                     <SelectItem key={canal} value={canal}>
                       {canal}
@@ -606,7 +606,7 @@ const Vendas = () => {
                 </SelectContent>
               </Select>
               <Select value={filtroOrigem} onValueChange={setFiltroOrigem}>
-                <SelectTrigger className="h-8 text-xs flex-1">
+                <SelectTrigger className="h-9 text-sm">
                   <SelectValue placeholder="Origem" />
                 </SelectTrigger>
                 <SelectContent>

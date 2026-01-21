@@ -541,18 +541,18 @@ const Producao = () => {
       )}
 
       <Tabs defaultValue="estoque" className="w-full">
-        <TabsList className="grid w-full max-w-lg grid-cols-3">
-          <TabsTrigger value="estoque" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-            <Package className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Estoque</span> Acabado
+        <TabsList className="grid w-full grid-cols-3 h-auto p-1 gap-1">
+          <TabsTrigger value="estoque" className="flex items-center justify-center gap-1.5 px-2 py-2.5 text-xs sm:text-sm">
+            <Package className="h-4 w-4 shrink-0" />
+            <span className="truncate">Acabado</span>
           </TabsTrigger>
-          <TabsTrigger value="receitas" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-            <FlaskConical className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Estoque</span> Receitas
+          <TabsTrigger value="receitas" className="flex items-center justify-center gap-1.5 px-2 py-2.5 text-xs sm:text-sm">
+            <FlaskConical className="h-4 w-4 shrink-0" />
+            <span className="truncate">Receitas</span>
           </TabsTrigger>
-          <TabsTrigger value="historico" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-            <Factory className="h-3 w-3 sm:h-4 sm:w-4" />
-            Histórico
+          <TabsTrigger value="historico" className="flex items-center justify-center gap-1.5 px-2 py-2.5 text-xs sm:text-sm">
+            <Factory className="h-4 w-4 shrink-0" />
+            <span className="truncate">Histórico</span>
           </TabsTrigger>
         </TabsList>
 
