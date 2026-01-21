@@ -407,7 +407,7 @@ const Dashboard = () => {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Meu Negócio</h1>
           <p className="text-sm sm:text-base text-muted-foreground">Visão geral do seu negócio</p>
         </div>
         <Select value={periodo} onValueChange={(v) => setPeriodo(v as PeriodoType)}>
