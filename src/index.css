@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -137,12 +137,12 @@
   }
 
   html {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'DM Sans', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     height: 100%;
     width: 100%;
-    overflow: hidden; /* evita scroll no body (iOS) */
+    overflow: hidden;
     overscroll-behavior: none;
   }
 
@@ -181,7 +181,8 @@
 
   /* Typography */
   h1, h2, h3 {
-    @apply font-bold text-foreground;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    @apply font-bold text-foreground tracking-tight;
   }
 
   h1 {
