@@ -24,7 +24,11 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
-  TrendingUp
+  TrendingUp,
+  TrendingDown,
+  ArrowRight,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
 import { ProdutoComMetricas, TaxaApp, CustosPercentuais, formatCurrency, formatPercent } from './types';
 import MarketPriceSearch from '@/components/produtos/MarketPriceSearch';
@@ -45,6 +49,7 @@ interface PriceSimulatorProps {
   onClose: () => void;
   isApplying?: boolean;
   isDrawer?: boolean;
+  cmvAlvo?: number;
 }
 
 const PriceSimulator: React.FC<PriceSimulatorProps> = ({
@@ -62,10 +67,48 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
   onApply,
   onClose,
   isApplying,
-  isDrawer
+  isDrawer,
+  cmvAlvo = 35
 }) => {
   const [showCostBreakdown, setShowCostBreakdown] = useState(false);
   const [showChannelComparison, setShowChannelComparison] = useState(false);
+
+  // Calcular margem do preço atual
+  const calcularMargemDoPreco = (preco: number) => {
+    if (!produto || preco <= 0) return 0;
+    const { percCustoFixo, percImposto } = custosPercentuais;
+    const taxaAppAtual = appSelecionado === 'balcao'
+      ? 0
+      : (taxasApps.find(a => a.id === appSelecionado)?.taxa_percentual || 0);
+    
+    const custoFixoValor = preco * (percCustoFixo / 100);
+    const impostoValor = preco * (percImposto / 100);
+    const taxaAppValor = preco * (taxaAppAtual / 100);
+    const lucro = preco - produto.custoInsumos - custoFixoValor - impostoValor - taxaAppValor;
+    return (lucro / preco) * 100;
+  };
+
+  // Margem e lucro do preço ATUAL
+  const margemAtual = useMemo(() => {
+    if (!produto) return 0;
+    return calcularMargemDoPreco(produto.preco_venda);
+  }, [produto, custosPercentuais, appSelecionado, taxasApps]);
+
+  const lucroAtual = useMemo(() => {
+    if (!produto || produto.preco_venda <= 0) return 0;
+    const { percCustoFixo, percImposto } = custosPercentuais;
+    const taxaAppAtual = appSelecionado === 'balcao'
+      ? 0
+      : (taxasApps.find(a => a.id === appSelecionado)?.taxa_percentual || 0);
+    
+    const preco = produto.preco_venda;
+    return preco - produto.custoInsumos - (preco * percCustoFixo / 100) - (preco * percImposto / 100) - (preco * taxaAppAtual / 100);
+  }, [produto, custosPercentuais, appSelecionado, taxasApps]);
+
+  const cmvAtual = useMemo(() => {
+    if (!produto || produto.preco_venda <= 0) return 0;
+    return (produto.custoInsumos / produto.preco_venda) * 100;
+  }, [produto]);
 
   // Calcular preço baseado nos parâmetros
   const calcs = useMemo(() => {
@@ -126,21 +169,6 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
     };
   }, [produto, margemDesejada, appSelecionado, custosPercentuais, taxasApps]);
 
-  // Calcular margem reversa quando o preço é digitado manualmente
-  const calcularMargemDoPreco = (preco: number) => {
-    if (!produto || preco <= 0) return 0;
-    const { percCustoFixo, percImposto } = custosPercentuais;
-    const taxaAppAtual = appSelecionado === 'balcao'
-      ? 0
-      : (taxasApps.find(a => a.id === appSelecionado)?.taxa_percentual || 0);
-    
-    const custoFixoValor = preco * (percCustoFixo / 100);
-    const impostoValor = preco * (percImposto / 100);
-    const taxaAppValor = preco * (taxaAppAtual / 100);
-    const lucro = preco - produto.custoInsumos - custoFixoValor - impostoValor - taxaAppValor;
-    return (lucro / preco) * 100;
-  };
-
   const precoFinal = modoPreco === 'manual' && precoManual
     ? parseFloat(precoManual) || 0
     : calcs?.novoPreco || 0;
@@ -157,6 +185,13 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
     ? (precoFinal - produto.custoInsumos - (precoFinal * (calcs?.percCustoFixo || 0) / 100) - (precoFinal * (calcs?.percImposto || 0) / 100) - (precoFinal * (calcs?.percTaxaApp || 0) / 100))
     : calcs?.lucroLiquido || 0;
 
+  const cmvNovo = precoFinal > 0 && produto ? (produto.custoInsumos / precoFinal) * 100 : 0;
+
+  // Diferenças
+  const diferencaPreco = produto ? precoFinal - produto.preco_venda : 0;
+  const diferencaMargem = margemCalculada - margemAtual;
+  const diferencaLucro = lucroFinal - lucroAtual;
+
   if (!produto) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
@@ -171,6 +206,21 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
     ? 'Balcão' 
     : taxasApps.find(a => a.id === appSelecionado)?.nome_app || 'Canal';
 
+  // Helper para cor do CMV
+  const getCmvColor = (cmv: number) => {
+    if (cmv <= cmvAlvo) return 'text-emerald-600';
+    if (cmv <= cmvAlvo + 10) return 'text-amber-600';
+    return 'text-destructive';
+  };
+
+  const getCmvBg = (cmv: number) => {
+    if (cmv <= cmvAlvo) return 'bg-emerald-500/10';
+    if (cmv <= cmvAlvo + 10) return 'bg-amber-500/10';
+    return 'bg-destructive/10';
+  };
+
+  const isCmvSaudavel = cmvNovo <= cmvAlvo;
+
   return (
     <div className={`flex flex-col gap-3 ${isDrawer ? 'pb-4' : ''}`}>
       {/* Header: Produto selecionado - Compacto */}
@@ -184,15 +234,89 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-medium text-sm truncate">{produto.nome}</p>
-          <div className="flex gap-3 text-xs text-muted-foreground">
-            <span>Custo: <span className="font-semibold text-foreground">{formatCurrency(produto.custoInsumos)}</span></span>
-            <span>Atual: <span className="font-semibold text-foreground">{formatCurrency(produto.preco_venda)}</span></span>
-          </div>
+          <p className="text-xs text-muted-foreground">
+            Custo: <span className="font-semibold text-foreground">{formatCurrency(produto.custoInsumos)}</span>
+          </p>
         </div>
         <Button size="icon" variant="ghost" onClick={onClose} className="h-7 w-7 shrink-0">
           <X className="h-4 w-4" />
         </Button>
       </div>
+
+      {/* Comparação: Atual vs Novo - Card Visual */}
+      <div className="grid grid-cols-[1fr,auto,1fr] gap-2 items-stretch">
+        {/* Preço Atual */}
+        <div className="p-3 rounded-lg border bg-muted/30 space-y-1">
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Atual</p>
+          <p className="text-lg font-bold">{formatCurrency(produto.preco_venda)}</p>
+          <div className="flex flex-col gap-0.5 text-xs">
+            <span className={`font-medium ${margemAtual >= 0 ? 'text-muted-foreground' : 'text-destructive'}`}>
+              {formatPercent(margemAtual)} margem
+            </span>
+            <span className={`${getCmvColor(cmvAtual)} text-[10px]`}>
+              CMV: {formatPercent(cmvAtual)}
+            </span>
+          </div>
+        </div>
+
+        {/* Seta de transição */}
+        <div className="flex items-center justify-center">
+          <div className={`p-1.5 rounded-full ${diferencaPreco >= 0 ? 'bg-emerald-500/10' : 'bg-amber-500/10'}`}>
+            <ArrowRight className={`h-4 w-4 ${diferencaPreco >= 0 ? 'text-emerald-600' : 'text-amber-600'}`} />
+          </div>
+        </div>
+
+        {/* Preço Novo */}
+        <div className={`p-3 rounded-lg border-2 space-y-1 ${isPrecoViavel ? 'border-primary/30 bg-primary/5' : 'border-destructive/30 bg-destructive/5'}`}>
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+            {modoPreco === 'manual' ? 'Novo' : 'Sugerido'}
+          </p>
+          <p className={`text-lg font-bold ${isPrecoViavel ? 'text-primary' : 'text-destructive'}`}>
+            {formatCurrency(precoFinal)}
+          </p>
+          <div className="flex flex-col gap-0.5 text-xs">
+            <span className={`font-medium ${margemCalculada >= 20 ? 'text-emerald-600' : margemCalculada >= 10 ? 'text-amber-600' : margemCalculada > 0 ? 'text-orange-600' : 'text-destructive'}`}>
+              {formatPercent(margemCalculada)} margem
+            </span>
+            <span className={`${getCmvColor(cmvNovo)} text-[10px] flex items-center gap-1`}>
+              CMV: {formatPercent(cmvNovo)}
+              {isCmvSaudavel ? (
+                <CheckCircle2 className="h-3 w-3" />
+              ) : (
+                <XCircle className="h-3 w-3" />
+              )}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Resumo das diferenças */}
+      {precoFinal !== produto.preco_venda && (
+        <div className="flex items-center justify-center gap-4 py-2 px-3 rounded-lg bg-muted/30 text-xs">
+          <div className="flex items-center gap-1">
+            {diferencaPreco >= 0 ? (
+              <TrendingUp className="h-3.5 w-3.5 text-emerald-600" />
+            ) : (
+              <TrendingDown className="h-3.5 w-3.5 text-amber-600" />
+            )}
+            <span className={diferencaPreco >= 0 ? 'text-emerald-600 font-medium' : 'text-amber-600 font-medium'}>
+              {diferencaPreco >= 0 ? '+' : ''}{formatCurrency(diferencaPreco)}
+            </span>
+          </div>
+          <div className="w-px h-4 bg-border" />
+          <div className="flex items-center gap-1">
+            <span className={diferencaMargem >= 0 ? 'text-emerald-600 font-medium' : 'text-amber-600 font-medium'}>
+              {diferencaMargem >= 0 ? '+' : ''}{formatPercent(diferencaMargem)} margem
+            </span>
+          </div>
+          <div className="w-px h-4 bg-border" />
+          <div className="flex items-center gap-1">
+            <span className={diferencaLucro >= 0 ? 'text-emerald-600 font-medium' : 'text-amber-600 font-medium'}>
+              {diferencaLucro >= 0 ? '+' : ''}{formatCurrency(diferencaLucro)} lucro
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Seletor de Canal - Inline com scroll */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1">
@@ -304,46 +428,25 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
         </div>
       )}
 
-      {/* Resultado Principal - Card de destaque */}
-      <div className={`rounded-xl p-4 ${isPrecoViavel ? 'bg-primary/5 border-2 border-primary/20' : 'bg-destructive/5 border-2 border-destructive/20'}`}>
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">
-              {modoPreco === 'manual' ? 'Preço definido' : 'Preço sugerido'}
-              <span className="mx-1">•</span>
-              <span className="font-medium">{canalAtualNome}</span>
-            </p>
-            <p className={`text-3xl font-bold tracking-tight ${isPrecoViavel ? 'text-primary' : 'text-destructive'}`}>
-              {formatCurrency(precoFinal)}
-            </p>
-          </div>
-          <div className="text-right space-y-1">
-            <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
-              margemCalculada >= 20 ? 'bg-emerald-500/10 text-emerald-600' :
-              margemCalculada >= 10 ? 'bg-amber-500/10 text-amber-600' :
-              margemCalculada > 0 ? 'bg-orange-500/10 text-orange-600' :
-              'bg-destructive/10 text-destructive'
-            }`}>
-              <TrendingUp className="h-3 w-3" />
-              {formatPercent(margemCalculada)} margem
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Lucro: <span className={`font-semibold ${lucroFinal > 0 ? 'text-emerald-600' : 'text-destructive'}`}>
-                {formatCurrency(lucroFinal)}
-              </span>
-            </p>
-          </div>
-        </div>
+      {/* Alerta de viabilidade */}
+      {!isPrecoViavel && (
+        <Alert variant="destructive" className="py-2">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription className="text-xs">
+            {modoPreco === 'manual' ? 'Preço abaixo do custo mínimo!' : 'Margem inviável. Reduza a margem ou revise custos.'}
+          </AlertDescription>
+        </Alert>
+      )}
 
-        {!isPrecoViavel && (
-          <Alert variant="destructive" className="mt-3 py-2">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription className="text-xs">
-              {modoPreco === 'manual' ? 'Preço abaixo do custo mínimo!' : 'Margem inviável. Reduza a margem ou revise custos.'}
-            </AlertDescription>
-          </Alert>
-        )}
-      </div>
+      {/* Alerta de CMV alto */}
+      {isPrecoViavel && !isCmvSaudavel && (
+        <Alert className="py-2 border-amber-500/30 bg-amber-500/5">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-xs text-amber-700">
+            CMV de {formatPercent(cmvNovo)} está acima da meta de {formatPercent(cmvAlvo)}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Accordions para detalhes */}
       <div className="space-y-2">
@@ -362,8 +465,17 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
             <div className="space-y-1.5 text-sm p-3 rounded-lg border bg-background">
               <div className="flex justify-between py-1 items-center">
                 <span className="text-muted-foreground flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-orange-500" />
-                  CMV ({precoFinal > 0 ? formatPercent((produto.custoInsumos / precoFinal) * 100) : '0%'})
+                  <span className={`w-2 h-2 rounded-full ${isCmvSaudavel ? 'bg-emerald-500' : 'bg-orange-500'}`} />
+                  CMV ({formatPercent(cmvNovo)})
+                  {isCmvSaudavel ? (
+                    <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-emerald-500/30 text-emerald-600">
+                      ≤ meta {formatPercent(cmvAlvo)}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-amber-500/30 text-amber-600">
+                      &gt; meta {formatPercent(cmvAlvo)}
+                    </Badge>
+                  )}
                 </span>
                 <span className="font-medium">{formatCurrency(produto.custoInsumos)}</span>
               </div>
