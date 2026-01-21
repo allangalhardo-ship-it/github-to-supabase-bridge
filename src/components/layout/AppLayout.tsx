@@ -35,6 +35,11 @@ import {
   BarChart3,
   Bot,
   ChevronDown,
+  BookOpen,
+  Settings2,
+  BarChart2,
+  Sliders,
+  LifeBuoy,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Crown, Sparkles } from 'lucide-react';
@@ -48,12 +53,14 @@ import {
 const navCategories = [
   {
     label: 'Início',
+    icon: null,
     items: [
       { to: '/dashboard', icon: Store, label: 'Meu Negócio' },
     ],
   },
   {
     label: 'Catálogo',
+    icon: BookOpen,
     items: [
       { to: '/insumos', icon: Carrot, label: 'Insumos' },
       { to: '/produtos', icon: UtensilsCrossed, label: 'Produtos' },
@@ -63,6 +70,7 @@ const navCategories = [
   },
   {
     label: 'Operações',
+    icon: Settings2,
     items: [
       { to: '/estoque', icon: PackageOpen, label: 'Estoque' },
       { to: '/producao', icon: Factory, label: 'Produção' },
@@ -72,6 +80,7 @@ const navCategories = [
   },
   {
     label: 'Análises',
+    icon: BarChart2,
     items: [
       { to: '/relatorios', icon: BarChart3, label: 'Relatórios' },
       { to: '/caixa', icon: Wallet, label: 'Caixa' },
@@ -80,6 +89,7 @@ const navCategories = [
   },
   {
     label: 'Configurar',
+    icon: Sliders,
     items: [
       { to: '/clientes', icon: Users, label: 'Clientes' },
       { to: '/custos-fixos', icon: Calculator, label: 'Custos Fixos' },
@@ -89,11 +99,15 @@ const navCategories = [
   },
 ];
 
-const helpItems = [
-  { to: '/sobre', icon: Info, label: 'Sobre' },
-  { to: '/faq', icon: HelpCircle, label: 'FAQ' },
-  { to: '/contato', icon: MessageSquare, label: 'Contato' },
-];
+const helpItems = {
+  label: 'Ajuda',
+  icon: LifeBuoy,
+  items: [
+    { to: '/sobre', icon: Info, label: 'Sobre' },
+    { to: '/faq', icon: HelpCircle, label: 'FAQ' },
+    { to: '/contato', icon: MessageSquare, label: 'Contato' },
+  ],
+};
 
 const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAdmin: boolean }) => {
   const { usuario, signOut } = useAuth();
@@ -204,7 +218,10 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
             return (
               <Collapsible key={category.label} defaultOpen={isActive}>
                 <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2.5 text-[11px] font-bold text-sidebar-foreground/50 uppercase tracking-[0.1em] hover:text-sidebar-foreground/70 transition-colors">
-                  {category.label}
+                  <span className="flex items-center gap-2">
+                    {category.icon && <category.icon className="h-3.5 w-3.5" />}
+                    {category.label}
+                  </span>
                   <ChevronDown className="h-3.5 w-3.5 opacity-60 transition-transform duration-200 [&[data-state=open]>svg]:rotate-180" />
                 </CollapsibleTrigger>
                 <CollapsibleContent className="space-y-0.5 mt-0.5">
@@ -236,11 +253,14 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
         <div className="px-3 mt-4 pt-4 border-t border-sidebar-border/30">
           <Collapsible>
             <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2.5 text-[11px] font-bold text-sidebar-foreground/50 uppercase tracking-[0.1em] hover:text-sidebar-foreground/70 transition-colors">
-              Ajuda
+              <span className="flex items-center gap-2">
+                <helpItems.icon className="h-3.5 w-3.5" />
+                {helpItems.label}
+              </span>
               <ChevronDown className="h-3.5 w-3.5 opacity-60 transition-transform duration-200" />
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-0.5 mt-0.5">
-              {helpItems.map((item) => (
+              {helpItems.items.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
