@@ -1,12 +1,15 @@
-import React, { useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { 
   Calculator,
   X,
@@ -17,9 +20,11 @@ import {
   PieChart,
   AlertTriangle,
   Zap,
-  TrendingUp,
   ImageIcon,
-  ExternalLink
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  TrendingUp
 } from 'lucide-react';
 import { ProdutoComMetricas, TaxaApp, CustosPercentuais, formatCurrency, formatPercent } from './types';
 import MarketPriceSearch from '@/components/produtos/MarketPriceSearch';
@@ -59,6 +64,9 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
   isApplying,
   isDrawer
 }) => {
+  const [showCostBreakdown, setShowCostBreakdown] = useState(false);
+  const [showChannelComparison, setShowChannelComparison] = useState(false);
+
   // Calcular preço baseado nos parâmetros
   const calcs = useMemo(() => {
     if (!produto) return null;
@@ -145,84 +153,58 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
     ? margemCalculada > 0
     : calcs?.isViavel;
 
+  const lucroFinal = modoPreco === 'manual' && produto
+    ? (precoFinal - produto.custoInsumos - (precoFinal * (calcs?.percCustoFixo || 0) / 100) - (precoFinal * (calcs?.percImposto || 0) / 100) - (precoFinal * (calcs?.percTaxaApp || 0) / 100))
+    : calcs?.lucroLiquido || 0;
+
   if (!produto) {
     return (
-      <Card className="sticky top-4">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Calculator className="h-5 w-5" />
-            Simulador de Preço
-          </CardTitle>
-          <CardDescription>
-            Simule diferentes margens e canais
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-12 text-muted-foreground">
-            <Calculator className="h-12 w-12 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">Selecione um produto para simular</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+        <Calculator className="h-12 w-12 mb-3 opacity-30" />
+        <p className="text-sm font-medium">Selecione um produto</p>
+        <p className="text-xs">para simular preços</p>
+      </div>
     );
   }
 
+  const canalAtualNome = appSelecionado === 'balcao' 
+    ? 'Balcão' 
+    : taxasApps.find(a => a.id === appSelecionado)?.nome_app || 'Canal';
+
   return (
-    <div className={`space-y-4 ${isDrawer ? 'pb-4' : ''}`}>
-      {/* Produto selecionado */}
-      <div className="flex items-start gap-3 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-        <div className="w-14 h-14 rounded-md bg-muted flex items-center justify-center overflow-hidden shrink-0">
+    <div className={`flex flex-col gap-3 ${isDrawer ? 'pb-4' : ''}`}>
+      {/* Header: Produto selecionado - Compacto */}
+      <div className="flex items-center gap-3 p-2.5 bg-muted/50 rounded-lg border">
+        <div className="w-10 h-10 rounded-md bg-background flex items-center justify-center overflow-hidden shrink-0 border">
           {produto.imagem_url ? (
-            <img
-              src={produto.imagem_url}
-              alt={produto.nome}
-              className="w-full h-full object-cover"
-            />
+            <img src={produto.imagem_url} alt={produto.nome} className="w-full h-full object-cover" />
           ) : (
-            <ImageIcon className="h-6 w-6 text-muted-foreground/50" />
+            <ImageIcon className="h-4 w-4 text-muted-foreground/50" />
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm line-clamp-2">{produto.nome}</p>
-          <div className="flex flex-wrap gap-2 mt-1 text-xs text-muted-foreground">
-            <span>Custo: <span className="font-medium text-foreground">{formatCurrency(produto.custoInsumos)}</span></span>
-            <span>Atual: <span className="font-medium text-foreground">{formatCurrency(produto.preco_venda)}</span></span>
+          <p className="font-medium text-sm truncate">{produto.nome}</p>
+          <div className="flex gap-3 text-xs text-muted-foreground">
+            <span>Custo: <span className="font-semibold text-foreground">{formatCurrency(produto.custoInsumos)}</span></span>
+            <span>Atual: <span className="font-semibold text-foreground">{formatCurrency(produto.preco_venda)}</span></span>
           </div>
         </div>
-        <Button
-          size="icon"
-          variant="ghost"
-          onClick={onClose}
-          className="h-8 w-8 shrink-0"
-        >
+        <Button size="icon" variant="ghost" onClick={onClose} className="h-7 w-7 shrink-0">
           <X className="h-4 w-4" />
         </Button>
       </div>
 
-      {/* Pesquisa de Mercado */}
-      <MarketPriceSearch
-        productName={produto.nome}
-        category={produto.categoria}
-        currentPrice={produto.preco_venda}
-        trigger={
-          <Button variant="outline" size="sm" className="w-full gap-2">
-            <ExternalLink className="h-4 w-4" />
-            Consultar preço de mercado
-          </Button>
-        }
-      />
-
-      {/* Seletor de Canal */}
-      <div className="space-y-2">
-        <Label className="text-sm font-medium">Canal de Venda</Label>
-        <div className="grid grid-cols-2 gap-2">
+      {/* Seletor de Canal - Inline com scroll */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+        <span className="text-xs text-muted-foreground shrink-0">Canal:</span>
+        <div className="flex gap-1.5">
           <Button
             size="sm"
             variant={appSelecionado === 'balcao' ? 'default' : 'outline'}
             onClick={() => setAppSelecionado('balcao')}
-            className="gap-1.5 h-9"
+            className="h-7 px-2.5 text-xs gap-1"
           >
-            <Store className="h-4 w-4" />
+            <Store className="h-3 w-3" />
             Balcão
           </Button>
           {taxasApps.map(app => (
@@ -231,44 +213,48 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
               size="sm"
               variant={appSelecionado === app.id ? 'default' : 'outline'}
               onClick={() => setAppSelecionado(app.id)}
-              className="gap-1.5 h-9"
+              className="h-7 px-2.5 text-xs gap-1 shrink-0"
             >
-              <Smartphone className="h-4 w-4" />
-              <span className="truncate">{app.nome_app}</span>
-              <span className="text-xs opacity-70">({app.taxa_percentual}%)</span>
+              <Smartphone className="h-3 w-3" />
+              <span className="truncate max-w-[60px]">{app.nome_app}</span>
+              <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">{app.taxa_percentual}%</Badge>
             </Button>
           ))}
         </div>
       </div>
 
-      {/* Toggle Margem / Manual */}
-      <div className="grid grid-cols-2 gap-2">
-        <Button
-          size="sm"
-          variant={modoPreco === 'margem' ? 'default' : 'outline'}
+      {/* Toggle Modo - Mais compacto */}
+      <div className="flex rounded-lg border p-0.5 bg-muted/30">
+        <button
           onClick={() => setModoPreco('margem')}
-          className="gap-1.5 h-10"
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-sm font-medium transition-all ${
+            modoPreco === 'margem' 
+              ? 'bg-background shadow-sm text-foreground' 
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
         >
           <Percent className="h-4 w-4" />
-          Por Margem
-        </Button>
-        <Button
-          size="sm"
-          variant={modoPreco === 'manual' ? 'default' : 'outline'}
+          Definir Margem
+        </button>
+        <button
           onClick={() => setModoPreco('manual')}
-          className="gap-1.5 h-10"
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-sm font-medium transition-all ${
+            modoPreco === 'manual' 
+              ? 'bg-background shadow-sm text-foreground' 
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
         >
           <DollarSign className="h-4 w-4" />
           Digitar Preço
-        </Button>
+        </button>
       </div>
 
-      {/* Input de Margem ou Preço */}
+      {/* Input Area */}
       {modoPreco === 'margem' ? (
-        <div className="space-y-3">
-          <div className="flex justify-between items-center">
-            <Label className="text-sm">Margem Líquida</Label>
-            <div className="flex items-center gap-2">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm">Margem líquida desejada</Label>
+            <div className="flex items-center gap-1 bg-primary/10 rounded-md px-2 py-1">
               <Input
                 type="number"
                 min={5}
@@ -281,9 +267,9 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
                     setMargemDesejada(val);
                   }
                 }}
-                className="w-16 h-9 text-center font-bold text-primary"
+                className="w-12 h-7 text-center font-bold text-primary border-0 bg-transparent p-0"
               />
-              <span className="font-bold text-primary">%</span>
+              <span className="font-bold text-primary text-sm">%</span>
             </div>
           </div>
           <Slider
@@ -292,19 +278,19 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
             min={5}
             max={60}
             step={1}
-            className="py-2"
+            className="py-1"
           />
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>5%</span>
-            <span>30%</span>
-            <span>60%</span>
+          <div className="flex justify-between text-[10px] text-muted-foreground">
+            <span>5% mín</span>
+            <span>30% ideal</span>
+            <span>60% máx</span>
           </div>
         </div>
       ) : (
-        <div className="space-y-3">
-          <Label className="text-sm">Digite o preço desejado</Label>
+        <div className="space-y-2">
+          <Label className="text-sm">Preço de venda desejado</Label>
           <div className="relative">
-            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">R$</span>
             <Input
               type="number"
               step="0.01"
@@ -312,144 +298,172 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
               placeholder="0,00"
               value={precoManual}
               onChange={(e) => setPrecoManual(e.target.value)}
-              className="pl-9 text-lg font-semibold h-12"
+              className="pl-10 text-lg font-semibold h-11"
             />
           </div>
-          {precoManual && (
-            <div className={`p-3 rounded-lg ${margemCalculada >= 0 ? 'bg-success/10' : 'bg-destructive/10'}`}>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Margem resultante</span>
-                <span className={`text-lg font-bold ${margemCalculada >= 0 ? 'text-success' : 'text-destructive'}`}>
-                  {formatPercent(margemCalculada)}
+        </div>
+      )}
+
+      {/* Resultado Principal - Card de destaque */}
+      <div className={`rounded-xl p-4 ${isPrecoViavel ? 'bg-primary/5 border-2 border-primary/20' : 'bg-destructive/5 border-2 border-destructive/20'}`}>
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">
+              {modoPreco === 'manual' ? 'Preço definido' : 'Preço sugerido'}
+              <span className="mx-1">•</span>
+              <span className="font-medium">{canalAtualNome}</span>
+            </p>
+            <p className={`text-3xl font-bold tracking-tight ${isPrecoViavel ? 'text-primary' : 'text-destructive'}`}>
+              {formatCurrency(precoFinal)}
+            </p>
+          </div>
+          <div className="text-right space-y-1">
+            <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
+              margemCalculada >= 20 ? 'bg-emerald-500/10 text-emerald-600' :
+              margemCalculada >= 10 ? 'bg-amber-500/10 text-amber-600' :
+              margemCalculada > 0 ? 'bg-orange-500/10 text-orange-600' :
+              'bg-destructive/10 text-destructive'
+            }`}>
+              <TrendingUp className="h-3 w-3" />
+              {formatPercent(margemCalculada)} margem
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Lucro: <span className={`font-semibold ${lucroFinal > 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                {formatCurrency(lucroFinal)}
+              </span>
+            </p>
+          </div>
+        </div>
+
+        {!isPrecoViavel && (
+          <Alert variant="destructive" className="mt-3 py-2">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="text-xs">
+              {modoPreco === 'manual' ? 'Preço abaixo do custo mínimo!' : 'Margem inviável. Reduza a margem ou revise custos.'}
+            </AlertDescription>
+          </Alert>
+        )}
+      </div>
+
+      {/* Accordions para detalhes */}
+      <div className="space-y-2">
+        {/* Decomposição de Custos */}
+        <Collapsible open={showCostBreakdown} onOpenChange={setShowCostBreakdown}>
+          <CollapsibleTrigger asChild>
+            <button className="flex items-center justify-between w-full p-2.5 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <PieChart className="h-4 w-4 text-muted-foreground" />
+                Composição do preço
+              </div>
+              {showCostBreakdown ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2">
+            <div className="space-y-1.5 text-sm p-3 rounded-lg border bg-background">
+              <div className="flex justify-between py-1 items-center">
+                <span className="text-muted-foreground flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-orange-500" />
+                  Custo insumos
+                </span>
+                <span className="font-medium">{formatCurrency(produto.custoInsumos)}</span>
+              </div>
+              <div className="flex justify-between py-1 items-center">
+                <span className="text-muted-foreground flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-500" />
+                  Custo fixo ({formatPercent(calcs?.percCustoFixo || 0)})
+                </span>
+                <span>{formatCurrency((precoFinal * (calcs?.percCustoFixo || 0)) / 100)}</span>
+              </div>
+              <div className="flex justify-between py-1 items-center">
+                <span className="text-muted-foreground flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-red-500" />
+                  Impostos ({formatPercent(calcs?.percImposto || 0)})
+                </span>
+                <span>{formatCurrency((precoFinal * (calcs?.percImposto || 0)) / 100)}</span>
+              </div>
+              {(calcs?.percTaxaApp || 0) > 0 && (
+                <div className="flex justify-between py-1 items-center">
+                  <span className="text-muted-foreground flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-purple-500" />
+                    Taxa {canalAtualNome} ({formatPercent(calcs?.percTaxaApp || 0)})
+                  </span>
+                  <span>{formatCurrency((precoFinal * (calcs?.percTaxaApp || 0)) / 100)}</span>
+                </div>
+              )}
+              <div className="flex justify-between py-2 items-center border-t mt-2 pt-2">
+                <span className="text-muted-foreground flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  Lucro líquido ({formatPercent(margemCalculada)})
+                </span>
+                <span className={`font-semibold ${lucroFinal > 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                  {formatCurrency(lucroFinal)}
                 </span>
               </div>
             </div>
-          )}
-        </div>
-      )}
+          </CollapsibleContent>
+        </Collapsible>
 
-      <Separator />
-
-      {/* Decomposição do preço */}
-      <div className="space-y-2">
-        <h4 className="text-sm font-medium flex items-center gap-2">
-          <PieChart className="h-4 w-4" />
-          Composição do Preço
-        </h4>
-        <div className="space-y-1 text-sm">
-          <div className="flex justify-between py-1.5 items-center">
-            <span className="text-muted-foreground flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-orange-500" />
-              Insumos
-            </span>
-            <span className="font-medium">{formatCurrency(produto.custoInsumos)}</span>
-          </div>
-          <div className="flex justify-between py-1.5 items-center">
-            <span className="text-muted-foreground flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-blue-500" />
-              C. Fixo ({formatPercent(calcs?.percCustoFixo || 0)})
-            </span>
-            <span>{formatCurrency(calcs?.valorCustoFixo || 0)}</span>
-          </div>
-          <div className="flex justify-between py-1.5 items-center">
-            <span className="text-muted-foreground flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-red-500" />
-              Imposto ({formatPercent(calcs?.percImposto || 0)})
-            </span>
-            <span>{formatCurrency(calcs?.valorImposto || 0)}</span>
-          </div>
-          {(calcs?.percTaxaApp || 0) > 0 && (
-            <div className="flex justify-between py-1.5 items-center">
-              <span className="text-muted-foreground flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-purple-500" />
-                Taxa App ({formatPercent(calcs?.percTaxaApp || 0)})
-              </span>
-              <span>{formatCurrency(calcs?.valorTaxaApp || 0)}</span>
-            </div>
-          )}
-          <div className="flex justify-between py-2 items-center border-t pt-3">
-            <span className="text-muted-foreground flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500" />
-              Lucro ({formatPercent(modoPreco === 'manual' ? margemCalculada : margemDesejada)})
-            </span>
-            <span className={`font-medium ${margemCalculada > 0 ? 'text-success' : 'text-destructive'}`}>
-              {formatCurrency(modoPreco === 'manual'
-                ? (precoFinal - produto.custoInsumos - (precoFinal * (calcs?.percCustoFixo || 0) / 100) - (precoFinal * (calcs?.percImposto || 0) / 100) - (precoFinal * (calcs?.percTaxaApp || 0) / 100))
-                : calcs?.lucroLiquido || 0)}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* Preço Final */}
-      <div className={`flex justify-between items-center p-4 rounded-lg ${
-        isPrecoViavel ? 'bg-primary/10 border border-primary/30' : 'bg-destructive/10 border border-destructive/30'
-      }`}>
-        <div>
-          <p className="text-xs text-muted-foreground">
-            {modoPreco === 'manual' ? 'Preço Definido' : 'Preço Sugerido'}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {appSelecionado === 'balcao' ? 'Venda direta' : taxasApps.find(a => a.id === appSelecionado)?.nome_app}
-          </p>
-        </div>
-        <span className={`text-2xl font-bold ${isPrecoViavel ? 'text-primary' : 'text-destructive'}`}>
-          {formatCurrency(precoFinal)}
-        </span>
-      </div>
-
-      {!isPrecoViavel && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            {modoPreco === 'manual'
-              ? 'Preço muito baixo! A margem está negativa.'
-              : 'Margem inviável! Reduza ou revise custos.'}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Comparativo de Canais */}
-      {calcs?.precosCanais && calcs.precosCanais.length > 1 && (
-        <div className="space-y-2">
-          <h4 className="text-xs font-medium text-muted-foreground">Todos os Canais</h4>
-          <div className="grid grid-cols-2 gap-2">
-            {calcs.precosCanais.map((canal, idx) => (
-              <div
-                key={idx}
-                className={`p-2.5 rounded-lg border text-center ${
-                  (appSelecionado === 'balcao' && canal.taxa === 0) ||
-                  (appSelecionado !== 'balcao' && taxasApps.find(a => a.id === appSelecionado)?.taxa_percentual === canal.taxa)
-                    ? 'border-primary bg-primary/5'
-                    : 'border-muted'
-                }`}
-              >
-                <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground mb-1">
-                  {canal.taxa === 0 ? (
-                    <Store className="h-3 w-3" />
-                  ) : (
-                    <Smartphone className="h-3 w-3" />
-                  )}
-                  {canal.nome}
+        {/* Comparativo de Canais */}
+        {calcs?.precosCanais && calcs.precosCanais.length > 1 && (
+          <Collapsible open={showChannelComparison} onOpenChange={setShowChannelComparison}>
+            <CollapsibleTrigger asChild>
+              <button className="flex items-center justify-between w-full p-2.5 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Smartphone className="h-4 w-4 text-muted-foreground" />
+                  Ver preços em outros canais
                 </div>
-                <p className="font-bold text-sm">{formatCurrency(canal.preco)}</p>
+                {showChannelComparison ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-2">
+              <div className="grid grid-cols-2 gap-2">
+                {calcs.precosCanais.map((canal, idx) => {
+                  const isSelected = (appSelecionado === 'balcao' && canal.taxa === 0) ||
+                    (appSelecionado !== 'balcao' && taxasApps.find(a => a.id === appSelecionado)?.taxa_percentual === canal.taxa);
+                  return (
+                    <div
+                      key={idx}
+                      className={`p-2.5 rounded-lg border text-center transition-all ${
+                        isSelected ? 'border-primary bg-primary/5 ring-1 ring-primary/20' : 'border-muted bg-muted/30'
+                      }`}
+                    >
+                      <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mb-0.5">
+                        {canal.taxa === 0 ? <Store className="h-3 w-3" /> : <Smartphone className="h-3 w-3" />}
+                        {canal.nome}
+                        {canal.taxa > 0 && <span className="opacity-70">({canal.taxa}%)</span>}
+                      </div>
+                      <p className={`font-bold text-sm ${isSelected ? 'text-primary' : ''}`}>{formatCurrency(canal.preco)}</p>
+                    </div>
+                  );
+                })}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+      </div>
 
-      {/* Botão de Aplicar */}
+      {/* Pesquisa de mercado - Link discreto */}
+      <MarketPriceSearch
+        productName={produto.nome}
+        category={produto.categoria}
+        currentPrice={produto.preco_venda}
+        trigger={
+          <button className="flex items-center justify-center gap-2 w-full py-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <ExternalLink className="h-4 w-4" />
+            Consultar preço de mercado
+          </button>
+        }
+      />
+
+      {/* Botão Aplicar - Fixo no final */}
       <Button
         onClick={onApply}
         disabled={isApplying || !isPrecoViavel}
-        className="w-full gap-2 h-12"
+        className="w-full gap-2 h-12 text-base font-semibold"
         size="lg"
       >
         <Zap className="h-5 w-5" />
-        Aplicar Preço de {formatCurrency(precoFinal)}
+        Aplicar {formatCurrency(precoFinal)}
       </Button>
     </div>
   );
