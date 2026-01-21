@@ -13,7 +13,7 @@ import NotificationSettings from '@/components/layout/NotificationSettings';
 import { useAlertNotifications } from '@/hooks/useAlertNotifications';
 import { useSessionTracker } from '@/hooks/useSessionTracker';
 import {
-  LayoutDashboard,
+  Store,
   UtensilsCrossed,
   Carrot,
   PackageOpen,
@@ -49,7 +49,7 @@ const navCategories = [
   {
     label: 'Início',
     items: [
-      { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+      { to: '/dashboard', icon: Store, label: 'Meu Negócio' },
     ],
   },
   {
