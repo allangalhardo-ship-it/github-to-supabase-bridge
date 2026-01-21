@@ -179,6 +179,17 @@ serve(async (req) => {
       accessLogsMap[log.user_id] = (accessLogsMap[log.user_id] || 0) + 1;
     });
 
+    // Helper function to safely parse dates
+    const safeParseDate = (dateStr: string | null | undefined): Date | null => {
+      if (!dateStr) return null;
+      try {
+        const date = new Date(dateStr);
+        return isNaN(date.getTime()) ? null : date;
+      } catch {
+        return null;
+      }
+    };
+
     // Combine all data
     const enrichedUsers = authUsers.users.map(authUser => {
       const usuario = usuarios?.find(u => u.id === authUser.id);
@@ -191,8 +202,8 @@ serve(async (req) => {
       let trialStatus = "expired";
       let trialDaysRemaining = 0;
       
-      if (authUser.created_at) {
-        const createdAt = new Date(authUser.created_at);
+      const createdAt = safeParseDate(authUser.created_at);
+      if (createdAt) {
         const now = new Date();
         const daysSinceCreation = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
         trialDaysRemaining = Math.max(0, 7 - daysSinceCreation);
@@ -202,9 +213,11 @@ serve(async (req) => {
       // Calculate total time logged (sum of session durations)
       let totalTimeMinutes = 0;
       sessions.forEach(s => {
-        const start = new Date(s.started_at);
-        const end = s.ended_at ? new Date(s.ended_at) : new Date(s.last_activity_at);
-        totalTimeMinutes += Math.round((end.getTime() - start.getTime()) / (1000 * 60));
+        const start = safeParseDate(s.started_at);
+        const end = safeParseDate(s.ended_at) || safeParseDate(s.last_activity_at);
+        if (start && end) {
+          totalTimeMinutes += Math.round((end.getTime() - start.getTime()) / (1000 * 60));
+        }
       });
 
       // Get unique IPs and devices
@@ -212,21 +225,27 @@ serve(async (req) => {
       const uniqueDevices = [...new Set(sessions.map(s => `${s.device_type} - ${s.browser} - ${s.os}`).filter(d => d !== ' -  - '))];
 
       // Get last 5 sessions for details
-      const recentSessions = sessions.slice(0, 5).map(s => ({
-        id: s.id,
-        ip: s.ip_address,
-        device: s.device_type,
-        browser: s.browser,
-        os: s.os,
-        started_at: s.started_at,
-        last_activity: s.last_activity_at,
-        ended_at: s.ended_at,
-        is_active: s.is_active,
-        pages_visited: s.pages_visited,
-        duration_minutes: Math.round(
-          ((s.ended_at ? new Date(s.ended_at) : new Date(s.last_activity_at)).getTime() - new Date(s.started_at).getTime()) / (1000 * 60)
-        ),
-      }));
+      const recentSessions = sessions.slice(0, 5).map(s => {
+        const startDate = safeParseDate(s.started_at);
+        const endDate = safeParseDate(s.ended_at) || safeParseDate(s.last_activity_at);
+        const durationMinutes = (startDate && endDate) 
+          ? Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60))
+          : 0;
+        
+        return {
+          id: s.id,
+          ip: s.ip_address,
+          device: s.device_type,
+          browser: s.browser,
+          os: s.os,
+          started_at: s.started_at,
+          last_activity: s.last_activity_at,
+          ended_at: s.ended_at,
+          is_active: s.is_active,
+          pages_visited: s.pages_visited,
+          duration_minutes: durationMinutes,
+        };
+      });
 
       return {
         id: authUser.id,
@@ -264,10 +283,10 @@ serve(async (req) => {
       };
     });
 
-    // Sort by most recent first
+    // Sort by most recent first (with safe date parsing)
     enrichedUsers.sort((a, b) => {
-      const dateA = new Date(a.last_sign_in_at || a.created_at || 0);
-      const dateB = new Date(b.last_sign_in_at || b.created_at || 0);
+      const dateA = safeParseDate(a.last_sign_in_at) || safeParseDate(a.created_at) || new Date(0);
+      const dateB = safeParseDate(b.last_sign_in_at) || safeParseDate(b.created_at) || new Date(0);
       return dateB.getTime() - dateA.getTime();
     });
 
