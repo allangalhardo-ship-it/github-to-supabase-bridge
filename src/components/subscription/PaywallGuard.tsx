@@ -2,6 +2,8 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOnboarding } from '@/hooks/useOnboarding';
+import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
 import { Loader2 } from 'lucide-react';
 
 interface PaywallGuardProps {
@@ -9,11 +11,20 @@ interface PaywallGuardProps {
 }
 
 const PaywallGuard: React.FC<PaywallGuardProps> = ({ children }) => {
-  const { hasAccess, loading, subscription } = useSubscription();
+  const { hasAccess, loading: subscriptionLoading, subscription } = useSubscription();
   const { user } = useAuth();
   const location = useLocation();
+  const { 
+    showOnboarding, 
+    initialStep, 
+    isLoading: onboardingLoading, 
+    completeOnboarding 
+  } = useOnboarding();
 
-  if (loading) {
+  // Loading state combinado
+  const isLoading = subscriptionLoading || onboardingLoading;
+
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -28,6 +39,11 @@ const PaywallGuard: React.FC<PaywallGuardProps> = ({ children }) => {
 
   if (shouldRedirectToSubscription) {
     return <Navigate to="/assinatura" state={{ from: location }} replace />;
+  }
+
+  // Mostrar onboarding para novos usuários (exceto se estiver na página de assinatura)
+  if (showOnboarding && user && location.pathname !== '/assinatura') {
+    return <OnboardingWizard onComplete={completeOnboarding} initialStep={initialStep} />;
   }
 
   return <>{children}</>;

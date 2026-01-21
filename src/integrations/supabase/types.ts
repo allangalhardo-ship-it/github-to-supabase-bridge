@@ -549,6 +549,42 @@ export type Database = {
           },
         ]
       }
+      onboarding_progress: {
+        Row: {
+          completed: boolean
+          created_at: string
+          current_step: number
+          empresa_id: string
+          first_insumo_id: string | null
+          first_produto_id: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          current_step?: number
+          empresa_id: string
+          first_insumo_id?: string | null
+          first_produto_id?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          current_step?: number
+          empresa_id?: string
+          first_insumo_id?: string | null
+          first_produto_id?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       producoes: {
         Row: {
           created_at: string
