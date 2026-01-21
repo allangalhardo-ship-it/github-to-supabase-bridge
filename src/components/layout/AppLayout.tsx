@@ -188,10 +188,10 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
                   onClick={onNavigate}
                   className={({ isActive }) =>
                     cn(
-                      'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                      'flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-semibold transition-colors',
                       isActive
-                        ? 'bg-sidebar-primary text-sidebar-primary-foreground'
-                        : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                        ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-sm'
+                        : 'text-sidebar-foreground/90 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                     )
                   }
                 >
@@ -203,11 +203,11 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
 
             return (
               <Collapsible key={category.label} defaultOpen={isActive}>
-                <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-sidebar-foreground/60 uppercase tracking-wider hover:text-sidebar-foreground/80 transition-colors">
+                <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2.5 text-[11px] font-bold text-sidebar-foreground/50 uppercase tracking-[0.1em] hover:text-sidebar-foreground/70 transition-colors">
                   {category.label}
-                  <ChevronDown className="h-4 w-4 transition-transform duration-200 [&[data-state=open]>svg]:rotate-180" />
+                  <ChevronDown className="h-3.5 w-3.5 opacity-60 transition-transform duration-200 [&[data-state=open]>svg]:rotate-180" />
                 </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-1 mt-1">
+                <CollapsibleContent className="space-y-0.5 mt-0.5">
                   {category.items.map((item) => (
                     <NavLink
                       key={item.to}
@@ -215,14 +215,14 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
                       onClick={onNavigate}
                       className={({ isActive }) =>
                         cn(
-                          'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ml-2',
+                          'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-colors ml-1',
                           isActive
-                            ? 'bg-sidebar-primary text-sidebar-primary-foreground'
-                            : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                            ? 'bg-sidebar-primary text-sidebar-primary-foreground font-semibold shadow-sm'
+                            : 'text-sidebar-foreground/80 font-medium hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                         )
                       }
                     >
-                      <item.icon className="h-4 w-4" />
+                      <item.icon className="h-4 w-4 opacity-80" />
                       {item.label}
                     </NavLink>
                   ))}
@@ -233,13 +233,13 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
         </nav>
 
         {/* Seção de Ajuda */}
-        <div className="px-3 mt-4 pt-4 border-t border-sidebar-border/50">
+        <div className="px-3 mt-4 pt-4 border-t border-sidebar-border/30">
           <Collapsible>
-            <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-sidebar-foreground/60 uppercase tracking-wider hover:text-sidebar-foreground/80 transition-colors">
+            <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2.5 text-[11px] font-bold text-sidebar-foreground/50 uppercase tracking-[0.1em] hover:text-sidebar-foreground/70 transition-colors">
               Ajuda
-              <ChevronDown className="h-4 w-4 transition-transform duration-200" />
+              <ChevronDown className="h-3.5 w-3.5 opacity-60 transition-transform duration-200" />
             </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-1 mt-1">
+            <CollapsibleContent className="space-y-0.5 mt-0.5">
               {helpItems.map((item) => (
                 <NavLink
                   key={item.to}
@@ -247,14 +247,14 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
                   onClick={onNavigate}
                   className={({ isActive }) =>
                     cn(
-                      'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ml-2',
+                      'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-colors ml-1',
                       isActive
-                        ? 'bg-sidebar-primary text-sidebar-primary-foreground'
-                        : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                        ? 'bg-sidebar-primary text-sidebar-primary-foreground font-semibold shadow-sm'
+                        : 'text-sidebar-foreground/60 font-medium hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                     )
                   }
                 >
-                  <item.icon className="h-4 w-4" />
+                  <item.icon className="h-4 w-4 opacity-70" />
                   {item.label}
                 </NavLink>
               ))}
@@ -264,13 +264,13 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
       </ScrollArea>
 
       {/* Footer com logout */}
-      <div className="p-4 border-t border-sidebar-border">
+      <div className="p-4 border-t border-sidebar-border/30">
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 text-sidebar-foreground/70 hover:text-red-300 hover:bg-sidebar-accent"
+          className="w-full justify-start gap-3 text-[13px] font-medium text-sidebar-foreground/70 hover:text-red-300 hover:bg-sidebar-accent"
           onClick={handleSignOut}
         >
-          <LogOut className="h-5 w-5" />
+          <LogOut className="h-4 w-4" />
           Sair
         </Button>
       </div>
