@@ -164,6 +164,50 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_historico: {
+        Row: {
+          created_at: string
+          dados_contexto: Json | null
+          detail: string
+          empresa_id: string
+          headline: string
+          id: string
+          prioridade: number
+          status: string
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          dados_contexto?: Json | null
+          detail: string
+          empresa_id: string
+          headline: string
+          id?: string
+          prioridade?: number
+          status: string
+          tipo: string
+        }
+        Update: {
+          created_at?: string
+          dados_contexto?: Json | null
+          detail?: string
+          empresa_id?: string
+          headline?: string
+          id?: string
+          prioridade?: number
+          status?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_historico_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       configuracoes: {
         Row: {
           cmv_alvo: number
