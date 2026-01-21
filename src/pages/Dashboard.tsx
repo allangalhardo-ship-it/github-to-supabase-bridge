@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { DashboardInsights } from '@/components/dashboard/DashboardInsights';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -127,6 +128,33 @@ const Dashboard = () => {
     enabled: !!usuario?.empresa_id,
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
+  });
+
+  // Fetch todos os produtos com fichas técnicas para análise de margem
+  const { data: produtosAnalise } = useQuery({
+    queryKey: ['produtos-analise', usuario?.empresa_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('produtos')
+        .select(`
+          id,
+          nome,
+          preco_venda,
+          categoria,
+          fichas_tecnicas (
+            quantidade,
+            insumos (
+              custo_unitario
+            )
+          )
+        `)
+        .eq('ativo', true);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!usuario?.empresa_id,
+    staleTime: 5 * 60 * 1000,
   });
 
   // Cálculos
@@ -258,6 +286,80 @@ const Dashboard = () => {
       currency: 'BRL',
     }).format(value);
   };
+
+  // Calcular produtos com margem negativa
+  const produtosMargemNegativa = useMemo(() => {
+    if (!produtosAnalise) return [];
+
+    return produtosAnalise
+      .map((produto) => {
+        const custoInsumos = produto.fichas_tecnicas?.reduce((sum: number, ft: any) => {
+          return sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0));
+        }, 0) || 0;
+
+        const lucro = produto.preco_venda - custoInsumos;
+        const margem = produto.preco_venda > 0 ? (lucro / produto.preco_venda) * 100 : 0;
+
+        return {
+          id: produto.id,
+          nome: produto.nome,
+          preco_venda: produto.preco_venda,
+          custo_insumos: custoInsumos,
+          margem,
+          lucro,
+        };
+      })
+      .filter((p) => p.lucro < 0 && p.custo_insumos > 0);
+  }, [produtosAnalise]);
+
+  // Calcular impacto dos apps de delivery
+  const impactoApps = useMemo(() => {
+    if (!vendas || !taxasApps) return [];
+
+    const porApp: Record<string, { taxaTotal: number; vendas: number }> = {};
+
+    vendas.forEach((venda) => {
+      if (!venda.canal) return;
+      const canalLower = venda.canal.toLowerCase();
+      
+      const taxaApp = taxasApps.find(t =>
+        t.nome_app && (canalLower.includes(t.nome_app.toLowerCase()) ||
+        t.nome_app.toLowerCase().includes(canalLower))
+      );
+
+      if (taxaApp) {
+        const nomeApp = taxaApp.nome_app;
+        if (!porApp[nomeApp]) {
+          porApp[nomeApp] = { taxaTotal: 0, vendas: 0 };
+        }
+        porApp[nomeApp].taxaTotal += (Number(venda.valor_total) * Number(taxaApp.taxa_percentual) / 100);
+        porApp[nomeApp].vendas += 1;
+      }
+    });
+
+    return Object.entries(porApp).map(([nome, dados]) => ({
+      nome,
+      taxaTotal: dados.taxaTotal,
+      percentualLucro: lucroEstimado > 0 ? (dados.taxaTotal / lucroEstimado) * 100 : 0,
+      vendas: dados.vendas,
+    }));
+  }, [vendas, taxasApps, lucroEstimado]);
+
+  // Melhor produto do mês
+  const melhorProduto = useMemo(() => {
+    if (!topProdutos || topProdutos.length === 0) return null;
+
+    const melhor = topProdutos[0];
+    const lucro = Number(melhor.lucro || 0);
+    const receita = Number(melhor.receita || 0);
+    
+    return {
+      nome: melhor.nome,
+      lucroTotal: lucro,
+      quantidade: Number(melhor.quantidade || 0),
+      margem: receita > 0 ? (lucro / receita) * 100 : 0,
+    };
+  }, [topProdutos]);
 
   const isLoading = loadingVendas || loadingCustos;
 
@@ -457,6 +559,15 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Insights Acionáveis */}
+      <DashboardInsights
+        produtosMargemNegativa={produtosMargemNegativa}
+        impactoApps={impactoApps}
+        melhorProduto={melhorProduto}
+        lucroTotal={lucroEstimado}
+        formatCurrency={formatCurrency}
+      />
 
       {/* Meta de Faturamento */}
       <Card className="animate-fade-in">
