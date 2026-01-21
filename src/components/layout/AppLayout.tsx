@@ -217,12 +217,12 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
 
             return (
               <Collapsible key={category.label} defaultOpen={isActive}>
-                <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2.5 text-[11px] font-bold text-sidebar-foreground/50 uppercase tracking-[0.1em] hover:text-sidebar-foreground/70 transition-colors">
+                <CollapsibleTrigger className="group flex items-center justify-between w-full px-3 py-2.5 text-[11px] font-bold text-sidebar-foreground/50 uppercase tracking-[0.1em] hover:text-sidebar-foreground/70 transition-colors">
                   <span className="flex items-center gap-2">
                     {category.icon && <category.icon className="h-3.5 w-3.5" />}
                     {category.label}
                   </span>
-                  <ChevronDown className="h-3.5 w-3.5 opacity-60 transition-transform duration-200 [&[data-state=open]>svg]:rotate-180" />
+                  <ChevronDown className="h-3.5 w-3.5 opacity-60 transition-transform duration-300 group-data-[state=open]:rotate-180" />
                 </CollapsibleTrigger>
                 <CollapsibleContent className="space-y-0.5 mt-0.5">
                   {category.items.map((item) => (
@@ -252,12 +252,12 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
         {/* Seção de Ajuda */}
         <div className="px-3 mt-4 pt-4 border-t border-sidebar-border/30">
           <Collapsible>
-            <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2.5 text-[11px] font-bold text-sidebar-foreground/50 uppercase tracking-[0.1em] hover:text-sidebar-foreground/70 transition-colors">
+            <CollapsibleTrigger className="group flex items-center justify-between w-full px-3 py-2.5 text-[11px] font-bold text-sidebar-foreground/50 uppercase tracking-[0.1em] hover:text-sidebar-foreground/70 transition-colors">
               <span className="flex items-center gap-2">
                 <helpItems.icon className="h-3.5 w-3.5" />
                 {helpItems.label}
               </span>
-              <ChevronDown className="h-3.5 w-3.5 opacity-60 transition-transform duration-200" />
+              <ChevronDown className="h-3.5 w-3.5 opacity-60 transition-transform duration-300 group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-0.5 mt-0.5">
               {helpItems.items.map((item) => (
