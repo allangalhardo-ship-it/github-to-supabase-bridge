@@ -1,8 +1,13 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   GraduationCap,
   ChevronRight,
@@ -12,7 +17,11 @@ import {
   CheckCircle,
   Target,
   Flame,
+  History,
+  Trash2,
 } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface Venda {
   id: string;
@@ -87,11 +96,22 @@ interface CoachMessage {
   status: CoachStatus;
   headline: string;
   detail: string;
+  tipo?: string;
   action?: {
     label: string;
     route: string;
   };
   priority: number;
+}
+
+interface CoachHistoricoItem {
+  id: string;
+  tipo: string;
+  status: string;
+  headline: string;
+  detail: string;
+  prioridade: number;
+  created_at: string;
 }
 
 export const BusinessCoach: React.FC<BusinessCoachProps> = ({
@@ -105,6 +125,10 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
   formatCurrency,
 }) => {
   const navigate = useNavigate();
+  const { usuario } = useAuth();
+  const queryClient = useQueryClient();
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [lastSavedHeadline, setLastSavedHeadline] = useState<string | null>(null);
   
   const margemMeta = config?.margem_desejada_padrao ?? 30;
   const impostoPercent = config?.imposto_medio_sobre_vendas ?? 10;
@@ -408,7 +432,83 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
     return main;
   }, [vendas, produtos, taxasApps, config, custosFixos, historicoPrecos, periodo, margemMeta, custoFixoMensal, formatCurrency]);
 
-  const getStatusStyles = (status: CoachStatus) => {
+  // Query para buscar histórico
+  const { data: coachHistorico } = useQuery({
+    queryKey: ['coach-historico', usuario?.empresa_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('coach_historico')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      
+      if (error) throw error;
+      return data as CoachHistoricoItem[];
+    },
+    enabled: !!usuario?.empresa_id,
+  });
+
+  // Mutation para salvar insight
+  const saveMutation = useMutation({
+    mutationFn: async (insight: { tipo: string; status: string; headline: string; detail: string; prioridade: number }) => {
+      if (!usuario?.empresa_id) throw new Error('Empresa não encontrada');
+      
+      const { error } = await supabase
+        .from('coach_historico')
+        .insert({
+          empresa_id: usuario.empresa_id,
+          ...insight,
+        });
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['coach-historico'] });
+    },
+  });
+
+  // Mutation para deletar histórico
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('coach_historico')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['coach-historico'] });
+    },
+  });
+
+  // Salvar insight quando mudar (apenas 1x por headline única)
+  useEffect(() => {
+    if (!coachAnalysis || !usuario?.empresa_id) return;
+    if (coachAnalysis.headline === lastSavedHeadline) return;
+    if (coachAnalysis.headline === 'Comece registrando suas primeiras vendas') return;
+    
+    // Determinar tipo baseado no conteúdo
+    let tipo = 'geral';
+    if (coachAnalysis.headline.includes('Meta')) tipo = 'meta_mensal';
+    else if (coachAnalysis.headline.includes('margem')) tipo = 'margem';
+    else if (coachAnalysis.headline.includes('Vendas') || coachAnalysis.headline.includes('ritmo')) tipo = 'tendencia';
+    else if (coachAnalysis.headline.includes('canal') || coachAnalysis.headline.includes('corroendo')) tipo = 'canal';
+    else if (coachAnalysis.headline.includes('promova') || coachAnalysis.headline.includes('Dica')) tipo = 'oportunidade';
+    else if (coachAnalysis.headline.includes('subiu') || coachAnalysis.headline.includes('insumo')) tipo = 'insumos';
+    
+    saveMutation.mutate({
+      tipo,
+      status: coachAnalysis.status,
+      headline: coachAnalysis.headline,
+      detail: coachAnalysis.detail,
+      prioridade: 'priority' in coachAnalysis ? (coachAnalysis as any).priority : 5,
+    });
+    
+    setLastSavedHeadline(coachAnalysis.headline);
+  }, [coachAnalysis?.headline, usuario?.empresa_id]);
+
+  const getStatusStyles = (status: CoachStatus | string) => {
     switch (status) {
       case 'success':
         return {
@@ -441,6 +541,15 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
     }
   };
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'success': return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'warning': return <Target className="h-4 w-4 text-amber-500" />;
+      case 'alert': return <AlertCircle className="h-4 w-4 text-red-500" />;
+      default: return <GraduationCap className="h-4 w-4 text-primary" />;
+    }
+  };
+
   const styles = getStatusStyles(coachAnalysis.status);
   const StatusIcon = styles.icon;
 
@@ -458,7 +567,7 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
           </div>
           
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <Badge 
                 variant="outline" 
                 className="bg-background/80 text-xs font-medium"
@@ -471,6 +580,81 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
                   +{coachAnalysis.secondaryCount} {coachAnalysis.secondaryCount === 1 ? 'insight' : 'insights'}
                 </Badge>
               )}
+              
+              {/* Botão de Histórico */}
+              <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    <History className="h-3 w-3 mr-1" />
+                    Histórico
+                    {coachHistorico && coachHistorico.length > 0 && (
+                      <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">
+                        {coachHistorico.length}
+                      </Badge>
+                    )}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-lg max-h-[80vh]">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <History className="h-5 w-5" />
+                      Histórico do Coach
+                    </DialogTitle>
+                  </DialogHeader>
+                  <ScrollArea className="h-[60vh] pr-4">
+                    {coachHistorico && coachHistorico.length > 0 ? (
+                      <div className="space-y-3">
+                        {coachHistorico.map((item) => (
+                          <div
+                            key={item.id}
+                            className={`p-3 rounded-lg border ${
+                              item.status === 'success' ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' :
+                              item.status === 'warning' ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800' :
+                              item.status === 'alert' ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800' :
+                              'bg-muted/50 border-border'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-start gap-2 min-w-0 flex-1">
+                                {getStatusIcon(item.status)}
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-medium text-sm leading-tight truncate">
+                                    {item.headline}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                    {item.detail}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground mt-2">
+                                    {format(new Date(item.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                  </p>
+                                </div>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive shrink-0"
+                                onClick={() => deleteMutation.mutate(item.id)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <History className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                        <p>Nenhum insight registrado ainda.</p>
+                        <p className="text-xs mt-1">Os insights serão salvos automaticamente.</p>
+                      </div>
+                    )}
+                  </ScrollArea>
+                </DialogContent>
+              </Dialog>
             </div>
             
             <h3 className="font-semibold text-lg text-foreground leading-tight">
