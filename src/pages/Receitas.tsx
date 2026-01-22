@@ -214,6 +214,7 @@ export default function Receitas() {
             }}
             receita={selectedReceita}
             insumosSimples={insumosSimples}
+            todasReceitas={receitas}
           />
         </TabsContent>
 

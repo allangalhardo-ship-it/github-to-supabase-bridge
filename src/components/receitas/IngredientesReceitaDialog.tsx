@@ -20,6 +20,7 @@ interface IngredientesReceitaDialogProps {
   onOpenChange: (open: boolean) => void;
   receita: Receita | null;
   insumosSimples: Insumo[] | undefined;
+  todasReceitas: Receita[] | undefined;
 }
 
 export function IngredientesReceitaDialog({
@@ -27,6 +28,7 @@ export function IngredientesReceitaDialog({
   onOpenChange,
   receita,
   insumosSimples,
+  todasReceitas,
 }: IngredientesReceitaDialogProps) {
   const queryClient = useQueryClient();
   const [novoIngrediente, setNovoIngrediente] = useState({ insumo_id: '', quantidade: '' });
@@ -59,13 +61,24 @@ export function IngredientesReceitaDialog({
     enabled: !!receita?.id,
   });
 
-  // Insumos disponíveis para adicionar à receita
-  const insumosDisponiveisReceita = (insumosSimples || []).filter(i => 
-    i.id !== receita?.id && 
+  // Combina insumos simples + outras receitas (intermediários) para seleção
+  const todosInsumosDisponiveis = [
+    ...(insumosSimples || []).map(i => ({ ...i, isReceita: false })),
+    ...(todasReceitas || [])
+      .filter(r => r.id !== receita?.id) // Exclui a própria receita
+      .map(r => ({ 
+        id: r.id, 
+        nome: r.nome, 
+        unidade_medida: r.unidade_medida, 
+        custo_unitario: r.custo_unitario,
+        is_intermediario: true,
+        isReceita: true 
+      }))
+  ].filter(i => 
     !ingredientesReceita?.some(r => r.insumo_ingrediente_id === i.id)
   );
 
-  const insumoSelecionadoReceitaInfo = insumosSimples?.find(i => i.id === novoIngrediente.insumo_id);
+  const insumoSelecionadoReceitaInfo = todosInsumosDisponiveis?.find(i => i.id === novoIngrediente.insumo_id);
 
   const recalcularCustoReceita = async () => {
     if (!receita || !ingredientesReceita) return;
@@ -193,17 +206,17 @@ export function IngredientesReceitaDialog({
             </p>
           )}
 
-          {insumosDisponiveisReceita.length > 0 && (
+          {todosInsumosDisponiveis.length > 0 && (
             <div className="flex gap-2 pt-2 border-t">
               <SearchableSelect
-                options={insumosDisponiveisReceita.map((insumo) => ({
+                options={todosInsumosDisponiveis.map((insumo) => ({
                   value: insumo.id,
-                  label: `${insumo.nome} (${insumo.unidade_medida})`,
+                  label: `${insumo.isReceita ? '🍳 ' : ''}${insumo.nome} (${insumo.unidade_medida})`,
                   searchTerms: insumo.nome,
                 }))}
                 value={novoIngrediente.insumo_id}
                 onValueChange={(value) => setNovoIngrediente({ ...novoIngrediente, insumo_id: value })}
-                placeholder="Buscar ingrediente..."
+                placeholder="Buscar ingrediente ou receita..."
                 searchPlaceholder="Digite para buscar..."
                 emptyMessage="Nenhum ingrediente encontrado."
                 className="flex-1"
