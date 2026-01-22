@@ -191,6 +191,7 @@ export default function Receitas() {
               }}
               editingReceita={editingReceita}
               insumosSimples={insumosSimples}
+              receitas={receitas}
             />
           </div>
 

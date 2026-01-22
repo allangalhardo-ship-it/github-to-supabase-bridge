@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +31,7 @@ interface ReceitaFormDialogProps {
   onOpenChange: (open: boolean) => void;
   editingReceita: Receita | null;
   insumosSimples: Insumo[] | undefined;
+  receitas?: Receita[] | undefined;
 }
 
 export function ReceitaFormDialog({
@@ -38,6 +39,7 @@ export function ReceitaFormDialog({
   onOpenChange,
   editingReceita,
   insumosSimples,
+  receitas,
 }: ReceitaFormDialogProps) {
   const { usuario } = useAuth();
   const queryClient = useQueryClient();
@@ -84,12 +86,27 @@ export function ReceitaFormDialog({
     return rendimento > 0 ? custoTotalTemp / rendimento : 0;
   }, [custoTotalTemp, formData.rendimento_receita]);
 
+  // Combina insumos simples + outras receitas (exceto a que está sendo editada)
+  const todosInsumosDisponiveis = useMemo(() => {
+    const simples = (insumosSimples || []).map(i => ({ ...i, isReceita: false }));
+    const receitasDisponiveis = (receitas || [])
+      .filter(r => r.id !== editingReceita?.id) // Exclui a própria receita sendo editada
+      .map(r => ({
+        id: r.id,
+        nome: r.nome,
+        unidade_medida: r.unidade_medida,
+        custo_unitario: r.custo_unitario,
+        isReceita: true,
+      }));
+    return [...simples, ...receitasDisponiveis];
+  }, [insumosSimples, receitas, editingReceita?.id]);
+
   const insumosDisponiveisForm = useMemo(() => 
-    (insumosSimples || []).filter(i => !ingredientesTemp.some(ing => ing.insumoId === i.id)),
-    [insumosSimples, ingredientesTemp]
+    todosInsumosDisponiveis.filter(i => !ingredientesTemp.some(ing => ing.insumoId === i.id)),
+    [todosInsumosDisponiveis, ingredientesTemp]
   );
 
-  const insumoFormSelecionadoInfo = insumosSimples?.find(i => i.id === novoIngredienteForm.insumo_id);
+  const insumoFormSelecionadoInfo = todosInsumosDisponiveis.find(i => i.id === novoIngredienteForm.insumo_id);
 
   const handleAddIngredienteTemp = () => {
     if (!novoIngredienteForm.insumo_id || !novoIngredienteForm.quantidade) {
@@ -97,7 +114,7 @@ export function ReceitaFormDialog({
       return;
     }
 
-    const insumo = insumosSimples?.find(i => i.id === novoIngredienteForm.insumo_id);
+    const insumo = todosInsumosDisponiveis.find(i => i.id === novoIngredienteForm.insumo_id);
     if (!insumo) return;
 
     const novoIng: IngredienteTemp = {
@@ -318,7 +335,7 @@ export function ReceitaFormDialog({
                     <SearchableSelect
                       options={insumosDisponiveisForm.map((insumo) => ({
                         value: insumo.id,
-                        label: `${insumo.nome} (${insumo.unidade_medida}) - ${formatCurrency(insumo.custo_unitario)}`,
+                        label: `${insumo.isReceita ? '📋 ' : ''}${insumo.nome} (${insumo.unidade_medida}) - ${formatCurrency(insumo.custo_unitario)}`,
                         searchTerms: insumo.nome,
                       }))}
                       value={novoIngredienteForm.insumo_id}
