@@ -148,39 +148,43 @@ export function IngredientesReceitaDialog({
       if (!isOpen) handleClose();
       else onOpenChange(isOpen);
     }}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <ChefHat className="h-5 w-5 text-primary" />
-            Ingredientes: {receita?.nome}
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="p-4 pb-2 sm:p-6 sm:pb-4 border-b shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <ChefHat className="h-5 w-5 text-primary shrink-0" />
+            <span className="truncate">Ingredientes: {receita?.nome}</span>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+          {/* Info da receita - responsivo */}
           <div className="p-3 bg-muted/50 rounded-lg">
-            <div className="flex justify-between text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
               <span>Unidade: <strong>{receita?.unidade_medida}</strong></span>
               <span>Rendimento: <strong>{receita?.rendimento_receita || 1} {receita?.unidade_medida}</strong></span>
-              <span>Custo atual: <strong>{formatCurrency(receita?.custo_unitario || 0)}/{receita?.unidade_medida}</strong></span>
+              <span>Custo: <strong className="text-primary">{formatCurrency(receita?.custo_unitario || 0)}/{receita?.unidade_medida}</strong></span>
             </div>
           </div>
 
+          {/* Lista de ingredientes */}
           {ingredientesReceita && ingredientesReceita.length > 0 ? (
             <div className="space-y-2">
               {ingredientesReceita.map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{item.insumo_ingrediente?.nome}</span>
-                    <Badge variant="outline">{item.quantidade} {item.insumo_ingrediente?.unidade_medida}</Badge>
+                <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-muted/50 rounded-lg gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
+                    <span className="font-medium text-sm truncate">{item.insumo_ingrediente?.nome}</span>
+                    <Badge variant="outline" className="self-start sm:self-auto text-xs">
+                      {item.quantidade} {item.insumo_ingrediente?.unidade_medida}
+                    </Badge>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">
+                  <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
+                    <span className="text-sm font-medium text-muted-foreground">
                       {formatCurrency(item.quantidade * (item.insumo_ingrediente?.custo_unitario || 0))}
                     </span>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-destructive"
+                      className="h-8 w-8 text-destructive shrink-0"
                       onClick={() => removeIngredienteMutation.mutate(item.id)}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -189,9 +193,9 @@ export function IngredientesReceitaDialog({
                 </div>
               ))}
               
-              <div className="flex justify-between pt-2 border-t font-medium">
-                <span>Custo total da receita:</span>
-                <span>
+              <div className="flex justify-between pt-3 border-t font-medium text-sm">
+                <span>Custo total:</span>
+                <span className="text-primary">
                   {formatCurrency(
                     ingredientesReceita.reduce((sum, item) => 
                       sum + (item.quantidade * (item.insumo_ingrediente?.custo_unitario || 0)), 0
@@ -201,13 +205,17 @@ export function IngredientesReceitaDialog({
               </div>
             </div>
           ) : (
-            <p className="text-center text-muted-foreground py-4">
+            <p className="text-center text-muted-foreground py-6 text-sm">
               Nenhum ingrediente cadastrado ainda.
             </p>
           )}
+        </div>
 
-          {todosInsumosDisponiveis.length > 0 && (
-            <div className="flex gap-2 pt-2 border-t">
+        {/* Área de adicionar ingrediente - fixa no bottom */}
+        {todosInsumosDisponiveis.length > 0 && (
+          <div className="shrink-0 border-t bg-background p-4 sm:p-6 space-y-3">
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Adicionar ingrediente</p>
+            <div className="flex flex-col sm:flex-row gap-2">
               <SearchableSelect
                 options={todosInsumosDisponiveis.map((insumo) => ({
                   value: insumo.id,
@@ -221,27 +229,32 @@ export function IngredientesReceitaDialog({
                 emptyMessage="Nenhum ingrediente encontrado."
                 className="flex-1"
               />
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder={insumoSelecionadoReceitaInfo ? `Qtd (${insumoSelecionadoReceitaInfo.unidade_medida})` : "Qtd"}
-                value={novoIngrediente.quantidade}
-                onChange={(e) => setNovoIngrediente({ ...novoIngrediente, quantidade: e.target.value })}
-                className="w-28"
-              />
-              <Button
-                onClick={() => addIngredienteMutation.mutate()}
-                disabled={!novoIngrediente.insumo_id || !novoIngrediente.quantidade || addIngredienteMutation.isPending}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder={insumoSelecionadoReceitaInfo ? `Qtd (${insumoSelecionadoReceitaInfo.unidade_medida})` : "Quantidade"}
+                  value={novoIngrediente.quantidade}
+                  onChange={(e) => setNovoIngrediente({ ...novoIngrediente, quantidade: e.target.value })}
+                  className="w-full sm:w-28"
+                />
+                <Button
+                  onClick={() => addIngredienteMutation.mutate()}
+                  disabled={!novoIngrediente.insumo_id || !novoIngrediente.quantidade || addIngredienteMutation.isPending}
+                  className="shrink-0"
+                >
+                  <Plus className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Adicionar</span>
+                </Button>
+              </div>
             </div>
-          )}
-
-          <div className="flex justify-end pt-4">
-            <Button onClick={handleClose}>Fechar</Button>
           </div>
+        )}
+
+        {/* Footer */}
+        <div className="shrink-0 border-t p-4 sm:p-6 flex justify-end">
+          <Button onClick={handleClose} variant="outline">Fechar</Button>
         </div>
       </DialogContent>
     </Dialog>
