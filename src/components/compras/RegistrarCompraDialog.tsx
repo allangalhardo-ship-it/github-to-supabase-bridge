@@ -256,21 +256,21 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
+      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="p-4 sm:p-6 pb-2 sm:pb-4 border-b shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Package className="h-5 w-5 text-primary shrink-0" />
             Registrar Compra
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs sm:text-sm">
             Registre uma compra com conversão automática de unidades
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
           {/* Insumo Selection */}
           <div className="space-y-2">
-            <Label>Insumo *</Label>
+            <Label className="text-sm">Insumo *</Label>
             <SearchableSelect
               options={insumoOptions}
               value={formData.insumo_id}
@@ -287,9 +287,9 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
           {/* Purchase Data */}
           {formData.insumo_id && (
             <>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-2">
-                  <Label>Quantidade *</Label>
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                <div className="space-y-1 sm:space-y-2">
+                  <Label className="text-xs sm:text-sm">Quantidade *</Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -306,11 +306,12 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
                         valor_total: novoTotal > 0 ? novoTotal.toFixed(2) : ''
                       });
                     }}
+                    className="h-9 sm:h-10"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Vlr Unitário *</Label>
+                <div className="space-y-1 sm:space-y-2">
+                  <Label className="text-xs sm:text-sm">Vlr Unit. *</Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -327,11 +328,12 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
                         valor_total: novoTotal > 0 ? novoTotal.toFixed(2) : ''
                       });
                     }}
+                    className="h-9 sm:h-10"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Valor Total</Label>
+                <div className="space-y-1 sm:space-y-2">
+                  <Label className="text-xs sm:text-sm">Total</Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -339,14 +341,14 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
                     placeholder="R$ 0,00"
                     value={formData.valor_total}
                     readOnly
-                    className="bg-muted"
+                    className="bg-muted h-9 sm:h-10"
                   />
                 </div>
               </div>
 
               {/* Unit Selection */}
               <div className="space-y-2">
-                <Label>Unidade de Compra</Label>
+                <Label className="text-sm">Unidade de Compra</Label>
                 {!showNovaUnidade ? (
                   <div className="flex gap-2">
                     <Select
@@ -361,7 +363,7 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
                       }}
                     >
                       <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Selecione ou crie uma unidade..." />
+                        <SelectValue placeholder="Selecione ou crie..." />
                       </SelectTrigger>
                       <SelectContent>
                         {unidadesCompra?.map((u) => (
@@ -381,28 +383,30 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
                 ) : (
                   <div className="space-y-3 p-3 border rounded-lg bg-muted/50">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Nova Unidade de Compra</span>
+                      <span className="text-xs sm:text-sm font-medium">Nova Unidade</span>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => setShowNovaUnidade(false)}
+                        className="h-7 text-xs"
                       >
                         Cancelar
                       </Button>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <Label className="text-xs">Nome da unidade</Label>
                         <Input
                           placeholder="Ex: pacote 500g"
                           value={formData.nova_unidade_nome}
                           onChange={(e) => setFormData({ ...formData, nova_unidade_nome: e.target.value })}
+                          className="h-9"
                         />
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs">
-                          1 unidade = X {insumoSelecionado?.unidade_medida}
+                          1 un = X {insumoSelecionado?.unidade_medida}
                         </Label>
                         <Input
                           type="number"
@@ -411,6 +415,7 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
                           placeholder="Ex: 500"
                           value={formData.fator_conversao_manual}
                           onChange={(e) => setFormData({ ...formData, fator_conversao_manual: e.target.value })}
+                          className="h-9"
                         />
                       </div>
                     </div>
@@ -420,7 +425,7 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
 
               {/* Supplier */}
               <div className="space-y-2">
-                <Label>Fornecedor (opcional)</Label>
+                <Label className="text-sm">Fornecedor (opcional)</Label>
                 <Input
                   placeholder="Nome do fornecedor"
                   value={formData.fornecedor}
@@ -431,23 +436,23 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
               {/* Calculation Summary */}
               {fatorConversao > 0 && quantidadeComprada > 0 && valorTotal > 0 && (
                 <Card className="bg-primary/5 border-primary/20">
-                  <CardContent className="pt-4">
-                    <div className="flex items-center gap-2 mb-3">
+                  <CardContent className="p-3 sm:pt-4">
+                    <div className="flex items-center gap-2 mb-2 sm:mb-3">
                       <Calculator className="h-4 w-4 text-primary" />
-                      <span className="font-medium text-sm">Resumo da Conversão</span>
+                      <span className="font-medium text-xs sm:text-sm">Resumo da Conversão</span>
                     </div>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">
+                    <div className="space-y-2 text-xs sm:text-sm">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
                           {quantidadeComprada} × {unidadeSelecionada?.nome || formData.nova_unidade_nome || 'unidade'}
                         </Badge>
-                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                        <Badge className="bg-primary">
+                        <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                        <Badge className="bg-primary text-xs">
                           {quantidadeConvertida.toFixed(2)} {insumoSelecionado?.unidade_medida}
                         </Badge>
                       </div>
                       <div className="flex justify-between pt-2 border-t">
-                        <span className="text-muted-foreground">Custo por {insumoSelecionado?.unidade_medida}:</span>
+                        <span className="text-muted-foreground">Custo/{insumoSelecionado?.unidade_medida}:</span>
                         <span className="font-bold text-primary">{formatCurrency(custoUnitarioProducao)}</span>
                       </div>
                     </div>
@@ -456,20 +461,22 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
               )}
             </>
           )}
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={registrarCompraMutation.isPending || !fatorConversao || !quantidadeComprada}
-            >
-              {registrarCompraMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Registrar Compra
-            </Button>
-          </DialogFooter>
         </form>
+
+        {/* Footer fixo */}
+        <div className="shrink-0 border-t p-4 sm:p-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleSubmit}
+            disabled={registrarCompraMutation.isPending || !fatorConversao || !quantidadeComprada}
+            className="w-full sm:w-auto"
+          >
+            {registrarCompraMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Registrar Compra
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
