@@ -219,7 +219,7 @@ export function IngredientesReceitaDialog({
               <SearchableSelect
                 options={todosInsumosDisponiveis.map((insumo) => ({
                   value: insumo.id,
-                  label: `${insumo.isReceita ? '🍳 ' : ''}${insumo.nome} (${insumo.unidade_medida})`,
+                  label: `${insumo.isReceita ? '📋 ' : ''}${insumo.nome} (${insumo.unidade_medida})`,
                   searchTerms: insumo.nome,
                 }))}
                 value={novoIngrediente.insumo_id}
