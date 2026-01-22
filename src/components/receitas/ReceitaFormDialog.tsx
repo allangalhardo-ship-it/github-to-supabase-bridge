@@ -197,19 +197,21 @@ export function ReceitaFormDialog({
       <DialogTrigger asChild>
         <Button>
           <Plus className="mr-2 h-4 w-4" />
-          Nova Receita
+          <span className="hidden sm:inline">Nova Receita</span>
+          <span className="sm:hidden">Nova</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <ChefHat className="h-5 w-5 text-primary" />
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="p-4 sm:p-6 pb-2 sm:pb-4 border-b shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <ChefHat className="h-5 w-5 text-primary shrink-0" />
             {editingReceita ? 'Editar Receita' : 'Nova Receita'}
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-            <strong>💡 Receitas</strong> são preparações base que podem ser usadas como ingrediente em produtos finais (ex: ganache, recheio, calda).
+        
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+          <div className="p-3 bg-muted/50 rounded-lg text-xs sm:text-sm text-muted-foreground">
+            <strong>💡 Receitas</strong> são preparações base que podem ser usadas como ingrediente em produtos finais.
           </div>
 
           <div className="space-y-2">
@@ -223,7 +225,7 @@ export function ReceitaFormDialog({
             />
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="unidade_medida">Unidade do rendimento</Label>
               <Select
@@ -266,28 +268,28 @@ export function ReceitaFormDialog({
           {/* Seção de ingredientes - apenas para criação */}
           {!editingReceita && (
             <Card className="border-primary/30">
-              <CardHeader className="pb-2">
+              <CardHeader className="p-3 sm:pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
                   <FlaskConical className="h-4 w-4 text-primary" />
                   Ingredientes da Receita
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="p-3 pt-0 space-y-3">
                 {ingredientesTemp.length > 0 && (
                   <div className="space-y-2">
                     {ingredientesTemp.map((ing) => (
-                      <div key={ing.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg text-sm">
-                        <span className="font-medium">{ing.nome}</span>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">{ing.quantidade} {ing.unidade}</Badge>
-                          <span className="text-muted-foreground">
+                      <div key={ing.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-2 bg-muted/50 rounded-lg text-sm gap-2">
+                        <span className="font-medium truncate">{ing.nome}</span>
+                        <div className="flex items-center justify-between sm:justify-end gap-2">
+                          <Badge variant="outline" className="text-xs">{ing.quantidade} {ing.unidade}</Badge>
+                          <span className="text-muted-foreground text-xs">
                             {formatCurrency(ing.quantidade * ing.custoUnitario)}
                           </span>
                           <Button
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 text-destructive"
+                            className="h-6 w-6 text-destructive shrink-0"
                             onClick={() => handleRemoveIngredienteTemp(ing.id)}
                           >
                             <Trash2 className="h-3 w-3" />
@@ -298,7 +300,7 @@ export function ReceitaFormDialog({
                     
                     <div className="pt-2 border-t space-y-1 text-sm">
                       <div className="flex justify-between">
-                        <span>Custo total da receita:</span>
+                        <span>Custo total:</span>
                         <span className="font-medium">{formatCurrency(custoTotalTemp)}</span>
                       </div>
                       {formData.rendimento_receita && parseFloat(formData.rendimento_receita) > 0 && (
@@ -312,7 +314,7 @@ export function ReceitaFormDialog({
                 )}
 
                 {insumosDisponiveisForm.length > 0 ? (
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <SearchableSelect
                       options={insumosDisponiveisForm.map((insumo) => ({
                         value: insumo.id,
@@ -326,23 +328,26 @@ export function ReceitaFormDialog({
                       emptyMessage="Nenhum insumo encontrado."
                       className="flex-1"
                     />
-                    <Input
-                      type="number"
-                      step="0.001"
-                      min="0"
-                      placeholder={insumoFormSelecionadoInfo ? `Qtd (${insumoFormSelecionadoInfo.unidade_medida})` : "Qtd"}
-                      value={novoIngredienteForm.quantidade}
-                      onChange={(e) => setNovoIngredienteForm({ ...novoIngredienteForm, quantidade: e.target.value })}
-                      className="w-24"
-                    />
-                    <Button
-                      type="button"
-                      size="icon"
-                      onClick={handleAddIngredienteTemp}
-                      disabled={!novoIngredienteForm.insumo_id || !novoIngredienteForm.quantidade}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        step="0.001"
+                        min="0"
+                        placeholder={insumoFormSelecionadoInfo ? `Qtd (${insumoFormSelecionadoInfo.unidade_medida})` : "Quantidade"}
+                        value={novoIngredienteForm.quantidade}
+                        onChange={(e) => setNovoIngredienteForm({ ...novoIngredienteForm, quantidade: e.target.value })}
+                        className="flex-1 sm:w-24"
+                      />
+                      <Button
+                        type="button"
+                        size="icon"
+                        onClick={handleAddIngredienteTemp}
+                        disabled={!novoIngredienteForm.insumo_id || !novoIngredienteForm.quantidade}
+                        className="shrink-0"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ) : ingredientesTemp.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-2">
@@ -354,20 +359,25 @@ export function ReceitaFormDialog({
           )}
 
           {editingReceita && (
-            <div className="p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
+            <div className="p-3 bg-muted/50 rounded-lg text-xs sm:text-sm text-muted-foreground">
               Para editar os ingredientes, clique no ícone de frasco na tabela.
             </div>
           )}
-
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={createReceitaMutation.isPending || updateReceitaMutation.isPending}>
-              {editingReceita ? 'Salvar' : 'Criar'}
-            </Button>
-          </div>
         </form>
+
+        {/* Footer fixo */}
+        <div className="shrink-0 border-t p-4 sm:p-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} className="w-full sm:w-auto">
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleSubmit} 
+            disabled={createReceitaMutation.isPending || updateReceitaMutation.isPending}
+            className="w-full sm:w-auto"
+          >
+            {editingReceita ? 'Salvar' : 'Criar'}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
