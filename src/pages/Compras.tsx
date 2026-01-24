@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Loader2, ImageIcon, Filter, Calendar, Package, Search, Trash2, Wand2, Pencil, Eye, AlertTriangle, ArrowRight, Calculator } from 'lucide-react';
+import { InsumoIcon } from '@/lib/insumoIconUtils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -2008,7 +2009,10 @@ const Compras = () => {
                 <SelectContent>
                   {insumos?.map((insumo) => (
                     <SelectItem key={insumo.id} value={insumo.id}>
-                      {insumo.nome} ({insumo.unidade_medida})
+                      <span className="flex items-center gap-2">
+                        <InsumoIcon nome={insumo.nome} className="h-3.5 w-3.5" />
+                        {insumo.nome} ({insumo.unidade_medida})
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>

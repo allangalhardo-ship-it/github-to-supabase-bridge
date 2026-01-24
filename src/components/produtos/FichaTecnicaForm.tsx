@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Trash2, FlaskConical } from 'lucide-react';
+import { InsumoIcon } from '@/lib/insumoIconUtils';
 
 interface FichaTecnicaItem {
   id: string;
@@ -150,7 +151,9 @@ const FichaTecnicaForm: React.FC<FichaTecnicaFormProps> = ({ produtoId, fichaTec
               value: insumo.id,
               label: `${insumo.nome} (${insumo.unidade_medida})`,
               searchTerms: insumo.nome,
-              icon: insumo.is_intermediario ? <FlaskConical className="h-3 w-3 text-purple-500" /> : undefined,
+              icon: insumo.is_intermediario 
+                ? <FlaskConical className="h-3 w-3 text-purple-500" /> 
+                : <InsumoIcon nome={insumo.nome} className="h-3 w-3" />,
             }))}
             value={novoInsumo.insumo_id}
             onValueChange={(value) => setNovoInsumo({ ...novoInsumo, insumo_id: value })}

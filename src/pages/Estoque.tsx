@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, ArrowUp, ArrowDown, Warehouse, Package, AlertTriangle, Search, Filter, X, Factory, Clock } from 'lucide-react';
+import { InsumoIcon } from '@/lib/insumoIconUtils';
 import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { format, startOfMonth, endOfMonth, subMonths, differenceInDays, isBefore } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -540,7 +541,10 @@ const Estoque = () => {
                       <SelectItem value="todos">Todos</SelectItem>
                       {insumos?.map((insumo) => (
                         <SelectItem key={insumo.id} value={insumo.id}>
-                          <span className="truncate">{insumo.nome}</span>
+                          <span className="flex items-center gap-2 truncate">
+                            <InsumoIcon nome={insumo.nome} className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">{insumo.nome}</span>
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>

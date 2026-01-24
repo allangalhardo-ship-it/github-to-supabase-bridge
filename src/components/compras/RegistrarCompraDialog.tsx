@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, Calculator, Package, ArrowRight, Loader2 } from 'lucide-react';
 import { SearchableSelect, SearchableSelectOption } from '@/components/ui/searchable-select';
 import { inserirMovimentoEstoque } from '@/lib/estoqueUtils';
+import { InsumoIcon } from '@/lib/insumoIconUtils';
 
 interface Insumo {
   id: string;
@@ -243,6 +244,7 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
   const insumoOptions: SearchableSelectOption[] = (insumos || []).map(i => ({
     value: i.id,
     label: `${i.nome} (${i.unidade_medida})`,
+    icon: <InsumoIcon nome={i.nome} className="h-3.5 w-3.5" />,
   }));
 
   const formatCurrency = (value: number) => {
