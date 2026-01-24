@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
   },
-  // Versão do build (usada no app para diagnóstico e para detectar diferença entre dispositivos)
+  // Versão do build (timestamp ISO para diagnóstico)
   define: {
     __APP_VERSION__: JSON.stringify(new Date().toISOString()),
   },
@@ -18,12 +18,13 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
-      registerType: "autoUpdate",
-      // Evita injeção automática para não duplicar registro (registramos no src/main.tsx)
+      // "prompt" = o usuário decide quando atualizar (não atualiza automaticamente)
+      registerType: "prompt",
+      // Não injeta registro automático - fazemos manualmente no main.tsx
       injectRegister: null,
       includeAssets: ["favicon.png", "icon-512.png"],
       devOptions: {
-        enabled: false, // Disable SW in dev to avoid caching issues
+        enabled: false, // Desabilita SW em dev para evitar problemas de cache
       },
       manifest: {
         name: "GastroGestor",
@@ -50,16 +51,23 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       workbox: {
-        // Não cachear JS/CSS agressivamente - o Vite já adiciona hashes nos nomes
+        // Só cacheia assets estáticos (imagens, fontes)
+        // JS/CSS têm hash no nome, então são automaticamente invalidados
         globPatterns: ["**/*.{ico,png,svg,woff,woff2}"],
+        
+        // Limpa caches antigos automaticamente
         cleanupOutdatedCaches: true,
-        skipWaiting: true,
-        clientsClaim: true,
-        // Navegação SEMPRE vai para rede primeiro, sem cache
+        
+        // IMPORTANTE: NÃO ativa automaticamente - usuário decide
+        // skipWaiting: false (padrão) - SW novo fica em "waiting"
+        // clientsClaim: false (padrão) - não toma controle imediatamente
+        
+        // Navegação sempre vai para a rede
         navigateFallback: null,
+        
         runtimeCaching: [
           {
-            // HTML/navegação: SEMPRE busca da rede, cache só como fallback offline
+            // HTML/navegação: SEMPRE busca da rede
             urlPattern: ({ request }) => request.mode === "navigate",
             handler: "NetworkOnly",
             options: {
@@ -67,25 +75,27 @@ export default defineConfig(({ mode }) => ({
             },
           },
           {
-            // JS/CSS: Stale-while-revalidate para pegar novo em background
+            // JS/CSS: Rede primeiro, cache como fallback
             urlPattern: /\.(js|css)$/i,
-            handler: "StaleWhileRevalidate",
+            handler: "NetworkFirst",
             options: {
               cacheName: "static-resources",
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 60 * 60, // 1 hora
+                maxAgeSeconds: 60 * 60 * 24, // 24 horas
               },
+              networkTimeoutSeconds: 3, // Se rede demorar mais de 3s, usa cache
             },
           },
           {
+            // API Supabase: Rede primeiro
             urlPattern: /^https:\/\/krpvggbewyqamldhvmyk\.supabase\.co\/rest\/v1\/.*/i,
             handler: "NetworkFirst",
             options: {
               cacheName: "supabase-api-cache",
               expiration: {
                 maxEntries: 100,
-                maxAgeSeconds: 60 * 5,
+                maxAgeSeconds: 60 * 5, // 5 minutos
               },
               cacheableResponse: {
                 statuses: [0, 200],
@@ -94,13 +104,14 @@ export default defineConfig(({ mode }) => ({
             },
           },
           {
+            // Storage Supabase: Cache com revalidação
             urlPattern: /^https:\/\/krpvggbewyqamldhvmyk\.supabase\.co\/storage\/.*/i,
-            handler: "NetworkFirst",
+            handler: "StaleWhileRevalidate",
             options: {
               cacheName: "supabase-storage-cache",
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 60 * 60,
+                maxAgeSeconds: 60 * 60 * 24, // 24 horas
               },
               cacheableResponse: {
                 statuses: [0, 200],
