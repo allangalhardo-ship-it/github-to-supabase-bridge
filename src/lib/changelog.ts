@@ -13,24 +13,26 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
-    version: '1.2.0',
+    version: '1.3.0',
     date: '2026-01-24',
-    title: 'Sistema de Atualizações Inteligente',
+    title: 'Sistema de Versões Profissional',
     changes: [
-      { type: 'feature', description: 'Novo sistema de notificação de atualizações - você controla quando atualizar' },
-      { type: 'feature', description: 'Indicador de atualização na sidebar e header' },
-      { type: 'feature', description: 'Histórico de versões (changelog) para ver o que mudou' },
-      { type: 'improvement', description: 'App não recarrega mais sozinho durante o uso' },
+      { type: 'feature', description: 'Sistema de atualizações totalmente reformulado e profissional' },
+      { type: 'feature', description: 'Histórico de versões (changelog) com todas as novidades' },
+      { type: 'fix', description: 'Corrigido problema de atualizações aleatórias durante o uso' },
+      { type: 'improvement', description: 'Verificação automática de atualizações a cada 30 minutos' },
+      { type: 'improvement', description: 'Indicador persistente quando há atualização disponível' },
+      { type: 'security', description: 'Você decide quando atualizar - sem reloads inesperados' },
     ],
   },
   {
-    version: '1.1.0',
+    version: '1.2.0',
     date: '2026-01-24',
     title: 'Ícones Inteligentes para Insumos',
     changes: [
-      { type: 'feature', description: 'Ícones automáticos baseados no nome do insumo (farinha, leite, carne, etc.)' },
-      { type: 'improvement', description: 'Ícones consistentes em toda a aplicação: listas, selects, fichas técnicas' },
-      { type: 'improvement', description: 'Visual mais intuitivo para identificar tipos de ingredientes' },
+      { type: 'feature', description: 'Ícones automáticos baseados no nome do insumo' },
+      { type: 'improvement', description: 'Ícones consistentes em toda a aplicação' },
+      { type: 'improvement', description: 'Visual mais intuitivo para identificar ingredientes' },
     ],
   },
   {
