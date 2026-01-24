@@ -324,7 +324,12 @@ const Estoque = () => {
                   data={insumosFiltrados}
                   keyExtractor={(insumo) => insumo.id}
                   columns={[
-                    { key: 'nome', header: 'Insumo', mobilePriority: 1, render: (i) => <span className="font-medium truncate block max-w-[120px] sm:max-w-none">{i.nome}</span> },
+                    { key: 'nome', header: 'Insumo', mobilePriority: 1, render: (i) => (
+                      <span className="font-medium truncate block max-w-[120px] sm:max-w-none flex items-center gap-1.5">
+                        <InsumoIcon nome={i.nome} className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{i.nome}</span>
+                      </span>
+                    ) },
                     { key: 'estoque', header: 'Estoque Atual', align: 'right', mobilePriority: 2, render: (i) => {
                       const estoqueBaixo = Number(i.estoque_atual) <= Number(i.estoque_minimo);
                       const estoqueZerado = Number(i.estoque_atual) <= 0;
@@ -352,7 +357,12 @@ const Estoque = () => {
                       );
                     }},
                   ]}
-                  renderMobileHeader={(i) => <span className="truncate block max-w-[180px]">{i.nome}</span>}
+                  renderMobileHeader={(i) => (
+                    <span className="truncate flex items-center gap-1.5 max-w-[180px]">
+                      <InsumoIcon nome={i.nome} className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{i.nome}</span>
+                    </span>
+                  )}
                   renderMobileSubtitle={(i) => {
                     const estoqueBaixo = Number(i.estoque_atual) <= Number(i.estoque_minimo);
                     const estoqueZerado = Number(i.estoque_atual) <= 0;

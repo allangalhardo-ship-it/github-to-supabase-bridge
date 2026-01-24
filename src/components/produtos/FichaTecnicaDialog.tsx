@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Trash2, FileText, Search } from 'lucide-react';
 import BuscarInsumoDialog from './BuscarInsumoDialog';
+import { InsumoIcon } from '@/lib/insumoIconUtils';
 
 interface FichaTecnicaItem {
   id: string;
@@ -181,7 +182,10 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({ produtoId, prod
                     className="flex items-center gap-2 p-3"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{item.insumos.nome}</p>
+                      <p className="font-medium text-sm truncate flex items-center gap-1.5">
+                        <InsumoIcon nome={item.insumos.nome} className="h-3.5 w-3.5 shrink-0" />
+                        {item.insumos.nome}
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         {item.insumos.unidade_medida} • {formatCurrency(item.insumos.custo_unitario)}/un
                       </p>
