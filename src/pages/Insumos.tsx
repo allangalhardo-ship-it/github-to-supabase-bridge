@@ -14,11 +14,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, AlertTriangle, ShoppingBasket, ShoppingCart, Upload, TrendingUp, Search, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, AlertTriangle, ShoppingBasket, ShoppingCart, Upload, TrendingUp, Search, X, Download } from 'lucide-react';
 import ListaCompras from '@/components/insumos/ListaCompras';
 import ImportInsumosDialog from '@/components/import/ImportInsumosDialog';
 import HistoricoPrecos from '@/components/insumos/HistoricoPrecos';
-
+import { ImportarBasePadraoDialog } from '@/components/insumos/ImportarBasePadraoDialog';
 const unidadesMedida = [
   { value: 'un', label: 'Unidade (un)' },
   { value: 'kg', label: 'Quilograma (kg)' },
@@ -357,15 +357,18 @@ const Insumos = () => {
           setDialogOpen(open);
           if (!open) resetForm();
         }}>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <ImportarBasePadraoDialog />
             <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
               <Upload className="mr-2 h-4 w-4" />
-              Importar
+              <span className="hidden sm:inline">Importar Excel</span>
+              <span className="sm:hidden">Excel</span>
             </Button>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
-                Novo Insumo
+                <span className="hidden sm:inline">Novo Insumo</span>
+                <span className="sm:hidden">Novo</span>
               </Button>
             </DialogTrigger>
           </div>
