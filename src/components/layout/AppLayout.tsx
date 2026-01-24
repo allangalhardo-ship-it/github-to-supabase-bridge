@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Logo, LogoMark } from '@/components/brand/Logo';
 import OfflineIndicator from '@/components/layout/OfflineIndicator';
 import NotificationSettings from '@/components/layout/NotificationSettings';
+import { UpdateIndicator } from '@/components/pwa/UpdateNotification';
 import { useAlertNotifications } from '@/hooks/useAlertNotifications';
 import { useSessionTracker } from '@/hooks/useSessionTracker';
 import {
@@ -283,8 +284,14 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
         </div>
       </ScrollArea>
 
-      {/* Footer com logout */}
-      <div className="p-4 border-t border-sidebar-border/30">
+      {/* Indicador de atualização + Footer com logout */}
+      <div className="p-4 border-t border-sidebar-border/30 space-y-2">
+        {/* Indicador de atualização na sidebar */}
+        <UpdateIndicator 
+          showLabel 
+          className="w-full justify-start gap-3 text-[13px] font-medium text-emerald-400 hover:text-emerald-300 hover:bg-sidebar-accent rounded-md px-3 py-2" 
+        />
+        
         <Button
           variant="ghost"
           className="w-full justify-start gap-3 text-[13px] font-medium text-sidebar-foreground/70 hover:text-red-300 hover:bg-sidebar-accent"
@@ -355,8 +362,11 @@ const AppLayout = () => {
               <Logo size="xs" theme="dark" />
             </div>
             
-            {/* Notification button */}
-            <NotificationSettings className="text-white hover:bg-white/10 h-8 w-8 flex-shrink-0" />
+            {/* Indicador de atualização + Notification button */}
+            <div className="flex items-center gap-1">
+              <UpdateIndicator className="text-emerald-400 hover:bg-white/10 h-8 w-8 flex items-center justify-center flex-shrink-0 rounded" />
+              <NotificationSettings className="text-white hover:bg-white/10 h-8 w-8 flex-shrink-0" />
+            </div>
           </header>
         </div>
 

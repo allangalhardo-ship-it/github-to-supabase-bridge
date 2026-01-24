@@ -2,32 +2,38 @@ import { createRoot } from "react-dom/client";
 import { registerSW } from "virtual:pwa-register";
 import App from "./App.tsx";
 import "./index.css";
-import { setUpdateCallback, triggerUpdateBanner } from "./components/pwa/UpdateBanner";
+import { notifyUpdateAvailable } from "./components/pwa/UpdateNotification";
 
-// Registra o Service Worker com callback para atualização
+// Variável para armazenar a função de atualização
+let updateServiceWorker: ((reloadPage?: boolean) => Promise<void>) | null = null;
+
+// Registra o Service Worker
 const updateSW = registerSW({
   immediate: true,
   onNeedRefresh() {
-    // Apenas mostra o banner - NÃO força atualização automática
-    // O usuário decide quando atualizar clicando no banner
-    triggerUpdateBanner();
+    // Notifica o app que há atualização disponível
+    // O usuário decide quando atualizar
+    notifyUpdateAvailable();
   },
   onOfflineReady() {
     console.log("App pronto para uso offline");
   },
 });
 
-// Define o callback que será chamado quando o usuário clicar em "Atualizar"
-setUpdateCallback(() => {
-  updateSW(true);
-});
+// Exporta função para atualizar o SW (será chamada pelo UpdateProvider)
+updateServiceWorker = updateSW;
+
+export const triggerServiceWorkerUpdate = () => {
+  if (updateServiceWorker) {
+    updateServiceWorker(true);
+  }
+};
 
 // Garante que, ao abrir o link publicado, o app tente sempre pegar a versão mais nova
-// (evita ficar "preso" em cache do Service Worker / PWA).
 const ensureFreshApp = () => {
   if (!("serviceWorker" in navigator)) return;
 
-  // Evita loop infinito de reload caso algo dê errado
+  // Evita loop infinito de reload
   const RELOAD_FLAG = "gg_sw_reloaded";
 
   navigator.serviceWorker.addEventListener("controllerchange", () => {
