@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext, useCallback } from 'react';
-import { RefreshCw, X, Sparkles, Download } from 'lucide-react';
+import { RefreshCw, X, Sparkles, Download, History, Wrench, Bug, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Dialog,
@@ -9,6 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { getLatestChanges, changeTypeLabels, getCurrentVersion } from '@/lib/changelog';
+import { cn } from '@/lib/utils';
 
 // ============= Context para gerenciar estado global de atualização =============
 
@@ -152,9 +155,17 @@ interface UpdateIndicatorProps {
   showLabel?: boolean;
 }
 
+const typeIcons = {
+  feature: Sparkles,
+  improvement: Wrench,
+  fix: Bug,
+  security: Shield,
+};
+
 export const UpdateIndicator = ({ className = '', showLabel = false }: UpdateIndicatorProps) => {
   const { hasUpdate, triggerUpdate } = useUpdateNotification();
   const [showDialog, setShowDialog] = useState(false);
+  const latestChanges = getLatestChanges();
 
   if (!hasUpdate) return null;
 
@@ -180,11 +191,40 @@ export const UpdateIndicator = ({ className = '', showLabel = false }: UpdateInd
               Nova versão disponível
             </DialogTitle>
             <DialogDescription>
-              Uma nova versão do aplicativo está disponível com melhorias e correções.
-              Ao atualizar, a página será recarregada e você terá acesso às últimas funcionalidades.
+              Versão {getCurrentVersion()} • {latestChanges?.title}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-3 pt-4">
+          
+          {/* O que há de novo */}
+          {latestChanges && (
+            <div className="space-y-2 py-2">
+              <p className="text-sm font-medium flex items-center gap-2">
+                <History className="h-4 w-4" />
+                O que há de novo:
+              </p>
+              <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                {latestChanges.changes.slice(0, 5).map((change, idx) => {
+                  const Icon = typeIcons[change.type];
+                  const typeInfo = changeTypeLabels[change.type];
+                  
+                  return (
+                    <div key={idx} className="flex items-start gap-2 text-sm">
+                      <Badge 
+                        variant="secondary" 
+                        className={cn("text-white text-xs shrink-0", typeInfo.color)}
+                      >
+                        <Icon className="h-3 w-3 mr-1" />
+                        {typeInfo.label}
+                      </Badge>
+                      <span className="text-muted-foreground text-xs">{change.description}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          
+          <div className="flex flex-col gap-3 pt-2">
             <Button onClick={triggerUpdate} className="w-full">
               <Download className="h-4 w-4 mr-2" />
               Atualizar agora
