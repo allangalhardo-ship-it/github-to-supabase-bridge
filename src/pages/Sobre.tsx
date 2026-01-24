@@ -1,8 +1,10 @@
-import { ArrowLeft, Target, Eye, Heart, Users, TrendingUp, Shield } from "lucide-react";
+import { ArrowLeft, Target, Eye, Heart, Users, TrendingUp, Shield, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate, Link } from "react-router-dom";
 import logoImage from '@/assets/logo.png';
+import { ChangelogDialog } from "@/components/pwa/ChangelogDialog";
+import { getCurrentVersion } from "@/lib/changelog";
 
 const Sobre = () => {
   const navigate = useNavigate();
@@ -47,7 +49,18 @@ const Sobre = () => {
           <div className="flex justify-center mb-6">
             <img src={logoImage} alt="GastroGestor" className="h-24 w-24 object-contain" />
           </div>
-          <h1 className="text-4xl font-bold text-foreground mb-4">GastroGestor</h1>
+          <h1 className="text-4xl font-bold text-foreground mb-2">GastroGestor</h1>
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <span className="text-sm text-muted-foreground">Versão {getCurrentVersion()}</span>
+            <ChangelogDialog 
+              trigger={
+                <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-primary">
+                  <History className="h-3 w-3" />
+                  Ver novidades
+                </Button>
+              }
+            />
+          </div>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             A plataforma completa de gestão financeira e operacional para estabelecimentos do setor de alimentação.
           </p>
