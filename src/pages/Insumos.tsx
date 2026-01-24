@@ -14,7 +14,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, AlertTriangle, ShoppingBasket, ShoppingCart, Upload, TrendingUp, Search, X, Download } from 'lucide-react';
+import { Plus, Pencil, Trash2, AlertTriangle, ShoppingCart, Upload, TrendingUp, Search, X, Download, Package } from 'lucide-react';
+import { InsumoIcon } from '@/lib/insumoIconUtils';
 import ListaCompras from '@/components/insumos/ListaCompras';
 import ImportInsumosDialog from '@/components/import/ImportInsumosDialog';
 import HistoricoPrecos from '@/components/insumos/HistoricoPrecos';
@@ -204,7 +205,7 @@ const Insumos = () => {
         return (
           <div className="flex items-center gap-1.5 min-w-0 overflow-hidden max-w-full">
             <span className="shrink-0">
-              <ShoppingBasket className="h-4 w-4 text-muted-foreground" />
+              <InsumoIcon nome={insumo.nome} />
             </span>
             <span className="font-medium truncate flex-1 min-w-0">{insumo.nome}</span>
             {estoqueBaixo && (
@@ -303,7 +304,7 @@ const Insumos = () => {
       renderMobileHeader={(insumo) => (
         <div className="flex items-start gap-2 min-w-0">
           <span className="shrink-0 mt-0.5">
-            <ShoppingBasket className="h-4 w-4 text-muted-foreground" />
+            <InsumoIcon nome={insumo.nome} />
           </span>
           <span className="min-w-0 whitespace-normal break-words leading-snug">
             {insumo.nome}
@@ -486,7 +487,7 @@ const Insumos = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4 grid grid-cols-2 sm:flex sm:flex-wrap h-auto gap-1 p-1">
             <TabsTrigger value="todos" className="gap-1.5 text-xs sm:text-sm px-3 py-2 justify-center">
-              <ShoppingBasket className="h-4 w-4" />
+              <Package className="h-4 w-4" />
               <span>Todos</span>
               <Badge variant="secondary" className="ml-1 text-[10px] sm:text-xs">{insumos.length}</Badge>
             </TabsTrigger>
@@ -542,7 +543,7 @@ const Insumos = () => {
         </Tabs>
       ) : (
         <Card className="p-12 text-center">
-          <ShoppingBasket className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">Nenhum insumo cadastrado</h3>
           <p className="text-muted-foreground mb-4">
             Comece adicionando seus primeiros insumos.
