@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, FileText, Check, AlertCircle, Plus, Link2, Camera, Key, QrCode, Loader2, ImageIcon, Calculator, Pencil, AlertTriangle, Lightbulb } from 'lucide-react';
+import { InsumoIcon } from '@/lib/insumoIconUtils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
 import { normalizeString, findBestMatch } from '@/lib/importUtils';
@@ -1330,7 +1331,10 @@ const XmlImport = () => {
                 <SelectContent>
                   {insumos?.map((insumo) => (
                     <SelectItem key={insumo.id} value={insumo.id}>
-                      {insumo.nome} ({insumo.unidade_medida})
+                      <span className="flex items-center gap-2">
+                        <InsumoIcon nome={insumo.nome} className="h-3.5 w-3.5" />
+                        {insumo.nome} ({insumo.unidade_medida})
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
