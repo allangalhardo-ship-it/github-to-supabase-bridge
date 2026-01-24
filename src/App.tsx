@@ -9,7 +9,12 @@ import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { queryClient } from "@/lib/queryConfig";
 import AppLayout from "@/components/layout/AppLayout";
 import PaywallGuard from "@/components/subscription/PaywallGuard";
-import UpdateBanner, { useUpdateBanner } from "@/components/pwa/UpdateBanner";
+import { 
+  UpdateProvider, 
+  UpdateBanner, 
+  useServiceWorkerIntegration 
+} from "@/components/pwa/UpdateNotification";
+import { triggerServiceWorkerUpdate } from "./main";
 import Login from "@/pages/Login";
 import Cadastro from "@/pages/Cadastro";
 import Assinatura from "@/pages/Assinatura";
@@ -39,13 +44,10 @@ import Sobre from "@/pages/Sobre";
 import Contato from "@/pages/Contato";
 import FAQ from "@/pages/FAQ";
 
-// Componente para exibir o banner de atualização
-const PWAUpdateBanner = () => {
-  const { showBanner, handleUpdate } = useUpdateBanner();
-  
-  if (!showBanner) return null;
-  
-  return <UpdateBanner onUpdate={handleUpdate} />;
+// Componente que integra o Service Worker com o sistema de notificações
+const ServiceWorkerIntegration = () => {
+  useServiceWorkerIntegration();
+  return null;
 };
 
 // Component to initialize offline sync
@@ -143,18 +145,21 @@ const AppRoutes = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <PWAUpdateBanner />
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <SubscriptionProvider>
-            <OfflineSyncProvider>
-              <AppRoutes />
-            </OfflineSyncProvider>
-          </SubscriptionProvider>
-        </AuthProvider>
-      </BrowserRouter>
+      <UpdateProvider onUpdate={triggerServiceWorkerUpdate}>
+        <ServiceWorkerIntegration />
+        <UpdateBanner />
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <SubscriptionProvider>
+              <OfflineSyncProvider>
+                <AppRoutes />
+              </OfflineSyncProvider>
+            </SubscriptionProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </UpdateProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
