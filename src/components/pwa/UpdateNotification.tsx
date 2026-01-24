@@ -216,8 +216,21 @@ export const useServiceWorkerIntegration = () => {
 
   useEffect(() => {
     triggerCallback = setUpdateAvailable;
+    
+    // Expõe função de teste no console (apenas em dev)
+    if (import.meta.env.DEV) {
+      (window as any).__testUpdateNotification = () => {
+        console.log('🔔 Simulando notificação de atualização...');
+        setUpdateAvailable();
+      };
+      console.log('💡 Para testar o sistema de atualização, execute no console: __testUpdateNotification()');
+    }
+    
     return () => {
       triggerCallback = null;
+      if (import.meta.env.DEV) {
+        delete (window as any).__testUpdateNotification;
+      }
     };
   }, [setUpdateAvailable]);
 };
