@@ -21,14 +21,14 @@ interface BuscarInsumoDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (insumo: Insumo) => void;
-  insumosExcluidos: string[];
+  insumosExistentes?: string[];
 }
 
 const BuscarInsumoDialog: React.FC<BuscarInsumoDialogProps> = ({
   open,
   onOpenChange,
   onSelect,
-  insumosExcluidos,
+  insumosExistentes = [],
 }) => {
   const [busca, setBusca] = useState('');
 
@@ -48,13 +48,14 @@ const BuscarInsumoDialog: React.FC<BuscarInsumoDialogProps> = ({
   const insumosFiltrados = useMemo(() => {
     if (!insumos) return [];
     
-    return insumos
-      .filter(i => !insumosExcluidos.includes(i.id))
-      .filter(i => 
-        busca === '' || 
-        i.nome.toLowerCase().includes(busca.toLowerCase())
-      );
-  }, [insumos, insumosExcluidos, busca]);
+    return insumos.filter(i => 
+      busca === '' || 
+      i.nome.toLowerCase().includes(busca.toLowerCase())
+    );
+  }, [insumos, busca]);
+
+  // Check if insumo is already in the list
+  const isInsumoExistente = (id: string) => insumosExistentes.includes(id);
 
   const formatCurrency = formatCurrencySmartBRL;
 
@@ -100,28 +101,38 @@ const BuscarInsumoDialog: React.FC<BuscarInsumoDialogProps> = ({
             </div>
           ) : (
             <div className="divide-y">
-              {insumosFiltrados.map((insumo) => (
-                <button
-                  key={insumo.id}
-                  onClick={() => handleSelect(insumo)}
-                  className="w-full flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors text-left"
-                >
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    {insumo.is_intermediario ? (
-                      <ClipboardList className="h-4 w-4 text-primary" />
-                    ) : (
-                      <InsumoIcon nome={insumo.nome} />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{insumo.nome}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {insumo.unidade_medida} • {formatCurrency(insumo.custo_unitario)}
-                    </p>
-                  </div>
-                  <Check className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100" />
-                </button>
-              ))}
+              {insumosFiltrados.map((insumo) => {
+                const jaExiste = isInsumoExistente(insumo.id);
+                return (
+                  <button
+                    key={insumo.id}
+                    onClick={() => handleSelect(insumo)}
+                    className="w-full flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors text-left"
+                  >
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      {insumo.is_intermediario ? (
+                        <ClipboardList className="h-4 w-4 text-primary" />
+                      ) : (
+                        <InsumoIcon nome={insumo.nome} />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate flex items-center gap-2">
+                        {insumo.nome}
+                        {jaExiste && (
+                          <span className="text-[10px] text-warning bg-warning/10 px-1.5 py-0.5 rounded font-medium">
+                            já na ficha
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {insumo.unidade_medida} • {formatCurrency(insumo.custo_unitario)}
+                      </p>
+                    </div>
+                    <Check className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100" />
+                  </button>
+                );
+              })}
             </div>
           )}
         </ScrollArea>

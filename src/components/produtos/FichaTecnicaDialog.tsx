@@ -64,7 +64,8 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
   const [buscaOpen, setBuscaOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showDiscardAlert, setShowDiscardAlert] = useState(false);
-  const [pendingClose, setPendingClose] = useState(false);
+  const [showDuplicateAlert, setShowDuplicateAlert] = useState(false);
+  const [pendingDuplicateInsumo, setPendingDuplicateInsumo] = useState<InsumoSelecionado | null>(null);
   
   // Estado local para edição
   const [localItems, setLocalItems] = useState<LocalItem[]>([]);
@@ -255,7 +256,22 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
   };
 
   const handleInsumoSelect = (insumo: InsumoSelecionado) => {
-    setNovoInsumo(insumo);
+    // Check if this insumo already exists in the list
+    const jaExiste = insumosNaFicha.includes(insumo.id);
+    if (jaExiste) {
+      setPendingDuplicateInsumo(insumo);
+      setShowDuplicateAlert(true);
+    } else {
+      setNovoInsumo(insumo);
+    }
+  };
+
+  const handleConfirmDuplicate = () => {
+    if (pendingDuplicateInsumo) {
+      setNovoInsumo(pendingDuplicateInsumo);
+    }
+    setPendingDuplicateInsumo(null);
+    setShowDuplicateAlert(false);
   };
 
   return (
@@ -504,7 +520,7 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
         open={buscaOpen}
         onOpenChange={setBuscaOpen}
         onSelect={handleInsumoSelect}
-        insumosExcluidos={insumosNaFicha}
+        insumosExistentes={insumosNaFicha}
       />
 
       <AlertDialog open={showDiscardAlert} onOpenChange={setShowDiscardAlert}>
@@ -519,6 +535,25 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
             <AlertDialogCancel>Continuar editando</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDiscard}>
               Descartar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showDuplicateAlert} onOpenChange={setShowDuplicateAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Ingrediente já adicionado</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{pendingDuplicateInsumo?.nome}" já está na ficha técnica. Deseja adicionar novamente?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingDuplicateInsumo(null)}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDuplicate}>
+              Adicionar mesmo assim
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
