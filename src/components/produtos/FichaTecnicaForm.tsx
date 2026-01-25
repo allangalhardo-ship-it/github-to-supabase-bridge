@@ -152,8 +152,8 @@ const FichaTecnicaForm: React.FC<FichaTecnicaFormProps> = ({ produtoId, fichaTec
               label: `${insumo.nome} (${insumo.unidade_medida})`,
               searchTerms: insumo.nome,
               icon: insumo.is_intermediario 
-                ? <FlaskConical className="h-3 w-3 text-purple-500" /> 
-                : <InsumoIcon nome={insumo.nome} className="h-3 w-3" />,
+                ? <FlaskConical className="h-4 w-4 text-purple-500" /> 
+                : <InsumoIcon nome={insumo.nome} className="h-4 w-4" />,
             }))}
             value={novoInsumo.insumo_id}
             onValueChange={(value) => setNovoInsumo({ ...novoInsumo, insumo_id: value })}
