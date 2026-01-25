@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Search, FlaskConical, Check } from 'lucide-react';
+import { Search, ClipboardList, Check } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { InsumoIcon } from '@/lib/insumoIconUtils';
 
@@ -112,7 +112,7 @@ const BuscarInsumoDialog: React.FC<BuscarInsumoDialogProps> = ({
                 >
                   <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                     {insumo.is_intermediario ? (
-                      <FlaskConical className="h-4 w-4 text-purple-500" />
+                      <ClipboardList className="h-4 w-4 text-primary" />
                     ) : (
                       <InsumoIcon nome={insumo.nome} />
                     )}
