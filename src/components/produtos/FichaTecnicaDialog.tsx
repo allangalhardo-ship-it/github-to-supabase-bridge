@@ -291,96 +291,142 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
 
             {/* Adicionar novo insumo */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Ingredientes</Label>
-              <div className="flex gap-2 items-center">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setBuscaOpen(true)}
-                  className="flex-1 justify-start gap-2 h-9 text-sm font-normal"
-                >
-                  <Search className="h-4 w-4 text-muted-foreground" />
-                  <span className="truncate text-muted-foreground">
-                    {novoInsumo ? novoInsumo.nome : 'Buscar insumo...'}
-                  </span>
-                </Button>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="Qtd"
-                  value={novaQuantidade}
-                  onChange={(e) => setNovaQuantidade(e.target.value)}
-                  className="w-20 h-9 text-center text-sm"
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleAddItem}
-                  disabled={!novoInsumo || !novaQuantidade}
-                  className="h-9 px-3"
-                >
-                  +
-                </Button>
-              </div>
-              {/* Preview do custo em tempo real */}
-              {novoInsumo && novaQuantidade && parseFloat(novaQuantidade) > 0 && (
-                <div className="flex items-center justify-between text-xs bg-primary/5 rounded px-2 py-1.5">
-                  <span className="text-muted-foreground">
-                    {parseFloat(novaQuantidade)} × {formatCurrencySmartBRL(novoInsumo.custo_unitario)}
-                  </span>
-                  <span className="font-semibold text-primary">
-                    = {formatCurrencyBRL(parseFloat(novaQuantidade) * novoInsumo.custo_unitario)}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Lista de insumos */}
-            {itensVisiveis.length > 0 ? (
-              <div className="divide-y border rounded-md">
-                {itensVisiveis.map((item) => (
-                  <div
-                    key={item.tempId}
-                    className={`flex items-center gap-2 p-3 ${item.isNew ? 'bg-success/5' : ''}`}
-                  >
+              <Label className="text-sm font-medium">Adicionar Ingrediente</Label>
+              
+              {/* Insumo selecionado ou botão de busca */}
+              {novoInsumo ? (
+                <div className="border rounded-lg p-3 bg-accent/30">
+                  <div className="flex items-start gap-3">
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate flex items-center gap-1.5">
-                        <InsumoIcon nome={item.insumo.nome} className="h-3.5 w-3.5 shrink-0" />
-                        {item.insumo.nome}
-                        {item.isNew && (
-                          <span className="text-[10px] text-success bg-success/10 px-1 rounded">novo</span>
-                        )}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {item.insumo.unidade_medida} • {formatCurrencySmartBRL(item.insumo.custo_unitario)}/un
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <InsumoIcon nome={novoInsumo.nome} className="h-4 w-4 shrink-0 text-primary" />
+                        <span className="font-medium text-sm">{novoInsumo.nome}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                        <span className="bg-muted px-1.5 py-0.5 rounded font-medium">{novoInsumo.unidade_medida}</span>
+                        <span>•</span>
+                        <span>{formatCurrencySmartBRL(novoInsumo.custo_unitario)} por {novoInsumo.unidade_medida}</span>
+                      </div>
                     </div>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={item.quantidade}
-                      className="w-16 h-8 text-center text-sm"
-                      onChange={(e) => handleUpdateQuantidade(item.tempId, parseFloat(e.target.value) || 0)}
-                    />
-                    <span className="w-20 text-right text-sm font-medium">
-                      {formatCurrencyBRL(item.quantidade * item.insumo.custo_unitario)}
-                    </span>
                     <Button
                       type="button"
                       variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive flex-shrink-0"
-                      onClick={() => handleRemoveItem(item.tempId)}
+                      size="sm"
+                      className="h-7 px-2 text-xs text-muted-foreground"
+                      onClick={() => setNovoInsumo(null)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      Trocar
                     </Button>
                   </div>
-                ))}
+                  
+                  {/* Quantidade */}
+                  <div className="flex items-center gap-2 mt-3 pt-3 border-t">
+                    <Label htmlFor="nova-quantidade" className="text-xs text-muted-foreground whitespace-nowrap">
+                      Quantidade:
+                    </Label>
+                    <Input
+                      id="nova-quantidade"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0"
+                      value={novaQuantidade}
+                      onChange={(e) => setNovaQuantidade(e.target.value)}
+                      className="w-24 h-8 text-center"
+                    />
+                    <span className="text-sm font-medium text-muted-foreground">{novoInsumo.unidade_medida}</span>
+                    <div className="flex-1" />
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleAddItem}
+                      disabled={!novaQuantidade || parseFloat(novaQuantidade) <= 0}
+                      className="h-8"
+                    >
+                      Adicionar
+                    </Button>
+                  </div>
+                  
+                  {/* Preview do custo em tempo real */}
+                  {novaQuantidade && parseFloat(novaQuantidade) > 0 && (
+                    <div className="flex items-center justify-between text-xs bg-primary/10 rounded px-2 py-1.5 mt-2">
+                      <span className="text-muted-foreground">
+                        {parseFloat(novaQuantidade)} {novoInsumo.unidade_medida} × {formatCurrencySmartBRL(novoInsumo.custo_unitario)}
+                      </span>
+                      <span className="font-semibold text-primary">
+                        = {formatCurrencyBRL(parseFloat(novaQuantidade) * novoInsumo.custo_unitario)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setBuscaOpen(true)}
+                  className="w-full justify-start gap-2 h-10"
+                >
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Buscar insumo para adicionar...</span>
+                </Button>
+              )}
+            </div>
+
+            {/* Lista de ingredientes */}
+            {itensVisiveis.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Ingredientes na Ficha</Label>
+                <div className="divide-y border rounded-md">
+                  {itensVisiveis.map((item) => (
+                    <div
+                      key={item.tempId}
+                      className={`p-3 ${item.isNew ? 'bg-success/5' : ''}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate flex items-center gap-1.5">
+                            <InsumoIcon nome={item.insumo.nome} className="h-3.5 w-3.5 shrink-0 text-primary" />
+                            {item.insumo.nome}
+                            {item.isNew && (
+                              <span className="text-[10px] text-success bg-success/10 px-1 rounded">novo</span>
+                            )}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {formatCurrencySmartBRL(item.insumo.custo_unitario)} por {item.insumo.unidade_medida}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={item.quantidade}
+                            className="w-16 h-8 text-center text-sm"
+                            onChange={(e) => handleUpdateQuantidade(item.tempId, parseFloat(e.target.value) || 0)}
+                          />
+                          <span className="text-xs text-muted-foreground w-8">{item.insumo.unidade_medida}</span>
+                        </div>
+                        <span className="w-20 text-right text-sm font-semibold">
+                          {formatCurrencyBRL(item.quantidade * item.insumo.custo_unitario)}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive flex-shrink-0"
+                          onClick={() => handleRemoveItem(item.tempId)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ) : (
+            )}
+
+            {/* Estado vazio */}
+            {itensVisiveis.length === 0 && (
               <div className="text-center py-6 border rounded-md bg-muted/20">
                 <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
                 <p className="text-sm text-muted-foreground">Nenhum ingrediente adicionado.</p>
