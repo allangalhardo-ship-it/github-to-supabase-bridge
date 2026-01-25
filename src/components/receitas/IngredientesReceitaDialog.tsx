@@ -11,7 +11,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { Plus, Trash2, ChefHat } from "lucide-react";
+import { Plus, Trash2, ChefHat, FlaskConical } from "lucide-react";
+import { InsumoIcon } from "@/lib/insumoIconUtils";
 import { toast } from "sonner";
 import { Receita, Insumo, ReceitaIngrediente, formatCurrency } from "./types";
 
@@ -219,8 +220,11 @@ export function IngredientesReceitaDialog({
               <SearchableSelect
                 options={todosInsumosDisponiveis.map((insumo) => ({
                   value: insumo.id,
-                  label: `${insumo.isReceita ? '📋 ' : ''}${insumo.nome} (${insumo.unidade_medida})`,
+                  label: `${insumo.nome} (${insumo.unidade_medida})`,
                   searchTerms: insumo.nome,
+                  icon: insumo.isReceita 
+                    ? <FlaskConical className="h-4 w-4 text-purple-500" />
+                    : <InsumoIcon nome={insumo.nome} className="h-4 w-4" />,
                 }))}
                 value={novoIngrediente.insumo_id}
                 onValueChange={(value) => setNovoIngrediente({ ...novoIngrediente, insumo_id: value })}
