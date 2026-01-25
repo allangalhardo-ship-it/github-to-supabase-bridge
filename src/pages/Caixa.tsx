@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { formatCurrencyBRL } from '@/lib/format';
 import { 
   Wallet,
   TrendingUp,
@@ -356,12 +357,7 @@ const Caixa = () => {
     return entradas - saidas;
   }, [todosMovimentosManuais, todasVendas, todasNotas]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
+  const formatCurrency = formatCurrencyBRL;
 
   const handleMesAnterior = () => {
     setMesAtual(subMonths(mesAtual, 1));

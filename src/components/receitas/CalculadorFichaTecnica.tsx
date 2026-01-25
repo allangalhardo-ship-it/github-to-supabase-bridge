@@ -43,7 +43,7 @@ import {
   Divide,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Insumo, Produto, IngredienteLote, formatCurrency } from "./types";
+import { Insumo, Produto, IngredienteLote, formatCurrency, formatCurrencySmart } from "./types";
 
 interface CalculadorFichaTecnicaProps {
   produtos: Produto[] | undefined;
@@ -479,7 +479,7 @@ export function CalculadorFichaTecnica({
                           Custo por Unidade (CMV)
                         </p>
                         <p className="text-4xl font-bold text-emerald-600">
-                          {formatCurrency(custoUnitarioCalc)}
+                          {formatCurrencySmart(custoUnitarioCalc)}
                         </p>
                         {produtoInfo && custoUnitarioCalc > 0 && (
                           <div className="mt-3 flex items-center justify-center gap-4 text-sm">
@@ -519,7 +519,7 @@ export function CalculadorFichaTecnica({
                                   <span>{ing.nome}</span>
                                   <span className="text-muted-foreground">
                                     {qtdUnitaria.toFixed(4)} {ing.unidade} ={" "}
-                                    {formatCurrency(
+                                    {formatCurrencySmart(
                                       qtdUnitaria * ing.custoUnitarioInsumo
                                     )}
                                   </span>
@@ -608,7 +608,7 @@ export function CalculadorFichaTecnica({
                     <div>
                       <p className="text-muted-foreground">Custo Unitário</p>
                       <p className="font-medium">
-                        {temFicha ? formatCurrency(custo) : "-"}
+                        {temFicha ? formatCurrencySmart(custo) : "-"}
                       </p>
                     </div>
                   </div>

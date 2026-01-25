@@ -19,6 +19,7 @@ import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { AlertaVencimento } from '@/components/producao/AlertaVencimento';
 import { inserirMovimentoEstoque } from '@/lib/estoqueUtils';
+import { formatCurrencyBRL } from '@/lib/format';
 
 type TipoProducao = 'produto' | 'receita';
 
@@ -283,12 +284,7 @@ const Producao = () => {
     return receitas?.find(r => r.id === receitaFormData.receita_id);
   }, [receitas, receitaFormData.receita_id]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
+  const formatCurrency = formatCurrencyBRL;
 
   return (
     <div className="space-y-6">

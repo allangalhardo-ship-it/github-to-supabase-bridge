@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Trash2, FileText, Search } from 'lucide-react';
 import BuscarInsumoDialog from './BuscarInsumoDialog';
 import { InsumoIcon } from '@/lib/insumoIconUtils';
+import { formatCurrencyBRL, formatCurrencySmartBRL } from '@/lib/format';
 
 interface FichaTecnicaItem {
   id: string;
@@ -92,20 +93,8 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({ produtoId, prod
 
   const insumosNaFicha = fichaTecnica.map(ft => ft.insumos.id);
 
-  const formatCurrency = (value: number) => {
-    const safe = Number.isFinite(value) ? value : 0;
-    const abs = Math.abs(safe);
-    let maximumFractionDigits = 2;
-    if (abs > 0 && abs < 0.001) maximumFractionDigits = 6;
-    else if (abs > 0 && abs < 0.01) maximumFractionDigits = 4;
-
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 2,
-      maximumFractionDigits,
-    }).format(safe);
-  };
+  const formatCurrencySmart = formatCurrencySmartBRL;
+  const formatCurrency = formatCurrencyBRL;
 
   const custoTotal = fichaTecnica.reduce((sum, item) => {
     return sum + (Number(item.quantidade) * Number(item.insumos.custo_unitario));
@@ -172,7 +161,7 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({ produtoId, prod
               {insumoSelecionado && quantidade && parseFloat(quantidade) > 0 && (
                 <div className="mt-2 flex items-center justify-between text-xs bg-primary/5 rounded px-2 py-1.5">
                   <span className="text-muted-foreground">
-                    {parseFloat(quantidade)} × {formatCurrency(insumoSelecionado.custo_unitario)}
+                    {parseFloat(quantidade)} × {formatCurrencySmart(insumoSelecionado.custo_unitario)}
                   </span>
                   <span className="font-semibold text-primary">
                     = {formatCurrency(parseFloat(quantidade) * insumoSelecionado.custo_unitario)}
@@ -195,7 +184,7 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({ produtoId, prod
                         {item.insumos.nome}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {item.insumos.unidade_medida} • {formatCurrency(item.insumos.custo_unitario)}/un
+                        {item.insumos.unidade_medida} • {formatCurrencySmart(item.insumos.custo_unitario)}/un
                       </p>
                     </div>
                     <Input

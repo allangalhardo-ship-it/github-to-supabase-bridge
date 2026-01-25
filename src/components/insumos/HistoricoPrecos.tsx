@@ -10,6 +10,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { TrendingUp, TrendingDown, Minus, History } from 'lucide-react';
+import { formatCurrencySmartBRL } from '@/lib/format';
 
 interface HistoricoPrecosProps {
   open: boolean;
@@ -42,12 +43,7 @@ const HistoricoPrecos: React.FC<HistoricoPrecosProps> = ({
     enabled: open && !!insumoId,
   });
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
+  const formatCurrency = formatCurrencySmartBRL;
 
   const formatDate = (dateStr: string) => {
     try {

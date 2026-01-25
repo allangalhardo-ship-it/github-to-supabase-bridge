@@ -7,6 +7,7 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Trash2, ClipboardList } from 'lucide-react';
 import { InsumoIcon } from '@/lib/insumoIconUtils';
+import { formatCurrencyBRL } from '@/lib/format';
 
 interface FichaTecnicaItem {
   id: string;
@@ -92,12 +93,7 @@ const FichaTecnicaForm: React.FC<FichaTecnicaFormProps> = ({ produtoId, fichaTec
   const insumosNaFicha = fichaTecnica.map(ft => ft.insumos.id);
   const insumosDisponiveis = insumos?.filter(i => !insumosNaFicha.includes(i.id)) || [];
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
+  const formatCurrency = formatCurrencyBRL;
 
   return (
     <div className="space-y-3 pt-2 border-t">

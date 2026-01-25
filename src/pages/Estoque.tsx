@@ -19,6 +19,7 @@ import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { format, startOfMonth, endOfMonth, subMonths, differenceInDays, isBefore } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { inserirMovimentoEstoque, calcularEstoqueDeMovimentos } from '@/lib/estoqueUtils';
+import { formatCurrencySmartBRL } from '@/lib/format';
 const Estoque = () => {
   const { usuario } = useAuth();
   const { toast } = useToast();
@@ -343,7 +344,7 @@ const Estoque = () => {
                       <span className="text-muted-foreground text-xs whitespace-nowrap">{Number(i.estoque_minimo).toFixed(2)} {i.unidade_medida}</span>
                     )},
                     { key: 'custo', header: 'Custo Unit.', align: 'right', mobilePriority: 5, hideOnMobile: true, render: (i) => (
-                      <span className="text-muted-foreground">R$ {Number(i.custo_unitario).toFixed(2)}</span>
+                      <span className="text-muted-foreground">{formatCurrencySmartBRL(Number(i.custo_unitario))}</span>
                     )},
                     { key: 'status', header: 'Status', align: 'center', mobilePriority: 3, render: (i) => {
                       const estoqueBaixo = Number(i.estoque_atual) <= Number(i.estoque_minimo);

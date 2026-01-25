@@ -19,6 +19,7 @@ import { Plus, Trash2, Package, User, Filter, DollarSign, ShoppingCart, Upload, 
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import ImportarVendasDialog from '@/components/vendas/ImportarVendasDialog';
+import { formatCurrencyBRL } from '@/lib/format';
 
 interface Cliente {
   id: string;
@@ -289,12 +290,7 @@ const Vendas = () => {
 
   const lucroEstimado = calcularLucroEstimado();
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
+  const formatCurrency = formatCurrencyBRL;
 
   return (
     <div className="space-y-4 sm:space-y-6">
