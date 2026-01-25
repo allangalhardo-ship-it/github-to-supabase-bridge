@@ -734,6 +734,7 @@ export type Database = {
           id: string
           imagem_url: string | null
           nome: string
+          observacoes_ficha: string | null
           preco_venda: number
           rendimento_padrao: number | null
           updated_at: string
@@ -747,6 +748,7 @@ export type Database = {
           id?: string
           imagem_url?: string | null
           nome: string
+          observacoes_ficha?: string | null
           preco_venda?: number
           rendimento_padrao?: number | null
           updated_at?: string
@@ -760,6 +762,7 @@ export type Database = {
           id?: string
           imagem_url?: string | null
           nome?: string
+          observacoes_ficha?: string | null
           preco_venda?: number
           rendimento_padrao?: number | null
           updated_at?: string
