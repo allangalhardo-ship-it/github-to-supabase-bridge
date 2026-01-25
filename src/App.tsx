@@ -43,6 +43,7 @@ import PoliticaPrivacidade from "@/pages/PoliticaPrivacidade";
 import Sobre from "@/pages/Sobre";
 import Contato from "@/pages/Contato";
 import FAQ from "@/pages/FAQ";
+import VerificarEmail from "@/pages/VerificarEmail";
 
 // Componente que integra o Service Worker com o sistema de notificações
 const ServiceWorkerIntegration = () => {
@@ -97,6 +98,7 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/cadastro" element={<PublicRoute><Cadastro /></PublicRoute>} />
+      <Route path="/verificar-email" element={<VerificarEmail />} />
       <Route path="/termos-de-uso" element={<TermosDeUso />} />
       <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
       <Route path="/sobre" element={<Sobre />} />
