@@ -103,13 +103,19 @@ export function IngredientesReceitaDialog({
     const rendimentoVal = receita.rendimento_receita || 1;
     const custoUnitario = custoTotal / rendimentoVal;
 
-    await supabase
+    const { error } = await supabase
       .from("insumos")
       .update({ custo_unitario: custoUnitario })
       .eq("id", receita.id);
 
-    queryClient.invalidateQueries({ queryKey: ["receitas"] });
-    queryClient.invalidateQueries({ queryKey: ["ingredientes-receita"] });
+    if (!error) {
+      // Invalidar todas as queries relacionadas com refetch forçado
+      await queryClient.invalidateQueries({ queryKey: ["receitas"], refetchType: 'all' });
+      await queryClient.invalidateQueries({ queryKey: ["insumos"], refetchType: 'all' });
+      await queryClient.invalidateQueries({ queryKey: ["insumos-select"], refetchType: 'all' });
+      await queryClient.invalidateQueries({ queryKey: ["insumos-busca"], refetchType: 'all' });
+      await queryClient.invalidateQueries({ queryKey: ["ingredientes-receita"], refetchType: 'all' });
+    }
   };
 
   const addIngredienteMutation = useMutation({
