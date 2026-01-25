@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Trash2, FileText, Search, Package, AlertCircle } from 'lucide-react';
 import BuscarInsumoDialog from './BuscarInsumoDialog';
 import { InsumoIcon } from '@/lib/insumoIconUtils';
@@ -62,6 +63,8 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
   const [open, setOpen] = useState(false);
   const [buscaOpen, setBuscaOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showDiscardAlert, setShowDiscardAlert] = useState(false);
+  const [pendingClose, setPendingClose] = useState(false);
   
   // Estado local para edição
   const [localItems, setLocalItems] = useState<LocalItem[]>([]);
@@ -232,10 +235,23 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
   // Cancelar e fechar
   const handleCancel = () => {
     if (hasChanges) {
-      const confirm = window.confirm('Você tem alterações não salvas. Deseja descartá-las?');
-      if (!confirm) return;
+      setShowDiscardAlert(true);
+    } else {
+      setOpen(false);
     }
+  };
+
+  const handleConfirmDiscard = () => {
+    setShowDiscardAlert(false);
     setOpen(false);
+  };
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen && hasChanges) {
+      setShowDiscardAlert(true);
+    } else {
+      setOpen(newOpen);
+    }
   };
 
   const handleInsumoSelect = (insumo: InsumoSelecionado) => {
@@ -244,13 +260,7 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={(newOpen) => {
-        if (!newOpen && hasChanges) {
-          const confirm = window.confirm('Você tem alterações não salvas. Deseja descartá-las?');
-          if (!confirm) return;
-        }
-        setOpen(newOpen);
-      }}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogTrigger asChild>
           {trigger ?? (
             <Button variant="secondary" size="sm" className="justify-center gap-2">
@@ -496,6 +506,23 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
         onSelect={handleInsumoSelect}
         insumosExcluidos={insumosNaFicha}
       />
+
+      <AlertDialog open={showDiscardAlert} onOpenChange={setShowDiscardAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Descartar alterações?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você tem alterações não salvas. Deseja descartá-las?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Continuar editando</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDiscard}>
+              Descartar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
