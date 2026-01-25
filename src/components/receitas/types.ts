@@ -1,5 +1,7 @@
 // Shared types for Receitas components
 
+import { formatCurrencyBRL, formatCurrencySmartBRL } from "@/lib/format";
+
 export interface Receita {
   id: string;
   nome: string;
@@ -80,9 +82,7 @@ export const unidadesMedida = [
   { value: 'dz', label: 'Dúzia (dz)' },
 ];
 
-export const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-};
+export const formatCurrency = formatCurrencyBRL;
+
+// Use when rendering unit costs that can be very small (ex.: R$/g)
+export const formatCurrencySmart = formatCurrencySmartBRL;

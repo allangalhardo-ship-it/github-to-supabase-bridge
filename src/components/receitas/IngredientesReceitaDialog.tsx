@@ -14,7 +14,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Plus, Trash2, ChefHat, ClipboardList } from "lucide-react";
 import { InsumoIcon } from "@/lib/insumoIconUtils";
 import { toast } from "sonner";
-import { Receita, Insumo, ReceitaIngrediente, formatCurrency } from "./types";
+import { Receita, Insumo, ReceitaIngrediente, formatCurrency, formatCurrencySmart } from "./types";
 
 interface IngredientesReceitaDialogProps {
   open: boolean;
@@ -181,7 +181,7 @@ export function IngredientesReceitaDialog({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
               <span>Unidade: <strong>{receita?.unidade_medida}</strong></span>
               <span>Rendimento: <strong>{receita?.rendimento_receita || 1} {receita?.unidade_medida}</strong></span>
-              <span>Custo: <strong className="text-primary">{formatCurrency(receita?.custo_unitario || 0)}/{receita?.unidade_medida}</strong></span>
+              <span>Custo: <strong className="text-primary">{formatCurrencySmart(receita?.custo_unitario || 0)}/{receita?.unidade_medida}</strong></span>
             </div>
           </div>
 
