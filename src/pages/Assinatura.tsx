@@ -393,7 +393,7 @@ const Assinatura = () => {
                           Pagar {plan.priceAnnual} (Pix)
                         </>
                       ) : (
-                        subscription.status === 'trialing' && !subscription.subscribed
+                        subscription.status === 'expired' || (subscription.status === 'trialing' && !subscription.subscribed)
                           ? 'Assinar Agora' 
                           : 'Começar 7 Dias Grátis'
                       )}
