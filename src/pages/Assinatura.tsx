@@ -1,10 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSubscription, PlanType } from '@/contexts/SubscriptionContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, Crown, Loader2, AlertTriangle, ArrowRight, Sparkles, Bot, CreditCard, QrCode } from 'lucide-react';
+import { Check, Crown, Loader2, AlertTriangle, ArrowRight, Sparkles, Bot, CreditCard, QrCode, LogOut } from 'lucide-react';
 import { Logo } from '@/components/brand/Logo';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
@@ -59,10 +60,25 @@ const plans = [
 const Assinatura = () => {
   const navigate = useNavigate();
   const { subscription, loading, openCheckout, openCustomerPortal, hasAccess } = useSubscription();
+  const { signOut, usuario } = useAuth();
   const [checkoutLoading, setCheckoutLoading] = React.useState<PlanType | null>(null);
   const [annualLoading, setAnnualLoading] = React.useState<PlanType | null>(null);
   const [portalLoading, setPortalLoading] = React.useState(false);
   const [billingPeriod, setBillingPeriod] = React.useState<'monthly' | 'annual'>('monthly');
+  const [logoutLoading, setLogoutLoading] = React.useState(false);
+
+  const handleLogout = async () => {
+    setLogoutLoading(true);
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (err) {
+      console.error('Logout error:', err);
+      toast.error('Erro ao sair da conta');
+    } finally {
+      setLogoutLoading(false);
+    }
+  };
 
   const handleCheckout = async (plan: PlanType) => {
     setCheckoutLoading(plan);
@@ -122,6 +138,24 @@ const Assinatura = () => {
       style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
     >
       <div className="max-w-5xl mx-auto space-y-8">
+        {/* Header com botão de logout */}
+        <div className="flex justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
+            disabled={logoutLoading}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            {logoutLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <LogOut className="mr-2 h-4 w-4" />
+            )}
+            {usuario?.email ? `Sair (${usuario.email})` : 'Sair / Trocar conta'}
+          </Button>
+        </div>
+
         {/* Header */}
         <div className="text-center space-y-4">
           <div className="flex justify-center">
