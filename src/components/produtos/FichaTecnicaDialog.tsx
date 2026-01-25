@@ -93,10 +93,18 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({ produtoId, prod
   const insumosNaFicha = fichaTecnica.map(ft => ft.insumos.id);
 
   const formatCurrency = (value: number) => {
+    const safe = Number.isFinite(value) ? value : 0;
+    const abs = Math.abs(safe);
+    let maximumFractionDigits = 2;
+    if (abs > 0 && abs < 0.001) maximumFractionDigits = 6;
+    else if (abs > 0 && abs < 0.01) maximumFractionDigits = 4;
+
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
-    }).format(value);
+      minimumFractionDigits: 2,
+      maximumFractionDigits,
+    }).format(safe);
   };
 
   const custoTotal = fichaTecnica.reduce((sum, item) => {

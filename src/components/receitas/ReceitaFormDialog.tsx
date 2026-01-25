@@ -24,7 +24,7 @@ import {
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Plus, Trash2, ChefHat, FlaskConical } from "lucide-react";
 import { toast } from "sonner";
-import { Receita, Insumo, IngredienteTemp, unidadesMedida, formatCurrency } from "./types";
+import { Receita, Insumo, IngredienteTemp, unidadesMedida, formatCurrency, formatCurrencySmart } from "./types";
 
 interface ReceitaFormDialogProps {
   open: boolean;
@@ -323,7 +323,7 @@ export function ReceitaFormDialog({
                       {formData.rendimento_receita && parseFloat(formData.rendimento_receita) > 0 && (
                         <div className="flex justify-between text-primary font-medium">
                           <span>Custo por {formData.unidade_medida}:</span>
-                          <span>{formatCurrency(custoUnitarioTemp)}</span>
+                           <span>{formatCurrencySmart(custoUnitarioTemp)}</span>
                         </div>
                       )}
                     </div>
@@ -335,7 +335,7 @@ export function ReceitaFormDialog({
                     <SearchableSelect
                       options={insumosDisponiveisForm.map((insumo) => ({
                         value: insumo.id,
-                        label: `${insumo.isReceita ? '📋 ' : ''}${insumo.nome} (${insumo.unidade_medida}) - ${formatCurrency(insumo.custo_unitario)}`,
+                        label: `${insumo.isReceita ? '📋 ' : ''}${insumo.nome} (${insumo.unidade_medida}) - ${formatCurrencySmart(insumo.custo_unitario)}`,
                         searchTerms: insumo.nome,
                       }))}
                       value={novoIngredienteForm.insumo_id}

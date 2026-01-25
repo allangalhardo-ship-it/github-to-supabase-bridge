@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Search, ClipboardList, Check } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { InsumoIcon } from '@/lib/insumoIconUtils';
+import { formatCurrencySmartBRL } from '@/lib/format';
 
 interface Insumo {
   id: string;
@@ -55,12 +56,7 @@ const BuscarInsumoDialog: React.FC<BuscarInsumoDialogProps> = ({
       );
   }, [insumos, insumosExcluidos, busca]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
+  const formatCurrency = formatCurrencySmartBRL;
 
   const handleSelect = (insumo: Insumo) => {
     onSelect(insumo);

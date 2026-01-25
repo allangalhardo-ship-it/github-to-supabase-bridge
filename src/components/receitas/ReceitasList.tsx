@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MobileDataView, Column } from "@/components/ui/mobile-data-view";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import { Plus, Trash2, ChefHat, FlaskConical, Pencil } from "lucide-react";
-import { Receita, formatCurrency } from "./types";
+import { Receita, formatCurrencySmart } from "./types";
 
 interface ReceitasListProps {
   receitas: Receita[] | undefined;
@@ -64,7 +64,7 @@ export function ReceitasList({
       header: 'Custo Unit.',
       align: 'right',
       mobilePriority: 2,
-      render: (receita) => formatCurrency(Number(receita.custo_unitario)),
+      render: (receita) => formatCurrencySmart(Number(receita.custo_unitario)),
     },
   ], []);
 
@@ -132,7 +132,7 @@ export function ReceitasList({
           )}
           renderMobileHighlight={(receita) => (
             <div className="text-right">
-              <p className="font-bold text-foreground">{formatCurrency(Number(receita.custo_unitario))}</p>
+              <p className="font-bold text-foreground">{formatCurrencySmart(Number(receita.custo_unitario))}</p>
               <p className="text-xs text-muted-foreground">por {receita.unidade_medida}</p>
             </div>
           )}
