@@ -157,6 +157,31 @@ export function IngredientesReceitaDialog({
     },
   });
 
+  const updateQuantidadeMutation = useMutation({
+    mutationFn: async ({ id, quantidade }: { id: string; quantidade: number }) => {
+      const { error } = await supabase
+        .from("receitas_intermediarias")
+        .update({ quantidade })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ingredientes-receita"] });
+      queryClient.invalidateQueries({ queryKey: ["receitas"] });
+      recalcularCustoReceita();
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const handleQuantidadeChange = (id: string, value: string) => {
+    const quantidade = parseFloat(value) || 0;
+    if (quantidade > 0) {
+      updateQuantidadeMutation.mutate({ id, quantidade });
+    }
+  };
+
   const handleClose = () => {
     setNovoIngrediente({ insumo_id: '', quantidade: '' });
     onOpenChange(false);
@@ -190,14 +215,20 @@ export function IngredientesReceitaDialog({
             <div className="space-y-2">
               {ingredientesReceita.map((item) => (
                 <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-muted/50 rounded-lg gap-2">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
                     <span className="font-medium text-sm truncate">{item.insumo_ingrediente?.nome}</span>
-                    <Badge variant="outline" className="self-start sm:self-auto text-xs">
-                      {item.quantidade} {item.insumo_ingrediente?.unidade_medida}
-                    </Badge>
                   </div>
-                  <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
-                    <span className="text-sm font-medium text-muted-foreground">
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      defaultValue={item.quantidade}
+                      onBlur={(e) => handleQuantidadeChange(item.id, e.target.value)}
+                      className="w-20 h-8 text-center text-sm"
+                    />
+                    <span className="text-xs text-muted-foreground w-8">{item.insumo_ingrediente?.unidade_medida}</span>
+                    <span className="text-sm font-medium text-muted-foreground w-20 text-right">
                       {formatCurrency(item.quantidade * (item.insumo_ingrediente?.custo_unitario || 0))}
                     </span>
                     <Button

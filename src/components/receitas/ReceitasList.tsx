@@ -49,21 +49,31 @@ export function ReceitasList({
       key: 'unidade',
       header: 'Und. Rend.',
       align: 'center',
-      mobilePriority: 3,
+      mobilePriority: 4,
       render: (receita) => receita.unidade_medida,
     },
     {
       key: 'rendimento',
       header: 'Quanto Rende',
       align: 'center',
-      mobilePriority: 4,
+      mobilePriority: 5,
       render: (receita) => receita.rendimento_receita ? `${receita.rendimento_receita} ${receita.unidade_medida}` : '-',
+    },
+    {
+      key: 'custo_total',
+      header: 'Custo Total',
+      align: 'right',
+      mobilePriority: 2,
+      render: (receita) => {
+        const custoTotal = (receita.custo_unitario || 0) * (receita.rendimento_receita || 1);
+        return formatCurrencySmart(custoTotal);
+      },
     },
     {
       key: 'custo',
       header: 'Custo Unit.',
       align: 'right',
-      mobilePriority: 2,
+      mobilePriority: 3,
       render: (receita) => formatCurrencySmart(Number(receita.custo_unitario)),
     },
   ], []);
@@ -120,16 +130,22 @@ export function ReceitasList({
               </span>
             </div>
           )}
-          renderMobileSubtitle={(receita) => (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span>{receita.unidade_medida}</span>
-              {receita.rendimento_receita && (
-                <Badge variant="outline" className="text-xs">
-                  Rende: {receita.rendimento_receita} {receita.unidade_medida}
+          renderMobileSubtitle={(receita) => {
+            const custoTotal = (receita.custo_unitario || 0) * (receita.rendimento_receita || 1);
+            return (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span>{receita.unidade_medida}</span>
+                {receita.rendimento_receita && (
+                  <Badge variant="outline" className="text-xs">
+                    Rende: {receita.rendimento_receita} {receita.unidade_medida}
+                  </Badge>
+                )}
+                <Badge variant="secondary" className="text-xs">
+                  Total: {formatCurrencySmart(custoTotal)}
                 </Badge>
-              )}
-            </div>
-          )}
+              </div>
+            );
+          }}
           renderMobileHighlight={(receita) => (
             <div className="text-right">
               <p className="font-bold text-foreground">{formatCurrencySmart(Number(receita.custo_unitario))}</p>
