@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,6 +15,7 @@ import { Plus, Package, Search, Filter, X, Upload, ImageIcon, Loader2, AlertTria
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import ProductCard from '@/components/produtos/ProductCard';
+import FichaTecnicaDialog from '@/components/produtos/FichaTecnicaDialog';
 import ImportProdutosDialog from '@/components/import/ImportProdutosDialog';
 import ImportFichaTecnicaDialog from '@/components/import/ImportFichaTecnicaDialog';
 import CategorySelect from '@/components/produtos/CategorySelect';
@@ -50,6 +51,7 @@ const Produtos = () => {
   const [editingProduto, setEditingProduto] = useState<Produto | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [openFichaForProductId, setOpenFichaForProductId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     nome: '',
     categoria: '',
@@ -279,47 +281,10 @@ const Produtos = () => {
     }
   };
 
-  // Duplicar produto
-  const handleDuplicate = async (produto: Produto) => {
-    if (!usuario?.empresa_id) return;
-    
-    try {
-      // Criar cópia do produto
-      const { data: novoProduto, error: produtoError } = await supabase
-        .from('produtos')
-        .insert({
-          empresa_id: usuario.empresa_id,
-          nome: `${produto.nome} (cópia)`,
-          categoria: produto.categoria,
-          preco_venda: produto.preco_venda,
-          ativo: produto.ativo,
-          rendimento_padrao: produto.rendimento_padrao,
-        })
-        .select()
-        .single();
-      
-      if (produtoError) throw produtoError;
-      
-      // Copiar ficha técnica se existir
-      if (produto.fichas_tecnicas && produto.fichas_tecnicas.length > 0) {
-        const fichasParaCopiar = produto.fichas_tecnicas.map(ft => ({
-          produto_id: novoProduto.id,
-          insumo_id: ft.insumos.id,
-          quantidade: ft.quantidade,
-        }));
-        
-        const { error: fichasError } = await supabase
-          .from('fichas_tecnicas')
-          .insert(fichasParaCopiar);
-        
-        if (fichasError) throw fichasError;
-      }
-      
-      queryClient.invalidateQueries({ queryKey: ['produtos'] });
-      toast({ title: 'Produto duplicado com sucesso!' });
-    } catch (error: any) {
-      toast({ title: 'Erro ao duplicar', description: error.message, variant: 'destructive' });
-    }
+  // Handler para quando duplicar produto com sucesso
+  const handleDuplicateSuccess = (novoProdutoId: string) => {
+    // Aguardar o refetch dos produtos e então abrir a ficha técnica do novo produto
+    setOpenFichaForProductId(novoProdutoId);
   };
 
   // Extrair categorias únicas dos produtos
@@ -545,6 +510,7 @@ const Produtos = () => {
               onDelete={() => handleDeleteClick(produto.id)}
               onApplyPrice={handleApplyPrice}
               isApplyingPrice={applyPriceMutation.isPending}
+              onDuplicateSuccess={handleDuplicateSuccess}
             />
           ))}
         </div>
@@ -580,6 +546,23 @@ const Produtos = () => {
         open={importFichasOpen}
         onOpenChange={setImportFichasOpen}
       />
+
+      {/* Ficha técnica controlada para novo produto duplicado */}
+      {openFichaForProductId && (() => {
+        const novoProduto = produtos?.find(p => p.id === openFichaForProductId);
+        if (!novoProduto) return null;
+        return (
+          <FichaTecnicaDialog
+            produtoId={novoProduto.id}
+            produtoNome={novoProduto.nome}
+            fichaTecnica={novoProduto.fichas_tecnicas || []}
+            rendimentoPadrao={novoProduto.rendimento_padrao}
+            observacoesFicha={novoProduto.observacoes_ficha}
+            defaultOpen={true}
+            onClose={() => setOpenFichaForProductId(null)}
+          />
+        );
+      })()}
     </div>
   );
 };
