@@ -15,6 +15,7 @@ import { MobileDataView } from '@/components/ui/mobile-data-view';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, Wallet, TrendingUp, AlertTriangle, CheckCircle2, AlertCircle } from 'lucide-react';
+import { formatCurrencyBRL } from '@/lib/format';
 
 const categorias = [
   'Aluguel',
@@ -215,12 +216,7 @@ const CustosFixos = () => {
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
+  const formatCurrency = formatCurrencyBRL;
 
   const totalMensal = custos?.reduce((sum, c) => sum + Number(c.valor_mensal), 0) || 0;
   const faturamento = configuracoes?.faturamento_mensal || 0;

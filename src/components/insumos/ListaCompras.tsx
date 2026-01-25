@@ -25,6 +25,7 @@ import {
 import { format, subDays, differenceInDays, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import { formatCurrencySmartBRL } from '@/lib/format';
 import {
   Tooltip,
   TooltipContent,
@@ -204,12 +205,7 @@ const ListaCompras = () => {
   const totalEstimado = itensParaComprar.reduce((sum, item) => sum + item.custoEstimado, 0);
   const itensUrgentes = itensParaComprar.filter(item => item.urgente).length;
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
+  const formatCurrency = formatCurrencySmartBRL;
 
   const formatNumber = (value: number, decimals = 2) => {
     return value.toFixed(decimals);

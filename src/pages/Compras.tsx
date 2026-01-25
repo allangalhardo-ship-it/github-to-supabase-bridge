@@ -21,6 +21,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
 import { format } from 'date-fns';
 import RegistrarCompraDialog from '@/components/compras/RegistrarCompraDialog';
+import { formatCurrencyBRL, formatCurrencySmartBRL } from '@/lib/format';
 import { inserirMovimentoEstoque, calcularEstoqueDeMovimentos } from '@/lib/estoqueUtils';
 
 interface XmlItem {
@@ -796,12 +797,7 @@ const Compras = () => {
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
+  const formatCurrency = formatCurrencyBRL;
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';

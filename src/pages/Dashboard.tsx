@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysInMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { formatCurrencyBRL } from '@/lib/format';
 
 type PeriodoType = 'hoje' | 'semana' | 'mes' | 'ultimos30';
 
@@ -337,12 +338,7 @@ const Dashboard = () => {
   
   const lucroEstimado = margemContribuicao - custoFixoTotal - impostos - taxaAppTotal;
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
+  const formatCurrency = formatCurrencyBRL;
 
   // Calcular produtos com margem negativa
   const produtosMargemNegativa = useMemo(() => {

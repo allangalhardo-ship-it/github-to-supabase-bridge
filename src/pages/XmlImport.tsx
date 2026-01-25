@@ -18,6 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
 import { normalizeString, findBestMatch } from '@/lib/importUtils';
 import { inserirMovimentoEstoque } from '@/lib/estoqueUtils';
+import { formatCurrencySmartBRL } from '@/lib/format';
 
 interface XmlItem {
   produto_descricao: string;
@@ -683,12 +684,7 @@ const XmlImport = () => {
     },
   });
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
+  const formatCurrency = formatCurrencySmartBRL;
 
   const itensMapeados = parsedNota?.itens.filter(i => i.mapeado).length || 0;
   const totalItens = parsedNota?.itens.length || 0;

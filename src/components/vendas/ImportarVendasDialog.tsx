@@ -14,6 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, X, AlertTriangle, Camera, ImageIcon, Loader2 } from 'lucide-react';
+import { formatCurrencyBRL } from '@/lib/format';
 import * as XLSX from 'xlsx';
 import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
 
@@ -655,9 +656,7 @@ const ImportarVendasDialog: React.FC = () => {
   const selectedCount = parsedRows.filter(r => r.selected).length;
   const totalValor = parsedRows.filter(r => r.selected).reduce((sum, r) => sum + r.valor, 0);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-  };
+  const formatCurrency = formatCurrencyBRL;
 
   return (
     <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetState(); }}>

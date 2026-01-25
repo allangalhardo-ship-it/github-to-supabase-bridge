@@ -85,13 +85,10 @@ export interface ChecklistItem {
   priority: 'high' | 'medium' | 'low';
 }
 
-// Utility functions
-export const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(value);
-};
+// Utility functions - centralized in @/lib/format
+import { formatCurrencyBRL, formatCurrencySmartBRL } from '@/lib/format';
+export const formatCurrency = formatCurrencyBRL;
+export const formatCurrencySmart = formatCurrencySmartBRL;
 
 export const formatPercent = (value: number): string => {
   return `${value.toFixed(1)}%`;

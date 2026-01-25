@@ -10,6 +10,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { formatCurrencyBRL } from '@/lib/format';
 import FichaTecnicaDialog from "./FichaTecnicaDialog";
 import MissingFichaBadge from "./MissingFichaBadge";
 import {
@@ -60,11 +61,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 }) => {
   const isMobile = useIsMobile();
 
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
+  const formatCurrency = formatCurrencyBRL;
 
   const custoInsumos = React.useMemo(() => {
     if (!produto.fichas_tecnicas || produto.fichas_tecnicas.length === 0) return 0;

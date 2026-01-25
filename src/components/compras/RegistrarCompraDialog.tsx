@@ -15,6 +15,7 @@ import { Plus, Calculator, Package, ArrowRight, Loader2 } from 'lucide-react';
 import { SearchableSelect, SearchableSelectOption } from '@/components/ui/searchable-select';
 import { inserirMovimentoEstoque } from '@/lib/estoqueUtils';
 import { InsumoIcon } from '@/lib/insumoIconUtils';
+import { formatCurrencySmartBRL } from '@/lib/format';
 
 interface Insumo {
   id: string;
@@ -247,14 +248,7 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
     icon: <InsumoIcon nome={i.nome} className="h-3.5 w-3.5" />,
   }));
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 4,
-      maximumFractionDigits: 4,
-    }).format(value);
-  };
+  const formatCurrency = formatCurrencySmartBRL;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

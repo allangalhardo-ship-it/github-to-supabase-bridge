@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { formatCurrencyBRL } from '@/lib/format';
 import {
   BarChart,
   Bar,
@@ -79,12 +80,7 @@ interface TaxaApp {
   ativo: boolean;
 }
 
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(value);
-};
+const formatCurrency = formatCurrencyBRL;
 
 const formatPercent = (value: number) => {
   return `${value.toFixed(1)}%`;

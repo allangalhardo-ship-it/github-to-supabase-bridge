@@ -16,6 +16,7 @@ import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, AlertTriangle, ShoppingCart, Upload, TrendingUp, Search, X, Download, Package } from 'lucide-react';
 import { InsumoIcon } from '@/lib/insumoIconUtils';
+import { formatCurrencySmartBRL } from '@/lib/format';
 import ListaCompras from '@/components/insumos/ListaCompras';
 import ImportInsumosDialog from '@/components/import/ImportInsumosDialog';
 import HistoricoPrecos from '@/components/insumos/HistoricoPrecos';
@@ -188,12 +189,7 @@ const Insumos = () => {
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
+  const formatCurrency = formatCurrencySmartBRL;
 
   const insumoColumns: Column<Insumo>[] = useMemo(() => [
     {

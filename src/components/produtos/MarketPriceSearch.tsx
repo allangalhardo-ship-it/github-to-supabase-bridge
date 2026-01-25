@@ -11,6 +11,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Search, Loader2, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { formatCurrencyBRL } from '@/lib/format';
 
 interface MarketPriceSearchProps {
   productName: string;
@@ -71,12 +72,7 @@ const MarketPriceSearch = ({ productName, category, currentPrice, trigger }: Mar
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
+  const formatCurrency = formatCurrencyBRL;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

@@ -38,6 +38,7 @@ import {
   ArrowDownCircle
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { formatCurrencyBRL } from '@/lib/format';
 import { ptBR } from 'date-fns/locale';
 
 interface CaixaMovimento {
@@ -225,12 +226,7 @@ const LancamentosManuaisTab = () => {
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
+  const formatCurrency = formatCurrencyBRL;
 
   const totalEntradas = movimentosFiltrados
     .filter(m => m.tipo === 'entrada')
