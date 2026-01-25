@@ -82,10 +82,21 @@ export function IngredientesReceitaDialog({
   const insumoSelecionadoReceitaInfo = todosInsumosDisponiveis?.find(i => i.id === novoIngrediente.insumo_id);
 
   const recalcularCustoReceita = async () => {
-    if (!receita || !ingredientesReceita) return;
+    if (!receita) return;
 
-    const custoTotal = ingredientesReceita.reduce((sum, item) => {
-      const custoIngrediente = item.insumo_ingrediente?.custo_unitario || 0;
+    // Buscar ingredientes atualizados diretamente do banco
+    const { data: ingredientesAtualizados } = await supabase
+      .from("receitas_intermediarias")
+      .select(`
+        quantidade,
+        insumo_ingrediente:insumos!receitas_intermediarias_insumo_ingrediente_id_fkey (
+          custo_unitario
+        )
+      `)
+      .eq("insumo_id", receita.id);
+
+    const custoTotal = (ingredientesAtualizados || []).reduce((sum, item) => {
+      const custoIngrediente = (item.insumo_ingrediente as any)?.custo_unitario || 0;
       return sum + (item.quantidade * custoIngrediente);
     }, 0);
 
@@ -98,6 +109,7 @@ export function IngredientesReceitaDialog({
       .eq("id", receita.id);
 
     queryClient.invalidateQueries({ queryKey: ["receitas"] });
+    queryClient.invalidateQueries({ queryKey: ["ingredientes-receita"] });
   };
 
   const addIngredienteMutation = useMutation({
