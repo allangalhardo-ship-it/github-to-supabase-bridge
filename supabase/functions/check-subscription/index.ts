@@ -77,7 +77,7 @@ serve(async (req) => {
     
     if (!userEmail) throw new Error("User email not available in token");
 
-    // Get user creation date from service role client
+    // Get user creation date and trial override from service role client
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
@@ -87,6 +87,15 @@ serve(async (req) => {
     const { data: userData } = await supabaseAdmin.auth.admin.getUserById(userId);
     const userCreatedAt = userData?.user?.created_at;
 
+    // Check for trial_end_override in usuarios table
+    const { data: usuarioData } = await supabaseAdmin
+      .from("usuarios")
+      .select("trial_end_override")
+      .eq("id", userId)
+      .maybeSingle();
+    
+    const trialEndOverride = usuarioData?.trial_end_override;
+
     logStep("User authenticated", { userId, email: userEmail });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
@@ -95,18 +104,26 @@ serve(async (req) => {
     const customers = await stripe.customers.list({ email: userEmail, limit: 1 });
 
     if (customers.data.length === 0) {
-      logStep("No customer found - user is in trial period based on account creation");
+      logStep("No customer found - checking trial status");
 
-      // Check if user is still in trial based on account creation date
-      let daysSinceCreation = 0;
+      // Calculate trial based on override or creation date
       let trialDaysRemaining = 7;
       let isInTrial = true;
 
-      if (userCreatedAt) {
+      if (trialEndOverride) {
+        // Use override date
+        const overrideDate = new Date(trialEndOverride);
+        if (!isNaN(overrideDate.getTime())) {
+          const now = new Date();
+          trialDaysRemaining = Math.max(0, Math.ceil((overrideDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+          isInTrial = trialDaysRemaining > 0;
+        }
+      } else if (userCreatedAt) {
+        // Default: 7 days from creation
         const createdAt = new Date(userCreatedAt);
         if (!isNaN(createdAt.getTime())) {
           const now = new Date();
-          daysSinceCreation = Math.floor(
+          const daysSinceCreation = Math.floor(
             (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24),
           );
           trialDaysRemaining = Math.max(0, 7 - daysSinceCreation);
@@ -191,16 +208,24 @@ serve(async (req) => {
       );
     }
 
-    // No active subscription - check if in free trial period (7 days from account creation)
-    let daysSinceCreation = 0;
+    // No active subscription - check if in free trial period
     let trialDaysRemaining = 7;
     let isInTrial = true;
 
-    if (userCreatedAt) {
+    if (trialEndOverride) {
+      // Use override date
+      const overrideDate = new Date(trialEndOverride);
+      if (!isNaN(overrideDate.getTime())) {
+        const now = new Date();
+        trialDaysRemaining = Math.max(0, Math.ceil((overrideDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+        isInTrial = trialDaysRemaining > 0;
+      }
+    } else if (userCreatedAt) {
+      // Default: 7 days from creation
       const createdAt = new Date(userCreatedAt);
       if (!isNaN(createdAt.getTime())) {
         const now = new Date();
-        daysSinceCreation = Math.floor(
+        const daysSinceCreation = Math.floor(
           (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24),
         );
         trialDaysRemaining = Math.max(0, 7 - daysSinceCreation);
@@ -208,7 +233,7 @@ serve(async (req) => {
       }
     }
 
-    logStep("No active subscription", { daysSinceCreation, trialDaysRemaining, isInTrial });
+    logStep("No active subscription", { trialDaysRemaining, isInTrial, hasOverride: !!trialEndOverride });
 
     return new Response(
       JSON.stringify({
