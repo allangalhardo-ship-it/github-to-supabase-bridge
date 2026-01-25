@@ -27,6 +27,7 @@ interface Produto {
   ativo: boolean;
   rendimento_padrao?: number | null;
   imagem_url?: string | null;
+  observacoes_ficha?: string | null;
   fichas_tecnicas?: {
     id: string;
     quantidade: number;
@@ -68,7 +69,14 @@ const Produtos = () => {
       const { data, error } = await supabase
         .from('produtos')
         .select(`
-          *,
+          id,
+          nome,
+          categoria,
+          preco_venda,
+          ativo,
+          rendimento_padrao,
+          imagem_url,
+          observacoes_ficha,
           fichas_tecnicas (
             id,
             quantidade,

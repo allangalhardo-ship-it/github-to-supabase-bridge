@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Trash2, FileText, Search } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Trash2, FileText, Search, Package, AlertCircle } from 'lucide-react';
 import BuscarInsumoDialog from './BuscarInsumoDialog';
 import { InsumoIcon } from '@/lib/insumoIconUtils';
 import { formatCurrencyBRL, formatCurrencySmartBRL } from '@/lib/format';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface FichaTecnicaItem {
   id: string;
@@ -25,6 +28,8 @@ interface FichaTecnicaDialogProps {
   produtoId: string;
   produtoNome: string;
   fichaTecnica: FichaTecnicaItem[];
+  rendimentoPadrao?: number | null;
+  observacoesFicha?: string | null;
   trigger?: React.ReactNode;
 }
 
@@ -35,78 +40,217 @@ interface InsumoSelecionado {
   custo_unitario: number;
 }
 
-const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({ produtoId, produtoNome, fichaTecnica, trigger }) => {
+interface LocalItem {
+  tempId: string;
+  id?: string;
+  insumo: InsumoSelecionado;
+  quantidade: number;
+  isNew?: boolean;
+  isDeleted?: boolean;
+}
+
+const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({ 
+  produtoId, 
+  produtoNome, 
+  fichaTecnica, 
+  rendimentoPadrao,
+  observacoesFicha,
+  trigger 
+}) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [buscaOpen, setBuscaOpen] = useState(false);
-  const [insumoSelecionado, setInsumoSelecionado] = useState<InsumoSelecionado | null>(null);
-  const [quantidade, setQuantidade] = useState('');
+  const [saving, setSaving] = useState(false);
+  
+  // Estado local para edição
+  const [localItems, setLocalItems] = useState<LocalItem[]>([]);
+  const [rendimento, setRendimento] = useState('');
+  const [observacoes, setObservacoes] = useState('');
+  const [novoInsumo, setNovoInsumo] = useState<InsumoSelecionado | null>(null);
+  const [novaQuantidade, setNovaQuantidade] = useState('');
 
-  const addMutation = useMutation({
-    mutationFn: async () => {
-      if (!insumoSelecionado) return;
-      const { error } = await supabase.from('fichas_tecnicas').insert({
-        produto_id: produtoId,
-        insumo_id: insumoSelecionado.id,
-        quantidade: parseFloat(quantidade) || 0,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
+  // Inicializar estado local quando abrir o dialog
+  useEffect(() => {
+    if (open) {
+      setLocalItems(
+        fichaTecnica.map((ft, index) => ({
+          tempId: `existing-${ft.id}`,
+          id: ft.id,
+          insumo: ft.insumos,
+          quantidade: ft.quantidade,
+          isNew: false,
+          isDeleted: false,
+        }))
+      );
+      setRendimento(rendimentoPadrao?.toString() || '');
+      setObservacoes(observacoesFicha || '');
+      setNovoInsumo(null);
+      setNovaQuantidade('');
+    }
+  }, [open, fichaTecnica, rendimentoPadrao, observacoesFicha]);
+
+  // Calcular custo total (apenas itens não deletados)
+  const custoTotal = useMemo(() => {
+    return localItems
+      .filter(item => !item.isDeleted)
+      .reduce((sum, item) => sum + (item.quantidade * item.insumo.custo_unitario), 0);
+  }, [localItems]);
+
+  // Calcular custo por unidade
+  const custoPorUnidade = useMemo(() => {
+    const rend = parseFloat(rendimento) || 0;
+    if (rend <= 0 || custoTotal <= 0) return 0;
+    return custoTotal / rend;
+  }, [custoTotal, rendimento]);
+
+  // Itens visíveis (não deletados)
+  const itensVisiveis = localItems.filter(item => !item.isDeleted);
+  
+  // IDs de insumos já na lista
+  const insumosNaFicha = itensVisiveis.map(item => item.insumo.id);
+
+  // Verificar se há mudanças
+  const hasChanges = useMemo(() => {
+    const originalRendimento = rendimentoPadrao?.toString() || '';
+    const originalObs = observacoesFicha || '';
+    
+    if (rendimento !== originalRendimento) return true;
+    if (observacoes !== originalObs) return true;
+    
+    // Verificar se há itens novos ou deletados
+    if (localItems.some(item => item.isNew || item.isDeleted)) return true;
+    
+    // Verificar se quantidades mudaram
+    const originalMap = new Map(fichaTecnica.map(ft => [ft.id, ft.quantidade]));
+    for (const item of localItems) {
+      if (item.id && !item.isNew && !item.isDeleted) {
+        const originalQty = originalMap.get(item.id);
+        if (originalQty !== item.quantidade) return true;
+      }
+    }
+    
+    return false;
+  }, [localItems, rendimento, observacoes, fichaTecnica, rendimentoPadrao, observacoesFicha]);
+
+  // Adicionar item localmente
+  const handleAddItem = () => {
+    if (!novoInsumo || !novaQuantidade) return;
+    
+    const newItem: LocalItem = {
+      tempId: `new-${Date.now()}`,
+      insumo: novoInsumo,
+      quantidade: parseFloat(novaQuantidade) || 0,
+      isNew: true,
+    };
+    
+    setLocalItems(prev => [...prev, newItem]);
+    setNovoInsumo(null);
+    setNovaQuantidade('');
+  };
+
+  // Remover item localmente
+  const handleRemoveItem = (tempId: string) => {
+    setLocalItems(prev => prev.map(item => 
+      item.tempId === tempId 
+        ? item.isNew 
+          ? { ...item, isDeleted: true } // Itens novos são removidos da lista
+          : { ...item, isDeleted: true } // Itens existentes são marcados para deleção
+        : item
+    ).filter(item => !(item.isNew && item.isDeleted))); // Remove novos que foram deletados
+  };
+
+  // Atualizar quantidade localmente
+  const handleUpdateQuantidade = (tempId: string, newQty: number) => {
+    setLocalItems(prev => prev.map(item => 
+      item.tempId === tempId ? { ...item, quantidade: newQty } : item
+    ));
+  };
+
+  // Salvar todas as mudanças
+  const handleSave = async () => {
+    setSaving(true);
+    
+    try {
+      // 1. Atualizar produto (rendimento e observações)
+      const { error: produtoError } = await supabase
+        .from('produtos')
+        .update({
+          rendimento_padrao: parseFloat(rendimento) || null,
+          observacoes_ficha: observacoes || null,
+        })
+        .eq('id', produtoId);
+      
+      if (produtoError) throw produtoError;
+
+      // 2. Deletar itens marcados
+      const itensParaDeletar = localItems.filter(item => item.isDeleted && item.id);
+      for (const item of itensParaDeletar) {
+        const { error } = await supabase
+          .from('fichas_tecnicas')
+          .delete()
+          .eq('id', item.id);
+        if (error) throw error;
+      }
+
+      // 3. Inserir novos itens
+      const itensParaInserir = localItems.filter(item => item.isNew && !item.isDeleted);
+      if (itensParaInserir.length > 0) {
+        const { error } = await supabase
+          .from('fichas_tecnicas')
+          .insert(itensParaInserir.map(item => ({
+            produto_id: produtoId,
+            insumo_id: item.insumo.id,
+            quantidade: item.quantidade,
+          })));
+        if (error) throw error;
+      }
+
+      // 4. Atualizar quantidades de itens existentes
+      const itensParaAtualizar = localItems.filter(item => !item.isNew && !item.isDeleted && item.id);
+      for (const item of itensParaAtualizar) {
+        const original = fichaTecnica.find(ft => ft.id === item.id);
+        if (original && original.quantidade !== item.quantidade) {
+          const { error } = await supabase
+            .from('fichas_tecnicas')
+            .update({ quantidade: item.quantidade })
+            .eq('id', item.id);
+          if (error) throw error;
+        }
+      }
+
       queryClient.invalidateQueries({ queryKey: ['produtos'] });
-      setInsumoSelecionado(null);
-      setQuantidade('');
-      toast({ title: 'Insumo adicionado à ficha técnica!' });
-    },
-    onError: (error) => {
-      toast({ title: 'Erro ao adicionar', description: error.message, variant: 'destructive' });
-    },
-  });
+      toast({ title: 'Ficha técnica salva com sucesso!' });
+      setOpen(false);
+    } catch (error: any) {
+      toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
 
-  const removeMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('fichas_tecnicas').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['produtos'] });
-      toast({ title: 'Insumo removido!' });
-    },
-    onError: (error) => {
-      toast({ title: 'Erro ao remover', description: error.message, variant: 'destructive' });
-    },
-  });
-
-  const updateQuantidadeMutation = useMutation({
-    mutationFn: async ({ id, quantidade }: { id: string; quantidade: number }) => {
-      const { error } = await supabase
-        .from('fichas_tecnicas')
-        .update({ quantidade })
-        .eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['produtos'] });
-    },
-  });
-
-  const insumosNaFicha = fichaTecnica.map(ft => ft.insumos.id);
-
-  const formatCurrencySmart = formatCurrencySmartBRL;
-  const formatCurrency = formatCurrencyBRL;
-
-  const custoTotal = fichaTecnica.reduce((sum, item) => {
-    return sum + (Number(item.quantidade) * Number(item.insumos.custo_unitario));
-  }, 0);
+  // Cancelar e fechar
+  const handleCancel = () => {
+    if (hasChanges) {
+      const confirm = window.confirm('Você tem alterações não salvas. Deseja descartá-las?');
+      if (!confirm) return;
+    }
+    setOpen(false);
+  };
 
   const handleInsumoSelect = (insumo: InsumoSelecionado) => {
-    setInsumoSelecionado(insumo);
+    setNovoInsumo(insumo);
   };
 
   return (
     <>
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(newOpen) => {
+        if (!newOpen && hasChanges) {
+          const confirm = window.confirm('Você tem alterações não salvas. Deseja descartá-las?');
+          if (!confirm) return;
+        }
+        setOpen(newOpen);
+      }}>
         <DialogTrigger asChild>
           {trigger ?? (
             <Button variant="secondary" size="sm" className="justify-center gap-2">
@@ -115,20 +259,42 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({ produtoId, prod
             </Button>
           )}
         </DialogTrigger>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden flex flex-col p-0">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col p-0">
           <DialogHeader className="p-4 pb-3 border-b flex-shrink-0">
             <DialogTitle className="flex items-center gap-2 text-base">
               <FileText className="h-4 w-4" />
-              {produtoNome}
+              Ficha Técnica: {produtoNome}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto">
-            {/* Adicionar novo insumo - Compacto */}
-            <div className="p-3 border-b bg-muted/30">
-              <p className="text-xs font-medium text-muted-foreground mb-2">Adicionar Insumo</p>
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {/* Campo de Rendimento */}
+            <div className="space-y-2">
+              <Label htmlFor="rendimento" className="flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                Rendimento
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="rendimento"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="Ex: 10"
+                  value={rendimento}
+                  onChange={(e) => setRendimento(e.target.value)}
+                  className="w-24"
+                />
+                <span className="text-sm text-muted-foreground">unidades produzidas com esta ficha</span>
+              </div>
+            </div>
+
+            {/* Adicionar novo insumo */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Ingredientes</Label>
               <div className="flex gap-2 items-center">
                 <Button
+                  type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => setBuscaOpen(true)}
@@ -136,7 +302,7 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({ produtoId, prod
                 >
                   <Search className="h-4 w-4 text-muted-foreground" />
                   <span className="truncate text-muted-foreground">
-                    {insumoSelecionado ? insumoSelecionado.nome : 'Buscar insumo...'}
+                    {novoInsumo ? novoInsumo.nome : 'Buscar insumo...'}
                   </span>
                 </Button>
                 <Input
@@ -144,70 +310,70 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({ produtoId, prod
                   step="0.01"
                   min="0"
                   placeholder="Qtd"
-                  value={quantidade}
-                  onChange={(e) => setQuantidade(e.target.value)}
-                  className="w-16 h-9 text-center text-sm"
+                  value={novaQuantidade}
+                  onChange={(e) => setNovaQuantidade(e.target.value)}
+                  className="w-20 h-9 text-center text-sm"
                 />
                 <Button
+                  type="button"
                   size="sm"
-                  onClick={() => addMutation.mutate()}
-                  disabled={!insumoSelecionado || !quantidade || addMutation.isPending}
+                  onClick={handleAddItem}
+                  disabled={!novoInsumo || !novaQuantidade}
                   className="h-9 px-3"
                 >
                   +
                 </Button>
               </div>
               {/* Preview do custo em tempo real */}
-              {insumoSelecionado && quantidade && parseFloat(quantidade) > 0 && (
-                <div className="mt-2 flex items-center justify-between text-xs bg-primary/5 rounded px-2 py-1.5">
+              {novoInsumo && novaQuantidade && parseFloat(novaQuantidade) > 0 && (
+                <div className="flex items-center justify-between text-xs bg-primary/5 rounded px-2 py-1.5">
                   <span className="text-muted-foreground">
-                    {parseFloat(quantidade)} × {formatCurrencySmart(insumoSelecionado.custo_unitario)}
+                    {parseFloat(novaQuantidade)} × {formatCurrencySmartBRL(novoInsumo.custo_unitario)}
                   </span>
                   <span className="font-semibold text-primary">
-                    = {formatCurrency(parseFloat(quantidade) * insumoSelecionado.custo_unitario)}
+                    = {formatCurrencyBRL(parseFloat(novaQuantidade) * novoInsumo.custo_unitario)}
                   </span>
                 </div>
               )}
             </div>
 
             {/* Lista de insumos */}
-            {fichaTecnica.length > 0 ? (
-              <div className="divide-y">
-                {fichaTecnica.map((item) => (
+            {itensVisiveis.length > 0 ? (
+              <div className="divide-y border rounded-md">
+                {itensVisiveis.map((item) => (
                   <div
-                    key={item.id}
-                    className="flex items-center gap-2 p-3"
+                    key={item.tempId}
+                    className={`flex items-center gap-2 p-3 ${item.isNew ? 'bg-success/5' : ''}`}
                   >
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate flex items-center gap-1.5">
-                        <InsumoIcon nome={item.insumos.nome} className="h-3.5 w-3.5 shrink-0" />
-                        {item.insumos.nome}
+                        <InsumoIcon nome={item.insumo.nome} className="h-3.5 w-3.5 shrink-0" />
+                        {item.insumo.nome}
+                        {item.isNew && (
+                          <span className="text-[10px] text-success bg-success/10 px-1 rounded">novo</span>
+                        )}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {item.insumos.unidade_medida} • {formatCurrencySmart(item.insumos.custo_unitario)}/un
+                        {item.insumo.unidade_medida} • {formatCurrencySmartBRL(item.insumo.custo_unitario)}/un
                       </p>
                     </div>
                     <Input
                       type="number"
                       step="0.01"
                       min="0"
-                      defaultValue={item.quantidade}
+                      value={item.quantidade}
                       className="w-16 h-8 text-center text-sm"
-                      onBlur={(e) => {
-                        const newQty = parseFloat(e.target.value);
-                        if (newQty !== item.quantidade) {
-                          updateQuantidadeMutation.mutate({ id: item.id, quantidade: newQty });
-                        }
-                      }}
+                      onChange={(e) => handleUpdateQuantidade(item.tempId, parseFloat(e.target.value) || 0)}
                     />
                     <span className="w-20 text-right text-sm font-medium">
-                      {formatCurrency(Number(item.quantidade) * Number(item.insumos.custo_unitario))}
+                      {formatCurrencyBRL(item.quantidade * item.insumo.custo_unitario)}
                     </span>
                     <Button
+                      type="button"
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-destructive hover:text-destructive flex-shrink-0"
-                      onClick={() => removeMutation.mutate(item.id)}
+                      onClick={() => handleRemoveItem(item.tempId)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -215,21 +381,66 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({ produtoId, prod
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <FileText className="h-10 w-10 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Nenhum insumo na ficha técnica.</p>
-                <p className="text-xs">Clique em buscar para adicionar.</p>
+              <div className="text-center py-6 border rounded-md bg-muted/20">
+                <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+                <p className="text-sm text-muted-foreground">Nenhum ingrediente adicionado.</p>
+                <p className="text-xs text-muted-foreground">Clique em buscar para adicionar.</p>
               </div>
+            )}
+
+            {/* Observações */}
+            <div className="space-y-2">
+              <Label htmlFor="observacoes">Observações / Modo de Preparo (opcional)</Label>
+              <Textarea
+                id="observacoes"
+                placeholder="Ex: Assar por 15 minutos a 180°C, deixar esfriar antes de embalar..."
+                value={observacoes}
+                onChange={(e) => setObservacoes(e.target.value)}
+                rows={3}
+                className="resize-none"
+              />
+            </div>
+
+            {/* Alerta se não tem rendimento */}
+            {itensVisiveis.length > 0 && !rendimento && (
+              <Alert variant="default" className="bg-warning/10 border-warning/30">
+                <AlertCircle className="h-4 w-4 text-warning" />
+                <AlertDescription className="text-sm">
+                  Defina o rendimento para calcular o custo por unidade.
+                </AlertDescription>
+              </Alert>
             )}
           </div>
 
-          {/* Total fixo no rodapé */}
-          {fichaTecnica.length > 0 && (
-            <div className="flex justify-between items-center p-4 bg-primary/10 border-t flex-shrink-0">
-              <span className="font-medium text-sm">Custo Total</span>
-              <span className="font-bold text-lg">{formatCurrency(custoTotal)}</span>
+          {/* Resumo de custos */}
+          <div className="border-t bg-muted/30 p-4 flex-shrink-0">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Custo Total:</span>
+                <span className="font-bold text-lg">{formatCurrencyBRL(custoTotal)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Custo/Unidade:</span>
+                <span className={`font-bold text-lg ${custoPorUnidade > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
+                  {custoPorUnidade > 0 ? formatCurrencySmartBRL(custoPorUnidade) : '—'}
+                </span>
+              </div>
             </div>
-          )}
+          </div>
+
+          {/* Botões Salvar/Cancelar - Padronizados */}
+          <DialogFooter className="p-4 pt-0 border-t flex-shrink-0 gap-2 sm:gap-2">
+            <Button type="button" variant="outline" onClick={handleCancel} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button 
+              type="button" 
+              onClick={handleSave} 
+              disabled={saving || !hasChanges}
+            >
+              {saving ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
