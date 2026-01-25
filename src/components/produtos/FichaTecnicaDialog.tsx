@@ -32,6 +32,8 @@ interface FichaTecnicaDialogProps {
   rendimentoPadrao?: number | null;
   observacoesFicha?: string | null;
   trigger?: React.ReactNode;
+  defaultOpen?: boolean;
+  onClose?: () => void;
 }
 
 interface InsumoSelecionado {
@@ -56,16 +58,25 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
   fichaTecnica, 
   rendimentoPadrao,
   observacoesFicha,
-  trigger 
+  trigger,
+  defaultOpen = false,
+  onClose,
 }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [buscaOpen, setBuscaOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showDiscardAlert, setShowDiscardAlert] = useState(false);
   const [showDuplicateAlert, setShowDuplicateAlert] = useState(false);
   const [pendingDuplicateInsumo, setPendingDuplicateInsumo] = useState<InsumoSelecionado | null>(null);
+
+  // Sync with defaultOpen prop
+  useEffect(() => {
+    if (defaultOpen) {
+      setOpen(true);
+    }
+  }, [defaultOpen]);
   
   // Estado local para edição
   const [localItems, setLocalItems] = useState<LocalItem[]>([]);
@@ -245,6 +256,7 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
   const handleConfirmDiscard = () => {
     setShowDiscardAlert(false);
     setOpen(false);
+    if (onClose) onClose();
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -252,6 +264,9 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
       setShowDiscardAlert(true);
     } else {
       setOpen(newOpen);
+      if (!newOpen && onClose) {
+        onClose();
+      }
     }
   };
 

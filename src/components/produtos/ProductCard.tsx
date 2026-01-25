@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  Copy,
   FileText,
   ImageIcon,
   Pencil,
@@ -12,6 +13,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatCurrencyBRL } from '@/lib/format';
 import FichaTecnicaDialog from "./FichaTecnicaDialog";
+import DuplicarProdutoDialog from "./DuplicarProdutoDialog";
 import MissingFichaBadge from "./MissingFichaBadge";
 import {
   Tooltip,
@@ -50,6 +52,7 @@ interface ProductCardProps {
   onDelete: () => void;
   onApplyPrice?: (produtoId: string, novoPreco: number) => void;
   isApplyingPrice?: boolean;
+  onDuplicateSuccess?: (novoProdutoId: string) => void;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({
@@ -59,8 +62,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
   onDelete,
   onApplyPrice,
   isApplyingPrice,
+  onDuplicateSuccess,
 }) => {
   const isMobile = useIsMobile();
+  const [showDuplicar, setShowDuplicar] = useState(false);
 
   const formatCurrency = formatCurrencyBRL;
 
@@ -81,12 +86,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const cmvAlvo = Number(config?.cmv_alvo ?? 35);
   const margemDesejada = Number(config?.margem_desejada_padrao ?? 30);
 
-  // Margem bruta atual: quanto % do preço é lucro bruto (antes de custos fixos/impostos)
   const margemBruta = precoVenda > 0 ? ((precoVenda - custoInsumos) / precoVenda) * 100 : 0;
 
-  // Calcula preço sugerido com base na margem desejada
-  // Fórmula simplificada: Preço = Custo / (1 - Margem%)
-  // Nota: A precificação completa (com impostos, custos fixos) está na página de Precificação
   const precoSugerido = React.useMemo(() => {
     if (custoInsumos <= 0) return 0;
     if (!Number.isFinite(margemDesejada) || margemDesejada < 0 || margemDesejada >= 100) return custoInsumos;
@@ -135,90 +136,220 @@ const ProductCard: React.FC<ProductCardProps> = ({
   // Mobile: foco em foto, nome, preço, lucro e margem
   if (isMobile) {
     return (
-      <Card className={`${!produto.ativo ? "opacity-60" : ""} overflow-hidden`}>
-        <CardContent className="p-3">
-          <div className="flex gap-3">
-            <div className="w-14 h-14">{React.cloneElement(productImage, {
-              className:
-                "w-14 h-14 bg-muted rounded-md flex items-center justify-center shrink-0 overflow-hidden",
-              children: produto.imagem_url ? (
-                <img
-                  src={produto.imagem_url}
-                  alt={produto.nome}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-              ) : (
-                <ImageIcon className="h-5 w-5 text-muted-foreground/50" />
-              ),
-            })}</div>
+      <>
+        <Card className={`${!produto.ativo ? "opacity-60" : ""} overflow-hidden`}>
+          <CardContent className="p-3">
+            <div className="flex gap-3">
+              <div className="w-14 h-14">{React.cloneElement(productImage, {
+                className:
+                  "w-14 h-14 bg-muted rounded-md flex items-center justify-center shrink-0 overflow-hidden",
+                children: produto.imagem_url ? (
+                  <img
+                    src={produto.imagem_url}
+                    alt={produto.nome}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <ImageIcon className="h-5 w-5 text-muted-foreground/50" />
+                ),
+              })}</div>
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-medium text-sm leading-tight line-clamp-2">{produto.nome}</h3>
-                  <div className="flex flex-wrap gap-1 mt-0.5">
-                    {produto.categoria && (
-                      <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
-                        {produto.categoria}
-                      </Badge>
-                    )}
-                    {!temFichaTecnica && <MissingFichaBadge />}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-medium text-sm leading-tight line-clamp-2">{produto.nome}</h3>
+                    <div className="flex flex-wrap gap-1 mt-0.5">
+                      {produto.categoria && (
+                        <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
+                          {produto.categoria}
+                        </Badge>
+                      )}
+                      {!temFichaTecnica && <MissingFichaBadge />}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-[10px] text-muted-foreground">Preço</p>
+                    <p className="font-bold text-sm">{formatCurrency(precoVenda)}</p>
                   </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <p className="text-[10px] text-muted-foreground">Preço</p>
-                  <p className="font-bold text-sm">{formatCurrency(precoVenda)}</p>
+
+                {temFichaTecnica ? (
+                  <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                    <span className={`${lucroTextClass} font-medium`}>
+                      Lucro: <span className="font-bold">{formatCurrency(lucro)}</span>
+                    </span>
+                    <span className={`${margemTextClass} font-medium`}>
+                      Margem: <span className="font-bold">{margemBruta.toFixed(0)}%</span>
+                    </span>
+                    {precoSugeridoValido && (
+                      <span className={precoAbaixoSugerido ? "text-warning" : "text-muted-foreground"}>
+                        Sugerido: <span className="font-medium">{formatCurrency(precoSugerido)}</span>
+                      </span>
+                    )}
+                    {produto.rendimento_padrao && produto.rendimento_padrao > 0 && (
+                      <span className="text-muted-foreground">
+                        Rende: <span className="font-medium text-foreground">{produto.rendimento_padrao}</span>
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs text-muted-foreground italic">
+                    Adicione ingredientes para ver custos e lucros
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-3 flex gap-2">
+              {temFichaTecnica && precoSugerido > 0 && precoAbaixoSugerido && onApplyPrice && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="default" 
+                      size="sm" 
+                      className="h-8 px-2 text-xs gap-1.5"
+                      onClick={() => onApplyPrice(produto.id, precoSugerido)}
+                      disabled={isApplyingPrice}
+                    >
+                      <Zap className="h-3.5 w-3.5" />
+                      Aplicar
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Aplicar preço sugerido: {formatCurrency(precoSugerido)}</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              <FichaTecnicaDialog
+                produtoId={produto.id}
+                produtoNome={produto.nome}
+                fichaTecnica={produto.fichas_tecnicas || []}
+                rendimentoPadrao={produto.rendimento_padrao}
+                observacoesFicha={produto.observacoes_ficha}
+                trigger={
+                  <Button variant="secondary" size="sm" className="h-8 px-2 text-xs flex-1 gap-1.5">
+                    <FileText className="h-3.5 w-3.5" />
+                    Ficha ({qtdInsumos})
+                  </Button>
+                }
+              />
+              <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => setShowDuplicar(true)}>
+                <Copy className="h-3.5 w-3.5" />
+              </Button>
+              <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={onEdit}>
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <DuplicarProdutoDialog
+          open={showDuplicar}
+          onOpenChange={setShowDuplicar}
+          produto={produto}
+          onSuccess={onDuplicateSuccess}
+        />
+      </>
+    );
+  }
+
+  // Desktop: compacto, com detalhes sob demanda
+  return (
+    <>
+      <Card className={`${!produto.ativo ? "opacity-60" : ""} overflow-hidden hover:shadow-sm transition-shadow`}>
+        <CardContent className="p-3">
+          <div className="flex gap-3">
+            <div className="w-16 h-20 shrink-0">
+              <div className="w-16 h-20 bg-muted rounded-md flex items-center justify-center overflow-hidden">
+                {produto.imagem_url ? (
+                  <img
+                    src={produto.imagem_url}
+                    alt={produto.nome}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <ImageIcon className="h-6 w-6 text-muted-foreground/50" />
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="mb-1">
+                <h3 className="font-medium text-sm leading-tight line-clamp-2">{produto.nome}</h3>
+                <div className="flex flex-wrap gap-1 mt-0.5">
+                  {produto.categoria && (
+                    <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
+                      {produto.categoria}
+                    </Badge>
+                  )}
+                  {!temFichaTecnica && <MissingFichaBadge />}
                 </div>
               </div>
 
               {temFichaTecnica ? (
-                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
-                  <span className={`${lucroTextClass} font-medium`}>
-                    Lucro: <span className="font-bold">{formatCurrency(lucro)}</span>
-                  </span>
-                  <span className={`${margemTextClass} font-medium`}>
-                    Margem: <span className="font-bold">{margemBruta.toFixed(0)}%</span>
-                  </span>
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">Preço </span>
+                    <span className="font-bold text-sm">{formatCurrency(precoVenda)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Lucro </span>
+                    <span className={`font-bold text-sm ${lucroTextClass}`}>{formatCurrency(lucro)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Margem </span>
+                    <span className={`font-bold text-sm ${margemTextClass}`}>{margemBruta.toFixed(1)}%</span>
+                  </div>
                   {precoSugeridoValido && (
-                    <span className={precoAbaixoSugerido ? "text-warning" : "text-muted-foreground"}>
-                      Sugerido: <span className="font-medium">{formatCurrency(precoSugerido)}</span>
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-muted-foreground">Sugerido </span>
+                      <span className={`font-bold text-sm ${precoAbaixoSugerido ? "text-warning" : "text-success"}`}>
+                        {formatCurrency(precoSugerido)}
+                      </span>
+                      {precoAbaixoSugerido && onApplyPrice && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-5 px-1.5 text-[10px] gap-0.5 text-primary border-primary hover:bg-primary/10"
+                              onClick={() => onApplyPrice(produto.id, precoSugerido)}
+                              disabled={isApplyingPrice}
+                            >
+                              <Zap className="h-3 w-3" />
+                              Aplicar
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Aplicar preço sugerido de {formatCurrency(precoSugerido)}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
                   )}
                   {produto.rendimento_padrao && produto.rendimento_padrao > 0 && (
-                    <span className="text-muted-foreground">
-                      Rende: <span className="font-medium text-foreground">{produto.rendimento_padrao}</span>
-                    </span>
+                    <div className="text-muted-foreground">
+                      Rende <span className="font-medium text-foreground">{produto.rendimento_padrao}</span>
+                    </div>
                   )}
                 </div>
               ) : (
-                <p className="mt-2 text-xs text-muted-foreground italic">
-                  Adicione ingredientes para ver custos e lucros
-                </p>
+                <div className="flex items-baseline gap-3 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">Preço </span>
+                    <span className="font-bold text-sm">{formatCurrency(precoVenda)}</span>
+                  </div>
+                  <p className="text-muted-foreground italic">
+                    Adicione ingredientes para ver custos
+                  </p>
+                </div>
               )}
             </div>
           </div>
 
-          <div className="mt-3 flex gap-2">
-            {temFichaTecnica && precoSugerido > 0 && precoAbaixoSugerido && onApplyPrice && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="default" 
-                    size="sm" 
-                    className="h-8 px-2 text-xs gap-1.5"
-                    onClick={() => onApplyPrice(produto.id, precoSugerido)}
-                    disabled={isApplyingPrice}
-                  >
-                    <Zap className="h-3.5 w-3.5" />
-                    Aplicar
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Aplicar preço sugerido: {formatCurrency(precoSugerido)}</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
+          <div className="mt-2 pt-2 border-t flex items-center gap-1">
             <FichaTecnicaDialog
               produtoId={produto.id}
               produtoNome={produto.nome}
@@ -226,198 +357,98 @@ const ProductCard: React.FC<ProductCardProps> = ({
               rendimentoPadrao={produto.rendimento_padrao}
               observacoesFicha={produto.observacoes_ficha}
               trigger={
-                <Button variant="secondary" size="sm" className="h-8 px-2 text-xs flex-1 gap-1.5">
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1">
                   <FileText className="h-3.5 w-3.5" />
                   Ficha ({qtdInsumos})
                 </Button>
               }
             />
-            <Button variant="outline" size="sm" className="h-8 px-2 text-xs flex-1" onClick={onEdit}>
-              <Pencil className="h-3.5 w-3.5 mr-1.5" />
-              Editar
+
+            <div className="flex-1" />
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-7 w-7" 
+                  onClick={() => setShowDuplicar(true)} 
+                  title="Duplicar"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Duplicar produto</TooltipContent>
+            </Tooltip>
+
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit} title="Editar">
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-destructive hover:text-destructive"
+              onClick={onDelete}
+              title="Excluir"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
+
+          {temFichaTecnica && (
+            <details className="mt-3 pt-2 border-t">
+              <summary className="cursor-pointer select-none text-xs text-muted-foreground">
+                Detalhes
+              </summary>
+
+              <div className="mt-2 grid grid-cols-2 gap-3 text-xs">
+                <div className="bg-muted/50 rounded-md p-2">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Custo insumos</p>
+                  <p className="font-semibold">{formatCurrency(custoInsumos)}</p>
+                </div>
+                <div className="bg-muted/50 rounded-md p-2">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">CMV</p>
+                  <p className="font-semibold">{cmvAtual.toFixed(1)}%</p>
+                </div>
+              </div>
+
+              <div className="mt-2 grid grid-cols-2 gap-3">
+                <div>
+                  <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
+                    <span>Margem Bruta</span>
+                    <span>Meta {margemDesejada}%</span>
+                  </div>
+                  <div className="h-1 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${margemBarClass}`}
+                      style={{ width: `${Math.min(Math.max((margemBruta / Math.max(margemDesejada, 1)) * 100, 0), 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
+                    <span>CMV</span>
+                    <span>Meta {cmvAlvo}%</span>
+                  </div>
+                  <div className="h-1 bg-muted rounded-full overflow-hidden">
+                    <div className={`h-full ${cmvBarClass}`} style={{ width: `${Math.min(cmvAtual, 100)}%` }} />
+                  </div>
+                </div>
+              </div>
+            </details>
+          )}
         </CardContent>
       </Card>
-    );
-  }
 
-  // Desktop: compacto, com detalhes sob demanda
-  return (
-    <Card className={`${!produto.ativo ? "opacity-60" : ""} overflow-hidden hover:shadow-sm transition-shadow`}>
-      <CardContent className="p-3">
-        <div className="flex gap-3">
-          {/* Imagem mais proporcional */}
-          <div className="w-16 h-20 shrink-0">
-            <div className="w-16 h-20 bg-muted rounded-md flex items-center justify-center overflow-hidden">
-              {produto.imagem_url ? (
-                <img
-                  src={produto.imagem_url}
-                  alt={produto.nome}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-              ) : (
-                <ImageIcon className="h-6 w-6 text-muted-foreground/50" />
-              )}
-            </div>
-          </div>
-
-          <div className="flex-1 min-w-0">
-            {/* Nome e categoria */}
-            <div className="mb-1">
-              <h3 className="font-medium text-sm leading-tight line-clamp-2">{produto.nome}</h3>
-              <div className="flex flex-wrap gap-1 mt-0.5">
-                {produto.categoria && (
-                  <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
-                    {produto.categoria}
-                  </Badge>
-                )}
-                {!temFichaTecnica && <MissingFichaBadge />}
-              </div>
-            </div>
-
-            {/* KPIs */}
-            {temFichaTecnica ? (
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs">
-                <div>
-                  <span className="text-muted-foreground">Preço </span>
-                  <span className="font-bold text-sm">{formatCurrency(precoVenda)}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Lucro </span>
-                  <span className={`font-bold text-sm ${lucroTextClass}`}>{formatCurrency(lucro)}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Margem </span>
-                  <span className={`font-bold text-sm ${margemTextClass}`}>{margemBruta.toFixed(1)}%</span>
-                </div>
-                {precoSugeridoValido && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-muted-foreground">Sugerido </span>
-                    <span className={`font-bold text-sm ${precoAbaixoSugerido ? "text-warning" : "text-success"}`}>
-                      {formatCurrency(precoSugerido)}
-                    </span>
-                    {precoAbaixoSugerido && onApplyPrice && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="h-5 px-1.5 text-[10px] gap-0.5 text-primary border-primary hover:bg-primary/10"
-                            onClick={() => onApplyPrice(produto.id, precoSugerido)}
-                            disabled={isApplyingPrice}
-                          >
-                            <Zap className="h-3 w-3" />
-                            Aplicar
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Aplicar preço sugerido de {formatCurrency(precoSugerido)}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                  </div>
-                )}
-                {produto.rendimento_padrao && produto.rendimento_padrao > 0 && (
-                  <div className="text-muted-foreground">
-                    Rende <span className="font-medium text-foreground">{produto.rendimento_padrao}</span>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-baseline gap-3 text-xs">
-                <div>
-                  <span className="text-muted-foreground">Preço </span>
-                  <span className="font-bold text-sm">{formatCurrency(precoVenda)}</span>
-                </div>
-                <p className="text-muted-foreground italic">
-                  Adicione ingredientes para ver custos
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Botões movidos para baixo */}
-        <div className="mt-2 pt-2 border-t flex items-center gap-1">
-          <FichaTecnicaDialog
-            produtoId={produto.id}
-            produtoNome={produto.nome}
-            fichaTecnica={produto.fichas_tecnicas || []}
-            rendimentoPadrao={produto.rendimento_padrao}
-            observacoesFicha={produto.observacoes_ficha}
-            trigger={
-              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1">
-                <FileText className="h-3.5 w-3.5" />
-                Ficha ({qtdInsumos})
-              </Button>
-            }
-          />
-
-          <div className="flex-1" />
-
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit} title="Editar">
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-destructive hover:text-destructive"
-            onClick={onDelete}
-            title="Excluir"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-
-        {/* Detalhes (desktop): custo + CMV + metas/barras */}
-        {temFichaTecnica && (
-          <details className="mt-3 pt-2 border-t">
-            <summary className="cursor-pointer select-none text-xs text-muted-foreground">
-              Detalhes
-            </summary>
-
-            <div className="mt-2 grid grid-cols-2 gap-3 text-xs">
-              <div className="bg-muted/50 rounded-md p-2">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Custo insumos</p>
-                <p className="font-semibold">{formatCurrency(custoInsumos)}</p>
-              </div>
-              <div className="bg-muted/50 rounded-md p-2">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">CMV</p>
-                <p className="font-semibold">{cmvAtual.toFixed(1)}%</p>
-              </div>
-            </div>
-
-            <div className="mt-2 grid grid-cols-2 gap-3">
-              <div>
-                <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
-                  <span>Margem Bruta</span>
-                  <span>Meta {margemDesejada}%</span>
-                </div>
-                <div className="h-1 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className={`h-full ${margemBarClass}`}
-                    style={{ width: `${Math.min(Math.max((margemBruta / Math.max(margemDesejada, 1)) * 100, 0), 100)}%` }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
-                  <span>CMV</span>
-                  <span>Meta {cmvAlvo}%</span>
-                </div>
-                <div className="h-1 bg-muted rounded-full overflow-hidden">
-                  <div className={`h-full ${cmvBarClass}`} style={{ width: `${Math.min(cmvAtual, 100)}%` }} />
-                </div>
-              </div>
-            </div>
-          </details>
-        )}
-      </CardContent>
-    </Card>
+      <DuplicarProdutoDialog
+        open={showDuplicar}
+        onOpenChange={setShowDuplicar}
+        produto={produto}
+        onSuccess={onDuplicateSuccess}
+      />
+    </>
   );
 };
 
