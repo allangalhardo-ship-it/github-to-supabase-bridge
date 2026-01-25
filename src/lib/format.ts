@@ -13,8 +13,10 @@ export function formatCurrencySmartBRL(value: number) {
   const abs = Math.abs(safe);
 
   let maximumFractionDigits = 2;
-  if (abs > 0 && abs < 0.001) maximumFractionDigits = 6;
+  if (abs > 0 && abs < 0.0001) maximumFractionDigits = 8;
+  else if (abs > 0 && abs < 0.001) maximumFractionDigits = 6;
   else if (abs > 0 && abs < 0.01) maximumFractionDigits = 4;
+  else if (abs > 0 && abs < 0.1) maximumFractionDigits = 3;
 
   return formatCurrencyBRL(safe, {
     minimumFractionDigits: 2,
