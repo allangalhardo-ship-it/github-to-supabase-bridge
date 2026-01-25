@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, FlaskConical } from 'lucide-react';
+import { Plus, Trash2, ClipboardList } from 'lucide-react';
 import { InsumoIcon } from '@/lib/insumoIconUtils';
 
 interface FichaTecnicaItem {
@@ -152,7 +152,7 @@ const FichaTecnicaForm: React.FC<FichaTecnicaFormProps> = ({ produtoId, fichaTec
               label: `${insumo.nome} (${insumo.unidade_medida})`,
               searchTerms: insumo.nome,
               icon: insumo.is_intermediario 
-                ? <FlaskConical className="h-4 w-4 text-purple-500" /> 
+                ? <ClipboardList className="h-4 w-4 text-primary" /> 
                 : <InsumoIcon nome={insumo.nome} className="h-4 w-4" />,
             }))}
             value={novoInsumo.insumo_id}
