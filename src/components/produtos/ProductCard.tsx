@@ -83,6 +83,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const lucro = precoVenda - custoInsumos;
   const cmvAtual = precoVenda > 0 ? (custoInsumos / precoVenda) * 100 : 0;
 
+  // Custo por unidade
+  const rendimento = Number(produto.rendimento_padrao) || 0;
+  const custoPorUnidade = rendimento > 0 && custoInsumos > 0 ? custoInsumos / rendimento : 0;
+
   const cmvAlvo = Number(config?.cmv_alvo ?? 35);
   const margemDesejada = Number(config?.margem_desejada_padrao ?? 30);
 
@@ -187,9 +191,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
                         Sugerido: <span className="font-medium">{formatCurrency(precoSugerido)}</span>
                       </span>
                     )}
-                    {produto.rendimento_padrao && produto.rendimento_padrao > 0 && (
+                    {custoPorUnidade > 0 && (
                       <span className="text-muted-foreground">
-                        Rende: <span className="font-medium text-foreground">{produto.rendimento_padrao}</span>
+                        Custo/un: <span className="font-medium text-foreground">{formatCurrency(custoPorUnidade)}</span>
                       </span>
                     )}
                   </div>
@@ -329,9 +333,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
                       )}
                     </div>
                   )}
-                  {produto.rendimento_padrao && produto.rendimento_padrao > 0 && (
+                  {custoPorUnidade > 0 && (
                     <div className="text-muted-foreground">
-                      Rende <span className="font-medium text-foreground">{produto.rendimento_padrao}</span>
+                      Custo/un <span className="font-medium text-foreground">{formatCurrency(custoPorUnidade)}</span>
+                      <span className="text-[10px] ml-1">(rende {rendimento})</span>
                     </div>
                   )}
                 </div>
