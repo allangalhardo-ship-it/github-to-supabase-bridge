@@ -83,6 +83,7 @@ serve(async (req) => {
         telefone,
         cpf_cnpj,
         is_test_user,
+        trial_end_override,
         created_at,
         empresa_id,
         empresas (
@@ -214,16 +215,30 @@ serve(async (req) => {
       const activeSessions = activeSessionsMap[authUser.id] || 0;
       const totalPageViews = accessLogsMap[authUser.id] || 0;
       
-      // Calculate trial status
+      // Calculate trial status - considering trial_end_override
       let trialStatus = "expired";
       let trialDaysRemaining = 0;
+      let trialEndDate: Date | null = null;
       
-      const createdAt = safeParseDate(authUser.created_at);
-      if (createdAt) {
-        const now = new Date();
-        const daysSinceCreation = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
-        trialDaysRemaining = Math.max(0, 7 - daysSinceCreation);
-        trialStatus = trialDaysRemaining > 0 ? "trialing" : "expired";
+      // Check for manual override first
+      if (usuario?.trial_end_override) {
+        const overrideDate = safeParseDate(usuario.trial_end_override);
+        if (overrideDate) {
+          trialEndDate = overrideDate;
+          const now = new Date();
+          trialDaysRemaining = Math.max(0, Math.ceil((overrideDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+          trialStatus = trialDaysRemaining > 0 ? "trialing" : "expired";
+        }
+      } else {
+        // Default: 7 days from creation
+        const createdAt = safeParseDate(authUser.created_at);
+        if (createdAt) {
+          const now = new Date();
+          trialEndDate = new Date(createdAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+          const daysSinceCreation = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+          trialDaysRemaining = Math.max(0, 7 - daysSinceCreation);
+          trialStatus = trialDaysRemaining > 0 ? "trialing" : "expired";
+        }
       }
 
       // Calculate total time logged (sum of session durations)
@@ -279,6 +294,8 @@ serve(async (req) => {
         trial: {
           status: trialStatus,
           daysRemaining: trialDaysRemaining,
+          endDate: trialEndDate?.toISOString() || null,
+          hasOverride: !!usuario?.trial_end_override,
         },
         // Session tracking data
         session_stats: {

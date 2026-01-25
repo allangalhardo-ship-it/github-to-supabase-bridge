@@ -977,6 +977,7 @@ export type Database = {
           is_test_user: boolean | null
           nome: string
           telefone: string | null
+          trial_end_override: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -988,6 +989,7 @@ export type Database = {
           is_test_user?: boolean | null
           nome: string
           telefone?: string | null
+          trial_end_override?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -999,6 +1001,7 @@ export type Database = {
           is_test_user?: boolean | null
           nome?: string
           telefone?: string | null
+          trial_end_override?: string | null
         }
         Relationships: [
           {

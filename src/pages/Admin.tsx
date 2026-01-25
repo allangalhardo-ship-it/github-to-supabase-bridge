@@ -34,7 +34,9 @@ import {
   Zap,
   Server,
   TrendingUp,
-  Gauge
+  Gauge,
+  CalendarPlus,
+  RotateCcw
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ScrollableTableWrapper } from '@/components/ui/scrollable-table-wrapper';
@@ -89,6 +91,8 @@ interface AdminUser {
   trial: {
     status: string;
     daysRemaining: number;
+    endDate: string | null;
+    hasOverride: boolean;
   };
   session_stats?: SessionStats;
   recent_sessions?: SessionInfo[];
@@ -138,6 +142,7 @@ const Admin = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
+  const [extendingTrial, setExtendingTrial] = useState<string | null>(null);
 
   useEffect(() => {
     checkAdminAndFetchData();
@@ -268,6 +273,62 @@ const Admin = () => {
       }
       return newSet;
     });
+  };
+
+  const handleExtendTrial = async (userId: string, days: number) => {
+    setExtendingTrial(userId);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-extend-trial', {
+        body: { userId, action: 'extend', days },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: '✅ Trial Estendido',
+        description: data.message,
+      });
+
+      // Refresh data
+      await fetchAdminData();
+    } catch (error) {
+      console.error('Error extending trial:', error);
+      toast({
+        title: 'Erro ao estender trial',
+        description: 'Não foi possível estender o período de teste.',
+        variant: 'destructive',
+      });
+    } finally {
+      setExtendingTrial(null);
+    }
+  };
+
+  const handleResetTrial = async (userId: string) => {
+    setExtendingTrial(userId);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-extend-trial', {
+        body: { userId, action: 'reset' },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: '✅ Trial Resetado',
+        description: data.message,
+      });
+
+      // Refresh data
+      await fetchAdminData();
+    } catch (error) {
+      console.error('Error resetting trial:', error);
+      toast({
+        title: 'Erro ao resetar trial',
+        description: 'Não foi possível resetar o período de teste.',
+        variant: 'destructive',
+      });
+    } finally {
+      setExtendingTrial(null);
+    }
   };
 
   const filteredUsers = users.filter(u => {
@@ -783,6 +844,94 @@ const Admin = () => {
                                           </div>
                                         </div>
                                       ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Trial Management - Only for non-subscribers */}
+                                {!u.subscription?.subscribed && (
+                                  <div className="bg-background rounded-lg p-3 border border-blue-200">
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <p className="text-xs text-muted-foreground mb-1">Gerenciar Período de Teste</p>
+                                        <div className="flex items-center gap-2">
+                                          <Badge 
+                                            variant={u.trial.status === 'trialing' ? 'default' : 'destructive'}
+                                            className={u.trial.status === 'trialing' ? 'bg-blue-100 text-blue-700' : ''}
+                                          >
+                                            <Clock className="h-3 w-3 mr-1" />
+                                            {u.trial.status === 'trialing' 
+                                              ? `${u.trial.daysRemaining} dias restantes` 
+                                              : 'Expirado'}
+                                          </Badge>
+                                          {u.trial.hasOverride && (
+                                            <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-300">
+                                              Estendido manualmente
+                                            </Badge>
+                                          )}
+                                          {u.trial.endDate && (
+                                            <span className="text-xs text-muted-foreground">
+                                              Termina em: {format(new Date(u.trial.endDate), "dd/MM/yyyy", { locale: ptBR })}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleExtendTrial(u.id, 7);
+                                          }}
+                                          disabled={extendingTrial === u.id}
+                                          className="text-xs"
+                                        >
+                                          <CalendarPlus className="h-3 w-3 mr-1" />
+                                          +7 dias
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleExtendTrial(u.id, 14);
+                                          }}
+                                          disabled={extendingTrial === u.id}
+                                          className="text-xs"
+                                        >
+                                          <CalendarPlus className="h-3 w-3 mr-1" />
+                                          +14 dias
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleExtendTrial(u.id, 30);
+                                          }}
+                                          disabled={extendingTrial === u.id}
+                                          className="text-xs"
+                                        >
+                                          <CalendarPlus className="h-3 w-3 mr-1" />
+                                          +30 dias
+                                        </Button>
+                                        {u.trial.hasOverride && (
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleResetTrial(u.id);
+                                            }}
+                                            disabled={extendingTrial === u.id}
+                                            className="text-xs text-muted-foreground"
+                                          >
+                                            <RotateCcw className="h-3 w-3 mr-1" />
+                                            Resetar
+                                          </Button>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                 )}
