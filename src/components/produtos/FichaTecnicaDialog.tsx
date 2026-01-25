@@ -237,6 +237,7 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
       queryClient.invalidateQueries({ queryKey: ['produtos'] });
       toast({ title: 'Ficha técnica salva com sucesso!' });
       setOpen(false);
+      if (onClose) onClose();
     } catch (error: any) {
       toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' });
     } finally {
