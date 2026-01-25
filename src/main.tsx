@@ -24,12 +24,14 @@ import { notifyUpdateAvailable } from "./components/pwa/UpdateNotification";
 // Armazena a função de atualização do Service Worker
 let updateServiceWorker: ((reloadPage?: boolean) => Promise<void>) | null = null;
 
-// Intervalo de verificação de atualizações (30 minutos)
-const UPDATE_CHECK_INTERVAL = 30 * 60 * 1000;
+// IMPORTANTE: desabilitamos verificação periódica automática.
+// Motivo: estava causando recarregamentos inesperados em alguns ambientes.
+// O app ainda suporta atualização manual via UI (triggerServiceWorkerUpdate).
 
 // Registra o Service Worker com modo "prompt" (usuário decide quando atualizar)
 const updateSW = registerSW({
-  immediate: true,
+  // registra apenas após o load para reduzir chance de "refresh" inesperado
+  immediate: false,
   
   onNeedRefresh() {
     // Nova versão disponível - SW está em "waiting"
@@ -42,18 +44,8 @@ const updateSW = registerSW({
     console.log('[SW] App pronto para uso offline');
   },
   
-  onRegisteredSW(swUrl, registration) {
+  onRegisteredSW(swUrl) {
     console.log('[SW] Service Worker registrado:', swUrl);
-    
-    // Configura verificação periódica de atualizações
-    if (registration) {
-      setInterval(() => {
-        console.log('[SW] Verificando atualizações...');
-        registration.update().catch((err) => {
-          console.warn('[SW] Erro ao verificar atualizações:', err);
-        });
-      }, UPDATE_CHECK_INTERVAL);
-    }
   },
   
   onRegisterError(error) {
