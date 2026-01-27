@@ -110,6 +110,19 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
     return (produto.custoInsumos / produto.preco_venda) * 100;
   }, [produto]);
 
+  // Calcular margem máxima viável para o canal
+  const margemMaximaViavel = useMemo(() => {
+    const { percCustoFixo, percImposto } = custosPercentuais;
+    const taxaAppAtual = appSelecionado === 'balcao'
+      ? 0
+      : (taxasApps.find(a => a.id === appSelecionado)?.taxa_percentual || 0);
+    
+    // Margem máxima = 100% - impostos - custos fixos - taxa app - margem mínima para viabilidade (~5%)
+    const espacoDisponivel = 100 - percImposto - percCustoFixo - taxaAppAtual;
+    // Deixar 5% de "folga" para CMV mínimo viável
+    return Math.max(0, espacoDisponivel - 5);
+  }, [custosPercentuais, appSelecionado, taxasApps]);
+
   // Calcular preço baseado nos parâmetros
   const calcs = useMemo(() => {
     if (!produto) return null;
@@ -125,14 +138,15 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
     const taxaApp = taxaAppAtual / 100;
 
     const divisor = 1 - margem - imposto - custoFixo - taxaApp;
-    const novoPreco = divisor > 0 ? produto.custoInsumos / divisor : produto.custoInsumos * 3;
+    
+    // Se divisor <= 0, é matematicamente impossível
+    const isViavel = divisor > 0.01; // Mínimo 1% para CMV
+    const novoPreco = isViavel ? produto.custoInsumos / divisor : null;
 
-    const valorImposto = novoPreco * imposto;
-    const valorCustoFixo = novoPreco * custoFixo;
-    const valorTaxaApp = novoPreco * taxaApp;
-    const lucroLiquido = novoPreco - produto.custoInsumos - valorImposto - valorCustoFixo - valorTaxaApp;
-
-    const isViavel = divisor > 0 && lucroLiquido > 0;
+    const valorImposto = novoPreco ? novoPreco * imposto : 0;
+    const valorCustoFixo = novoPreco ? novoPreco * custoFixo : 0;
+    const valorTaxaApp = novoPreco ? novoPreco * taxaApp : 0;
+    const lucroLiquido = novoPreco ? novoPreco - produto.custoInsumos - valorImposto - valorCustoFixo - valorTaxaApp : 0;
 
     // Preços por canal
     const precosCanais = [
@@ -152,8 +166,11 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
 
     function calcularPrecoCanal(custo: number, taxa: number) {
       const div = 1 - margem - imposto - custoFixo - (taxa / 100);
-      return div > 0 ? custo / div : custo * 3;
+      return div > 0.01 ? custo / div : null;
     }
+
+    // Calcular composição total dos custos percentuais
+    const totalCustosPercentuais = percImposto + percCustoFixo + taxaAppAtual;
 
     return {
       novoPreco,
@@ -165,9 +182,14 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
       percImposto,
       percCustoFixo,
       percTaxaApp: taxaAppAtual,
-      precosCanais
+      precosCanais,
+      totalCustosPercentuais,
+      divisor: divisor * 100
     };
   }, [produto, margemDesejada, appSelecionado, custosPercentuais, taxasApps]);
+
+  // Verificar se margem é viável
+  const isMargemInviavel = !calcs?.isViavel && modoPreco === 'margem';
 
   const precoFinal = modoPreco === 'manual' && precoManual
     ? parseFloat(precoManual) || 0
@@ -188,9 +210,9 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
   const cmvNovo = precoFinal > 0 && produto ? (produto.custoInsumos / precoFinal) * 100 : 0;
 
   // Diferenças
-  const diferencaPreco = produto ? precoFinal - produto.preco_venda : 0;
-  const diferencaMargem = margemCalculada - margemAtual;
-  const diferencaLucro = lucroFinal - lucroAtual;
+  const diferencaPreco = produto && precoFinal ? precoFinal - produto.preco_venda : 0;
+  const diferencaMargem = precoFinal ? margemCalculada - margemAtual : 0;
+  const diferencaLucro = precoFinal ? lucroFinal - lucroAtual : 0;
 
   if (!produto) {
     return (
@@ -271,27 +293,38 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
           <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
             {modoPreco === 'manual' ? 'Novo' : 'Sugerido'}
           </p>
-          <p className={`text-lg font-bold ${isPrecoViavel ? 'text-primary' : 'text-destructive'}`}>
-            {formatCurrency(precoFinal)}
-          </p>
-          <div className="flex flex-col gap-0.5 text-xs">
-            <span className={`font-medium ${margemCalculada >= 20 ? 'text-emerald-600' : margemCalculada >= 10 ? 'text-amber-600' : margemCalculada > 0 ? 'text-orange-600' : 'text-destructive'}`}>
-              {formatPercent(margemCalculada)} margem
-            </span>
-            <span className={`${getCmvColor(cmvNovo)} text-[10px] flex items-center gap-1`}>
-              CMV: {formatPercent(cmvNovo)}
-              {isCmvSaudavel ? (
-                <CheckCircle2 className="h-3 w-3" />
-              ) : (
-                <XCircle className="h-3 w-3" />
-              )}
-            </span>
-          </div>
+          {isPrecoViavel && precoFinal ? (
+            <>
+              <p className="text-lg font-bold text-primary">
+                {formatCurrency(precoFinal)}
+              </p>
+              <div className="flex flex-col gap-0.5 text-xs">
+                <span className={`font-medium ${margemCalculada >= 20 ? 'text-emerald-600' : margemCalculada >= 10 ? 'text-amber-600' : margemCalculada > 0 ? 'text-orange-600' : 'text-destructive'}`}>
+                  {formatPercent(margemCalculada)} margem
+                </span>
+                <span className={`${getCmvColor(cmvNovo)} text-[10px] flex items-center gap-1`}>
+                  CMV: {formatPercent(cmvNovo)}
+                  {isCmvSaudavel ? (
+                    <CheckCircle2 className="h-3 w-3" />
+                  ) : (
+                    <XCircle className="h-3 w-3" />
+                  )}
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-1">
+              <p className="text-destructive font-bold text-sm">Inviável</p>
+              <p className="text-[10px] text-muted-foreground">
+                Máx: {formatPercent(margemMaximaViavel)}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Resumo das diferenças - Grid responsivo para mobile */}
-      {precoFinal !== produto.preco_venda && (
+      {isPrecoViavel && precoFinal && precoFinal !== produto.preco_venda && (
         <div className="grid grid-cols-3 gap-2 py-2 px-2 rounded-lg bg-muted/30 text-xs">
           <div className="flex flex-col items-center gap-0.5">
             <div className="flex items-center gap-1">
@@ -394,22 +427,36 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
                     setMargemDesejada(val);
                   }
                 }}
-                className="w-12 h-7 text-center font-bold text-primary border-0 bg-transparent p-0"
+                className={`w-12 h-7 text-center font-bold border-0 bg-transparent p-0 ${
+                  margemDesejada > margemMaximaViavel ? 'text-destructive' : 'text-primary'
+                }`}
               />
-              <span className="font-bold text-primary text-sm">%</span>
+              <span className={`font-bold text-sm ${margemDesejada > margemMaximaViavel ? 'text-destructive' : 'text-primary'}`}>%</span>
             </div>
           </div>
-          <Slider
-            value={[margemDesejada]}
-            onValueChange={([value]) => setMargemDesejada(value)}
-            min={5}
-            max={60}
-            step={1}
-            className="py-1"
-          />
+          <div className="relative">
+            <Slider
+              value={[margemDesejada]}
+              onValueChange={([value]) => setMargemDesejada(value)}
+              min={5}
+              max={60}
+              step={1}
+              className="py-1"
+            />
+            {/* Indicador visual da margem máxima viável */}
+            {margemMaximaViavel < 60 && margemMaximaViavel > 5 && (
+              <div 
+                className="absolute top-1/2 -translate-y-1/2 w-0.5 h-4 bg-destructive/50 rounded-full pointer-events-none"
+                style={{ left: `${((margemMaximaViavel - 5) / (60 - 5)) * 100}%` }}
+                title={`Margem máxima: ${margemMaximaViavel.toFixed(0)}%`}
+              />
+            )}
+          </div>
           <div className="flex justify-between text-[10px] text-muted-foreground">
             <span>5% mín</span>
-            <span>30% ideal</span>
+            <span className={margemMaximaViavel < 30 ? 'text-destructive' : ''}>
+              {margemMaximaViavel >= 30 ? '30% ideal' : `máx ${formatPercent(margemMaximaViavel)}`}
+            </span>
             <span>60% máx</span>
           </div>
         </div>
@@ -431,12 +478,28 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
         </div>
       )}
 
-      {/* Alerta de viabilidade */}
-      {!isPrecoViavel && (
+      {/* Alerta de viabilidade - mais informativo */}
+      {!isPrecoViavel && modoPreco === 'margem' && (
+        <Alert variant="destructive" className="py-2">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription className="text-xs space-y-1">
+            <p className="font-medium">Margem de {formatPercent(margemDesejada)} é inviável neste canal</p>
+            <p className="text-destructive/80">
+              Custos totais: {formatPercent(calcs?.totalCustosPercentuais || 0)} 
+              (Impostos {formatPercent(calcs?.percImposto || 0)} + 
+              Fixos {formatPercent(calcs?.percCustoFixo || 0)} + 
+              Taxa {formatPercent(calcs?.percTaxaApp || 0)})
+            </p>
+            <p>Margem máxima viável: <strong>{formatPercent(margemMaximaViavel)}</strong></p>
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {!isPrecoViavel && modoPreco === 'manual' && (
         <Alert variant="destructive" className="py-2">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription className="text-xs">
-            {modoPreco === 'manual' ? 'Preço abaixo do custo mínimo!' : 'Margem inviável. Reduza a margem ou revise custos.'}
+            Preço abaixo do custo mínimo!
           </AlertDescription>
         </Alert>
       )}
@@ -526,11 +589,16 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
                 {calcs.precosCanais.map((canal, idx) => {
                   const isSelected = (appSelecionado === 'balcao' && canal.taxa === 0) ||
                     (appSelecionado !== 'balcao' && taxasApps.find(a => a.id === appSelecionado)?.taxa_percentual === canal.taxa);
+                  const isInviavel = canal.preco === null;
                   return (
                     <div
                       key={idx}
                       className={`p-2.5 rounded-lg border text-center transition-all ${
-                        isSelected ? 'border-primary bg-primary/5 ring-1 ring-primary/20' : 'border-muted bg-muted/30'
+                        isInviavel 
+                          ? 'border-destructive/30 bg-destructive/5' 
+                          : isSelected 
+                            ? 'border-primary bg-primary/5 ring-1 ring-primary/20' 
+                            : 'border-muted bg-muted/30'
                       }`}
                     >
                       <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mb-0.5">
@@ -538,7 +606,13 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
                         {canal.nome}
                         {canal.taxa > 0 && <span className="opacity-70">({canal.taxa}%)</span>}
                       </div>
-                      <p className={`font-bold text-sm ${isSelected ? 'text-primary' : ''}`}>{formatCurrency(canal.preco)}</p>
+                      {isInviavel ? (
+                        <p className="font-bold text-sm text-destructive">Inviável</p>
+                      ) : (
+                        <p className={`font-bold text-sm ${isSelected ? 'text-primary' : ''}`}>
+                          {formatCurrency(canal.preco)}
+                        </p>
+                      )}
                     </div>
                   );
                 })}
@@ -564,12 +638,12 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
       {/* Botão Aplicar - Touch friendly */}
       <Button
         onClick={onApply}
-        disabled={isApplying || !isPrecoViavel}
+        disabled={isApplying || !isPrecoViavel || !precoFinal}
         className="w-full gap-2 h-12 text-base font-semibold touch-manipulation active:scale-[0.98] transition-transform"
         size="lg"
       >
         <Zap className="h-5 w-5" />
-        Aplicar {formatCurrency(precoFinal)}
+        {isPrecoViavel && precoFinal ? `Aplicar ${formatCurrency(precoFinal)}` : 'Margem inviável'}
       </Button>
     </div>
   );
