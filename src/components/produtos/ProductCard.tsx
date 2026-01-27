@@ -12,6 +12,8 @@ import {
   Pencil,
   Trash2,
   Zap,
+  Store,
+  Smartphone,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatCurrencyBRL } from '@/lib/format';
@@ -36,6 +38,13 @@ interface FichaTecnicaItem {
   };
 }
 
+interface TaxaApp {
+  id: string;
+  nome_app: string;
+  taxa_percentual: number;
+  ativo: boolean;
+}
+
 interface ProductCardProps {
   produto: {
     id: string;
@@ -54,6 +63,7 @@ interface ProductCardProps {
     imposto_medio_sobre_vendas?: number;
     faturamento_mensal?: number;
   } | null;
+  taxasApps?: TaxaApp[] | null;
   onEdit: () => void;
   onDelete: () => void;
   onApplyPrice?: (produtoId: string, novoPreco: number) => void;
@@ -64,6 +74,7 @@ interface ProductCardProps {
 const ProductCard: React.FC<ProductCardProps> = ({
   produto,
   config,
+  taxasApps,
   onEdit,
   onDelete,
   onApplyPrice,
@@ -75,6 +86,32 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const [showDuplicar, setShowDuplicar] = useState(false);
 
   const formatCurrency = formatCurrencyBRL;
+
+  // Imposto configurado
+  const imposto = (config?.imposto_medio_sobre_vendas || 0) / 100;
+
+  // Calcular margem para um canal específico
+  const calcularMargemCanal = (preco: number, custo: number, taxa: number) => {
+    if (preco <= 0) return 0;
+    const lucro = preco - custo - preco * imposto - preco * (taxa / 100);
+    return (lucro / preco) * 100;
+  };
+
+  // Lista de canais para indicadores
+  const canais = useMemo(() => {
+    const lista: { id: string; nome: string; taxa: number; icone: React.ReactNode }[] = [
+      { id: 'balcao', nome: 'Balcão', taxa: 0, icone: <Store className="h-3 w-3" /> }
+    ];
+    (taxasApps || []).forEach(app => {
+      lista.push({ 
+        id: app.id, 
+        nome: app.nome_app, 
+        taxa: app.taxa_percentual, 
+        icone: <Smartphone className="h-3 w-3" /> 
+      });
+    });
+    return lista;
+  }, [taxasApps]);
 
   // Não precisamos mais buscar custos fixos para o cálculo do preço
   // O custo fixo é verificado no Dashboard, não no preço unitário
@@ -204,24 +241,55 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 </div>
 
                 {temFichaTecnica ? (
-                  <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
-                    <span className={`${lucroTextClass} font-medium`}>
-                      Lucro: <span className="font-bold">{formatCurrency(lucro)}</span>
-                    </span>
-                    <span className={`${margemTextClass} font-medium`}>
-                      Margem: <span className="font-bold">{margemBruta.toFixed(0)}%</span>
-                    </span>
-                    {precoAbaixoSugerido && (
-                      <span className="text-warning">
-                        Sugerido: <span className="font-medium">{formatCurrency(precoSugerido)}</span>
+                  <>
+                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                      <span className={`${lucroTextClass} font-medium`}>
+                        Lucro: <span className="font-bold">{formatCurrency(lucro)}</span>
                       </span>
-                    )}
-                    {custoPorUnidade > 0 && (
-                      <span className="text-muted-foreground">
-                        Custo/un: <span className="font-medium text-foreground">{formatCurrency(custoPorUnidade)}</span>
+                      <span className={`${margemTextClass} font-medium`}>
+                        Margem: <span className="font-bold">{margemBruta.toFixed(0)}%</span>
                       </span>
-                    )}
-                  </div>
+                      {precoAbaixoSugerido && (
+                        <span className="text-warning">
+                          Sugerido: <span className="font-medium">{formatCurrency(precoSugerido)}</span>
+                        </span>
+                      )}
+                      {custoPorUnidade > 0 && (
+                        <span className="text-muted-foreground">
+                          Custo/un: <span className="font-medium text-foreground">{formatCurrency(custoPorUnidade)}</span>
+                        </span>
+                      )}
+                    </div>
+                    {/* Indicadores de margem por canal */}
+                    <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                      {canais.map(canal => {
+                        const margem = calcularMargemCanal(precoVenda, custoInsumos, canal.taxa);
+                        const isCritico = margem < 0;
+                        const isAtencao = margem >= 0 && margem < 15;
+                        const isSaudavel = margem >= 15;
+                        
+                        return (
+                          <Tooltip key={canal.id}>
+                            <TooltipTrigger asChild>
+                              <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium border cursor-default ${
+                                isCritico ? "bg-destructive/10 text-destructive border-destructive/30" :
+                                isAtencao ? "bg-amber-500/10 text-amber-600 border-amber-500/30" :
+                                "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+                              }`}>
+                                {canal.icone}
+                                <span>{margem.toFixed(0)}%</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs">
+                              <p className="font-medium">{canal.nome}</p>
+                              <p>Margem: {margem.toFixed(1)}%</p>
+                              {canal.taxa > 0 && <p className="text-muted-foreground">Taxa: {canal.taxa}%</p>}
+                            </TooltipContent>
+                          </Tooltip>
+                        );
+                      })}
+                    </div>
+                  </>
                 ) : (
                   <p className="mt-2 text-xs text-muted-foreground italic">
                     Adicione ingredientes para ver custos e lucros
@@ -318,53 +386,84 @@ const ProductCard: React.FC<ProductCardProps> = ({
               </div>
 
               {temFichaTecnica ? (
-                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs">
-                  <div>
-                    <span className="text-muted-foreground">Preço </span>
-                    <span className="font-bold text-sm">{formatCurrency(precoVenda)}</span>
+                <>
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs">
+                    <div>
+                      <span className="text-muted-foreground">Preço </span>
+                      <span className="font-bold text-sm">{formatCurrency(precoVenda)}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Lucro </span>
+                      <span className={`font-bold text-sm ${lucroTextClass}`}>{formatCurrency(lucro)}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Margem </span>
+                      <span className={`font-bold text-sm ${margemTextClass}`}>{margemBruta.toFixed(1)}%</span>
+                    </div>
+                    {precoAbaixoSugerido && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-muted-foreground">Sugerido </span>
+                        <span className="font-bold text-sm text-warning">
+                          {formatCurrency(precoSugerido)}
+                        </span>
+                        {onApplyPrice && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-5 px-1.5 text-[10px] gap-0.5 text-primary border-primary hover:bg-primary/10"
+                                onClick={() => onApplyPrice(produto.id, precoSugerido)}
+                                disabled={isApplyingPrice}
+                              >
+                                <Zap className="h-3 w-3" />
+                                Aplicar
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Aplicar preço sugerido de {formatCurrency(precoSugerido)}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                    )}
+                    {custoPorUnidade > 0 && (
+                      <div className="text-muted-foreground">
+                        Custo/un <span className="font-medium text-foreground">{formatCurrency(custoPorUnidade)}</span>
+                        <span className="text-[10px] ml-1">(rende {rendimento})</span>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <span className="text-muted-foreground">Lucro </span>
-                    <span className={`font-bold text-sm ${lucroTextClass}`}>{formatCurrency(lucro)}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Margem </span>
-                    <span className={`font-bold text-sm ${margemTextClass}`}>{margemBruta.toFixed(1)}%</span>
-                  </div>
-                  {precoAbaixoSugerido && (
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-muted-foreground">Sugerido </span>
-                      <span className="font-bold text-sm text-warning">
-                        {formatCurrency(precoSugerido)}
-                      </span>
-                      {onApplyPrice && (
-                        <Tooltip>
+                  {/* Indicadores de margem por canal */}
+                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                    {canais.map(canal => {
+                      const margem = calcularMargemCanal(precoVenda, custoInsumos, canal.taxa);
+                      const isCritico = margem < 0;
+                      const isAtencao = margem >= 0 && margem < 15;
+                      const isSaudavel = margem >= 15;
+                      
+                      return (
+                        <Tooltip key={canal.id}>
                           <TooltipTrigger asChild>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="h-5 px-1.5 text-[10px] gap-0.5 text-primary border-primary hover:bg-primary/10"
-                              onClick={() => onApplyPrice(produto.id, precoSugerido)}
-                              disabled={isApplyingPrice}
-                            >
-                              <Zap className="h-3 w-3" />
-                              Aplicar
-                            </Button>
+                            <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium border cursor-default ${
+                              isCritico ? "bg-destructive/10 text-destructive border-destructive/30" :
+                              isAtencao ? "bg-amber-500/10 text-amber-600 border-amber-500/30" :
+                              "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+                            }`}>
+                              {canal.icone}
+                              <span>{margem.toFixed(0)}%</span>
+                            </div>
                           </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Aplicar preço sugerido de {formatCurrency(precoSugerido)}</p>
+                          <TooltipContent side="top" className="text-xs">
+                            <p className="font-medium">{canal.nome}</p>
+                            <p>Margem: {margem.toFixed(1)}%</p>
+                            {canal.taxa > 0 && <p className="text-muted-foreground">Taxa: {canal.taxa}%</p>}
                           </TooltipContent>
                         </Tooltip>
-                      )}
-                    </div>
-                  )}
-                  {custoPorUnidade > 0 && (
-                    <div className="text-muted-foreground">
-                      Custo/un <span className="font-medium text-foreground">{formatCurrency(custoPorUnidade)}</span>
-                      <span className="text-[10px] ml-1">(rende {rendimento})</span>
-                    </div>
-                  )}
-                </div>
+                      );
+                    })}
+                  </div>
+                </>
               ) : (
                 <div className="flex items-baseline gap-3 text-xs">
                   <div>
