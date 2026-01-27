@@ -133,20 +133,25 @@ const ImportarVendasDialog: React.FC = () => {
     enabled: !!usuario?.empresa_id && open,
   });
 
-  // Fetch apps cadastrados
-  const { data: taxasApps } = useQuery({
-    queryKey: ['taxas_apps', usuario?.empresa_id],
+  // Hook para buscar canais configurados
+  const { data: canaisConfigurados } = useQuery({
+    queryKey: ['canais-configurados', usuario?.empresa_id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('taxas_apps')
-        .select('nome_app')
+      const { data: canaisData, error: canaisError } = await supabase
+        .from('canais_venda')
+        .select('*')
         .eq('ativo', true)
-        .order('nome_app');
-      if (error) throw error;
-      return data;
+        .order('tipo')
+        .order('nome');
+
+      if (canaisError) throw canaisError;
+      return canaisData || [];
     },
     enabled: !!usuario?.empresa_id && open,
   });
+
+  // Lista de canais de delivery para os selects
+  const canaisDelivery = canaisConfigurados?.filter(c => c.tipo === 'app_delivery') || [];
 
   const resetState = () => {
     setStep('upload');
@@ -936,12 +941,10 @@ const ImportarVendasDialog: React.FC = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="__fromfile__">Do arquivo</SelectItem>
-                          {taxasApps?.map(app => (
-                            <SelectItem key={app.nome_app} value={app.nome_app}>{app.nome_app}</SelectItem>
+                          {canaisDelivery.map(canal => (
+                            <SelectItem key={canal.id} value={canal.nome}>{canal.nome}</SelectItem>
                           ))}
                           <SelectItem value="Venda Direta">Venda Direta</SelectItem>
-                          <SelectItem value="iFood">iFood</SelectItem>
-                          <SelectItem value="Rappi">Rappi</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1220,12 +1223,9 @@ const ImportarVendasDialog: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__fromfile__">Do arquivo</SelectItem>
-                    {taxasApps?.map(app => (
-                      <SelectItem key={app.nome_app} value={app.nome_app}>{app.nome_app}</SelectItem>
+                    {canaisDelivery.map(canal => (
+                      <SelectItem key={canal.id} value={canal.nome}>{canal.nome}</SelectItem>
                     ))}
-                    <SelectItem value="iFood">iFood</SelectItem>
-                    <SelectItem value="Rappi">Rappi</SelectItem>
-                    <SelectItem value="99Food">99Food</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
