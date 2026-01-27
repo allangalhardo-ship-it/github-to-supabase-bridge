@@ -30,7 +30,7 @@ export interface PrecoApp {
   id: string;
   nome_app: string;
   taxa_percentual: number;
-  preco: number;
+  preco: number | null;
   viavel: boolean;
 }
 
