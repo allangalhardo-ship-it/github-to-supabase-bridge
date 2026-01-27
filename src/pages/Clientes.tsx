@@ -1,327 +1,214 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
-import { MobileDataView } from '@/components/ui/mobile-data-view';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Users, Trash2, Pencil, Phone } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-
-interface Cliente {
-  id: string;
-  nome: string;
-  whatsapp: string | null;
-  created_at: string;
-}
+import { Plus, Search, Users, Gift } from 'lucide-react';
+import { useClientes, Cliente, ClienteFormData } from '@/hooks/useClientes';
+import { ClienteFormDialog } from '@/components/clientes/ClienteFormDialog';
+import { ClienteCard } from '@/components/clientes/ClienteCard';
+import { differenceInDays, parseISO } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
 
 const Clientes = () => {
   const { usuario } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    nome: '',
-    whatsapp: '',
-  });
+  const [clienteToDelete, setClienteToDelete] = useState<string | null>(null);
+  const [busca, setBusca] = useState('');
 
-  const { data: clientes, isLoading } = useQuery({
-    queryKey: ['clientes', usuario?.empresa_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('clientes')
-        .select('*')
-        .order('nome');
+  const { 
+    clientes, 
+    isLoading, 
+    createCliente, 
+    updateCliente, 
+    deleteCliente,
+    isCreating,
+    isUpdating,
+    gerarLinkWhatsApp,
+    gerarLinkPedido,
+  } = useClientes();
 
-      if (error) throw error;
-      return data as Cliente[];
-    },
-    enabled: !!usuario?.empresa_id,
-  });
+  // Filtrar clientes
+  const clientesFiltrados = useMemo(() => {
+    if (!clientes) return [];
+    if (!busca.trim()) return clientes;
+    
+    const termo = busca.toLowerCase();
+    return clientes.filter(c => 
+      c.nome.toLowerCase().includes(termo) ||
+      c.whatsapp?.includes(termo) ||
+      c.email?.toLowerCase().includes(termo) ||
+      c.endereco_bairro?.toLowerCase().includes(termo) ||
+      c.endereco_cidade?.toLowerCase().includes(termo)
+    );
+  }, [clientes, busca]);
 
-  const createMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
-      const { error } = await supabase.from('clientes').insert({
-        empresa_id: usuario!.empresa_id,
-        nome: data.nome.trim(),
-        whatsapp: data.whatsapp.trim() || null,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clientes'] });
-      toast({ title: 'Cliente cadastrado!' });
-      resetForm();
-    },
-    onError: (error) => {
-      toast({ title: 'Erro ao cadastrar', description: error.message, variant: 'destructive' });
-    },
-  });
+  // Clientes com aniversário próximo
+  const aniversariantesProximos = useMemo(() => {
+    if (!clientes) return [];
+    const hoje = new Date();
+    
+    return clientes.filter(c => {
+      if (!c.data_nascimento) return false;
+      const nascimento = parseISO(c.data_nascimento);
+      const aniversarioEsteAno = new Date(hoje.getFullYear(), nascimento.getMonth(), nascimento.getDate());
+      const diff = differenceInDays(aniversarioEsteAno, hoje);
+      return diff >= 0 && diff <= 7;
+    });
+  }, [clientes]);
 
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: typeof formData }) => {
-      const { error } = await supabase
-        .from('clientes')
-        .update({
-          nome: data.nome.trim(),
-          whatsapp: data.whatsapp.trim() || null,
-        })
-        .eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clientes'] });
-      toast({ title: 'Cliente atualizado!' });
-      resetForm();
-    },
-    onError: (error) => {
-      toast({ title: 'Erro ao atualizar', description: error.message, variant: 'destructive' });
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('clientes').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clientes'] });
-      toast({ title: 'Cliente excluído!' });
-      setDeleteConfirmOpen(false);
-      setItemToDelete(null);
-    },
-    onError: (error) => {
-      toast({ title: 'Erro ao excluir', description: error.message, variant: 'destructive' });
-    },
-  });
-
-  const handleDeleteClick = (id: string) => {
-    setItemToDelete(id);
-    setDeleteConfirmOpen(true);
-  };
-
-  const confirmDelete = () => {
-    if (itemToDelete) {
-      deleteMutation.mutate(itemToDelete);
+  const handleSubmit = (data: ClienteFormData) => {
+    if (editingCliente) {
+      updateCliente({ id: editingCliente.id, data });
+    } else {
+      createCliente(data);
     }
-  };
-
-  const resetForm = () => {
-    setFormData({ nome: '', whatsapp: '' });
     setEditingCliente(null);
-    setDialogOpen(false);
   };
 
   const handleEdit = (cliente: Cliente) => {
     setEditingCliente(cliente);
-    setFormData({
-      nome: cliente.nome,
-      whatsapp: cliente.whatsapp || '',
-    });
     setDialogOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.nome.trim()) {
-      toast({ title: 'Nome é obrigatório', variant: 'destructive' });
-      return;
+  const handleDeleteClick = (id: string) => {
+    setClienteToDelete(id);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (clienteToDelete) {
+      deleteCliente(clienteToDelete);
+      setDeleteConfirmOpen(false);
+      setClienteToDelete(null);
+    }
+  };
+
+  const handleWhatsApp = (cliente: Cliente, mensagem: string) => {
+    if (!cliente.whatsapp) return;
+    
+    // Substituir placeholder do link de pedido
+    let mensagemFinal = mensagem;
+    if (mensagem.includes('[LINK_PEDIDO]') && usuario?.empresa_id) {
+      const linkPedido = gerarLinkPedido(usuario.empresa_id, cliente.id);
+      mensagemFinal = mensagem.replace('[LINK_PEDIDO]', linkPedido);
     }
     
-    if (editingCliente) {
-      updateMutation.mutate({ id: editingCliente.id, data: formData });
-    } else {
-      createMutation.mutate(formData);
-    }
+    const link = gerarLinkWhatsApp(cliente.whatsapp, mensagemFinal);
+    window.open(link, '_blank');
   };
 
-  const formatWhatsApp = (value: string) => {
-    // Remove tudo que não é número
-    const numbers = value.replace(/\D/g, '');
-    // Formata como (XX) XXXXX-XXXX
-    if (numbers.length <= 2) return numbers;
-    if (numbers.length <= 7) return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
-    if (numbers.length <= 11) return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`;
-    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
-  };
-
-  const handleWhatsAppChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatWhatsApp(e.target.value);
-    setFormData({ ...formData, whatsapp: formatted });
-  };
-
-  const openWhatsApp = (whatsapp: string) => {
-    const numbers = whatsapp.replace(/\D/g, '');
-    const fullNumber = numbers.length === 11 ? `55${numbers}` : `55${numbers}`;
-    window.open(`https://wa.me/${fullNumber}`, '_blank');
+  const handleCopyLink = (cliente: Cliente) => {
+    if (!usuario?.empresa_id) return;
+    const link = gerarLinkPedido(usuario.empresa_id, cliente.id);
+    navigator.clipboard.writeText(link);
+    toast({ title: 'Link copiado!', description: 'Cole no WhatsApp ou onde preferir.' });
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Clientes</h1>
-          <p className="text-muted-foreground">Cadastre clientes para vendas diretas</p>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Clientes</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              Gerencie seus clientes e envie pedidos pelo WhatsApp
+            </p>
+          </div>
+
+          <Button onClick={() => { setEditingCliente(null); setDialogOpen(true); }}>
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Cliente
+          </Button>
         </div>
 
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
-          if (!open) resetForm();
-          setDialogOpen(open);
-        }}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Cliente
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingCliente ? 'Editar Cliente' : 'Novo Cliente'}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="nome">Nome *</Label>
-                <Input
-                  id="nome"
-                  value={formData.nome}
-                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                  placeholder="Nome do cliente"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="whatsapp">WhatsApp</Label>
-                <Input
-                  id="whatsapp"
-                  value={formData.whatsapp}
-                  onChange={handleWhatsAppChange}
-                  placeholder="(XX) XXXXX-XXXX"
-                  maxLength={16}
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                  {editingCliente ? 'Salvar' : 'Cadastrar'}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        {/* Alerta de aniversariantes */}
+        {aniversariantesProximos.length > 0 && (
+          <div className="bg-pink-50 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-900 rounded-lg p-3 flex items-center gap-2">
+            <Gift className="h-5 w-5 text-pink-600" />
+            <span className="text-sm text-pink-700 dark:text-pink-300">
+              <strong>{aniversariantesProximos.length}</strong> cliente(s) fazem aniversário nos próximos 7 dias!
+            </span>
+          </div>
+        )}
+
+        {/* Busca */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome, telefone, email ou bairro..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
+        {/* Stats */}
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <Users className="h-4 w-4" />
+            <span>{clientes?.length || 0} clientes</span>
+          </div>
+          {busca && (
+            <Badge variant="secondary">
+              {clientesFiltrados.length} encontrados
+            </Badge>
+          )}
+        </div>
       </div>
 
       {isLoading ? (
-        <Skeleton className="h-96" />
-      ) : (
-        <MobileDataView
-          data={clientes || []}
-          columns={[
-            {
-              key: 'nome',
-              header: 'Nome',
-              mobilePriority: 1,
-              render: (cliente) => <span className="font-medium truncate block max-w-[150px] sm:max-w-none">{cliente.nome}</span>,
-            },
-            {
-              key: 'whatsapp',
-              header: 'WhatsApp',
-              mobilePriority: 2,
-              render: (cliente) => cliente.whatsapp ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-green-600 hover:text-green-700 p-0 h-auto"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openWhatsApp(cliente.whatsapp!);
-                  }}
-                >
-                  <Phone className="h-4 w-4 mr-1" />
-                  {cliente.whatsapp}
-                </Button>
-              ) : (
-                <span className="text-muted-foreground">-</span>
-              ),
-            },
-            {
-              key: 'created_at',
-              header: 'Cadastrado em',
-              mobilePriority: 3,
-              render: (cliente) => (
-                <span className="text-muted-foreground">
-                  {cliente.created_at ? format(new Date(cliente.created_at), 'dd/MM/yyyy', { locale: ptBR }) : '-'}
-                </span>
-              ),
-            },
-          ]}
-          keyExtractor={(cliente) => cliente.id}
-          renderMobileHeader={(cliente) => (
-            <span className="truncate block max-w-[180px]">{cliente.nome}</span>
-          )}
-          renderActions={(cliente) => (
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => handleEdit(cliente)}
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-destructive"
-                onClick={() => handleDeleteClick(cliente.id)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </>
-          )}
-          renderMobileSubtitle={(cliente) => (
-            cliente.whatsapp ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-green-600 hover:text-green-700 p-0 h-auto text-xs"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openWhatsApp(cliente.whatsapp!);
-                }}
-              >
-                <Phone className="h-3 w-3 mr-1" />
-                {cliente.whatsapp}
-              </Button>
-            ) : (
-              <span className="text-muted-foreground text-xs">Sem WhatsApp</span>
-            )
-          )}
-          renderMobileHighlight={(cliente) => (
-            <span className="text-xs text-muted-foreground">
-              {cliente.created_at ? format(new Date(cliente.created_at), 'dd/MM/yy', { locale: ptBR }) : ''}
-            </span>
-          )}
-          emptyMessage="Nenhum cliente cadastrado"
-          emptyAction={
+        <div className="space-y-3">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+        </div>
+      ) : clientesFiltrados.length === 0 ? (
+        <div className="text-center py-12 border rounded-lg bg-muted/30">
+          <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-medium mb-2">
+            {busca ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}
+          </h3>
+          <p className="text-muted-foreground mb-4">
+            {busca 
+              ? 'Tente outro termo de busca' 
+              : 'Cadastre seus clientes para enviar pedidos pelo WhatsApp'
+            }
+          </p>
+          {!busca && (
             <Button onClick={() => setDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Novo Cliente
             </Button>
-          }
-        />
+          )}
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {clientesFiltrados.map((cliente) => (
+            <ClienteCard
+              key={cliente.id}
+              cliente={cliente}
+              onEdit={() => handleEdit(cliente)}
+              onDelete={() => handleDeleteClick(cliente.id)}
+              onWhatsApp={(mensagem) => handleWhatsApp(cliente, mensagem)}
+              onCopyLink={() => handleCopyLink(cliente)}
+            />
+          ))}
+        </div>
       )}
+
+      <ClienteFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        cliente={editingCliente}
+        onSubmit={handleSubmit}
+        isLoading={isCreating || isUpdating}
+      />
 
       <DeleteConfirmationDialog
         open={deleteConfirmOpen}
