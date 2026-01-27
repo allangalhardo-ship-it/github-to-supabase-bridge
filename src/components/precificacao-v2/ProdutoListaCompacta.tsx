@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   Search, 
   Zap, 
@@ -12,9 +13,11 @@ import {
   TrendingUp,
   TrendingDown,
   AlertTriangle,
-  CheckCircle2
+  CheckCircle2,
+  Store,
+  Smartphone
 } from 'lucide-react';
-import { ProdutoAnalise, QuadranteMenu, formatCurrency, formatPercent, getQuadranteInfo } from './types';
+import { ProdutoAnalise, QuadranteMenu, TaxaApp, ConfiguracoesPrecificacao, formatCurrency, formatPercent, getQuadranteInfo } from './types';
 import { cn } from '@/lib/utils';
 
 interface ProdutoListaCompactaProps {
@@ -25,6 +28,8 @@ interface ProdutoListaCompactaProps {
   onAplicarPreco: (produtoId: string, novoPreco: number, precoAnterior: number) => void;
   isAplicando?: boolean;
   isMobile?: boolean;
+  taxasApps?: TaxaApp[];
+  config?: ConfiguracoesPrecificacao;
 }
 
 const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
@@ -35,10 +40,30 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
   onAplicarPreco,
   isAplicando,
   isMobile,
+  taxasApps,
+  config,
 }) => {
   const [busca, setBusca] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState<string>('todas');
   const [filtroSaude, setFiltroSaude] = useState<string>('todos');
+
+  const imposto = (config?.imposto_medio_sobre_vendas || 0) / 100;
+
+  // Calcular margem para um canal específico
+  const calcularMargemCanal = (produto: ProdutoAnalise, taxa: number) => {
+    if (produto.preco_venda <= 0) return 0;
+    const lucro = produto.preco_venda - produto.custoInsumos - produto.preco_venda * imposto - produto.preco_venda * (taxa / 100);
+    return (lucro / produto.preco_venda) * 100;
+  };
+
+  // Montar lista de canais
+  const canais = useMemo(() => {
+    const lista = [{ id: 'balcao', nome: 'Balcão', taxa: 0, icone: <Store className="h-3 w-3" /> }];
+    (taxasApps || []).forEach(app => {
+      lista.push({ id: app.id, nome: app.nome_app, taxa: app.taxa_percentual, icone: <Smartphone className="h-3 w-3" /> });
+    });
+    return lista;
+  }, [taxasApps]);
 
   const produtosFiltrados = useMemo(() => {
     return produtos.filter(produto => {
@@ -213,6 +238,37 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
                             {produto.quantidadeVendida} vendas
                           </span>
                         )}
+                      </div>
+
+                      {/* Indicadores de margem por canal */}
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        {canais.map(canal => {
+                          const margem = calcularMargemCanal(produto, canal.taxa);
+                          const isCritico = margem < 0;
+                          const isAtencao = margem >= 0 && margem < 15;
+                          const isSaudavel = margem >= 15;
+                          
+                          return (
+                            <Tooltip key={canal.id}>
+                              <TooltipTrigger asChild>
+                                <div className={cn(
+                                  "flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium border",
+                                  isCritico && "bg-destructive/10 text-destructive border-destructive/30",
+                                  isAtencao && "bg-amber-500/10 text-amber-600 border-amber-500/30",
+                                  isSaudavel && "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+                                )}>
+                                  {canal.icone}
+                                  <span>{margem.toFixed(0)}%</span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs">
+                                <p className="font-medium">{canal.nome}</p>
+                                <p>Margem: {formatPercent(margem)}</p>
+                                {canal.taxa > 0 && <p className="text-muted-foreground">Taxa: {canal.taxa}%</p>}
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        })}
                       </div>
 
                       {/* Sugestão de preço */}
