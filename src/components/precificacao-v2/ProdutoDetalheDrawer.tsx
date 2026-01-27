@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 import { 
   Drawer,
   DrawerContent,
@@ -24,8 +24,6 @@ import {
   Smartphone,
   Zap,
   Calculator,
-  Target,
-  DollarSign,
   Receipt,
   Percent
 } from 'lucide-react';
@@ -66,9 +64,9 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
   const isMobile = useIsMobile();
   const [margemDesejada, setMargemDesejada] = useState(config?.margem_desejada_padrao || 30);
   const [cmvDesejado, setCmvDesejado] = useState(config?.cmv_alvo || 35);
-  const [precoSimulado, setPrecoSimulado] = useState('');
   const [canalParaAplicar, setCanalParaAplicar] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<string>('cmv');
+  // Preços editáveis por canal (inicializa com valores calculados)
+  const [precosEditaveis, setPrecosEditaveis] = useState<Record<string, string>>({});
   const [showComposicao, setShowComposicao] = useState(false);
 
   // Montar lista de canais: Balcão + plataformas (antes do early return!)
@@ -140,21 +138,30 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
 
   // Resultados da simulação por CMV - preço diferente por canal!
   const resultadosSimulacaoCMV = canais.map(canal => {
-    const precoIdeal = calcularPrecoParaCMV(cmvDesejado, canal.taxa);
-    const resultado = precoIdeal ? calcularResultado(precoIdeal, canal.taxa) : { margem: 0, lucro: 0 };
+    const precoCalculado = calcularPrecoParaCMV(cmvDesejado, canal.taxa);
+    // Usar preço editável se existir, senão usar calculado
+    const precoEditavel = precosEditaveis[canal.id];
+    const precoFinal = precoEditavel ? parseFloat(precoEditavel.replace(',', '.')) || 0 : precoCalculado;
+    const resultado = precoFinal > 0 ? calcularResultado(precoFinal, canal.taxa) : { margem: 0, lucro: 0 };
     return {
       ...canal,
-      precoIdeal,
+      precoCalculado,
+      precoFinal,
       ...resultado
     };
   });
 
-  // Resultados da simulação por preço
-  const precoNumerico = parseFloat(precoSimulado.replace(',', '.')) || 0;
-  const resultadosSimulacaoPreco = canais.map(canal => ({
-    ...canal,
-    ...calcularResultado(precoNumerico, canal.taxa)
-  }));
+  // Atualizar preços editáveis quando CMV muda
+  const atualizarPrecosParaCMV = () => {
+    const novosPrecos: Record<string, string> = {};
+    canais.forEach(canal => {
+      const preco = calcularPrecoParaCMV(cmvDesejado, canal.taxa);
+      if (preco) {
+        novosPrecos[canal.id] = preco.toFixed(2).replace('.', ',');
+      }
+    });
+    setPrecosEditaveis(novosPrecos);
+  };
 
   const getCorMargem = (m: number) => 
     m < 0 ? "text-destructive" : m < 15 ? "text-amber-600" : "text-emerald-600";
@@ -244,179 +251,126 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
 
       <Separator />
 
-      {/* Simulador com Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 h-9">
-          <TabsTrigger value="cmv" className="text-xs gap-1">
-            <Percent className="h-3 w-3" />
-            Por CMV
-          </TabsTrigger>
-          <TabsTrigger value="preco" className="text-xs gap-1">
-            <DollarSign className="h-3 w-3" />
-            Por Preço
-          </TabsTrigger>
-        </TabsList>
+      {/* Simulador por CMV - sem tabs, direto */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Percent className="h-4 w-4 text-primary" />
+          <Label className="text-sm font-semibold">Simulador de Preço por CMV</Label>
+        </div>
 
-        {/* Tab: Simular por CMV */}
-        <TabsContent value="cmv" className="space-y-4 mt-4">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm">CMV desejado</Label>
-              <div className="flex items-center gap-1 bg-amber-500/10 rounded-md px-2 py-1">
-                <span className="font-bold text-amber-600">{cmvDesejado.toFixed(0)}%</span>
-              </div>
-            </div>
-            <Slider
-              value={[cmvDesejado]}
-              onValueChange={([value]) => {
-                setCmvDesejado(value);
-                setCanalParaAplicar(null);
-              }}
-              min={10}
-              max={70}
-              step={1}
-              className="py-2"
-            />
-            <div className="flex justify-between text-[10px] text-muted-foreground">
-              <span>10%</span>
-              <span>Alvo: {config?.cmv_alvo || 35}%</span>
-              <span>70%</span>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm">CMV desejado</Label>
+            <div className="flex items-center gap-1 bg-amber-500/10 rounded-md px-2 py-1">
+              <span className="font-bold text-amber-600">{cmvDesejado.toFixed(0)}%</span>
             </div>
           </div>
+          <Slider
+            value={[cmvDesejado]}
+            onValueChange={([value]) => {
+              setCmvDesejado(value);
+              setCanalParaAplicar(null);
+              // Atualizar preços editáveis quando muda CMV
+              const novosPrecos: Record<string, string> = {};
+              canais.forEach(canal => {
+                const preco = calcularPrecoParaCMV(value, canal.taxa);
+                if (preco) {
+                  novosPrecos[canal.id] = preco.toFixed(2).replace('.', ',');
+                }
+              });
+              setPrecosEditaveis(novosPrecos);
+            }}
+            min={10}
+            max={70}
+            step={1}
+            className="py-2"
+          />
+          <div className="flex justify-between text-[10px] text-muted-foreground">
+            <span>10%</span>
+            <span>Alvo: {config?.cmv_alvo || 35}%</span>
+            <span>70%</span>
+          </div>
+        </div>
 
-          {/* Preços por canal para atingir CMV desejado */}
+        {/* Preços por canal - editáveis */}
+        <div className="space-y-2">
+          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Preço por canal (edite para arredondar)
+          </Label>
           <div className="space-y-2">
-            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Preço necessário para CMV de {cmvDesejado}%
-            </Label>
-            <div className="space-y-2">
-              {resultadosSimulacaoCMV.map(canal => (
-                <div 
-                  key={canal.id}
-                  className={cn(
-                    "p-3 rounded-lg border transition-all cursor-pointer",
-                    canalParaAplicar === canal.id 
-                      ? "border-primary bg-primary/5 ring-2 ring-primary/20" 
-                      : canal.destaque 
-                        ? "border-primary/20 hover:border-primary/40" 
-                        : "hover:border-muted-foreground/30"
-                  )}
-                  onClick={() => canal.precoIdeal && setCanalParaAplicar(canal.id)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {canal.icone}
-                      <span className="text-sm font-medium">{canal.nome}</span>
-                      {canal.taxa > 0 && (
-                        <Badge variant="outline" className="text-[9px] px-1.5 h-4">
-                          -{canal.taxa}%
-                        </Badge>
-                      )}
-                    </div>
-                    {canal.precoIdeal ? (
-                      <div className="text-right">
-                        <p className="text-base font-bold text-amber-600">
-                          {formatCurrency(canal.precoIdeal)}
-                        </p>
-                        <p className={cn("text-[10px]", getCorMargem(canal.margem))}>
-                          margem: {formatPercent(canal.margem)} • {formatCurrency(canal.lucro)}/un
-                        </p>
-                      </div>
-                    ) : (
-                      <Badge variant="destructive" className="text-xs">Inviável</Badge>
+            {resultadosSimulacaoCMV.map(canal => (
+              <div 
+                key={canal.id}
+                className={cn(
+                  "p-3 rounded-lg border transition-all",
+                  canalParaAplicar === canal.id 
+                    ? "border-primary bg-primary/5 ring-2 ring-primary/20" 
+                    : canal.destaque 
+                      ? "border-primary/20" 
+                      : "border-muted"
+                )}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {canal.icone}
+                    <span className="text-sm font-medium truncate">{canal.nome}</span>
+                    {canal.taxa > 0 && (
+                      <Badge variant="outline" className="text-[9px] px-1.5 h-4 shrink-0">
+                        -{canal.taxa}%
+                      </Badge>
                     )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="relative w-28">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">
+                        R$
+                      </span>
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        value={precosEditaveis[canal.id] || (canal.precoCalculado?.toFixed(2).replace('.', ',') || '')}
+                        onChange={(e) => {
+                          setPrecosEditaveis(prev => ({
+                            ...prev,
+                            [canal.id]: e.target.value
+                          }));
+                        }}
+                        onFocus={() => setCanalParaAplicar(canal.id)}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}
+                        className="pl-7 text-sm font-semibold h-9 text-right"
+                      />
+                    </div>
+                    <div className={cn(
+                      "text-right min-w-[60px]",
+                      getCorMargem(canal.margem)
+                    )}>
+                      <p className="text-sm font-bold">{formatPercent(canal.margem)}</p>
+                      <p className="text-[10px]">{formatCurrency(canal.lucro)}</p>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Botão aplicar */}
-          {canalParaAplicar && activeTab === 'cmv' && (
-            <Button
-              size="lg"
-              className="w-full gap-2"
-              onClick={() => {
-                const canal = resultadosSimulacaoCMV.find(c => c.id === canalParaAplicar);
-                if (canal?.precoIdeal) handleAplicar(canal.precoIdeal, canal.id);
-              }}
-              disabled={isAplicando}
-            >
-              <Zap className="h-4 w-4" />
-              Aplicar {formatCurrency(resultadosSimulacaoCMV.find(c => c.id === canalParaAplicar)?.precoIdeal || 0)} em {resultadosSimulacaoCMV.find(c => c.id === canalParaAplicar)?.nome}
-            </Button>
-          )}
-        </TabsContent>
-
-        {/* Tab: Simular por Preço */}
-        <TabsContent value="preco" className="space-y-4 mt-4">
-          <div className="space-y-2">
-            <Label className="text-sm">Digite o preço de venda</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                R$
-              </span>
-              <Input
-                type="text"
-                inputMode="decimal"
-                placeholder="0,00"
-                value={precoSimulado}
-                onChange={(e) => setPrecoSimulado(e.target.value)}
-                onPointerDown={(e) => e.stopPropagation()}
-                onTouchStart={(e) => e.stopPropagation()}
-                className="pl-10 text-lg font-semibold h-12"
-              />
-            </div>
-          </div>
-
-          {/* Resultados por canal */}
-          {precoNumerico > 0 && (
-            <div className="space-y-2">
-              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Margem com preço de {formatCurrency(precoNumerico)}
-              </Label>
-              <div className="grid grid-cols-2 gap-2">
-                {resultadosSimulacaoPreco.map(canal => (
-                  <div 
-                    key={canal.id}
-                    className={cn(
-                      "p-3 rounded-lg border-2",
-                      getCorBgMargem(canal.margem)
-                    )}
-                  >
-                    <div className="flex items-center gap-1.5 mb-1">
-                      {canal.icone}
-                      <span className="text-xs font-medium truncate">{canal.nome}</span>
-                      {canal.taxa > 0 && (
-                        <Badge variant="secondary" className="text-[9px] px-1 h-4 ml-auto">
-                          {canal.taxa}%
-                        </Badge>
-                      )}
-                    </div>
-                    <p className={cn("text-xl font-bold", getCorMargem(canal.margem))}>
-                      {formatPercent(canal.margem)}
-                    </p>
-                    <p className={cn("text-sm font-medium", getCorMargem(canal.lucro))}>
-                      {formatCurrency(canal.lucro)}/un
-                    </p>
-                  </div>
-                ))}
               </div>
+            ))}
+          </div>
+        </div>
 
-              {/* Botão aplicar */}
-              <Button
-                size="lg"
-                className="w-full gap-2 mt-2"
-                onClick={() => handleAplicar(precoNumerico)}
-                disabled={isAplicando || precoNumerico === produto.preco_venda}
-              >
-                <Zap className="h-4 w-4" />
-                Aplicar {formatCurrency(precoNumerico)}
-              </Button>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+        {/* Botão aplicar */}
+        {canalParaAplicar && (
+          <Button
+            size="lg"
+            className="w-full gap-2"
+            onClick={() => {
+              const canal = resultadosSimulacaoCMV.find(c => c.id === canalParaAplicar);
+              if (canal?.precoFinal > 0) handleAplicar(canal.precoFinal, canal.id);
+            }}
+            disabled={isAplicando}
+          >
+            <Zap className="h-4 w-4" />
+            Aplicar {formatCurrency(resultadosSimulacaoCMV.find(c => c.id === canalParaAplicar)?.precoFinal || 0)} em {resultadosSimulacaoCMV.find(c => c.id === canalParaAplicar)?.nome}
+          </Button>
+        )}
+      </div>
 
       {/* Métricas do produto - mais compacto */}
       <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t">
