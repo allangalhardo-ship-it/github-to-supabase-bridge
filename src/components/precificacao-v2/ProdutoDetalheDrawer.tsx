@@ -27,10 +27,11 @@ import {
   Receipt,
   Percent
 } from 'lucide-react';
-import { ProdutoAnalise, TaxaApp, ConfiguracoesPrecificacao, formatCurrency, formatPercent, getQuadranteInfo } from './types';
+import { ProdutoAnalise, ConfiguracoesPrecificacao, formatCurrency, formatPercent, getQuadranteInfo } from './types';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import ComposicaoPrecoModal from './ComposicaoPrecoModal';
+import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 
 interface ProdutoDetalheDrawerProps {
   produto: ProdutoAnalise | null;
@@ -39,7 +40,6 @@ interface ProdutoDetalheDrawerProps {
   onAplicarPreco: (produtoId: string, novoPreco: number, precoAnterior: number) => void;
   onAplicarPrecoCanal?: (produtoId: string, canal: string, novoPreco: number, precoAnterior: number) => void;
   config: ConfiguracoesPrecificacao | undefined;
-  taxasApps: TaxaApp[] | undefined;
   isAplicando?: boolean;
 }
 
@@ -58,32 +58,29 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
   onAplicarPreco,
   onAplicarPrecoCanal,
   config,
-  taxasApps,
   isAplicando,
 }) => {
   const isMobile = useIsMobile();
   const [cmvDesejado, setCmvDesejado] = useState(config?.cmv_alvo || 35);
   const [canalParaAplicar, setCanalParaAplicar] = useState<string | null>(null);
-  // Preços editáveis por canal (inicializa com valores calculados)
   const [precosEditaveis, setPrecosEditaveis] = useState<Record<string, string>>({});
   const [showComposicao, setShowComposicao] = useState(false);
+  
+  // Usar hook que busca canais da nova estrutura
+  const { canaisConfigurados } = usePrecosCanais();
 
-  // Montar lista de canais: Balcão + plataformas (antes do early return!)
+  // Montar lista de canais a partir da nova estrutura
   const canais: CanalInfo[] = useMemo(() => {
-    const lista: CanalInfo[] = [
-      { id: 'balcao', nome: 'Balcão', taxa: 0, icone: <Store className="h-4 w-4" />, destaque: true }
-    ];
-    (taxasApps || []).forEach(app => {
-      lista.push({
-        id: app.id,
-        nome: app.nome_app,
-        taxa: app.taxa_percentual,
-        icone: <Smartphone className="h-4 w-4" />
-      });
-    });
-    return lista;
-  }, [taxasApps]);
-
+    if (!canaisConfigurados) return [];
+    
+    return canaisConfigurados.map(canal => ({
+      id: canal.id,
+      nome: canal.nome,
+      taxa: canal.taxa,
+      icone: canal.isBalcao ? <Store className="h-4 w-4" /> : <Smartphone className="h-4 w-4" />,
+      destaque: canal.isBalcao
+    }));
+  }, [canaisConfigurados]);
   if (!produto) return null;
 
   const quadInfo = getQuadranteInfo(produto.quadrante);

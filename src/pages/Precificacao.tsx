@@ -257,7 +257,6 @@ const Precificacao = () => {
         onAplicarPreco={handleAplicarPreco}
         onAplicarPrecoCanal={handleAplicarPrecoCanal}
         config={config}
-        taxasApps={taxasApps}
         isAplicando={updatePrecoMutation.isPending || isSavingPrecoCanal}
       />
     </div>
