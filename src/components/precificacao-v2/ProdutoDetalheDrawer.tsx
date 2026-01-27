@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
@@ -19,12 +18,8 @@ import {
 } from '@/components/ui/dialog';
 import {
   X,
-  ImageIcon,
   Store,
   Smartphone,
-  TrendingUp,
-  TrendingDown,
-  ArrowRight,
   Zap,
   Calculator
 } from 'lucide-react';
@@ -53,29 +48,32 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
 }) => {
   const isMobile = useIsMobile();
   const [margemDesejada, setMargemDesejada] = useState(config?.margem_desejada_padrao || 30);
-  const [canalSelecionado, setCanalSelecionado] = useState<string>('balcao');
 
   if (!produto) return null;
 
   const quadInfo = getQuadranteInfo(produto.quadrante);
-
-  // Calcular preço para margem desejada
-  const taxaCanal = canalSelecionado === 'balcao' 
-    ? 0 
-    : (taxasApps?.find(a => a.id === canalSelecionado)?.taxa_percentual || 0);
-  
   const imposto = (config?.imposto_medio_sobre_vendas || 0) / 100;
+  
+  // Taxa iFood (primeira taxa de app ativa)
+  const ifoodApp = taxasApps?.find(a => a.nome_app.toLowerCase().includes('ifood')) || taxasApps?.[0];
+  const taxaIfood = (ifoodApp?.taxa_percentual || 0) / 100;
+
+  // Margem no Balcão (sem taxa de app)
+  const margemBalcao = produto.preco_venda > 0
+    ? ((produto.preco_venda - produto.custoInsumos - produto.preco_venda * imposto) / produto.preco_venda) * 100
+    : 0;
+
+  // Margem no iFood com o MESMO preço
+  const margemIfood = produto.preco_venda > 0
+    ? ((produto.preco_venda - produto.custoInsumos - produto.preco_venda * imposto - produto.preco_venda * taxaIfood) / produto.preco_venda) * 100
+    : 0;
+
+  // Calcular preço para margem desejada (no balcão)
   const margem = margemDesejada / 100;
-  const taxa = taxaCanal / 100;
-  const divisor = 1 - margem - imposto - taxa;
+  const divisor = 1 - margem - imposto;
   const precoCalculado = divisor > 0.01 ? produto.custoInsumos / divisor : null;
   
-  const diferencaPreco = precoCalculado ? precoCalculado - produto.preco_venda : 0;
-  
-  // Margem atual no canal selecionado
-  const margemAtualCanal = produto.preco_venda > 0
-    ? ((produto.preco_venda - produto.custoInsumos - produto.preco_venda * imposto - produto.preco_venda * taxa) / produto.preco_venda) * 100
-    : 0;
+  const mostrarAplicar = precoCalculado && precoCalculado !== produto.preco_venda;
 
   const ConteudoDrawer = () => (
     <div className="flex flex-col gap-4 p-4">
@@ -101,99 +99,59 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
         </div>
       </div>
 
-      {/* Comparação Atual vs Calculado */}
-      <div className="grid grid-cols-[1fr,auto,1fr] gap-2 items-stretch">
-        <div className="p-3 rounded-lg border bg-muted/30 space-y-1">
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Atual</p>
-          <p className="text-xl font-bold">{formatCurrency(produto.preco_venda)}</p>
-          <p className={cn(
-            "text-sm font-medium",
-            margemAtualCanal < 0 ? "text-destructive" :
-            margemAtualCanal < 15 ? "text-amber-600" : "text-emerald-600"
-          )}>
-            {formatPercent(margemAtualCanal)} margem
-          </p>
-        </div>
-
-        <div className="flex items-center justify-center">
-          <div className={cn(
-            "p-1.5 rounded-full",
-            diferencaPreco >= 0 ? "bg-emerald-500/10" : "bg-amber-500/10"
-          )}>
-            <ArrowRight className={cn(
-              "h-4 w-4",
-              diferencaPreco >= 0 ? "text-emerald-600" : "text-amber-600"
-            )} />
-          </div>
-        </div>
-
-        <div className={cn(
-          "p-3 rounded-lg border-2 space-y-1",
-          precoCalculado ? "border-primary/30 bg-primary/5" : "border-destructive/30 bg-destructive/5"
-        )}>
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Calculado</p>
-          {precoCalculado ? (
-            <>
-              <p className="text-xl font-bold text-primary">{formatCurrency(precoCalculado)}</p>
-              <p className="text-sm font-medium text-primary">{formatPercent(margemDesejada)} margem</p>
-            </>
-          ) : (
-            <p className="text-sm text-destructive font-medium">Inviável</p>
-          )}
-        </div>
+      {/* Preço Atual */}
+      <div className="text-center p-3 rounded-lg border bg-muted/30">
+        <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Preço Atual</p>
+        <p className="text-2xl font-bold">{formatCurrency(produto.preco_venda)}</p>
       </div>
 
-      {/* Diferença */}
-      {precoCalculado && diferencaPreco !== 0 && (
-        <div className="flex items-center justify-center gap-2 py-2 rounded-lg bg-muted/30 text-sm">
-          {diferencaPreco > 0 ? (
-            <TrendingUp className="h-4 w-4 text-emerald-600" />
-          ) : (
-            <TrendingDown className="h-4 w-4 text-amber-600" />
-          )}
-          <span className={diferencaPreco > 0 ? "text-emerald-600 font-semibold" : "text-amber-600 font-semibold"}>
-            {diferencaPreco > 0 ? '+' : ''}{formatCurrency(diferencaPreco)} por unidade
-          </span>
+      {/* Comparativo de Margens - Balcão vs iFood */}
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">Comparativo de Margem (mesmo preço)</Label>
+        <div className="grid grid-cols-2 gap-3">
+          {/* Balcão */}
+          <div className="p-4 rounded-lg border-2 border-primary/20 bg-primary/5 space-y-1">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Store className="h-4 w-4" />
+              <span className="text-xs font-medium">Balcão</span>
+            </div>
+            <p className={cn(
+              "text-xl font-bold",
+              margemBalcao < 0 ? "text-destructive" :
+              margemBalcao < 15 ? "text-amber-600" : "text-emerald-600"
+            )}>
+              {formatPercent(margemBalcao)}
+            </p>
+            <p className="text-[10px] text-muted-foreground">de margem</p>
+          </div>
+
+          {/* iFood */}
+          <div className="p-4 rounded-lg border bg-muted/30 space-y-1">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Smartphone className="h-4 w-4" />
+              <span className="text-xs font-medium">{ifoodApp?.nome_app || 'iFood'}</span>
+              <Badge variant="secondary" className="text-[10px] px-1.5 h-4 ml-auto">
+                {(taxaIfood * 100).toFixed(1)}%
+              </Badge>
+            </div>
+            <p className={cn(
+              "text-xl font-bold",
+              margemIfood < 0 ? "text-destructive" :
+              margemIfood < 15 ? "text-amber-600" : "text-emerald-600"
+            )}>
+              {formatPercent(margemIfood)}
+            </p>
+            <p className="text-[10px] text-muted-foreground">de margem</p>
+          </div>
         </div>
-      )}
+      </div>
 
       <Separator />
 
-      {/* Seletor de Canal */}
-      <div className="space-y-2">
-        <Label className="text-sm">Canal de venda</Label>
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          <Button
-            size="sm"
-            variant={canalSelecionado === 'balcao' ? 'default' : 'outline'}
-            onClick={() => setCanalSelecionado('balcao')}
-            className="h-9 px-3 gap-1.5 shrink-0"
-          >
-            <Store className="h-3.5 w-3.5" />
-            Balcão
-          </Button>
-          {taxasApps?.map(app => (
-            <Button
-              key={app.id}
-              size="sm"
-              variant={canalSelecionado === app.id ? 'default' : 'outline'}
-              onClick={() => setCanalSelecionado(app.id)}
-              className="h-9 px-3 gap-1.5 shrink-0"
-            >
-              <Smartphone className="h-3.5 w-3.5" />
-              <span className="truncate max-w-[60px]">{app.nome_app}</span>
-              <Badge variant="secondary" className="text-[10px] px-1.5 h-4">
-                {app.taxa_percentual}%
-              </Badge>
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      {/* Slider de Margem */}
+      {/* Simulador de Margem */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <Label className="text-sm">Margem desejada</Label>
+          <Label className="text-sm">Simular margem desejada</Label>
           <div className="flex items-center gap-1 bg-primary/10 rounded-md px-2 py-1">
             <span className="font-bold text-primary">{margemDesejada.toFixed(0)}%</span>
           </div>
@@ -235,20 +193,25 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
         </div>
       </div>
 
-      {/* Botão Aplicar */}
-      {precoCalculado && precoCalculado !== produto.preco_venda && (
-        <Button
-          size="lg"
-          className="w-full gap-2"
-          onClick={() => {
-            onAplicarPreco(produto.id, precoCalculado, produto.preco_venda);
-            onClose();
-          }}
-          disabled={isAplicando}
-        >
-          <Zap className="h-4 w-4" />
-          Aplicar {formatCurrency(precoCalculado)}
-        </Button>
+      {/* Botão Aplicar - mostra o preço calculado apenas aqui */}
+      {mostrarAplicar && (
+        <div className="space-y-2 pt-2">
+          <div className="text-center text-sm text-muted-foreground">
+            Para atingir <span className="font-semibold text-primary">{margemDesejada}% de margem</span> no balcão:
+          </div>
+          <Button
+            size="lg"
+            className="w-full gap-2"
+            onClick={() => {
+              onAplicarPreco(produto.id, precoCalculado!, produto.preco_venda);
+              onClose();
+            }}
+            disabled={isAplicando}
+          >
+            <Zap className="h-4 w-4" />
+            Aplicar {formatCurrency(precoCalculado!)}
+          </Button>
+        </div>
       )}
     </div>
   );
