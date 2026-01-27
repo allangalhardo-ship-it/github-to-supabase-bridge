@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Settings, Save, Loader2 } from 'lucide-react';
-import TaxasAppsConfig from '@/components/configuracoes/TaxasAppsConfig';
+import CanaisVendaConfig from '@/components/configuracoes/CanaisVendaConfig';
 
 const Configuracoes = () => {
   const { usuario } = useAuth();
@@ -176,7 +176,7 @@ const Configuracoes = () => {
         </Card>
       </form>
 
-      <TaxasAppsConfig />
+      <CanaisVendaConfig />
 
       <Card>
         <CardHeader>
