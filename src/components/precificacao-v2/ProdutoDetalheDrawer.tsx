@@ -26,7 +26,8 @@ import {
   Calculator,
   Target,
   DollarSign,
-  Receipt
+  Receipt,
+  Percent
 } from 'lucide-react';
 import { ProdutoAnalise, TaxaApp, ConfiguracoesPrecificacao, formatCurrency, formatPercent, getQuadranteInfo } from './types';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -62,6 +63,7 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
 }) => {
   const isMobile = useIsMobile();
   const [margemDesejada, setMargemDesejada] = useState(config?.margem_desejada_padrao || 30);
+  const [cmvDesejado, setCmvDesejado] = useState(config?.cmv_alvo || 35);
   const [precoSimulado, setPrecoSimulado] = useState('');
   const [canalParaAplicar, setCanalParaAplicar] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('margem');
@@ -105,6 +107,13 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
     return produto.custoInsumos / divisor;
   };
 
+  // Calcular preço necessário para atingir CMV em um canal
+  // CMV = custoInsumos / preco => preco = custoInsumos / CMV
+  const calcularPrecoParaCMV = (cmvAlvo: number) => {
+    if (cmvAlvo <= 0 || cmvAlvo >= 100) return null;
+    return produto.custoInsumos / (cmvAlvo / 100);
+  };
+
   // Resultados atuais (preço atual)
   const resultadosAtuais = canais.map(canal => ({
     ...canal,
@@ -119,6 +128,17 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
       precoIdeal,
       margem: margemDesejada,
       lucro: precoIdeal ? calcularResultado(precoIdeal, canal.taxa).lucro : 0
+    };
+  });
+
+  // Resultados da simulação por CMV
+  const precoParaCMV = calcularPrecoParaCMV(cmvDesejado);
+  const resultadosSimulacaoCMV = canais.map(canal => {
+    const resultado = precoParaCMV ? calcularResultado(precoParaCMV, canal.taxa) : { margem: 0, lucro: 0 };
+    return {
+      ...canal,
+      precoIdeal: precoParaCMV,
+      ...resultado
     };
   });
 
@@ -215,14 +235,18 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
 
       {/* Simulador com Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 h-9">
-          <TabsTrigger value="margem" className="text-xs gap-1.5">
-            <Target className="h-3.5 w-3.5" />
-            Por Margem
+        <TabsList className="grid w-full grid-cols-3 h-9">
+          <TabsTrigger value="margem" className="text-xs gap-1">
+            <Target className="h-3 w-3" />
+            Margem
           </TabsTrigger>
-          <TabsTrigger value="preco" className="text-xs gap-1.5">
-            <DollarSign className="h-3.5 w-3.5" />
-            Por Preço
+          <TabsTrigger value="cmv" className="text-xs gap-1">
+            <Percent className="h-3 w-3" />
+            CMV
+          </TabsTrigger>
+          <TabsTrigger value="preco" className="text-xs gap-1">
+            <DollarSign className="h-3 w-3" />
+            Preço
           </TabsTrigger>
         </TabsList>
 
@@ -314,6 +338,96 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
               <Zap className="h-4 w-4" />
               Aplicar {formatCurrency(resultadosSimulacaoMargem.find(c => c.id === canalParaAplicar)?.precoIdeal || 0)}
             </Button>
+          )}
+        </TabsContent>
+
+        {/* Tab: Simular por CMV */}
+        <TabsContent value="cmv" className="space-y-4 mt-4">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm">CMV desejado</Label>
+              <div className="flex items-center gap-1 bg-amber-500/10 rounded-md px-2 py-1">
+                <span className="font-bold text-amber-600">{cmvDesejado.toFixed(0)}%</span>
+              </div>
+            </div>
+            <Slider
+              value={[cmvDesejado]}
+              onValueChange={([value]) => {
+                setCmvDesejado(value);
+                setCanalParaAplicar(null);
+              }}
+              min={10}
+              max={70}
+              step={1}
+              className="py-2"
+            />
+            <div className="flex justify-between text-[10px] text-muted-foreground">
+              <span>10%</span>
+              <span>Alvo: {config?.cmv_alvo || 35}%</span>
+              <span>70%</span>
+            </div>
+          </div>
+
+          {/* Preço único para CMV + margens por canal */}
+          {precoParaCMV && (
+            <div className="space-y-2">
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-center">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                  Preço para CMV de {cmvDesejado}%
+                </p>
+                <p className="text-2xl font-bold text-amber-600">
+                  {formatCurrency(precoParaCMV)}
+                </p>
+              </div>
+
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Margem resultante por canal
+              </Label>
+              <div className="space-y-2">
+                {resultadosSimulacaoCMV.map(canal => (
+                  <div 
+                    key={canal.id}
+                    className={cn(
+                      "p-3 rounded-lg border transition-all",
+                      canal.destaque 
+                        ? "border-primary/20" 
+                        : "border-muted"
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {canal.icone}
+                        <span className="text-sm font-medium">{canal.nome}</span>
+                        {canal.taxa > 0 && (
+                          <Badge variant="outline" className="text-[9px] px-1.5 h-4">
+                            -{canal.taxa}%
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className={cn("text-base font-bold", getCorMargem(canal.margem))}>
+                          {formatPercent(canal.margem)}
+                        </p>
+                        <p className={cn("text-[10px]", getCorMargem(canal.lucro))}>
+                          lucro: {formatCurrency(canal.lucro)}/un
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Botão aplicar */}
+              <Button
+                size="lg"
+                className="w-full gap-2 mt-2"
+                onClick={() => handleAplicar(precoParaCMV)}
+                disabled={isAplicando || precoParaCMV === produto.preco_venda}
+              >
+                <Zap className="h-4 w-4" />
+                Aplicar {formatCurrency(precoParaCMV)}
+              </Button>
+            </div>
           )}
         </TabsContent>
 
