@@ -56,6 +56,30 @@ export function useMenuEngineering() {
     enabled: !!usuario?.empresa_id,
   });
 
+  // Buscar preços por canal de todos os produtos
+  const { data: precosCanaisTodos } = useQuery({
+    queryKey: ['precos-canais-todos', usuario?.empresa_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('precos_canais')
+        .select('produto_id, canal, preco')
+        .eq('empresa_id', usuario?.empresa_id);
+
+      if (error) throw error;
+
+      // Criar mapa: produto_id -> { canal -> preco }
+      const mapa: Record<string, Record<string, number>> = {};
+      data?.forEach(p => {
+        if (!mapa[p.produto_id]) {
+          mapa[p.produto_id] = {};
+        }
+        mapa[p.produto_id][p.canal] = p.preco;
+      });
+      return mapa;
+    },
+    enabled: !!usuario?.empresa_id,
+  });
+
   // Buscar configurações
   const { data: config } = useQuery({
     queryKey: ['config-menu-engineering', usuario?.empresa_id],
@@ -141,6 +165,9 @@ export function useMenuEngineering() {
       const quantidadeVendida = vendas?.quantidade || 0;
       const receitaTotal = vendas?.receita || 0;
 
+      // Buscar preços por canal deste produto
+      const precosCanaisProduto = precosCanaisTodos?.[produto.id] || {};
+
       const precoVenda = produto.preco_venda || 0;
       const cmv = precoVenda > 0 ? (custoInsumos / precoVenda) * 100 : 100;
       
@@ -180,6 +207,7 @@ export function useMenuEngineering() {
         precoSugeridoViavel,
         saudeMargem,
         saudeCmv,
+        precosCanais: precosCanaisProduto,
         quadrante: 'desafio' as QuadranteMenu, // placeholder
       };
     });
@@ -208,7 +236,7 @@ export function useMenuEngineering() {
 
       return { ...produto, quadrante };
     });
-  }, [produtos, config, vendasAgregadas]);
+  }, [produtos, config, vendasAgregadas, precosCanaisTodos]);
 
   // Resumo por quadrante
   const resumoQuadrantes: ResumoQuadrante[] = useMemo(() => {

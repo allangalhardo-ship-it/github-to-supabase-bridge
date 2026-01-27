@@ -50,10 +50,18 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
   const imposto = (config?.imposto_medio_sobre_vendas || 0) / 100;
 
   // Calcular margem para um canal específico
-  const calcularMargemCanal = (produto: ProdutoAnalise, taxa: number) => {
-    if (produto.preco_venda <= 0) return 0;
-    const lucro = produto.preco_venda - produto.custoInsumos - produto.preco_venda * imposto - produto.preco_venda * (taxa / 100);
-    return (lucro / produto.preco_venda) * 100;
+  const calcularMargemCanal = (preco: number, custo: number, taxa: number) => {
+    if (preco <= 0) return 0;
+    const lucro = preco - custo - preco * imposto - preco * (taxa / 100);
+    return (lucro / preco) * 100;
+  };
+
+  // Obter preço de um canal (customizado ou base)
+  const getPrecoCanal = (produto: ProdutoAnalise, canalId: string) => {
+    if (produto.precosCanais && produto.precosCanais[canalId] !== undefined) {
+      return produto.precosCanais[canalId];
+    }
+    return produto.preco_venda; // fallback para preço base
   };
 
   // Montar lista de canais
@@ -222,65 +230,141 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
                         <p className="font-medium text-sm truncate">{produto.nome}</p>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-muted-foreground">
-                        <span>
-                          Atual: <span className="font-semibold text-foreground">{formatCurrency(produto.preco_venda)}</span>
-                        </span>
-                        <span className={cn(
-                          "font-medium",
-                          produto.margemContribuicao < 0 ? "text-destructive" :
-                          produto.margemContribuicao < 15 ? "text-amber-600" : "text-emerald-600"
-                        )}>
-                          {formatPercent(produto.margemContribuicao)}
-                        </span>
-                        {produto.quantidadeVendida > 0 && (
-                          <span className="text-muted-foreground">
-                            {produto.quantidadeVendida} vendas
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Indicadores de margem por canal */}
-                      <div className="flex items-center gap-1.5 mt-1.5">
-                        {canais.map(canal => {
-                          const margem = calcularMargemCanal(produto, canal.taxa);
-                          const isCritico = margem < 0;
-                          const isAtencao = margem >= 0 && margem < 15;
-                          const isSaudavel = margem >= 15;
-                          
+                      {/* Verificar se tem preços customizados */}
+                      {(() => {
+                        const temPrecosCustomizados = produto.precosCanais && Object.keys(produto.precosCanais).length > 0;
+                        
+                        if (temPrecosCustomizados) {
+                          // Layout com preços por canal (similar ao ProductCard)
                           return (
-                            <Tooltip key={canal.id}>
-                              <TooltipTrigger asChild>
-                                <div className={cn(
-                                  "flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium border",
-                                  isCritico && "bg-destructive/10 text-destructive border-destructive/30",
-                                  isAtencao && "bg-amber-500/10 text-amber-600 border-amber-500/30",
-                                  isSaudavel && "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
-                                )}>
-                                  {canal.icone}
-                                  <span>{margem.toFixed(0)}%</span>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="text-xs">
-                                <p className="font-medium">{canal.nome}</p>
-                                <p>Margem: {formatPercent(margem)}</p>
-                                {canal.taxa > 0 && <p className="text-muted-foreground">Taxa: {canal.taxa}%</p>}
-                              </TooltipContent>
-                            </Tooltip>
+                            <div className="mt-2 space-y-1.5">
+                              <div className="text-[10px] text-muted-foreground font-medium">
+                                Preços por canal:
+                              </div>
+                              <div className="grid gap-1">
+                                {canais.map(canal => {
+                                  const precoCanal = getPrecoCanal(produto, canal.id);
+                                  const margem = calcularMargemCanal(precoCanal, produto.custoInsumos, canal.taxa);
+                                  const temPrecoCustom = produto.precosCanais && produto.precosCanais[canal.id] !== undefined;
+                                  const isCritico = margem < 0;
+                                  const isAtencao = margem >= 0 && margem < 15;
+                                  
+                                  if (!temPrecoCustom) return null;
+                                  
+                                  return (
+                                    <Tooltip key={canal.id}>
+                                      <TooltipTrigger asChild>
+                                        <div 
+                                          className={cn(
+                                            "flex items-center justify-between px-2 py-1 rounded-md border text-xs",
+                                            isCritico && "bg-destructive/5 border-destructive/20",
+                                            isAtencao && "bg-amber-500/5 border-amber-500/20",
+                                            !isCritico && !isAtencao && "bg-emerald-500/5 border-emerald-500/20"
+                                          )}
+                                        >
+                                          <div className="flex items-center gap-1.5">
+                                            {canal.icone}
+                                            <span className="font-medium truncate max-w-[60px]">{canal.nome}</span>
+                                            {canal.taxa > 0 && (
+                                              <span className="text-[10px] text-muted-foreground">({canal.taxa}%)</span>
+                                            )}
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-bold">{formatCurrency(precoCanal)}</span>
+                                            <span className={cn(
+                                              "text-[10px] font-medium",
+                                              isCritico && "text-destructive",
+                                              isAtencao && "text-amber-600",
+                                              !isCritico && !isAtencao && "text-emerald-600"
+                                            )}>
+                                              {margem.toFixed(0)}%
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top" className="text-xs">
+                                        <p className="font-medium">{canal.nome}</p>
+                                        <p>Preço: {formatCurrency(precoCanal)} ✓</p>
+                                        <p>Margem: {formatPercent(margem)}</p>
+                                        {canal.taxa > 0 && <p className="text-muted-foreground">Taxa: {canal.taxa}%</p>}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  );
+                                })}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground">
+                                Custo: {formatCurrency(produto.custoInsumos)}
+                              </div>
+                            </div>
                           );
-                        })}
-                      </div>
+                        } else {
+                          // Layout original (preço único)
+                          return (
+                            <>
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-muted-foreground">
+                                <span>
+                                  Atual: <span className="font-semibold text-foreground">{formatCurrency(produto.preco_venda)}</span>
+                                </span>
+                                <span className={cn(
+                                  "font-medium",
+                                  produto.margemContribuicao < 0 ? "text-destructive" :
+                                  produto.margemContribuicao < 15 ? "text-amber-600" : "text-emerald-600"
+                                )}>
+                                  {formatPercent(produto.margemContribuicao)}
+                                </span>
+                                {produto.quantidadeVendida > 0 && (
+                                  <span className="text-muted-foreground">
+                                    {produto.quantidadeVendida} vendas
+                                  </span>
+                                )}
+                              </div>
 
-                      {/* Sugestão de preço */}
-                      {precisaAjuste && (
-                        <div className="flex items-center gap-1 mt-1.5 text-xs text-emerald-600">
-                          <TrendingUp className="h-3 w-3" />
-                          <span>Sugerido: {formatCurrency(produto.precoSugerido)}</span>
-                          <span className="text-muted-foreground">
-                            (+{formatCurrency(diferencaPreco)})
-                          </span>
-                        </div>
-                      )}
+                              {/* Indicadores de margem por canal (sem preços customizados) */}
+                              <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                {canais.map(canal => {
+                                  const margem = calcularMargemCanal(produto.preco_venda, produto.custoInsumos, canal.taxa);
+                                  const isCritico = margem < 0;
+                                  const isAtencao = margem >= 0 && margem < 15;
+                                  const isSaudavel = margem >= 15;
+                                  
+                                  return (
+                                    <Tooltip key={canal.id}>
+                                      <TooltipTrigger asChild>
+                                        <div className={cn(
+                                          "flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium border",
+                                          isCritico && "bg-destructive/10 text-destructive border-destructive/30",
+                                          isAtencao && "bg-amber-500/10 text-amber-600 border-amber-500/30",
+                                          isSaudavel && "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+                                        )}>
+                                          {canal.icone}
+                                          <span>{margem.toFixed(0)}%</span>
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top" className="text-xs">
+                                        <p className="font-medium">{canal.nome}</p>
+                                        <p>Preço: {formatCurrency(produto.preco_venda)} (base)</p>
+                                        <p>Margem: {formatPercent(margem)}</p>
+                                        {canal.taxa > 0 && <p className="text-muted-foreground">Taxa: {canal.taxa}%</p>}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  );
+                                })}
+                              </div>
+
+                              {/* Sugestão de preço */}
+                              {precisaAjuste && (
+                                <div className="flex items-center gap-1 mt-1.5 text-xs text-emerald-600">
+                                  <TrendingUp className="h-3 w-3" />
+                                  <span>Sugerido: {formatCurrency(produto.precoSugerido)}</span>
+                                  <span className="text-muted-foreground">
+                                    (+{formatCurrency(diferencaPreco)})
+                                  </span>
+                                </div>
+                              )}
+                            </>
+                          );
+                        }
+                      })()}
                     </div>
 
                     {/* Ações */}
