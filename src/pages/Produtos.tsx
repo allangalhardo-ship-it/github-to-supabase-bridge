@@ -113,21 +113,6 @@ const Produtos = () => {
     enabled: !!usuario?.empresa_id,
   });
 
-  // Fetch taxas de apps para indicadores de margem por canal
-  const { data: taxasApps } = useQuery({
-    queryKey: ['taxas-apps', usuario?.empresa_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('taxas_apps')
-        .select('id, nome_app, taxa_percentual, ativo')
-        .eq('ativo', true)
-        .order('nome_app');
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!usuario?.empresa_id,
-  });
 
 
   const createMutation = useMutation({
@@ -522,7 +507,6 @@ const Produtos = () => {
               key={produto.id}
               produto={produto}
               config={config}
-              taxasApps={taxasApps}
               onEdit={() => handleEdit(produto)}
               onDelete={() => handleDeleteClick(produto.id)}
               onApplyPrice={handleApplyPrice}

@@ -18,6 +18,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatCurrencyBRL } from '@/lib/format';
 import { calcularPrecoSugerido, ConfiguracaoPrecificacao } from '@/lib/precificacaoUtils';
+import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import FichaTecnicaDialog from "./FichaTecnicaDialog";
 import DuplicarProdutoDialog from "./DuplicarProdutoDialog";
 import PrecosCanaisDialog from "./PrecosCanaisDialog";
@@ -39,13 +40,6 @@ interface FichaTecnicaItem {
   };
 }
 
-interface TaxaApp {
-  id: string;
-  nome_app: string;
-  taxa_percentual: number;
-  ativo: boolean;
-}
-
 interface ProductCardProps {
   produto: {
     id: string;
@@ -64,7 +58,6 @@ interface ProductCardProps {
     imposto_medio_sobre_vendas?: number;
     faturamento_mensal?: number;
   } | null;
-  taxasApps?: TaxaApp[] | null;
   onEdit: () => void;
   onDelete: () => void;
   onApplyPrice?: (produtoId: string, novoPreco: number) => void;
@@ -75,7 +68,6 @@ interface ProductCardProps {
 const ProductCard: React.FC<ProductCardProps> = ({
   produto,
   config,
-  taxasApps,
   onEdit,
   onDelete,
   onApplyPrice,
@@ -87,6 +79,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const [showDuplicar, setShowDuplicar] = useState(false);
 
   const formatCurrency = formatCurrencyBRL;
+  
+  // Hook para buscar canais configurados com taxas
+  const { canaisConfigurados } = usePrecosCanais();
 
   // Buscar preços por canal para este produto
   const { data: precosCanais } = useQuery({
@@ -119,21 +114,15 @@ const ProductCard: React.FC<ProductCardProps> = ({
     return (lucro / preco) * 100;
   };
 
-  // Lista de canais para indicadores
+  // Lista de canais para indicadores - agora vem do hook
   const canais = useMemo(() => {
-    const lista: { id: string; nome: string; taxa: number; icone: React.ReactNode }[] = [
-      { id: 'balcao', nome: 'Balcão', taxa: 0, icone: <Store className="h-3 w-3" /> }
-    ];
-    (taxasApps || []).forEach(app => {
-      lista.push({ 
-        id: app.id, 
-        nome: app.nome_app, 
-        taxa: app.taxa_percentual, 
-        icone: <Smartphone className="h-3 w-3" /> 
-      });
-    });
-    return lista;
-  }, [taxasApps]);
+    return (canaisConfigurados || []).map(canal => ({
+      id: canal.id,
+      nome: canal.nome,
+      taxa: canal.taxa,
+      icone: canal.isBalcao ? <Store className="h-3 w-3" /> : <Smartphone className="h-3 w-3" />
+    }));
+  }, [canaisConfigurados]);
 
   // Função para obter o preço de um canal (customizado ou base)
   const getPrecoCanal = (canalId: string) => {
