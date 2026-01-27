@@ -209,8 +209,9 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
         </div>
         <div className="grid grid-cols-2 gap-2">
           {resultadosAtuais.map(canal => {
-            // Calcular CMV específico do canal
-            const cmvCanal = canal.preco > 0 ? (produto.custoInsumos / canal.preco) * 100 : 0;
+            // CMV efetivo considera a taxa do canal (receita líquida)
+            const receitaLiquida = canal.preco * (1 - canal.taxa / 100);
+            const cmvCanal = receitaLiquida > 0 ? (produto.custoInsumos / receitaLiquida) * 100 : 0;
             
             return (
               <div 
