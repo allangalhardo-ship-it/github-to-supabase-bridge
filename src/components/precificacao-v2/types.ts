@@ -58,12 +58,6 @@ export interface ConfiguracoesPrecificacao {
   faturamento_mensal: number;
 }
 
-export interface TaxaApp {
-  id: string;
-  nome_app: string;
-  taxa_percentual: number;
-  ativo: boolean;
-}
 
 export interface ResumoQuadrante {
   tipo: QuadranteMenu;

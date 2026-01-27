@@ -43,7 +43,6 @@ const Precificacao = () => {
     metricas,
     categorias,
     config,
-    taxasApps,
     isLoading,
   } = useMenuEngineering();
 

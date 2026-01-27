@@ -899,36 +899,6 @@ export type Database = {
           },
         ]
       }
-      taxas_apps: {
-        Row: {
-          ativo: boolean
-          created_at: string
-          empresa_id: string
-          id: string
-          nome_app: string
-          taxa_percentual: number
-          updated_at: string
-        }
-        Insert: {
-          ativo?: boolean
-          created_at?: string
-          empresa_id: string
-          id?: string
-          nome_app: string
-          taxa_percentual?: number
-          updated_at?: string
-        }
-        Update: {
-          ativo?: boolean
-          created_at?: string
-          empresa_id?: string
-          id?: string
-          nome_app?: string
-          taxa_percentual?: number
-          updated_at?: string
-        }
-        Relationships: []
-      }
       taxas_canais: {
         Row: {
           canal_id: string
