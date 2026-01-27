@@ -88,6 +88,27 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   const formatCurrency = formatCurrencyBRL;
 
+  // Buscar preços por canal para este produto
+  const { data: precosCanais } = useQuery({
+    queryKey: ['precos-canais', produto.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('precos_canais')
+        .select('canal, preco')
+        .eq('produto_id', produto.id);
+      
+      if (error) throw error;
+      
+      // Criar mapa canal -> preco
+      const mapa: Record<string, number> = {};
+      data?.forEach(p => {
+        mapa[p.canal] = p.preco;
+      });
+      return mapa;
+    },
+    enabled: !!produto.id,
+  });
+
   // Imposto configurado
   const imposto = (config?.imposto_medio_sobre_vendas || 0) / 100;
 
@@ -113,6 +134,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
     });
     return lista;
   }, [taxasApps]);
+
+  // Função para obter o preço de um canal (customizado ou base)
+  const getPrecoCanal = (canalId: string) => {
+    if (precosCanais && precosCanais[canalId] !== undefined) {
+      return precosCanais[canalId];
+    }
+    return precoVenda; // fallback para preço base
+  };
+
+  // Verificar se tem preços customizados
+  const temPrecosCustomizados = precosCanais && Object.keys(precosCanais).length > 0;
 
   // Não precisamos mais buscar custos fixos para o cálculo do preço
   // O custo fixo é verificado no Dashboard, não no preço unitário
@@ -261,13 +293,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
                         </span>
                       )}
                     </div>
-                    {/* Indicadores de margem por canal */}
+                    {/* Indicadores de margem por canal com preços customizados */}
                     <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                       {canais.map(canal => {
-                        const margem = calcularMargemCanal(precoVenda, custoInsumos, canal.taxa);
+                        const precoCanal = getPrecoCanal(canal.id);
+                        const margem = calcularMargemCanal(precoCanal, custoInsumos, canal.taxa);
+                        const temPrecoCustom = precosCanais && precosCanais[canal.id] !== undefined;
                         const isCritico = margem < 0;
                         const isAtencao = margem >= 0 && margem < 15;
-                        const isSaudavel = margem >= 15;
                         
                         return (
                           <Tooltip key={canal.id}>
@@ -283,6 +316,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                             </TooltipTrigger>
                             <TooltipContent side="top" className="text-xs">
                               <p className="font-medium">{canal.nome}</p>
+                              <p>Preço: {formatCurrency(precoCanal)}{temPrecoCustom && ' ✓'}</p>
                               <p>Margem: {margem.toFixed(1)}%</p>
                               {canal.taxa > 0 && <p className="text-muted-foreground">Taxa: {canal.taxa}%</p>}
                             </TooltipContent>
@@ -444,13 +478,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
                       </div>
                     )}
                   </div>
-                  {/* Indicadores de margem por canal */}
+                  {/* Indicadores de margem por canal com preços customizados */}
                   <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                     {canais.map(canal => {
-                      const margem = calcularMargemCanal(precoVenda, custoInsumos, canal.taxa);
+                      const precoCanal = getPrecoCanal(canal.id);
+                      const margem = calcularMargemCanal(precoCanal, custoInsumos, canal.taxa);
+                      const temPrecoCustom = precosCanais && precosCanais[canal.id] !== undefined;
                       const isCritico = margem < 0;
                       const isAtencao = margem >= 0 && margem < 15;
-                      const isSaudavel = margem >= 15;
                       
                       return (
                         <Tooltip key={canal.id}>
@@ -466,6 +501,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                           </TooltipTrigger>
                           <TooltipContent side="top" className="text-xs">
                             <p className="font-medium">{canal.nome}</p>
+                            <p>Preço: {formatCurrency(precoCanal)}{temPrecoCustom && ' ✓'}</p>
                             <p>Margem: {margem.toFixed(1)}%</p>
                             {canal.taxa > 0 && <p className="text-muted-foreground">Taxa: {canal.taxa}%</p>}
                           </TooltipContent>
