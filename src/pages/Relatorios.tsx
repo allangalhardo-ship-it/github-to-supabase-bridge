@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -73,11 +74,12 @@ interface CustoFixo {
   valor_mensal: number;
 }
 
-interface TaxaApp {
+interface CanalConfig {
   id: string;
-  nome_app: string;
-  taxa_percentual: number;
-  ativo: boolean;
+  nome: string;
+  taxa: number;
+  tipo: 'presencial' | 'app_delivery' | 'proprio';
+  isBalcao: boolean;
 }
 
 const formatCurrency = formatCurrencyBRL;
@@ -156,21 +158,8 @@ const Relatorios = () => {
     enabled: !!usuario?.empresa_id,
   });
 
-  // Buscar taxas de apps
-  const { data: taxasApps } = useQuery({
-    queryKey: ['taxas-apps-relatorio', usuario?.empresa_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('taxas_apps')
-        .select('id, nome_app, taxa_percentual, ativo')
-        .eq('empresa_id', usuario?.empresa_id)
-        .eq('ativo', true);
-      
-      if (error) throw error;
-      return data as TaxaApp[];
-    },
-    enabled: !!usuario?.empresa_id,
-  });
+  // Buscar canais configurados com taxas agregadas
+  const { canaisConfigurados } = usePrecosCanais();
 
   // Calcular percentuais de custos
   const custosPercentuais = useMemo(() => {
@@ -204,18 +193,18 @@ const Relatorios = () => {
       const lucroBalcao = precoVenda - custoInsumos - custoFixoValor - impostoValor;
       const margemBalcao = precoVenda > 0 ? (lucroBalcao / precoVenda) * 100 : 0;
       
-      // Margem por app
-      const margensPorApp = taxasApps?.map(app => {
-        const taxaAppValor = precoVenda * (app.taxa_percentual / 100);
-        const lucroApp = precoVenda - custoInsumos - custoFixoValor - impostoValor - taxaAppValor;
-        const margemApp = precoVenda > 0 ? (lucroApp / precoVenda) * 100 : 0;
+      // Margem por canal
+      const margensPorCanal = canaisConfigurados?.map(canal => {
+        const taxaCanalValor = precoVenda * (canal.taxa / 100);
+        const lucroCanal = precoVenda - custoInsumos - custoFixoValor - impostoValor - taxaCanalValor;
+        const margemCanal = precoVenda > 0 ? (lucroCanal / precoVenda) * 100 : 0;
         
         return {
-          appId: app.id,
-          appNome: app.nome_app,
-          taxa: app.taxa_percentual,
-          lucro: lucroApp,
-          margem: margemApp,
+          canalId: canal.id,
+          canalNome: canal.nome,
+          taxa: canal.taxa,
+          lucro: lucroCanal,
+          margem: margemCanal,
         };
       }) || [];
       
@@ -231,7 +220,7 @@ const Relatorios = () => {
         cmv,
         lucroBalcao,
         margemBalcao,
-        margensPorApp,
+        margensPorCanal,
         statusMargem: margemBalcao >= custosPercentuais.margemDesejada ? 'ideal' : 
                       margemBalcao > 0 ? 'baixa' : 'negativa',
       };
@@ -279,8 +268,8 @@ const Relatorios = () => {
         'Balcão': parseFloat(p.margemBalcao.toFixed(1)),
       };
       
-      p.margensPorApp.forEach(app => {
-        dados[app.appNome] = parseFloat(app.margem.toFixed(1));
+      p.margensPorCanal.forEach(canal => {
+        dados[canal.canalNome] = parseFloat(canal.margem.toFixed(1));
       });
       
       return dados;
@@ -315,23 +304,23 @@ const Relatorios = () => {
         margemMedia: margemMedia,
         lucroMedio: lucroMedio,
       },
-      ...(taxasApps?.map(app => {
-        const margemMediaApp = produtosFiltrados.reduce((acc, p) => {
-          const margemApp = p.margensPorApp.find(m => m.appId === app.id)?.margem || 0;
-          return acc + margemApp;
+      ...(canaisConfigurados?.filter(c => !c.isBalcao).map(canal => {
+        const margemMediaCanal = produtosFiltrados.reduce((acc, p) => {
+          const margemCanal = p.margensPorCanal.find(m => m.canalId === canal.id)?.margem || 0;
+          return acc + margemCanal;
         }, 0) / totalProdutos || 0;
         
-        const lucroMedioApp = produtosFiltrados.reduce((acc, p) => {
-          const lucroApp = p.margensPorApp.find(m => m.appId === app.id)?.lucro || 0;
-          return acc + lucroApp;
+        const lucroMedioCanal = produtosFiltrados.reduce((acc, p) => {
+          const lucroCanal = p.margensPorCanal.find(m => m.canalId === canal.id)?.lucro || 0;
+          return acc + lucroCanal;
         }, 0) / totalProdutos || 0;
         
         return {
-          canal: app.nome_app,
+          canal: canal.nome,
           icone: Smartphone,
-          taxa: app.taxa_percentual,
-          margemMedia: margemMediaApp,
-          lucroMedio: lucroMedioApp,
+          taxa: canal.taxa,
+          margemMedia: margemMediaCanal,
+          lucroMedio: lucroMedioCanal,
         };
       }) || []),
     ];
@@ -355,7 +344,7 @@ const Relatorios = () => {
       resumoPorCanal,
       categorias,
     };
-  }, [produtos, custosPercentuais, taxasApps, filtroCategoria, ordenacao]);
+  }, [produtos, custosPercentuais, canaisConfigurados, filtroCategoria, ordenacao]);
 
   const categorias = useMemo(() => {
     if (!produtos) return [];
@@ -393,7 +382,7 @@ const Relatorios = () => {
     );
   }
 
-  const canaisKeys = ['Balcão', ...(taxasApps?.map(a => a.nome_app) || [])];
+  const canaisKeys = canaisConfigurados?.map(c => c.nome) || ['Balcão'];
 
   return (
     <div className="space-y-6">
@@ -811,11 +800,11 @@ const Relatorios = () => {
                         <p className="text-muted-foreground">Balcão</p>
                         <p className="font-medium text-primary">{formatCurrency(produto.lucroBalcao)}</p>
                       </div>
-                      {produto.margensPorApp[0] && (
+                      {produto.margensPorCanal[0] && (
                         <div className="bg-purple-500/10 rounded p-1.5 text-center">
-                          <p className="text-muted-foreground truncate">{produto.margensPorApp[0].appNome}</p>
+                          <p className="text-muted-foreground truncate">{produto.margensPorCanal[0].canalNome}</p>
                           <p className="font-medium text-purple-600 dark:text-purple-400">
-                            {formatCurrency(produto.margensPorApp[0].lucro)}
+                            {formatCurrency(produto.margensPorCanal[0].lucro)}
                           </p>
                         </div>
                       )}

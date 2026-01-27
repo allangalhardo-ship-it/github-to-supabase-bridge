@@ -50,9 +50,12 @@ interface Produto {
   }>;
 }
 
-interface TaxaApp {
-  nome_app: string;
-  taxa_percentual: number;
+interface CanalConfig {
+  id: string;
+  nome: string;
+  taxa: number;
+  tipo: 'presencial' | 'app_delivery' | 'proprio';
+  isBalcao: boolean;
 }
 
 interface Config {
@@ -69,7 +72,7 @@ interface CustoFixo {
 interface SmartInsightsProps {
   vendas: Venda[] | null;
   produtos: Produto[] | null;
-  taxasApps: TaxaApp[] | null;
+  canaisConfigurados: CanalConfig[] | null;
   config: Config | null;
   custosFixos: CustoFixo[] | null;
   periodo: 'hoje' | 'semana' | 'mes' | 'ultimos30';
@@ -96,7 +99,7 @@ const DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'
 export const SmartInsights: React.FC<SmartInsightsProps> = ({
   vendas,
   produtos,
-  taxasApps,
+  canaisConfigurados,
   config,
   custosFixos,
   periodo,
@@ -364,7 +367,7 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
     }
 
     // 8. SUGESTÃO DE PREÇO MÍNIMO POR CANAL
-    if (produtos && produtos.length > 0 && taxasApps && taxasApps.length > 0) {
+    if (produtos && produtos.length > 0 && canaisConfigurados && canaisConfigurados.length > 0) {
       // Encontrar produto com maior diferença de margem entre canais
       const analiseCanais: Array<{
         produto: string;
@@ -382,8 +385,8 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
         
         if (custoInsumos === 0 || produto.preco_venda === 0) return;
         
-        taxasApps.forEach((taxa) => {
-          const taxaTotal = Number(taxa.taxa_percentual) + impostoPercent;
+        canaisConfigurados.forEach((canal) => {
+          const taxaTotal = canal.taxa + impostoPercent;
           
           // Margem líquida = (Preço - Custo - Taxas) / Preço
           // Margem líquida = 1 - (Custo/Preço) - Taxa%
@@ -398,8 +401,8 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
             if (ajuste > 0) {
               analiseCanais.push({
                 produto: produto.nome,
-                canalProblema: taxa.nome_app,
-                taxaCanal: Number(taxa.taxa_percentual),
+                canalProblema: canal.nome,
+                taxaCanal: canal.taxa,
                 margemCanal: margemNoCanal,
                 precoMinimo,
                 ajusteNecessario: ajuste,
@@ -491,12 +494,12 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
         unidadesReais = valorTotal / precoVenda;
       }
       
-      // Encontrar taxa do app
-      const taxaApp = taxasApps?.find(t => 
-        t.nome_app && (canalLower.includes(t.nome_app.toLowerCase()) || 
-        t.nome_app.toLowerCase().includes(canalLower))
+      // Encontrar taxa do canal na nova estrutura
+      const canalConfig = canaisConfigurados?.find(c => 
+        c.nome.toLowerCase() === canalLower ||
+        c.id === canal
       );
-      const taxaValor = taxaApp ? (valorTotal * Number(taxaApp.taxa_percentual) / 100) : 0;
+      const taxaValor = canalConfig ? (valorTotal * canalConfig.taxa / 100) : 0;
       
       const lucroVenda = valorTotal - (custoUnitario * unidadesReais) - taxaValor;
       
@@ -675,7 +678,7 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
     }
 
     return result;
-  }, [vendas, produtos, taxasApps, config, custosFixos, periodo, margemMeta, impostoPercent, custoFixoMensal, formatCurrency]);
+  }, [vendas, produtos, canaisConfigurados, config, custosFixos, periodo, margemMeta, impostoPercent, custoFixoMensal, formatCurrency]);
 
   if (insights.length === 0) {
     return null;
