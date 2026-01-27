@@ -8,11 +8,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Trash2, FileText, Search, Package, AlertCircle } from 'lucide-react';
+import { Trash2, FileText, Search, Calculator, ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import BuscarInsumoDialog from './BuscarInsumoDialog';
 import { InsumoIcon } from '@/lib/insumoIconUtils';
 import { formatCurrencyBRL, formatCurrencySmartBRL } from '@/lib/format';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface FichaTecnicaItem {
   id: string;
@@ -80,7 +80,6 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
   
   // Estado local para edição
   const [localItems, setLocalItems] = useState<LocalItem[]>([]);
-  const [rendimento, setRendimento] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [novoInsumo, setNovoInsumo] = useState<InsumoSelecionado | null>(null);
   const [novaQuantidade, setNovaQuantidade] = useState('');
@@ -89,7 +88,7 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
   useEffect(() => {
     if (open) {
       setLocalItems(
-        fichaTecnica.map((ft, index) => ({
+        fichaTecnica.map((ft) => ({
           tempId: `existing-${ft.id}`,
           id: ft.id,
           insumo: ft.insumos,
@@ -98,12 +97,11 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
           isDeleted: false,
         }))
       );
-      setRendimento(rendimentoPadrao?.toString() || '');
       setObservacoes(observacoesFicha || '');
       setNovoInsumo(null);
       setNovaQuantidade('');
     }
-  }, [open, fichaTecnica, rendimentoPadrao, observacoesFicha]);
+  }, [open, fichaTecnica, observacoesFicha]);
 
   // Calcular custo total (apenas itens não deletados)
   const custoTotal = useMemo(() => {
@@ -111,13 +109,6 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
       .filter(item => !item.isDeleted)
       .reduce((sum, item) => sum + (item.quantidade * item.insumo.custo_unitario), 0);
   }, [localItems]);
-
-  // Calcular custo por unidade
-  const custoPorUnidade = useMemo(() => {
-    const rend = parseFloat(rendimento) || 0;
-    if (rend <= 0 || custoTotal <= 0) return 0;
-    return custoTotal / rend;
-  }, [custoTotal, rendimento]);
 
   // Itens visíveis (não deletados)
   const itensVisiveis = localItems.filter(item => !item.isDeleted);
@@ -127,10 +118,8 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
 
   // Verificar se há mudanças
   const hasChanges = useMemo(() => {
-    const originalRendimento = rendimentoPadrao?.toString() || '';
     const originalObs = observacoesFicha || '';
     
-    if (rendimento !== originalRendimento) return true;
     if (observacoes !== originalObs) return true;
     
     // Verificar se há itens novos ou deletados
@@ -146,7 +135,7 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
     }
     
     return false;
-  }, [localItems, rendimento, observacoes, fichaTecnica, rendimentoPadrao, observacoesFicha]);
+  }, [localItems, observacoes, fichaTecnica, observacoesFicha]);
 
   // Adicionar item localmente
   const handleAddItem = () => {
@@ -187,11 +176,10 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
     setSaving(true);
     
     try {
-      // 1. Atualizar produto (rendimento e observações)
+      // 1. Atualizar produto (observações)
       const { error: produtoError } = await supabase
         .from('produtos')
         .update({
-          rendimento_padrao: parseFloat(rendimento) || null,
           observacoes_ficha: observacoes || null,
         })
         .eq('id', produtoId);
@@ -310,26 +298,6 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Campo de Rendimento */}
-            <div className="space-y-2">
-              <Label htmlFor="rendimento" className="flex items-center gap-2">
-                <Package className="h-4 w-4" />
-                Rendimento
-              </Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="rendimento"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="Ex: 10"
-                  value={rendimento}
-                  onChange={(e) => setRendimento(e.target.value)}
-                  className="w-24"
-                />
-                <span className="text-sm text-muted-foreground">unidades produzidas com esta ficha</span>
-              </div>
-            </div>
 
             {/* Adicionar novo insumo */}
             <div className="space-y-2">
@@ -488,32 +456,32 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
                 className="resize-none"
               />
             </div>
-
-            {/* Alerta se não tem rendimento */}
-            {itensVisiveis.length > 0 && !rendimento && (
-              <Alert variant="default" className="bg-warning/10 border-warning/30">
-                <AlertCircle className="h-4 w-4 text-warning" />
-                <AlertDescription className="text-sm">
-                  Defina o rendimento para calcular o custo por unidade.
-                </AlertDescription>
-              </Alert>
-            )}
           </div>
 
-          {/* Resumo de custos */}
-          <div className="border-t bg-muted/30 p-4 flex-shrink-0">
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Custo Total:</span>
-                <span className="font-bold text-lg">{formatCurrencyBRL(custoTotal)}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Custo/Unidade:</span>
-                <span className={`font-bold text-lg ${custoPorUnidade > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
-                  {custoPorUnidade > 0 ? formatCurrencySmartBRL(custoPorUnidade) : '—'}
-                </span>
-              </div>
+          {/* Resumo de custos + Link para Calculador */}
+          <div className="border-t bg-muted/30 p-4 flex-shrink-0 space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground text-sm">Custo Total dos Ingredientes:</span>
+              <span className="font-bold text-lg">{formatCurrencyBRL(custoTotal)}</span>
             </div>
+            
+            {/* Link para Calculador de Ficha Técnica */}
+            <Link 
+              to="/receitas?tab=calculador" 
+              className="flex items-center gap-2 p-3 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors group"
+              onClick={() => setOpen(false)}
+            >
+              <Calculator className="h-5 w-5 text-primary" />
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm text-primary group-hover:underline">
+                  Calculador de Ficha Técnica
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Calcule o preço de venda ideal com base no custo, margem desejada e taxas de apps
+                </p>
+              </div>
+              <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
+            </Link>
           </div>
 
           {/* Botões Salvar/Cancelar - Padronizados */}
