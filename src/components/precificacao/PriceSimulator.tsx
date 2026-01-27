@@ -424,12 +424,12 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
               <Input
                 type="number"
                 min={5}
-                max={60}
+                max={Math.floor(margemMaximaViavel)}
                 step={1}
                 value={margemDesejada.toFixed(0)}
                 onChange={(e) => {
                   const val = parseFloat(e.target.value);
-                  if (!isNaN(val) && val >= 5 && val <= 60) {
+                  if (!isNaN(val) && val >= 5 && val <= margemMaximaViavel) {
                     setMargemDesejada(val);
                   }
                 }}
@@ -445,25 +445,16 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
               value={[margemDesejada]}
               onValueChange={([value]) => setMargemDesejada(value)}
               min={5}
-              max={60}
+              max={Math.floor(margemMaximaViavel)}
               step={1}
               className="py-1"
             />
-            {/* Indicador visual da margem máxima viável */}
-            {margemMaximaViavel < 60 && margemMaximaViavel > 5 && (
-              <div 
-                className="absolute top-1/2 -translate-y-1/2 w-0.5 h-4 bg-destructive/50 rounded-full pointer-events-none"
-                style={{ left: `${((margemMaximaViavel - 5) / (60 - 5)) * 100}%` }}
-                title={`Margem máxima: ${margemMaximaViavel.toFixed(0)}%`}
-              />
-            )}
+            {/* O indicador visual agora não é necessário pois o slider usa margemMaximaViavel como max */}
           </div>
           <div className="flex justify-between text-[10px] text-muted-foreground">
             <span>5% mín</span>
-            <span className={margemMaximaViavel < 30 ? 'text-destructive' : ''}>
-              {margemMaximaViavel >= 30 ? '30% ideal' : `máx ${formatPercent(margemMaximaViavel)}`}
-            </span>
-            <span>60% máx</span>
+            <span>30% ideal</span>
+            <span>{Math.floor(margemMaximaViavel)}% máx</span>
           </div>
         </div>
       ) : (
