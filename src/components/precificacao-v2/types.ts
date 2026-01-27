@@ -46,6 +46,9 @@ export interface ProdutoAnalise extends ProdutoBase {
   // Status de saúde
   saudeMargem: 'critico' | 'atencao' | 'saudavel';
   saudeCmv: 'critico' | 'atencao' | 'saudavel';
+  
+  // Preços por canal (mapa canal -> preco)
+  precosCanais?: Record<string, number>;
 }
 
 export interface ConfiguracoesPrecificacao {
