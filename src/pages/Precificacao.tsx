@@ -18,7 +18,6 @@ import {
 
 import {
   QuadranteCards,
-  MatrizScatter,
   ProdutoListaCompacta,
   ProdutoDetalheDrawer,
   ResumoExecutivo,
@@ -204,15 +203,6 @@ const Precificacao = () => {
             />
           </div>
 
-          {/* Matriz Scatter - apenas desktop ou se não houver filtro */}
-          {(!isMobile || !quadranteSelecionado) && (
-            <MatrizScatter
-              produtos={produtosAnalisados}
-              quadranteSelecionado={quadranteSelecionado}
-              onSelectProduto={handleSelectProduto}
-              margemAlvo={config?.margem_desejada_padrao || 30}
-            />
-          )}
 
           {/* Lista de Produtos */}
           <ProdutoListaCompacta
