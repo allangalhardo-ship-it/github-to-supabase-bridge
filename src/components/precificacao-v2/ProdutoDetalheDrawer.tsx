@@ -25,11 +25,13 @@ import {
   Zap,
   Calculator,
   Target,
-  DollarSign
+  DollarSign,
+  Receipt
 } from 'lucide-react';
 import { ProdutoAnalise, TaxaApp, ConfiguracoesPrecificacao, formatCurrency, formatPercent, getQuadranteInfo } from './types';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import ComposicaoPrecoModal from './ComposicaoPrecoModal';
 
 interface ProdutoDetalheDrawerProps {
   produto: ProdutoAnalise | null;
@@ -63,6 +65,7 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
   const [precoSimulado, setPrecoSimulado] = useState('');
   const [canalParaAplicar, setCanalParaAplicar] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('margem');
+  const [showComposicao, setShowComposicao] = useState(false);
 
   // Montar lista de canais: Balcão + plataformas (antes do early return!)
   const canais: CanalInfo[] = useMemo(() => {
@@ -165,9 +168,18 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
 
       {/* Situação Atual - Grid compacto */}
       <div className="space-y-2">
-        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          Situação Atual (preço {formatCurrency(produto.preco_venda)})
-        </Label>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Situação Atual (preço {formatCurrency(produto.preco_venda)})
+          </Label>
+          <button
+            onClick={() => setShowComposicao(true)}
+            className="text-xs text-primary hover:underline flex items-center gap-1"
+          >
+            <Receipt className="h-3 w-3" />
+            Ver composição
+          </button>
+        </div>
         <div className="grid grid-cols-2 gap-2">
           {resultadosAtuais.map(canal => (
             <div 
@@ -396,6 +408,23 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
           <p className="text-sm font-bold">{formatCurrency(produto.receitaTotal)}</p>
         </div>
       </div>
+      {/* Modal de Composição do Preço */}
+      <ComposicaoPrecoModal
+        isOpen={showComposicao}
+        onClose={() => setShowComposicao(false)}
+        produto={produto ? {
+          nome: produto.nome,
+          preco_venda: produto.preco_venda,
+          custoInsumos: produto.custoInsumos
+        } : null}
+        canais={canais.map(c => ({
+          id: c.id,
+          nome: c.nome,
+          taxa: c.taxa,
+          isBalcao: c.destaque
+        }))}
+        impostoPercentual={config?.imposto_medio_sobre_vendas || 0}
+      />
     </div>
   );
 
