@@ -80,23 +80,11 @@ const Vendas = () => {
     enabled: !!usuario?.empresa_id,
   });
 
-  // Fetch apps de delivery cadastrados (com ID para mapear preços)
-  const { data: taxasApps } = useQuery({
-    queryKey: ['taxas_apps_full', usuario?.empresa_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('taxas_apps')
-        .select('id, nome_app, taxa_percentual')
-        .eq('ativo', true)
-        .order('nome_app');
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!usuario?.empresa_id,
-  });
+  // Hook para buscar canais configurados e preços por canal
+  const { canaisConfigurados, todosPrecos, getPrecoCanal } = usePrecosCanais();
 
-  // Hook para buscar preços por canal
-  const { todosPrecos, getPrecoCanal } = usePrecosCanais();
+  // Apps de delivery (canais tipo app_delivery ativos)
+  const appsDeliveryList = canaisConfigurados?.filter(c => c.tipo === 'app_delivery') || [];
 
   // Fetch clientes para vendas diretas
   const { data: clientes } = useQuery({
@@ -112,8 +100,8 @@ const Vendas = () => {
     enabled: !!usuario?.empresa_id,
   });
 
-  // Apps de delivery (exclui canais fixos)
-  const appsDelivery = taxasApps?.map(t => t.nome_app) || [];
+  // Apps de delivery (nomes dos canais tipo app_delivery)
+  const appsDelivery = appsDeliveryList.map(c => c.nome);
 
   // Fetch vendas com filtro de data
   const { data: vendas, isLoading } = useQuery({
@@ -231,10 +219,11 @@ const Vendas = () => {
   const handleProdutoChange = (produtoId: string) => {
     const produto = produtos?.find(p => p.id === produtoId);
     // Buscar preço do canal atual, se existir
-    const canalAtual = formData.tipo_venda === 'app' ? 
-      (taxasApps?.find(t => t.nome_app === formData.canal)?.id || formData.canal) : 
-      'balcao';
-    const precoCanal = produto ? getPrecoCanal(produtoId, canalAtual, produto.preco_venda) : 0;
+    const canalConfig = formData.tipo_venda === 'app' 
+      ? appsDeliveryList.find(c => c.nome === formData.canal)
+      : canaisConfigurados?.find(c => c.tipo === 'presencial');
+    const canalId = canalConfig?.id || formData.canal;
+    const precoCanal = produto ? getPrecoCanal(produtoId, canalId, produto.preco_venda) : 0;
     const valorUnitario = precoCanal.toString();
     const quantidade = parseFloat(formData.quantidade) || 1;
     const valorTotal = valorUnitario ? (parseFloat(valorUnitario) * quantidade).toFixed(2) : '';
@@ -261,9 +250,10 @@ const Vendas = () => {
     }
 
     // Buscar preço do novo canal
-    const canalId = formData.tipo_venda === 'app' ? 
-      (taxasApps?.find(t => t.nome_app === canal)?.id || canal) : 
-      'balcao';
+    const canalConfig = formData.tipo_venda === 'app' 
+      ? appsDeliveryList.find(c => c.nome === canal)
+      : canaisConfigurados?.find(c => c.tipo === 'presencial');
+    const canalId = canalConfig?.id || canal;
     const precoCanal = getPrecoCanal(formData.produto_id, canalId, produto.preco_venda);
     const quantidade = parseFloat(formData.quantidade) || 1;
     const valorTotal = (precoCanal * quantidade).toFixed(2);
@@ -456,9 +446,10 @@ const Vendas = () => {
                     if (formData.produto_id) {
                       const produto = produtos?.find(p => p.id === formData.produto_id);
                       if (produto) {
-                        const canalId = value === 'app' ? 
-                          (taxasApps?.find(t => t.nome_app === novoCanal)?.id || novoCanal) : 
-                          'balcao';
+                        const canalConfig = value === 'app' 
+                          ? appsDeliveryList.find(c => c.nome === novoCanal)
+                          : canaisConfigurados?.find(c => c.tipo === 'presencial');
+                        const canalId = canalConfig?.id || novoCanal;
                         const precoCanal = getPrecoCanal(formData.produto_id, canalId, produto.preco_venda);
                         const quantidade = parseFloat(formData.quantidade) || 1;
                         setFormData({ 
