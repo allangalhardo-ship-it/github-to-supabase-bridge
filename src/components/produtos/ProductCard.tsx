@@ -267,77 +267,122 @@ const ProductCard: React.FC<ProductCardProps> = ({
                       {!temFichaTecnica && <MissingFichaBadge />}
                     </div>
                   </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-[10px] text-muted-foreground">Preço</p>
-                    <p className="font-bold text-sm">{formatCurrency(precoVenda)}</p>
-                  </div>
+                  {/* Preço base só aparece se NÃO tem preços customizados */}
+                  {!temPrecosCustomizados && (
+                    <div className="text-right shrink-0">
+                      <p className="text-[10px] text-muted-foreground">Preço</p>
+                      <p className="font-bold text-sm">{formatCurrency(precoVenda)}</p>
+                    </div>
+                  )}
                 </div>
 
                 {temFichaTecnica ? (
                   <>
-                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
-                      <span className={`${lucroTextClass} font-medium`}>
-                        Lucro: <span className="font-bold">{formatCurrency(lucro)}</span>
-                      </span>
-                      <span className={`${margemTextClass} font-medium`}>
-                        Margem: <span className="font-bold">{margemBruta.toFixed(0)}%</span>
-                      </span>
-                      {precoAbaixoSugerido && (
-                        <span className="text-warning">
-                          Sugerido: <span className="font-medium">{formatCurrency(precoSugerido)}</span>
-                        </span>
-                      )}
-                      {custoPorUnidade > 0 && (
-                        <span className="text-muted-foreground">
-                          Custo/un: <span className="font-medium text-foreground">{formatCurrency(custoPorUnidade)}</span>
-                        </span>
-                      )}
-                    </div>
-                    {/* Indicador de preços por canal */}
-                    {temPrecosCustomizados && (
-                      <div className="mt-2 flex items-center gap-1.5">
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 bg-primary/5 border-primary/30 text-primary">
-                          <Store className="h-3 w-3 mr-1" />
-                          {Object.keys(precosCanais!).length} preços configurados
-                        </Badge>
-                      </div>
-                    )}
-                    {/* Preços por canal com valores */}
-                    <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                      {canais.map(canal => {
-                        const precoCanal = getPrecoCanal(canal.id);
-                        const margem = calcularMargemCanal(precoCanal, custoInsumos, canal.taxa);
-                        const temPrecoCustom = precosCanais && precosCanais[canal.id] !== undefined;
-                        const isCritico = margem < 0;
-                        const isAtencao = margem >= 0 && margem < 15;
-                        
-                        return (
-                          <Tooltip key={canal.id}>
-                            <TooltipTrigger asChild>
-                              <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border cursor-default ${
-                                isCritico ? "bg-destructive/10 text-destructive border-destructive/30" :
-                                isAtencao ? "bg-amber-500/10 text-amber-600 border-amber-500/30" :
-                                "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
-                              }`}>
-                                {canal.icone}
-                                {temPrecoCustom && (
-                                  <span className="text-foreground/70">
-                                    R${precoCanal.toFixed(2).replace('.', ',')}
+                    {/* Layout quando TEM preços customizados - mostrar canais destacados */}
+                    {temPrecosCustomizados ? (
+                      <div className="mt-2 space-y-2">
+                        <div className="text-[10px] text-muted-foreground font-medium">
+                          Preços por canal:
+                        </div>
+                        <div className="grid gap-1.5">
+                          {canais.map(canal => {
+                            const precoCanal = getPrecoCanal(canal.id);
+                            const margem = calcularMargemCanal(precoCanal, custoInsumos, canal.taxa);
+                            const temPrecoCustom = precosCanais && precosCanais[canal.id] !== undefined;
+                            const isCritico = margem < 0;
+                            const isAtencao = margem >= 0 && margem < 15;
+                            
+                            if (!temPrecoCustom) return null;
+                            
+                            return (
+                              <div 
+                                key={canal.id} 
+                                className={`flex items-center justify-between px-2 py-1.5 rounded-md border text-xs ${
+                                  isCritico ? "bg-destructive/5 border-destructive/20" :
+                                  isAtencao ? "bg-amber-500/5 border-amber-500/20" :
+                                  "bg-emerald-500/5 border-emerald-500/20"
+                                }`}
+                              >
+                                <div className="flex items-center gap-1.5">
+                                  {canal.icone}
+                                  <span className="font-medium truncate max-w-[80px]">{canal.nome}</span>
+                                  {canal.taxa > 0 && (
+                                    <span className="text-[10px] text-muted-foreground">({canal.taxa}%)</span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold">{formatCurrency(precoCanal)}</span>
+                                  <span className={`text-[10px] font-medium ${
+                                    isCritico ? "text-destructive" :
+                                    isAtencao ? "text-amber-600" :
+                                    "text-emerald-600"
+                                  }`}>
+                                    {margem.toFixed(0)}%
                                   </span>
-                                )}
-                                <span>{margem.toFixed(0)}%</span>
+                                </div>
                               </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="text-xs">
-                              <p className="font-medium">{canal.nome}</p>
-                              <p>Preço: {formatCurrency(precoCanal)}{temPrecoCustom ? ' ✓' : ' (base)'}</p>
-                              <p>Margem: {margem.toFixed(1)}%</p>
-                              {canal.taxa > 0 && <p className="text-muted-foreground">Taxa: {canal.taxa}%</p>}
-                            </TooltipContent>
-                          </Tooltip>
-                        );
-                      })}
-                    </div>
+                            );
+                          })}
+                        </div>
+                        {custoInsumos > 0 && (
+                          <div className="text-[10px] text-muted-foreground">
+                            Custo: {formatCurrency(custoInsumos)}
+                            {custoPorUnidade > 0 && <> | Custo/un: {formatCurrency(custoPorUnidade)}</>}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      /* Layout ORIGINAL quando NÃO tem preços customizados */
+                      <>
+                        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                          <span className={`${lucroTextClass} font-medium`}>
+                            Lucro: <span className="font-bold">{formatCurrency(lucro)}</span>
+                          </span>
+                          <span className={`${margemTextClass} font-medium`}>
+                            Margem: <span className="font-bold">{margemBruta.toFixed(0)}%</span>
+                          </span>
+                          {precoAbaixoSugerido && (
+                            <span className="text-warning">
+                              Sugerido: <span className="font-medium">{formatCurrency(precoSugerido)}</span>
+                            </span>
+                          )}
+                          {custoPorUnidade > 0 && (
+                            <span className="text-muted-foreground">
+                              Custo/un: <span className="font-medium text-foreground">{formatCurrency(custoPorUnidade)}</span>
+                            </span>
+                          )}
+                        </div>
+                        {/* Badges de margem por canal (sem preços customizados) */}
+                        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                          {canais.map(canal => {
+                            const margem = calcularMargemCanal(precoVenda, custoInsumos, canal.taxa);
+                            const isCritico = margem < 0;
+                            const isAtencao = margem >= 0 && margem < 15;
+                            
+                            return (
+                              <Tooltip key={canal.id}>
+                                <TooltipTrigger asChild>
+                                  <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium border cursor-default ${
+                                    isCritico ? "bg-destructive/10 text-destructive border-destructive/30" :
+                                    isAtencao ? "bg-amber-500/10 text-amber-600 border-amber-500/30" :
+                                    "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+                                  }`}>
+                                    {canal.icone}
+                                    <span>{margem.toFixed(0)}%</span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="text-xs">
+                                  <p className="font-medium">{canal.nome}</p>
+                                  <p>Preço: {formatCurrency(precoVenda)} (base)</p>
+                                  <p>Margem: {margem.toFixed(1)}%</p>
+                                  {canal.taxa > 0 && <p className="text-muted-foreground">Taxa: {canal.taxa}%</p>}
+                                </TooltipContent>
+                              </Tooltip>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
                   </>
                 ) : (
                   <p className="mt-2 text-xs text-muted-foreground italic">
@@ -445,98 +490,135 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
               {temFichaTecnica ? (
                 <>
-                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs">
-                    <div>
-                      <span className="text-muted-foreground">Preço </span>
-                      <span className="font-bold text-sm">{formatCurrency(precoVenda)}</span>
+                  {/* Layout quando TEM preços customizados - mostrar canais destacados */}
+                  {temPrecosCustomizados ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {canais.map(canal => {
+                          const precoCanal = getPrecoCanal(canal.id);
+                          const margem = calcularMargemCanal(precoCanal, custoInsumos, canal.taxa);
+                          const temPrecoCustom = precosCanais && precosCanais[canal.id] !== undefined;
+                          const isCritico = margem < 0;
+                          const isAtencao = margem >= 0 && margem < 15;
+                          
+                          if (!temPrecoCustom) return null;
+                          
+                          return (
+                            <div 
+                              key={canal.id} 
+                              className={`flex items-center gap-2 px-2 py-1 rounded-md border text-xs ${
+                                isCritico ? "bg-destructive/5 border-destructive/20" :
+                                isAtencao ? "bg-amber-500/5 border-amber-500/20" :
+                                "bg-emerald-500/5 border-emerald-500/20"
+                              }`}
+                            >
+                              <div className="flex items-center gap-1">
+                                {canal.icone}
+                                <span className="font-medium">{canal.nome}</span>
+                                {canal.taxa > 0 && (
+                                  <span className="text-[10px] text-muted-foreground">({canal.taxa}%)</span>
+                                )}
+                              </div>
+                              <span className="font-bold">{formatCurrency(precoCanal)}</span>
+                              <span className={`text-[10px] font-medium ${
+                                isCritico ? "text-destructive" :
+                                isAtencao ? "text-amber-600" :
+                                "text-emerald-600"
+                              }`}>
+                                {margem.toFixed(0)}%
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {custoInsumos > 0 && (
+                        <div className="text-[10px] text-muted-foreground">
+                          Custo: {formatCurrency(custoInsumos)}
+                          {custoPorUnidade > 0 && <> | Custo/un: {formatCurrency(custoPorUnidade)} (rende {rendimento})</>}
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Lucro </span>
-                      <span className={`font-bold text-sm ${lucroTextClass}`}>{formatCurrency(lucro)}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Margem </span>
-                      <span className={`font-bold text-sm ${margemTextClass}`}>{margemBruta.toFixed(1)}%</span>
-                    </div>
-                    {precoAbaixoSugerido && (
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-muted-foreground">Sugerido </span>
-                        <span className="font-bold text-sm text-warning">
-                          {formatCurrency(precoSugerido)}
-                        </span>
-                        {onApplyPrice && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                className="h-5 px-1.5 text-[10px] gap-0.5 text-primary border-primary hover:bg-primary/10"
-                                onClick={() => onApplyPrice(produto.id, precoSugerido)}
-                                disabled={isApplyingPrice}
-                              >
-                                <Zap className="h-3 w-3" />
-                                Aplicar
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Aplicar preço sugerido de {formatCurrency(precoSugerido)}</p>
-                            </TooltipContent>
-                          </Tooltip>
+                  ) : (
+                    /* Layout ORIGINAL quando NÃO tem preços customizados */
+                    <>
+                      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs">
+                        <div>
+                          <span className="text-muted-foreground">Preço </span>
+                          <span className="font-bold text-sm">{formatCurrency(precoVenda)}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Lucro </span>
+                          <span className={`font-bold text-sm ${lucroTextClass}`}>{formatCurrency(lucro)}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Margem </span>
+                          <span className={`font-bold text-sm ${margemTextClass}`}>{margemBruta.toFixed(1)}%</span>
+                        </div>
+                        {precoAbaixoSugerido && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-muted-foreground">Sugerido </span>
+                            <span className="font-bold text-sm text-warning">
+                              {formatCurrency(precoSugerido)}
+                            </span>
+                            {onApplyPrice && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="h-5 px-1.5 text-[10px] gap-0.5 text-primary border-primary hover:bg-primary/10"
+                                    onClick={() => onApplyPrice(produto.id, precoSugerido)}
+                                    disabled={isApplyingPrice}
+                                  >
+                                    <Zap className="h-3 w-3" />
+                                    Aplicar
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Aplicar preço sugerido de {formatCurrency(precoSugerido)}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                        )}
+                        {custoPorUnidade > 0 && (
+                          <div className="text-muted-foreground">
+                            Custo/un <span className="font-medium text-foreground">{formatCurrency(custoPorUnidade)}</span>
+                            <span className="text-[10px] ml-1">(rende {rendimento})</span>
+                          </div>
                         )}
                       </div>
-                    )}
-                    {custoPorUnidade > 0 && (
-                      <div className="text-muted-foreground">
-                        Custo/un <span className="font-medium text-foreground">{formatCurrency(custoPorUnidade)}</span>
-                        <span className="text-[10px] ml-1">(rende {rendimento})</span>
+                      {/* Badges de margem por canal (sem preços customizados) */}
+                      <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                        {canais.map(canal => {
+                          const margem = calcularMargemCanal(precoVenda, custoInsumos, canal.taxa);
+                          const isCritico = margem < 0;
+                          const isAtencao = margem >= 0 && margem < 15;
+                          
+                          return (
+                            <Tooltip key={canal.id}>
+                              <TooltipTrigger asChild>
+                                <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium border cursor-default ${
+                                  isCritico ? "bg-destructive/10 text-destructive border-destructive/30" :
+                                  isAtencao ? "bg-amber-500/10 text-amber-600 border-amber-500/30" :
+                                  "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+                                }`}>
+                                  {canal.icone}
+                                  <span>{margem.toFixed(0)}%</span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs">
+                                <p className="font-medium">{canal.nome}</p>
+                                <p>Preço: {formatCurrency(precoVenda)} (base)</p>
+                                <p>Margem: {margem.toFixed(1)}%</p>
+                                {canal.taxa > 0 && <p className="text-muted-foreground">Taxa: {canal.taxa}%</p>}
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        })}
                       </div>
-                    )}
-                  </div>
-                  {/* Indicador de preços por canal */}
-                  {temPrecosCustomizados && (
-                    <div className="flex items-center gap-1.5 mt-1.5">
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 bg-primary/5 border-primary/30 text-primary">
-                        <Store className="h-3 w-3 mr-1" />
-                        {Object.keys(precosCanais!).length} preços configurados
-                      </Badge>
-                    </div>
+                    </>
                   )}
-                  {/* Preços por canal com valores */}
-                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                    {canais.map(canal => {
-                      const precoCanal = getPrecoCanal(canal.id);
-                      const margem = calcularMargemCanal(precoCanal, custoInsumos, canal.taxa);
-                      const temPrecoCustom = precosCanais && precosCanais[canal.id] !== undefined;
-                      const isCritico = margem < 0;
-                      const isAtencao = margem >= 0 && margem < 15;
-                      
-                      return (
-                        <Tooltip key={canal.id}>
-                          <TooltipTrigger asChild>
-                            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border cursor-default ${
-                              isCritico ? "bg-destructive/10 text-destructive border-destructive/30" :
-                              isAtencao ? "bg-amber-500/10 text-amber-600 border-amber-500/30" :
-                              "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
-                            }`}>
-                              {canal.icone}
-                              {temPrecoCustom && (
-                                <span className="text-foreground/70">
-                                  R${precoCanal.toFixed(2).replace('.', ',')}
-                                </span>
-                              )}
-                              <span>{margem.toFixed(0)}%</span>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="text-xs">
-                            <p className="font-medium">{canal.nome}</p>
-                            <p>Preço: {formatCurrency(precoCanal)}{temPrecoCustom ? ' ✓' : ' (base)'}</p>
-                            <p>Margem: {margem.toFixed(1)}%</p>
-                            {canal.taxa > 0 && <p className="text-muted-foreground">Taxa: {canal.taxa}%</p>}
-                          </TooltipContent>
-                        </Tooltip>
-                      );
-                    })}
-                  </div>
                 </>
               ) : (
                 <div className="flex items-baseline gap-3 text-xs">
