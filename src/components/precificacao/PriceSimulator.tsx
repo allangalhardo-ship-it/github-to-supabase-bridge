@@ -297,7 +297,7 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
         {/* Preço Novo */}
         <div className={`p-3 rounded-lg border-2 space-y-1 ${isPrecoViavel ? 'border-primary/30 bg-primary/5' : 'border-destructive/30 bg-destructive/5'}`}>
           <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
-            {modoPreco === 'manual' ? 'Novo' : 'Sugerido'}
+            {modoPreco === 'manual' ? 'Novo' : 'Calculado'}
           </p>
           {isPrecoViavel && precoFinal ? (
             <>
