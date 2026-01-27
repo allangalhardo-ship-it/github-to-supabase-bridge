@@ -468,15 +468,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   </div>
                 </div>
               ) : (
-                <div className="flex items-baseline gap-3 text-xs">
-                  <div>
-                    <span className="text-muted-foreground">Preço </span>
-                    <span className="font-bold text-sm">{formatCurrency(precoVenda)}</span>
-                  </div>
-                  <p className="text-muted-foreground italic">
-                    Adicione ingredientes para ver custos
-                  </p>
-                </div>
+                <p className="text-xs text-muted-foreground italic">
+                  Adicione ingredientes para ver custos e lucros
+                </p>
               )}
             </div>
           </div>
