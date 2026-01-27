@@ -504,29 +504,27 @@ const Vendas = () => {
               ) : (
                 <div className="space-y-2">
                   <Label htmlFor="canal">App de Delivery</Label>
-                  <Select
-                    value={formData.canal}
-                    onValueChange={handleCanalChange}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o app" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {appsDelivery.length > 0 ? (
-                        appsDelivery.map((app) => (
-                          <SelectItem key={app} value={app}>
-                            {app}
+                  {appsDeliveryList.length > 0 ? (
+                    <Select
+                      value={formData.canal}
+                      onValueChange={handleCanalChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o app" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {appsDeliveryList.map((canal) => (
+                          <SelectItem key={canal.id} value={canal.nome}>
+                            {canal.nome} {canal.taxa > 0 && `(${canal.taxa.toFixed(1)}%)`}
                           </SelectItem>
-                        ))
-                      ) : (
-                        <>
-                          <SelectItem value="iFood">iFood</SelectItem>
-                          <SelectItem value="Rappi">Rappi</SelectItem>
-                          <SelectItem value="99Food">99Food</SelectItem>
-                        </>
-                      )}
-                    </SelectContent>
-                  </Select>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="text-sm text-muted-foreground py-2">
+                      Nenhum app de delivery configurado. Configure em Configurações → Canais de Venda.
+                    </p>
+                  )}
                 </div>
               )}
 
