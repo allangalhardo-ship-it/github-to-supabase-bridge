@@ -293,7 +293,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
                         </span>
                       )}
                     </div>
-                    {/* Indicadores de margem por canal com preços customizados */}
+                    {/* Indicador de preços por canal */}
+                    {temPrecosCustomizados && (
+                      <div className="mt-2 flex items-center gap-1.5">
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 bg-primary/5 border-primary/30 text-primary">
+                          <Store className="h-3 w-3 mr-1" />
+                          {Object.keys(precosCanais!).length} preços configurados
+                        </Badge>
+                      </div>
+                    )}
+                    {/* Preços por canal com valores */}
                     <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                       {canais.map(canal => {
                         const precoCanal = getPrecoCanal(canal.id);
@@ -305,18 +314,23 @@ const ProductCard: React.FC<ProductCardProps> = ({
                         return (
                           <Tooltip key={canal.id}>
                             <TooltipTrigger asChild>
-                              <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium border cursor-default ${
+                              <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border cursor-default ${
                                 isCritico ? "bg-destructive/10 text-destructive border-destructive/30" :
                                 isAtencao ? "bg-amber-500/10 text-amber-600 border-amber-500/30" :
                                 "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
                               }`}>
                                 {canal.icone}
+                                {temPrecoCustom && (
+                                  <span className="text-foreground/70">
+                                    R${precoCanal.toFixed(2).replace('.', ',')}
+                                  </span>
+                                )}
                                 <span>{margem.toFixed(0)}%</span>
                               </div>
                             </TooltipTrigger>
                             <TooltipContent side="top" className="text-xs">
                               <p className="font-medium">{canal.nome}</p>
-                              <p>Preço: {formatCurrency(precoCanal)}{temPrecoCustom && ' ✓'}</p>
+                              <p>Preço: {formatCurrency(precoCanal)}{temPrecoCustom ? ' ✓' : ' (base)'}</p>
                               <p>Margem: {margem.toFixed(1)}%</p>
                               {canal.taxa > 0 && <p className="text-muted-foreground">Taxa: {canal.taxa}%</p>}
                             </TooltipContent>
@@ -478,7 +492,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
                       </div>
                     )}
                   </div>
-                  {/* Indicadores de margem por canal com preços customizados */}
+                  {/* Indicador de preços por canal */}
+                  {temPrecosCustomizados && (
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 bg-primary/5 border-primary/30 text-primary">
+                        <Store className="h-3 w-3 mr-1" />
+                        {Object.keys(precosCanais!).length} preços configurados
+                      </Badge>
+                    </div>
+                  )}
+                  {/* Preços por canal com valores */}
                   <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                     {canais.map(canal => {
                       const precoCanal = getPrecoCanal(canal.id);
@@ -490,18 +513,23 @@ const ProductCard: React.FC<ProductCardProps> = ({
                       return (
                         <Tooltip key={canal.id}>
                           <TooltipTrigger asChild>
-                            <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium border cursor-default ${
+                            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border cursor-default ${
                               isCritico ? "bg-destructive/10 text-destructive border-destructive/30" :
                               isAtencao ? "bg-amber-500/10 text-amber-600 border-amber-500/30" :
                               "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
                             }`}>
                               {canal.icone}
+                              {temPrecoCustom && (
+                                <span className="text-foreground/70">
+                                  R${precoCanal.toFixed(2).replace('.', ',')}
+                                </span>
+                              )}
                               <span>{margem.toFixed(0)}%</span>
                             </div>
                           </TooltipTrigger>
                           <TooltipContent side="top" className="text-xs">
                             <p className="font-medium">{canal.nome}</p>
-                            <p>Preço: {formatCurrency(precoCanal)}{temPrecoCustom && ' ✓'}</p>
+                            <p>Preço: {formatCurrency(precoCanal)}{temPrecoCustom ? ' ✓' : ' (base)'}</p>
                             <p>Margem: {margem.toFixed(1)}%</p>
                             {canal.taxa > 0 && <p className="text-muted-foreground">Taxa: {canal.taxa}%</p>}
                           </TooltipContent>
