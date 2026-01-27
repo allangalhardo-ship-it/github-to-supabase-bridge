@@ -139,7 +139,7 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
     onClose();
   };
 
-  const ConteudoDrawer = () => (
+  const conteudoDrawer = (
     <div className="flex flex-col gap-4 p-4">
       {/* Header Produto */}
       <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
@@ -413,7 +413,7 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
             </Button>
           </DrawerHeader>
           <div className="overflow-y-auto">
-            <ConteudoDrawer />
+            {conteudoDrawer}
           </div>
         </DrawerContent>
       </Drawer>
@@ -429,7 +429,7 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
             Simulador de Preço
           </DialogTitle>
         </DialogHeader>
-        <ConteudoDrawer />
+        {conteudoDrawer}
       </DialogContent>
     </Dialog>
   );
