@@ -178,25 +178,58 @@ export type Database = {
       clientes: {
         Row: {
           created_at: string
+          data_nascimento: string | null
+          email: string | null
           empresa_id: string
+          endereco_bairro: string | null
+          endereco_cep: string | null
+          endereco_cidade: string | null
+          endereco_complemento: string | null
+          endereco_estado: string | null
+          endereco_numero: string | null
+          endereco_rua: string | null
           id: string
           nome: string
+          observacoes: string | null
+          preferencias: string | null
           updated_at: string
           whatsapp: string | null
         }
         Insert: {
           created_at?: string
+          data_nascimento?: string | null
+          email?: string | null
           empresa_id: string
+          endereco_bairro?: string | null
+          endereco_cep?: string | null
+          endereco_cidade?: string | null
+          endereco_complemento?: string | null
+          endereco_estado?: string | null
+          endereco_numero?: string | null
+          endereco_rua?: string | null
           id?: string
           nome: string
+          observacoes?: string | null
+          preferencias?: string | null
           updated_at?: string
           whatsapp?: string | null
         }
         Update: {
           created_at?: string
+          data_nascimento?: string | null
+          email?: string | null
           empresa_id?: string
+          endereco_bairro?: string | null
+          endereco_cep?: string | null
+          endereco_cidade?: string | null
+          endereco_complemento?: string | null
+          endereco_estado?: string | null
+          endereco_numero?: string | null
+          endereco_rua?: string | null
           id?: string
           nome?: string
+          observacoes?: string | null
+          preferencias?: string | null
           updated_at?: string
           whatsapp?: string | null
         }
@@ -666,6 +699,69 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      pedidos: {
+        Row: {
+          cliente_id: string | null
+          created_at: string
+          data_entrega: string | null
+          empresa_id: string
+          endereco_entrega: string | null
+          hora_entrega: string | null
+          id: string
+          itens: Json
+          observacoes: string | null
+          origem: string
+          status: string
+          updated_at: string
+          valor_total: number
+        }
+        Insert: {
+          cliente_id?: string | null
+          created_at?: string
+          data_entrega?: string | null
+          empresa_id: string
+          endereco_entrega?: string | null
+          hora_entrega?: string | null
+          id?: string
+          itens?: Json
+          observacoes?: string | null
+          origem?: string
+          status?: string
+          updated_at?: string
+          valor_total?: number
+        }
+        Update: {
+          cliente_id?: string | null
+          created_at?: string
+          data_entrega?: string | null
+          empresa_id?: string
+          endereco_entrega?: string | null
+          hora_entrega?: string | null
+          id?: string
+          itens?: Json
+          observacoes?: string | null
+          origem?: string
+          status?: string
+          updated_at?: string
+          valor_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedidos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       precos_canais: {
         Row: {
