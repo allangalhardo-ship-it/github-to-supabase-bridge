@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import { Link } from 'react-router-dom';
 import { 
   Settings,
@@ -45,6 +46,9 @@ const Precificacao = () => {
     taxasApps,
     isLoading,
   } = useMenuEngineering();
+
+  // Hook para gerenciar preços por canal
+  const { upsertPreco, isSaving: isSavingPrecoCanal } = usePrecosCanais();
 
   // Mutation para atualizar preço
   const updatePrecoMutation = useMutation({
@@ -93,6 +97,29 @@ const Precificacao = () => {
 
   const handleAplicarPreco = (produtoId: string, novoPreco: number, precoAnterior: number) => {
     updatePrecoMutation.mutate({ produtoId, novoPreco, precoAnterior });
+  };
+
+  // Handler para aplicar preço em um canal específico
+  const handleAplicarPrecoCanal = (produtoId: string, canal: string, novoPreco: number, precoAnterior: number) => {
+    // Salvar no canal específico
+    upsertPreco({ produtoId, canal, preco: novoPreco });
+    
+    // Se for balcão, também atualizar o preço base do produto
+    if (canal === 'balcao') {
+      updatePrecoMutation.mutate({ produtoId, novoPreco, precoAnterior });
+    } else {
+      // Registrar histórico para outros canais também
+      supabase.from('historico_precos_produtos').insert({
+        empresa_id: usuario?.empresa_id,
+        produto_id: produtoId,
+        preco_anterior: precoAnterior,
+        preco_novo: novoPreco,
+        variacao_percentual: precoAnterior > 0 ? ((novoPreco - precoAnterior) / precoAnterior) * 100 : null,
+        origem: 'precificacao',
+        observacao: `Canal: ${canal}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['produtos-menu-engineering'] });
+    }
   };
 
   const handleSelectProduto = (produto: ProdutoAnalise) => {
@@ -228,9 +255,10 @@ const Precificacao = () => {
           setProdutoSelecionado(null);
         }}
         onAplicarPreco={handleAplicarPreco}
+        onAplicarPrecoCanal={handleAplicarPrecoCanal}
         config={config}
         taxasApps={taxasApps}
-        isAplicando={updatePrecoMutation.isPending}
+        isAplicando={updatePrecoMutation.isPending || isSavingPrecoCanal}
       />
     </div>
   );

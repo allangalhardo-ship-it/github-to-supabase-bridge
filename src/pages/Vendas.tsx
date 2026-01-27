@@ -20,6 +20,7 @@ import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import ImportarVendasDialog from '@/components/vendas/ImportarVendasDialog';
 import { formatCurrencyBRL } from '@/lib/format';
+import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 
 interface Cliente {
   id: string;
@@ -79,13 +80,13 @@ const Vendas = () => {
     enabled: !!usuario?.empresa_id,
   });
 
-  // Fetch apps de delivery cadastrados
+  // Fetch apps de delivery cadastrados (com ID para mapear preços)
   const { data: taxasApps } = useQuery({
-    queryKey: ['taxas_apps', usuario?.empresa_id],
+    queryKey: ['taxas_apps_full', usuario?.empresa_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('taxas_apps')
-        .select('nome_app')
+        .select('id, nome_app, taxa_percentual')
         .eq('ativo', true)
         .order('nome_app');
       if (error) throw error;
@@ -93,6 +94,9 @@ const Vendas = () => {
     },
     enabled: !!usuario?.empresa_id,
   });
+
+  // Hook para buscar preços por canal
+  const { todosPrecos, getPrecoCanal } = usePrecosCanais();
 
   // Fetch clientes para vendas diretas
   const { data: clientes } = useQuery({
@@ -226,7 +230,12 @@ const Vendas = () => {
 
   const handleProdutoChange = (produtoId: string) => {
     const produto = produtos?.find(p => p.id === produtoId);
-    const valorUnitario = produto ? produto.preco_venda.toString() : '';
+    // Buscar preço do canal atual, se existir
+    const canalAtual = formData.tipo_venda === 'app' ? 
+      (taxasApps?.find(t => t.nome_app === formData.canal)?.id || formData.canal) : 
+      'balcao';
+    const precoCanal = produto ? getPrecoCanal(produtoId, canalAtual, produto.preco_venda) : 0;
+    const valorUnitario = precoCanal.toString();
     const quantidade = parseFloat(formData.quantidade) || 1;
     const valorTotal = valorUnitario ? (parseFloat(valorUnitario) * quantidade).toFixed(2) : '';
     
@@ -234,6 +243,35 @@ const Vendas = () => {
       ...formData,
       produto_id: produtoId,
       valor_unitario: valorUnitario,
+      valor_total: valorTotal,
+    });
+  };
+
+  // Atualizar preço quando mudar o canal
+  const handleCanalChange = (canal: string) => {
+    if (!formData.produto_id) {
+      setFormData({ ...formData, canal });
+      return;
+    }
+    
+    const produto = produtos?.find(p => p.id === formData.produto_id);
+    if (!produto) {
+      setFormData({ ...formData, canal });
+      return;
+    }
+
+    // Buscar preço do novo canal
+    const canalId = formData.tipo_venda === 'app' ? 
+      (taxasApps?.find(t => t.nome_app === canal)?.id || canal) : 
+      'balcao';
+    const precoCanal = getPrecoCanal(formData.produto_id, canalId, produto.preco_venda);
+    const quantidade = parseFloat(formData.quantidade) || 1;
+    const valorTotal = (precoCanal * quantidade).toFixed(2);
+    
+    setFormData({
+      ...formData,
+      canal,
+      valor_unitario: precoCanal.toString(),
       valor_total: valorTotal,
     });
   };
@@ -411,9 +449,31 @@ const Vendas = () => {
                 <Label>Tipo de Venda</Label>
                 <RadioGroup
                   value={formData.tipo_venda}
-                  onValueChange={(value: 'direto' | 'app') => 
-                    setFormData({ ...formData, tipo_venda: value, canal: value === 'direto' ? 'balcao' : (appsDelivery[0] || 'iFood'), cliente_id: '' })
-                  }
+                  onValueChange={(value: 'direto' | 'app') => {
+                    const novoCanal = value === 'direto' ? 'balcao' : (appsDelivery[0] || 'iFood');
+                    
+                    // Atualizar preço baseado no novo canal
+                    if (formData.produto_id) {
+                      const produto = produtos?.find(p => p.id === formData.produto_id);
+                      if (produto) {
+                        const canalId = value === 'app' ? 
+                          (taxasApps?.find(t => t.nome_app === novoCanal)?.id || novoCanal) : 
+                          'balcao';
+                        const precoCanal = getPrecoCanal(formData.produto_id, canalId, produto.preco_venda);
+                        const quantidade = parseFloat(formData.quantidade) || 1;
+                        setFormData({ 
+                          ...formData, 
+                          tipo_venda: value, 
+                          canal: novoCanal, 
+                          cliente_id: '',
+                          valor_unitario: precoCanal.toString(),
+                          valor_total: (precoCanal * quantidade).toFixed(2)
+                        });
+                        return;
+                      }
+                    }
+                    setFormData({ ...formData, tipo_venda: value, canal: novoCanal, cliente_id: '' });
+                  }}
                   className="flex gap-4"
                 >
                   <div className="flex items-center space-x-2">
@@ -455,7 +515,7 @@ const Vendas = () => {
                   <Label htmlFor="canal">App de Delivery</Label>
                   <Select
                     value={formData.canal}
-                    onValueChange={(value) => setFormData({ ...formData, canal: value })}
+                    onValueChange={handleCanalChange}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o app" />

@@ -20,6 +20,7 @@ import { formatCurrencyBRL } from '@/lib/format';
 import { calcularPrecoSugerido, ConfiguracaoPrecificacao } from '@/lib/precificacaoUtils';
 import FichaTecnicaDialog from "./FichaTecnicaDialog";
 import DuplicarProdutoDialog from "./DuplicarProdutoDialog";
+import PrecosCanaisDialog from "./PrecosCanaisDialog";
 import MissingFichaBadge from "./MissingFichaBadge";
 import {
   Tooltip,
@@ -331,6 +332,15 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   </Button>
                 }
               />
+              {temFichaTecnica && (
+                <PrecosCanaisDialog
+                  produtoId={produto.id}
+                  produtoNome={produto.nome}
+                  precoBase={precoVenda}
+                  custoInsumos={custoInsumos}
+                  impostoPercentual={config?.imposto_medio_sobre_vendas}
+                />
+              )}
               <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => setShowDuplicar(true)}>
                 <Copy className="h-3.5 w-3.5" />
               </Button>

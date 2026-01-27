@@ -629,6 +629,51 @@ export type Database = {
         }
         Relationships: []
       }
+      precos_canais: {
+        Row: {
+          canal: string
+          created_at: string
+          empresa_id: string
+          id: string
+          preco: number
+          produto_id: string
+          updated_at: string
+        }
+        Insert: {
+          canal: string
+          created_at?: string
+          empresa_id: string
+          id?: string
+          preco?: number
+          produto_id: string
+          updated_at?: string
+        }
+        Update: {
+          canal?: string
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          preco?: number
+          produto_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "precos_canais_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "precos_canais_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       producoes: {
         Row: {
           created_at: string

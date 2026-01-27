@@ -39,6 +39,7 @@ interface ProdutoDetalheDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onAplicarPreco: (produtoId: string, novoPreco: number, precoAnterior: number) => void;
+  onAplicarPrecoCanal?: (produtoId: string, canal: string, novoPreco: number, precoAnterior: number) => void;
   config: ConfiguracoesPrecificacao | undefined;
   taxasApps: TaxaApp[] | undefined;
   isAplicando?: boolean;
@@ -57,6 +58,7 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
   isOpen,
   onClose,
   onAplicarPreco,
+  onAplicarPrecoCanal,
   config,
   taxasApps,
   isAplicando,
@@ -162,8 +164,12 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
     m < 15 ? "bg-amber-500/10 border-amber-500/30" : 
     "bg-emerald-500/10 border-emerald-500/30";
 
-  const handleAplicar = (preco: number) => {
-    onAplicarPreco(produto.id, preco, produto.preco_venda);
+  const handleAplicar = (preco: number, canal?: string) => {
+    if (canal && onAplicarPrecoCanal) {
+      onAplicarPrecoCanal(produto.id, canal, preco, produto.preco_venda);
+    } else {
+      onAplicarPreco(produto.id, preco, produto.preco_venda);
+    }
     onClose();
   };
 
@@ -332,12 +338,12 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
               className="w-full gap-2"
               onClick={() => {
                 const canal = resultadosSimulacaoCMV.find(c => c.id === canalParaAplicar);
-                if (canal?.precoIdeal) handleAplicar(canal.precoIdeal);
+                if (canal?.precoIdeal) handleAplicar(canal.precoIdeal, canal.id);
               }}
               disabled={isAplicando}
             >
               <Zap className="h-4 w-4" />
-              Aplicar {formatCurrency(resultadosSimulacaoCMV.find(c => c.id === canalParaAplicar)?.precoIdeal || 0)}
+              Aplicar {formatCurrency(resultadosSimulacaoCMV.find(c => c.id === canalParaAplicar)?.precoIdeal || 0)} em {resultadosSimulacaoCMV.find(c => c.id === canalParaAplicar)?.nome}
             </Button>
           )}
         </TabsContent>
