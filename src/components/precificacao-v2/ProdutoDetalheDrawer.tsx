@@ -63,12 +63,7 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
   const [precoSimulado, setPrecoSimulado] = useState('');
   const [canalParaAplicar, setCanalParaAplicar] = useState<string | null>(null);
 
-  if (!produto) return null;
-
-  const quadInfo = getQuadranteInfo(produto.quadrante);
-  const imposto = (config?.imposto_medio_sobre_vendas || 0) / 100;
-
-  // Montar lista de canais: Balcão + plataformas
+  // Montar lista de canais: Balcão + plataformas (antes do early return!)
   const canais: CanalInfo[] = useMemo(() => {
     const lista: CanalInfo[] = [
       { id: 'balcao', nome: 'Balcão', taxa: 0, icone: <Store className="h-4 w-4" />, destaque: true }
@@ -83,6 +78,11 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
     });
     return lista;
   }, [taxasApps]);
+
+  if (!produto) return null;
+
+  const quadInfo = getQuadranteInfo(produto.quadrante);
+  const imposto = (config?.imposto_medio_sobre_vendas || 0) / 100;
 
   // Calcular margem e lucro dado um preço e taxa
   const calcularResultado = (preco: number, taxa: number) => {
