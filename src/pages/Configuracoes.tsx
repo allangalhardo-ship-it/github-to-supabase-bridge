@@ -185,8 +185,13 @@ const Configuracoes = () => {
         <CardContent className="space-y-4 text-sm text-muted-foreground">
           <div>
             <h4 className="font-medium text-foreground">Preço Sugerido</h4>
-            <p>Custo dos insumos ÷ (1 - Margem%)</p>
-            <p className="text-xs">Exemplo: R$ 10,00 de custo com 30% de margem = R$ 14,29</p>
+            <p>Custo dos insumos ÷ (1 - Margem% - Imposto% - Taxa App%)</p>
+            <p className="text-xs">Exemplo: R$ 10 de custo, 40% margem, 10% imposto, 27.89% iFood = R$ 45,23</p>
+          </div>
+          <div>
+            <h4 className="font-medium text-foreground">Custos Fixos</h4>
+            <p>NÃO entram no cálculo do preço unitário</p>
+            <p className="text-xs">São cobertos pelo VOLUME de vendas. Verificado no Dashboard (Lucro Estimado).</p>
           </div>
           <div>
             <h4 className="font-medium text-foreground">CMV (Custo da Mercadoria Vendida)</h4>
@@ -194,9 +199,9 @@ const Configuracoes = () => {
             <p className="text-xs">Quanto menor, maior sua margem de lucro bruto</p>
           </div>
           <div>
-            <h4 className="font-medium text-foreground">Lucro Estimado</h4>
-            <p>Receita - CMV - Custos Fixos - Impostos</p>
-            <p className="text-xs">Visão completa considerando todos os custos do negócio</p>
+            <h4 className="font-medium text-foreground">Lucro no Dashboard</h4>
+            <p>Receita - CMV - Custos Fixos - Impostos - Taxas Apps</p>
+            <p className="text-xs">Visão completa do seu negócio considerando todos os custos</p>
           </div>
         </CardContent>
       </Card>

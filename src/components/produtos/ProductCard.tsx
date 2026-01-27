@@ -76,18 +76,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   const formatCurrency = formatCurrencyBRL;
 
-  // Fetch custos fixos para cálculo completo do preço sugerido
-  const { data: custosFixos } = useQuery({
-    queryKey: ['custos-fixos', usuario?.empresa_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('custos_fixos')
-        .select('valor_mensal');
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!usuario?.empresa_id,
-  });
+  // Não precisamos mais buscar custos fixos para o cálculo do preço
+  // O custo fixo é verificado no Dashboard, não no preço unitário
 
   const custoInsumos = useMemo(() => {
     if (!produto.fichas_tecnicas || produto.fichas_tecnicas.length === 0) return 0;
@@ -112,19 +102,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   const margemBruta = precoVenda > 0 ? ((precoVenda - custoInsumos) / precoVenda) * 100 : 0;
 
-  // Cálculo completo do preço sugerido (igual à página de Precificação)
+  // Cálculo do preço sugerido
+  // FÓRMULA CORRETA: SEM custo fixo no divisor
+  // O custo fixo é coberto pelo volume de vendas (verificado no Dashboard)
   const { precoSugerido, precoSugeridoValido, precoAbaixoSugerido } = useMemo(() => {
     if (custoInsumos <= 0) {
       return { precoSugerido: 0, precoSugeridoValido: false, precoAbaixoSugerido: false };
     }
-
-    const totalCustosFixos = custosFixos?.reduce((acc, cf) => acc + cf.valor_mensal, 0) || 0;
     
     const configPrecificacao: ConfiguracaoPrecificacao = {
-      faturamento_mensal: config?.faturamento_mensal || 0,
       margem_desejada_padrao: config?.margem_desejada_padrao || 30,
       imposto_medio_sobre_vendas: config?.imposto_medio_sobre_vendas || 0,
-      total_custos_fixos: totalCustosFixos,
     };
 
     const resultado = calcularPrecoSugerido(custoInsumos, configPrecificacao, 0);
@@ -136,7 +124,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       precoSugeridoValido: valido, 
       precoAbaixoSugerido: abaixo 
     };
-  }, [custoInsumos, config, custosFixos, precoVenda]);
+  }, [custoInsumos, config, precoVenda]);
 
   const temFichaTecnica = (produto.fichas_tecnicas?.length || 0) > 0;
   const qtdInsumos = produto.fichas_tecnicas?.length || 0;

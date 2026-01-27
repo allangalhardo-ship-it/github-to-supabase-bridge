@@ -1,13 +1,20 @@
 /**
  * Utilitários centralizados para cálculo de precificação
- * Fórmula completa: Preço = Custo / (1 - Margem% - Impostos% - CustoFixo% - TaxaApp%)
+ * 
+ * FÓRMULA CORRETA (custos variáveis apenas):
+ * Preço = Custo / (1 - Margem% - Impostos% - TaxaApp%)
+ * 
+ * IMPORTANTE: Custos fixos NÃO entram no cálculo do preço unitário.
+ * Eles são cobertos pela SOMA das margens de todos os produtos vendidos.
+ * A verificação de cobertura dos custos fixos é feita no Dashboard (Lucro Estimado).
  */
 
 export interface ConfiguracaoPrecificacao {
-  faturamento_mensal: number;
   margem_desejada_padrao: number;
   imposto_medio_sobre_vendas: number;
-  total_custos_fixos: number;
+  // Campos mantidos para compatibilidade, mas não usados no cálculo unitário
+  faturamento_mensal?: number;
+  total_custos_fixos?: number;
 }
 
 export interface ResultadoPrecoSugerido {
@@ -16,27 +23,14 @@ export interface ResultadoPrecoSugerido {
 }
 
 /**
- * Calcula os percentuais de custos fixos sobre o faturamento
- */
-export function calcularPercentuaisConfig(config: ConfiguracaoPrecificacao) {
-  const { faturamento_mensal, total_custos_fixos, imposto_medio_sobre_vendas, margem_desejada_padrao } = config;
-  
-  const percCustoFixo = faturamento_mensal > 0 
-    ? (total_custos_fixos / faturamento_mensal) * 100 
-    : 0;
-  
-  return {
-    percCustoFixo,
-    percImposto: imposto_medio_sobre_vendas,
-    margemDesejada: margem_desejada_padrao,
-  };
-}
-
-/**
- * Calcula o preço sugerido baseado na fórmula completa de precificação
+ * Calcula o preço sugerido baseado na fórmula de precificação
+ * 
+ * IMPORTANTE: Custos fixos NÃO entram neste cálculo.
+ * O preço unitário cobre: Custo dos insumos + Margem + Impostos + Taxa do App
+ * Os custos fixos são cobertos pelo volume de vendas (verificado no Dashboard).
  * 
  * @param custoInsumos - Custo total dos ingredientes/insumos
- * @param config - Configurações do sistema (margem, impostos, custos fixos, faturamento)
+ * @param config - Configurações do sistema (margem, impostos)
  * @param taxaApp - Taxa percentual do app de delivery (opcional, padrão 0)
  * @returns Objeto com preço sugerido e indicador de viabilidade
  */
@@ -49,16 +43,15 @@ export function calcularPrecoSugerido(
     return { preco: 0, viavel: false };
   }
 
-  const { percCustoFixo, percImposto, margemDesejada } = calcularPercentuaisConfig(config);
-  
-  const margem = margemDesejada / 100;
-  const imposto = percImposto / 100;
-  const custoFixo = percCustoFixo / 100;
+  const margem = config.margem_desejada_padrao / 100;
+  const imposto = config.imposto_medio_sobre_vendas / 100;
   const taxa = taxaApp / 100;
   
-  const divisor = 1 - margem - imposto - custoFixo - taxa;
+  // Fórmula: Preço = Custo / (1 - Margem - Imposto - TaxaApp)
+  // NÃO inclui custo fixo - ele é coberto pelo volume de vendas
+  const divisor = 1 - margem - imposto - taxa;
   
-  // Se o divisor for <= 0, a precificação é inviável (custos + margens >= 100%)
+  // Se o divisor for <= 0, a precificação é inviável
   if (divisor <= 0) {
     return { preco: custoInsumos * 3, viavel: false };
   }
@@ -68,6 +61,10 @@ export function calcularPrecoSugerido(
 
 /**
  * Calcula métricas de rentabilidade de um produto
+ * 
+ * NOTA: O lucro líquido aqui é por UNIDADE vendida.
+ * Os custos fixos são deduzidos no nível do negócio (Dashboard),
+ * não por produto individual.
  */
 export function calcularMetricasProduto(
   precoVenda: number,
@@ -75,27 +72,39 @@ export function calcularMetricasProduto(
   config: ConfiguracaoPrecificacao,
   taxaApp: number = 0
 ) {
-  const { percCustoFixo, percImposto } = calcularPercentuaisConfig(config);
+  const percImposto = config.imposto_medio_sobre_vendas;
   
-  const custoFixoValor = precoVenda * (percCustoFixo / 100);
   const impostoValor = precoVenda * (percImposto / 100);
   const taxaValor = precoVenda * (taxaApp / 100);
   
-  const custoTotal = custoInsumos + custoFixoValor + impostoValor + taxaValor;
-  const lucroLiquido = precoVenda - custoTotal;
-  const margemLiquida = precoVenda > 0 ? (lucroLiquido / precoVenda) * 100 : 0;
+  // Custo total por unidade (sem custo fixo - ele é coberto pelo volume)
+  const custoTotalVariavel = custoInsumos + impostoValor + taxaValor;
+  
+  // Lucro por unidade (contribuição para cobrir custos fixos + lucro)
+  const lucroContribuicao = precoVenda - custoTotalVariavel;
+  
+  // Margem de contribuição (% do preço que sobra após custos variáveis)
+  const margemContribuicao = precoVenda > 0 ? (lucroContribuicao / precoVenda) * 100 : 0;
+  
+  // Margem bruta (tradicional: preço - custo insumos)
   const margemBruta = precoVenda > 0 ? ((precoVenda - custoInsumos) / precoVenda) * 100 : 0;
+  
+  // CMV (Custo da Mercadoria Vendida)
   const cmv = precoVenda > 0 ? (custoInsumos / precoVenda) * 100 : 0;
   
   return {
     custoInsumos,
-    custoFixoValor,
     impostoValor,
     taxaValor,
-    custoTotal,
-    lucroLiquido,
-    margemLiquida,
+    custoTotalVariavel,
+    lucroContribuicao,      // Lucro por unidade (contribuição)
+    margemContribuicao,     // Margem de contribuição %
     margemBruta,
     cmv,
+    // Aliases para compatibilidade
+    lucroLiquido: lucroContribuicao,
+    margemLiquida: margemContribuicao,
+    custoTotal: custoTotalVariavel,
+    custoFixoValor: 0,      // Não calculamos mais por unidade
   };
 }
