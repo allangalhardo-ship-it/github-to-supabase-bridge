@@ -11,11 +11,11 @@ import {
   TrendingDown,
   Equal
 } from 'lucide-react';
-import { ProdutoComMetricas, TaxaApp, formatCurrency, formatPercent } from './types';
+import { ProdutoComMetricas, CanalVenda, formatCurrency, formatPercent } from './types';
 
 interface ChannelComparisonTableProps {
   produto: ProdutoComMetricas;
-  taxasApps: TaxaApp[];
+  canaisVenda: CanalVenda[];
   percImposto: number;
   cmvAlvo: number;
   margemReferencia?: number; // Margem a manter em todos os canais
@@ -31,7 +31,7 @@ interface CanalInfo {
 
 const ChannelComparisonTable: React.FC<ChannelComparisonTableProps> = ({
   produto,
-  taxasApps,
+  canaisVenda,
   percImposto,
   cmvAlvo,
   margemReferencia,
@@ -40,15 +40,14 @@ const ChannelComparisonTable: React.FC<ChannelComparisonTableProps> = ({
   const [viewMode, setViewMode] = useState<'mesma-margem' | 'mesmo-preco'>('mesma-margem');
 
   // Lista de canais disponíveis
-  const canais: CanalInfo[] = useMemo(() => [
-    { id: 'balcao', nome: 'Balcão', taxa: 0, icone: Store },
-    ...taxasApps.map(app => ({
-      id: app.id,
-      nome: app.nome_app,
-      taxa: app.taxa_percentual,
-      icone: Smartphone
+  const canais: CanalInfo[] = useMemo(() => 
+    canaisVenda.map(canal => ({
+      id: canal.id,
+      nome: canal.nome,
+      taxa: canal.taxa,
+      icone: canal.isBalcao ? Store : Smartphone
     }))
-  ], [taxasApps]);
+  , [canaisVenda]);
 
   // Calcular margem para um preço específico em um canal
   const calcularMargem = (preco: number, taxaApp: number): number => {
@@ -69,13 +68,14 @@ const ChannelComparisonTable: React.FC<ChannelComparisonTableProps> = ({
     return produto.custoInsumos / divisor;
   };
 
-  // Margem atual do produto (no balcão, sem taxa)
-  const margemAtualBalcao = useMemo(() => {
-    return calcularMargem(produto.preco_venda, 0);
-  }, [produto, percImposto]);
+  // Margem atual do produto (usando o primeiro canal como referência)
+  const margemAtualPrimeiro = useMemo(() => {
+    const primeiroCanal = canais[0];
+    return primeiroCanal ? calcularMargem(produto.preco_venda, primeiroCanal.taxa) : 0;
+  }, [produto, percImposto, canais]);
 
-  // Usar margem de referência ou a margem atual do balcão
-  const margemBase = margemReferencia ?? margemAtualBalcao;
+  // Usar margem de referência ou a margem atual do primeiro canal
+  const margemBase = margemReferencia ?? margemAtualPrimeiro;
   const precoBase = precoReferencia ?? produto.preco_venda;
 
   // Dados para "Mesma Margem" - calcular preço em cada canal para manter a margem

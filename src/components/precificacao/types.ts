@@ -47,6 +47,16 @@ export interface CustoFixo {
   valor_mensal: number;
 }
 
+// Interface unificada para canais de venda (substitui TaxaApp antiga)
+export interface CanalVenda {
+  id: string;
+  nome: string;
+  taxa: number; // Soma de todas as taxas do canal
+  tipo: 'presencial' | 'app_delivery' | 'proprio';
+  isBalcao: boolean;
+}
+
+// Alias para compatibilidade - usar CanalVenda em novos códigos
 export interface TaxaApp {
   id: string;
   nome_app: string;

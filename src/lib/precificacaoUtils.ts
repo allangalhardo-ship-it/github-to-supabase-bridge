@@ -2,7 +2,7 @@
  * Utilitários centralizados para cálculo de precificação
  * 
  * FÓRMULA CORRETA (custos variáveis apenas):
- * Preço = Custo / (1 - Margem% - Impostos% - TaxaApp%)
+ * Preço = Custo / (1 - Margem% - Impostos% - TaxaCanal%)
  * 
  * IMPORTANTE: Custos fixos NÃO entram no cálculo do preço unitário.
  * Eles são cobertos pela SOMA das margens de todos os produtos vendidos.
@@ -26,18 +26,18 @@ export interface ResultadoPrecoSugerido {
  * Calcula o preço sugerido baseado na fórmula de precificação
  * 
  * IMPORTANTE: Custos fixos NÃO entram neste cálculo.
- * O preço unitário cobre: Custo dos insumos + Margem + Impostos + Taxa do App
+ * O preço unitário cobre: Custo dos insumos + Margem + Impostos + Taxa do Canal
  * Os custos fixos são cobertos pelo volume de vendas (verificado no Dashboard).
  * 
  * @param custoInsumos - Custo total dos ingredientes/insumos
  * @param config - Configurações do sistema (margem, impostos)
- * @param taxaApp - Taxa percentual do app de delivery (opcional, padrão 0)
+ * @param taxaCanal - Taxa percentual do canal de venda (opcional, padrão 0)
  * @returns Objeto com preço sugerido e indicador de viabilidade
  */
 export function calcularPrecoSugerido(
   custoInsumos: number,
   config: ConfiguracaoPrecificacao,
-  taxaApp: number = 0
+  taxaCanal: number = 0
 ): ResultadoPrecoSugerido {
   if (custoInsumos <= 0) {
     return { preco: 0, viavel: false };
@@ -45,9 +45,9 @@ export function calcularPrecoSugerido(
 
   const margem = config.margem_desejada_padrao / 100;
   const imposto = config.imposto_medio_sobre_vendas / 100;
-  const taxa = taxaApp / 100;
+  const taxa = taxaCanal / 100;
   
-  // Fórmula: Preço = Custo / (1 - Margem - Imposto - TaxaApp)
+  // Fórmula: Preço = Custo / (1 - Margem - Imposto - TaxaCanal)
   // NÃO inclui custo fixo - ele é coberto pelo volume de vendas
   const divisor = 1 - margem - imposto - taxa;
   
@@ -70,12 +70,12 @@ export function calcularMetricasProduto(
   precoVenda: number,
   custoInsumos: number,
   config: ConfiguracaoPrecificacao,
-  taxaApp: number = 0
+  taxaCanal: number = 0
 ) {
   const percImposto = config.imposto_medio_sobre_vendas;
   
   const impostoValor = precoVenda * (percImposto / 100);
-  const taxaValor = precoVenda * (taxaApp / 100);
+  const taxaValor = precoVenda * (taxaCanal / 100);
   
   // Custo total por unidade (sem custo fixo - ele é coberto pelo volume)
   const custoTotalVariavel = custoInsumos + impostoValor + taxaValor;

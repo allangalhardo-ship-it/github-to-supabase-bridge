@@ -547,7 +547,8 @@ serve(async (req) => {
       { data: vendas },
       { data: configuracoes },
       { data: custosFixos },
-      { data: taxasApps },
+      { data: canaisVenda },
+      { data: taxasCanais },
     ] = await Promise.all([
       supabase
         .from("produtos")
@@ -580,10 +581,13 @@ serve(async (req) => {
         .select("nome, valor_mensal, categoria")
         .eq("empresa_id", empresaId),
       supabase
-        .from("taxas_apps")
-        .select("nome_app, taxa_percentual, ativo")
+        .from("canais_venda")
+        .select("id, nome, tipo, ativo")
         .eq("empresa_id", empresaId)
         .eq("ativo", true),
+      supabase
+        .from("taxas_canais")
+        .select("canal_id, nome, percentual"),
     ]);
 
     // Calculate metrics
@@ -630,8 +634,15 @@ serve(async (req) => {
 - Margem desejada padrão: ${configuracoes?.margem_desejada_padrao || 50}%
 - Imposto médio sobre vendas: ${configuracoes?.imposto_medio_sobre_vendas || 0}%
 
-### Canais de Venda (Apps Delivery)
-${taxasApps?.map(a => `- ${a.nome_app}: ${a.taxa_percentual}% de taxa`).join("\n") || "Nenhum app configurado"}
+### Canais de Venda
+${(() => {
+  if (!canaisVenda || canaisVenda.length === 0) return "Nenhum canal configurado";
+  return canaisVenda.map(c => {
+    const taxasDoCanal = (taxasCanais || []).filter(t => t.canal_id === c.id);
+    const taxaTotal = taxasDoCanal.reduce((sum, t) => sum + Number(t.percentual), 0);
+    return `- ${c.nome} (${c.tipo}): ${taxaTotal > 0 ? taxaTotal.toFixed(1) + '% de taxa' : 'sem taxa'}`;
+  }).join("\n");
+})()}
 
 ### Produtos (${produtosComCusto.length} ativos)
 ${produtosComCusto.slice(0, 20).map(p => 
