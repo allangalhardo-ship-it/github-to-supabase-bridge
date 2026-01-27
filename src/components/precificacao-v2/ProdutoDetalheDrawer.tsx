@@ -53,20 +53,25 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
 
   const quadInfo = getQuadranteInfo(produto.quadrante);
   const imposto = (config?.imposto_medio_sobre_vendas || 0) / 100;
-  
-  // Taxa iFood (primeira taxa de app ativa)
-  const ifoodApp = taxasApps?.find(a => a.nome_app.toLowerCase().includes('ifood')) || taxasApps?.[0];
-  const taxaIfood = (ifoodApp?.taxa_percentual || 0) / 100;
 
-  // Margem no Balcão (sem taxa de app)
-  const margemBalcao = produto.preco_venda > 0
-    ? ((produto.preco_venda - produto.custoInsumos - produto.preco_venda * imposto) / produto.preco_venda) * 100
-    : 0;
+  // Calcular margem e lucro para um canal
+  const calcularCanal = (taxa: number) => {
+    if (produto.preco_venda <= 0) return { margem: 0, lucro: 0 };
+    const lucro = produto.preco_venda - produto.custoInsumos - produto.preco_venda * imposto - produto.preco_venda * taxa;
+    const margem = (lucro / produto.preco_venda) * 100;
+    return { margem, lucro };
+  };
 
-  // Margem no iFood com o MESMO preço
-  const margemIfood = produto.preco_venda > 0
-    ? ((produto.preco_venda - produto.custoInsumos - produto.preco_venda * imposto - produto.preco_venda * taxaIfood) / produto.preco_venda) * 100
-    : 0;
+  // Balcão (sem taxa)
+  const balcao = calcularCanal(0);
+
+  // Todas as plataformas configuradas
+  const plataformas = (taxasApps || []).map(app => ({
+    id: app.id,
+    nome: app.nome_app,
+    taxa: app.taxa_percentual,
+    ...calcularCanal(app.taxa_percentual / 100)
+  }));
 
   // Calcular preço para margem desejada (no balcão)
   const margem = margemDesejada / 100;
@@ -74,6 +79,9 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
   const precoCalculado = divisor > 0.01 ? produto.custoInsumos / divisor : null;
   
   const mostrarAplicar = precoCalculado && precoCalculado !== produto.preco_venda;
+
+  const getCorMargem = (m: number) => 
+    m < 0 ? "text-destructive" : m < 15 ? "text-amber-600" : "text-emerald-600";
 
   const ConteudoDrawer = () => (
     <div className="flex flex-col gap-4 p-4">
@@ -105,44 +113,44 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
         <p className="text-2xl font-bold">{formatCurrency(produto.preco_venda)}</p>
       </div>
 
-      {/* Comparativo de Margens - Balcão vs iFood */}
+      {/* Comparativo de Margens - Balcão + Plataformas */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium">Comparativo de Margem (mesmo preço)</Label>
-        <div className="grid grid-cols-2 gap-3">
+        <Label className="text-sm font-medium">Comparativo por Canal (mesmo preço)</Label>
+        <div className="grid grid-cols-2 gap-2">
           {/* Balcão */}
-          <div className="p-4 rounded-lg border-2 border-primary/20 bg-primary/5 space-y-1">
+          <div className="p-3 rounded-lg border-2 border-primary/20 bg-primary/5 space-y-1">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Store className="h-4 w-4" />
               <span className="text-xs font-medium">Balcão</span>
             </div>
-            <p className={cn(
-              "text-xl font-bold",
-              margemBalcao < 0 ? "text-destructive" :
-              margemBalcao < 15 ? "text-amber-600" : "text-emerald-600"
-            )}>
-              {formatPercent(margemBalcao)}
+            <p className={cn("text-lg font-bold", getCorMargem(balcao.margem))}>
+              {formatPercent(balcao.margem)}
             </p>
-            <p className="text-[10px] text-muted-foreground">de margem</p>
+            <p className={cn("text-sm font-semibold", getCorMargem(balcao.lucro))}>
+              {formatCurrency(balcao.lucro)}
+            </p>
+            <p className="text-[10px] text-muted-foreground">lucro/unidade</p>
           </div>
 
-          {/* iFood */}
-          <div className="p-4 rounded-lg border bg-muted/30 space-y-1">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Smartphone className="h-4 w-4" />
-              <span className="text-xs font-medium">{ifoodApp?.nome_app || 'iFood'}</span>
-              <Badge variant="secondary" className="text-[10px] px-1.5 h-4 ml-auto">
-                {(taxaIfood * 100).toFixed(1)}%
-              </Badge>
+          {/* Plataformas dinâmicas */}
+          {plataformas.map(plat => (
+            <div key={plat.id} className="p-3 rounded-lg border bg-muted/30 space-y-1">
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <Smartphone className="h-4 w-4 shrink-0" />
+                <span className="text-xs font-medium truncate">{plat.nome}</span>
+                <Badge variant="secondary" className="text-[9px] px-1 h-4 ml-auto shrink-0">
+                  {plat.taxa}%
+                </Badge>
+              </div>
+              <p className={cn("text-lg font-bold", getCorMargem(plat.margem))}>
+                {formatPercent(plat.margem)}
+              </p>
+              <p className={cn("text-sm font-semibold", getCorMargem(plat.lucro))}>
+                {formatCurrency(plat.lucro)}
+              </p>
+              <p className="text-[10px] text-muted-foreground">lucro/unidade</p>
             </div>
-            <p className={cn(
-              "text-xl font-bold",
-              margemIfood < 0 ? "text-destructive" :
-              margemIfood < 15 ? "text-amber-600" : "text-emerald-600"
-            )}>
-              {formatPercent(margemIfood)}
-            </p>
-            <p className="text-[10px] text-muted-foreground">de margem</p>
-          </div>
+          ))}
         </div>
       </div>
 
