@@ -66,7 +66,7 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
   const [cmvDesejado, setCmvDesejado] = useState(config?.cmv_alvo || 35);
   const [precoSimulado, setPrecoSimulado] = useState('');
   const [canalParaAplicar, setCanalParaAplicar] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<string>('margem');
+  const [activeTab, setActiveTab] = useState<string>('cmv');
   const [showComposicao, setShowComposicao] = useState(false);
 
   // Montar lista de canais: Balcão + plataformas (antes do early return!)
@@ -240,111 +240,16 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
 
       {/* Simulador com Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-9">
-          <TabsTrigger value="margem" className="text-xs gap-1">
-            <Target className="h-3 w-3" />
-            Margem
-          </TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 h-9">
           <TabsTrigger value="cmv" className="text-xs gap-1">
             <Percent className="h-3 w-3" />
-            CMV
+            Por CMV
           </TabsTrigger>
           <TabsTrigger value="preco" className="text-xs gap-1">
             <DollarSign className="h-3 w-3" />
-            Preço
+            Por Preço
           </TabsTrigger>
         </TabsList>
-
-        {/* Tab: Simular por Margem */}
-        <TabsContent value="margem" className="space-y-4 mt-4">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm">Margem desejada</Label>
-              <div className="flex items-center gap-1 bg-primary/10 rounded-md px-2 py-1">
-                <span className="font-bold text-primary">{margemDesejada.toFixed(0)}%</span>
-              </div>
-            </div>
-            <Slider
-              value={[margemDesejada]}
-              onValueChange={([value]) => {
-                setMargemDesejada(value);
-                setCanalParaAplicar(null);
-              }}
-              min={5}
-              max={90}
-              step={1}
-              className="py-2"
-            />
-            <div className="flex justify-between text-[10px] text-muted-foreground">
-              <span>5%</span>
-              <span>Alvo: {config?.margem_desejada_padrao || 30}%</span>
-              <span>90%</span>
-            </div>
-          </div>
-
-          {/* Preços ideais por canal */}
-          <div className="space-y-2">
-            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Preço necessário para {margemDesejada}% de margem
-            </Label>
-            <div className="space-y-2">
-              {resultadosSimulacaoMargem.map(canal => (
-                <div 
-                  key={canal.id}
-                  className={cn(
-                    "p-3 rounded-lg border transition-all cursor-pointer",
-                    canalParaAplicar === canal.id 
-                      ? "border-primary bg-primary/5 ring-2 ring-primary/20" 
-                      : canal.destaque 
-                        ? "border-primary/20 hover:border-primary/40" 
-                        : "hover:border-muted-foreground/30"
-                  )}
-                  onClick={() => canal.precoIdeal && setCanalParaAplicar(canal.id)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {canal.icone}
-                      <span className="text-sm font-medium">{canal.nome}</span>
-                      {canal.taxa > 0 && (
-                        <Badge variant="outline" className="text-[9px] px-1.5 h-4">
-                          -{canal.taxa}%
-                        </Badge>
-                      )}
-                    </div>
-                    {canal.precoIdeal ? (
-                      <div className="text-right">
-                        <p className="text-base font-bold text-primary">
-                          {formatCurrency(canal.precoIdeal)}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground">
-                          lucro: {formatCurrency(canal.lucro)}/un
-                        </p>
-                      </div>
-                    ) : (
-                      <Badge variant="destructive" className="text-xs">Inviável</Badge>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Botão aplicar */}
-          {canalParaAplicar && (
-            <Button
-              size="lg"
-              className="w-full gap-2"
-              onClick={() => {
-                const canal = resultadosSimulacaoMargem.find(c => c.id === canalParaAplicar);
-                if (canal?.precoIdeal) handleAplicar(canal.precoIdeal);
-              }}
-              disabled={isAplicando}
-            >
-              <Zap className="h-4 w-4" />
-              Aplicar {formatCurrency(resultadosSimulacaoMargem.find(c => c.id === canalParaAplicar)?.precoIdeal || 0)}
-            </Button>
-          )}
-        </TabsContent>
 
         {/* Tab: Simular por CMV */}
         <TabsContent value="cmv" className="space-y-4 mt-4">
