@@ -28,10 +28,12 @@ import {
   TrendingDown,
   ArrowRight,
   CheckCircle2,
-  XCircle
+  XCircle,
+  BarChart3
 } from 'lucide-react';
 import { ProdutoComMetricas, TaxaApp, CustosPercentuais, formatCurrency, formatPercent } from './types';
 import MarketPriceSearch from '@/components/produtos/MarketPriceSearch';
+import ChannelComparisonTable from './ChannelComparisonTable';
 
 interface PriceSimulatorProps {
   produto: ProdutoComMetricas | null;
@@ -569,51 +571,27 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
           </CollapsibleContent>
         </Collapsible>
 
-        {/* Comparativo de Canais */}
-        {calcs?.precosCanais && calcs.precosCanais.length > 1 && (
+        {/* Comparativo de Canais - Novo componente com mesma margem/mesmo preço */}
+        {taxasApps.length > 0 && (
           <Collapsible open={showChannelComparison} onOpenChange={setShowChannelComparison}>
             <CollapsibleTrigger asChild>
               <button className="flex items-center justify-between w-full p-2.5 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors">
                 <div className="flex items-center gap-2 text-sm font-medium">
-                  <Smartphone className="h-4 w-4 text-muted-foreground" />
-                  Ver preços em outros canais
+                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                  Comparar canais de venda
                 </div>
                 {showChannelComparison ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-2">
-              <div className="grid grid-cols-2 gap-2">
-                {calcs.precosCanais.map((canal, idx) => {
-                  const isSelected = (appSelecionado === 'balcao' && canal.taxa === 0) ||
-                    (appSelecionado !== 'balcao' && taxasApps.find(a => a.id === appSelecionado)?.taxa_percentual === canal.taxa);
-                  const isInviavel = canal.preco === null;
-                  return (
-                    <div
-                      key={idx}
-                      className={`p-2.5 rounded-lg border text-center transition-all ${
-                        isInviavel 
-                          ? 'border-destructive/30 bg-destructive/5' 
-                          : isSelected 
-                            ? 'border-primary bg-primary/5 ring-1 ring-primary/20' 
-                            : 'border-muted bg-muted/30'
-                      }`}
-                    >
-                      <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mb-0.5">
-                        {canal.taxa === 0 ? <Store className="h-3 w-3" /> : <Smartphone className="h-3 w-3" />}
-                        {canal.nome}
-                        {canal.taxa > 0 && <span className="opacity-70">({canal.taxa}%)</span>}
-                      </div>
-                      {isInviavel ? (
-                        <p className="font-bold text-sm text-destructive">Inviável</p>
-                      ) : (
-                        <p className={`font-bold text-sm ${isSelected ? 'text-primary' : ''}`}>
-                          {formatCurrency(canal.preco)}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+              <ChannelComparisonTable
+                produto={produto}
+                taxasApps={taxasApps}
+                percImposto={calcs?.percImposto || 0}
+                cmvAlvo={cmvAlvo}
+                margemReferencia={margemAtual > 0 ? margemAtual : undefined}
+                precoReferencia={produto.preco_venda}
+              />
             </CollapsibleContent>
           </Collapsible>
         )}
