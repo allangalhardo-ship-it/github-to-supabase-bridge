@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +15,7 @@ import {
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatCurrencyBRL } from '@/lib/format';
+import { calcularPrecoSugerido, ConfiguracaoPrecificacao } from '@/lib/precificacaoUtils';
 import FichaTecnicaDialog from "./FichaTecnicaDialog";
 import DuplicarProdutoDialog from "./DuplicarProdutoDialog";
 import MissingFichaBadge from "./MissingFichaBadge";
@@ -47,6 +51,8 @@ interface ProductCardProps {
   config?: {
     margem_desejada_padrao?: number;
     cmv_alvo?: number;
+    imposto_medio_sobre_vendas?: number;
+    faturamento_mensal?: number;
   } | null;
   onEdit: () => void;
   onDelete: () => void;
@@ -64,12 +70,26 @@ const ProductCard: React.FC<ProductCardProps> = ({
   isApplyingPrice,
   onDuplicateSuccess,
 }) => {
+  const { usuario } = useAuth();
   const isMobile = useIsMobile();
   const [showDuplicar, setShowDuplicar] = useState(false);
 
   const formatCurrency = formatCurrencyBRL;
 
-  const custoInsumos = React.useMemo(() => {
+  // Fetch custos fixos para cálculo completo do preço sugerido
+  const { data: custosFixos } = useQuery({
+    queryKey: ['custos-fixos', usuario?.empresa_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('custos_fixos')
+        .select('valor_mensal');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!usuario?.empresa_id,
+  });
+
+  const custoInsumos = useMemo(() => {
     if (!produto.fichas_tecnicas || produto.fichas_tecnicas.length === 0) return 0;
     const custo = produto.fichas_tecnicas.reduce((sum, ft) => {
       const quantidade = Number(ft.quantidade) || 0;
@@ -92,14 +112,31 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   const margemBruta = precoVenda > 0 ? ((precoVenda - custoInsumos) / precoVenda) * 100 : 0;
 
-  const precoSugerido = React.useMemo(() => {
-    if (custoInsumos <= 0) return 0;
-    if (!Number.isFinite(margemDesejada) || margemDesejada < 0 || margemDesejada >= 100) return custoInsumos;
-    return custoInsumos / (1 - margemDesejada / 100);
-  }, [custoInsumos, margemDesejada]);
+  // Cálculo completo do preço sugerido (igual à página de Precificação)
+  const { precoSugerido, precoSugeridoValido, precoAbaixoSugerido } = useMemo(() => {
+    if (custoInsumos <= 0) {
+      return { precoSugerido: 0, precoSugeridoValido: false, precoAbaixoSugerido: false };
+    }
 
-  const precoSugeridoValido = Number.isFinite(precoSugerido) && precoSugerido > 0;
-  const precoAbaixoSugerido = precoSugeridoValido && precoVenda < precoSugerido;
+    const totalCustosFixos = custosFixos?.reduce((acc, cf) => acc + cf.valor_mensal, 0) || 0;
+    
+    const configPrecificacao: ConfiguracaoPrecificacao = {
+      faturamento_mensal: config?.faturamento_mensal || 0,
+      margem_desejada_padrao: config?.margem_desejada_padrao || 30,
+      imposto_medio_sobre_vendas: config?.imposto_medio_sobre_vendas || 0,
+      total_custos_fixos: totalCustosFixos,
+    };
+
+    const resultado = calcularPrecoSugerido(custoInsumos, configPrecificacao, 0);
+    const valido = Number.isFinite(resultado.preco) && resultado.preco > 0 && resultado.viavel;
+    const abaixo = valido && precoVenda < resultado.preco;
+
+    return { 
+      precoSugerido: resultado.preco, 
+      precoSugeridoValido: valido, 
+      precoAbaixoSugerido: abaixo 
+    };
+  }, [custoInsumos, config, custosFixos, precoVenda]);
 
   const temFichaTecnica = (produto.fichas_tecnicas?.length || 0) > 0;
   const qtdInsumos = produto.fichas_tecnicas?.length || 0;
@@ -186,8 +223,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
                     <span className={`${margemTextClass} font-medium`}>
                       Margem: <span className="font-bold">{margemBruta.toFixed(0)}%</span>
                     </span>
-                    {precoSugeridoValido && (
-                      <span className={precoAbaixoSugerido ? "text-warning" : "text-muted-foreground"}>
+                    {precoAbaixoSugerido && (
+                      <span className="text-warning">
                         Sugerido: <span className="font-medium">{formatCurrency(precoSugerido)}</span>
                       </span>
                     )}
@@ -306,13 +343,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
                     <span className="text-muted-foreground">Margem </span>
                     <span className={`font-bold text-sm ${margemTextClass}`}>{margemBruta.toFixed(1)}%</span>
                   </div>
-                  {precoSugeridoValido && (
+                  {precoAbaixoSugerido && (
                     <div className="flex items-center gap-1.5">
                       <span className="text-muted-foreground">Sugerido </span>
-                      <span className={`font-bold text-sm ${precoAbaixoSugerido ? "text-warning" : "text-success"}`}>
+                      <span className="font-bold text-sm text-warning">
                         {formatCurrency(precoSugerido)}
                       </span>
-                      {precoAbaixoSugerido && onApplyPrice && (
+                      {onApplyPrice && (
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button 
