@@ -188,7 +188,7 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
           </div>
           <p className="font-semibold mt-1 truncate text-sm">{produto.nome}</p>
           <p className="text-xs text-muted-foreground">
-            Custo: {formatCurrency(produto.custoInsumos)} • Preço atual: {formatCurrency(produto.preco_venda)}
+            Custo: {formatCurrency(produto.custoInsumos)}
           </p>
         </div>
       </div>
@@ -208,36 +208,47 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
           </button>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          {resultadosAtuais.map(canal => (
-            <div 
-              key={canal.id} 
-              className={cn(
-                "p-2.5 rounded-lg border",
-                canal.destaque ? "border-primary/30 bg-primary/5" : "bg-muted/30"
-              )}
-            >
-              <div className="flex items-center gap-1.5 mb-1">
-                {canal.icone}
-                <span className="text-xs font-medium truncate">{canal.nome}</span>
-                {canal.taxa > 0 && (
-                  <Badge variant="secondary" className="text-[9px] px-1 h-4 ml-auto">
-                    {canal.taxa}%
-                  </Badge>
+          {resultadosAtuais.map(canal => {
+            // Calcular CMV específico do canal
+            const cmvCanal = canal.preco > 0 ? (produto.custoInsumos / canal.preco) * 100 : 0;
+            
+            return (
+              <div 
+                key={canal.id} 
+                className={cn(
+                  "p-2.5 rounded-lg border",
+                  canal.destaque ? "border-primary/30 bg-primary/5" : "bg-muted/30"
                 )}
+              >
+                <div className="flex items-center gap-1.5 mb-1">
+                  {canal.icone}
+                  <span className="text-xs font-medium truncate">{canal.nome}</span>
+                  {canal.taxa > 0 && (
+                    <Badge variant="secondary" className="text-[9px] px-1 h-4 ml-auto">
+                      {canal.taxa}%
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className={cn("text-base font-bold", getCorMargem(canal.margem))}>
+                    {formatPercent(canal.margem)}
+                  </span>
+                  <span className={cn("text-xs", getCorMargem(canal.lucro))}>
+                    {formatCurrency(canal.lucro)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between mt-1 text-[10px] text-muted-foreground">
+                  <span>{formatCurrency(canal.preco)}</span>
+                  <span className={cn(
+                    cmvCanal > (config?.cmv_alvo || 35) + 10 ? "text-destructive" :
+                    cmvCanal > (config?.cmv_alvo || 35) ? "text-amber-600" : "text-emerald-600"
+                  )}>
+                    CMV {formatPercent(cmvCanal)}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-baseline gap-2">
-                <span className={cn("text-base font-bold", getCorMargem(canal.margem))}>
-                  {formatPercent(canal.margem)}
-                </span>
-                <span className={cn("text-xs", getCorMargem(canal.lucro))}>
-                  {formatCurrency(canal.lucro)}
-                </span>
-              </div>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
-                Preço: {formatCurrency(canal.preco)}
-              </p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
