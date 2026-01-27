@@ -230,14 +230,14 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
                 setCanalParaAplicar(null);
               }}
               min={5}
-              max={60}
+              max={90}
               step={1}
               className="py-2"
             />
             <div className="flex justify-between text-[10px] text-muted-foreground">
               <span>5%</span>
               <span>Alvo: {config?.margem_desejada_padrao || 30}%</span>
-              <span>60%</span>
+              <span>90%</span>
             </div>
           </div>
 
