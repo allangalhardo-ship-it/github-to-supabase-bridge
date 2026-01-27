@@ -10,15 +10,15 @@ import {
   Zap, 
   ChevronRight,
   ImageIcon,
-  TrendingUp,
   TrendingDown,
   AlertTriangle,
   CheckCircle2,
   Store,
   Smartphone
 } from 'lucide-react';
-import { ProdutoAnalise, QuadranteMenu, TaxaApp, ConfiguracoesPrecificacao, formatCurrency, formatPercent, getQuadranteInfo } from './types';
+import { ProdutoAnalise, QuadranteMenu, ConfiguracoesPrecificacao, formatCurrency, formatPercent, getQuadranteInfo } from './types';
 import { cn } from '@/lib/utils';
+import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 
 interface ProdutoListaCompactaProps {
   produtos: ProdutoAnalise[];
@@ -28,7 +28,6 @@ interface ProdutoListaCompactaProps {
   onAplicarPreco: (produtoId: string, novoPreco: number, precoAnterior: number) => void;
   isAplicando?: boolean;
   isMobile?: boolean;
-  taxasApps?: TaxaApp[];
   config?: ConfiguracoesPrecificacao;
 }
 
@@ -40,12 +39,13 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
   onAplicarPreco,
   isAplicando,
   isMobile,
-  taxasApps,
   config,
 }) => {
   const [busca, setBusca] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState<string>('todas');
   const [filtroSaude, setFiltroSaude] = useState<string>('todos');
+  
+  const { canaisConfigurados } = usePrecosCanais();
 
   const imposto = (config?.imposto_medio_sobre_vendas || 0) / 100;
 
@@ -64,14 +64,15 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
     return produto.preco_venda; // fallback para preço base
   };
 
-  // Montar lista de canais
+  // Montar lista de canais a partir do hook
   const canais = useMemo(() => {
-    const lista = [{ id: 'balcao', nome: 'Balcão', taxa: 0, icone: <Store className="h-3 w-3" /> }];
-    (taxasApps || []).forEach(app => {
-      lista.push({ id: app.id, nome: app.nome_app, taxa: app.taxa_percentual, icone: <Smartphone className="h-3 w-3" /> });
-    });
-    return lista;
-  }, [taxasApps]);
+    return (canaisConfigurados || []).map(canal => ({
+      id: canal.id,
+      nome: canal.nome,
+      taxa: canal.taxa,
+      icone: canal.isBalcao ? <Store className="h-3 w-3" /> : <Smartphone className="h-3 w-3" />
+    }));
+  }, [canaisConfigurados]);
 
   const produtosFiltrados = useMemo(() => {
     return produtos.filter(produto => {
