@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DashboardInsights } from '@/components/dashboard/DashboardInsights';
 import { SmartInsights } from '@/components/dashboard/SmartInsights';
+import { PontoEquilibrioCard } from '@/components/dashboard/PontoEquilibrioCard';
 import { BusinessCoach } from '@/components/dashboard/BusinessCoach';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
@@ -617,6 +618,14 @@ const Dashboard = () => {
         </StaggeredCard>
       </AnimatedCardContainer>
 
+      {/* Ponto de Equilíbrio - Destaque principal */}
+      <PontoEquilibrioCard
+        receitaBruta={receitaBruta}
+        margemContribuicao={margemContribuicao}
+        custoFixoMensal={custoFixoMensal}
+        isLoading={isLoading}
+      />
+
       {/* Business Coach - Resumo Inteligente */}
       <BusinessCoach
         vendas={vendas as any}
@@ -672,78 +681,6 @@ const Dashboard = () => {
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Meta de Faturamento */}
-      <Card className="animate-fade-in">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <TrendingUp className="h-5 w-5" />
-            Meta de Faturamento
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {(() => {
-            // Faturamento necessário para custos fixos = 20% (saudável)
-            const faturamentoNecessario = custoFixoMensal / 0.20;
-            const faltaParaMeta = faturamentoNecessario - receitaBruta;
-            const progressoMeta = faturamentoNecessario > 0 ? Math.min((receitaBruta / faturamentoNecessario) * 100, 100) : 0;
-            
-            // Status baseado no progresso
-            const getMetaStatus = () => {
-              if (custoFixoMensal === 0) {
-                return { label: 'Sem custos', color: 'text-muted-foreground', bgColor: 'bg-muted' };
-              }
-              if (receitaBruta >= faturamentoNecessario) {
-                return { label: 'Meta atingida! 🎉', color: 'text-green-600', bgColor: 'bg-green-100 dark:bg-green-950/30' };
-              }
-              if (progressoMeta >= 80) {
-                return { label: 'Quase lá!', color: 'text-yellow-600', bgColor: 'bg-yellow-100 dark:bg-yellow-950/30' };
-              }
-              return { label: 'Em progresso', color: 'text-muted-foreground', bgColor: 'bg-muted' };
-            };
-            
-            const metaStatus = getMetaStatus();
-            
-            return (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Meta mensal mínima</p>
-                    <p className="text-xl font-bold">{formatCurrency(faturamentoNecessario)}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Para custos fixos ≤ 20% do faturamento
-                    </p>
-                  </div>
-                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${metaStatus.bgColor}`}>
-                    <span className={`text-sm font-medium ${metaStatus.color}`}>
-                      {metaStatus.label}
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Progresso no período</span>
-                    <span className="font-medium">{progressoMeta.toFixed(0)}%</span>
-                  </div>
-                  <Progress value={progressoMeta} className="h-2" />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Faturado: {formatCurrency(receitaBruta)}</span>
-                    {faltaParaMeta > 0 ? (
-                      <span className="text-amber-600 font-medium">
-                        Falta: {formatCurrency(faltaParaMeta)}
-                      </span>
-                    ) : (
-                      <span className="text-green-600 font-medium">
-                        +{formatCurrency(Math.abs(faltaParaMeta))} acima
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-        </CardContent>
-      </Card>
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 animate-fade-in">
         {/* Top 5 Produtos */}
