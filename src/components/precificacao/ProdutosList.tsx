@@ -251,7 +251,7 @@ const ProdutosList: React.FC<ProdutosListProps> = ({
                           produto.margemLiquida >= 20 ? 'text-success' : 'text-foreground'
                         }`}>{formatPercent(produto.margemLiquida)}</span>
                       </span>
-                      {produto.statusPreco !== 'ideal' && (
+                      {produto.statusPreco === 'abaixo' && (
                         <span className="text-success">
                           Sugerido: <span className="font-medium">{formatCurrency(produto.precoBalcao)}</span>
                         </span>
