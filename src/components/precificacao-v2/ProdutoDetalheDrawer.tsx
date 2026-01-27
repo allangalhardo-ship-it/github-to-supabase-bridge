@@ -108,10 +108,15 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
   };
 
   // Calcular preço necessário para atingir CMV em um canal
-  // CMV = custoInsumos / preco => preco = custoInsumos / CMV
-  const calcularPrecoParaCMV = (cmvAlvo: number) => {
+  // CMV efetivo = custoInsumos / (preco * (1 - taxaCanal))
+  // Para manter CMV após taxa do canal: preco = custoInsumos / (CMV * (1 - taxaCanal))
+  const calcularPrecoParaCMV = (cmvAlvo: number, taxaCanal: number) => {
     if (cmvAlvo <= 0 || cmvAlvo >= 100) return null;
-    return produto.custoInsumos / (cmvAlvo / 100);
+    const cmv = cmvAlvo / 100;
+    const taxa = taxaCanal / 100;
+    const fatorReceita = 1 - taxa; // O que você recebe após a taxa
+    if (fatorReceita <= 0) return null;
+    return produto.custoInsumos / (cmv * fatorReceita);
   };
 
   // Resultados atuais (preço atual)
@@ -131,13 +136,13 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
     };
   });
 
-  // Resultados da simulação por CMV
-  const precoParaCMV = calcularPrecoParaCMV(cmvDesejado);
+  // Resultados da simulação por CMV - preço diferente por canal!
   const resultadosSimulacaoCMV = canais.map(canal => {
-    const resultado = precoParaCMV ? calcularResultado(precoParaCMV, canal.taxa) : { margem: 0, lucro: 0 };
+    const precoIdeal = calcularPrecoParaCMV(cmvDesejado, canal.taxa);
+    const resultado = precoIdeal ? calcularResultado(precoIdeal, canal.taxa) : { margem: 0, lucro: 0 };
     return {
       ...canal,
-      precoIdeal: precoParaCMV,
+      precoIdeal,
       ...resultado
     };
   });
@@ -368,66 +373,67 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
             </div>
           </div>
 
-          {/* Preço único para CMV + margens por canal */}
-          {precoParaCMV && (
+          {/* Preços por canal para atingir CMV desejado */}
+          <div className="space-y-2">
+            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Preço necessário para CMV de {cmvDesejado}%
+            </Label>
             <div className="space-y-2">
-              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-center">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                  Preço para CMV de {cmvDesejado}%
-                </p>
-                <p className="text-2xl font-bold text-amber-600">
-                  {formatCurrency(precoParaCMV)}
-                </p>
-              </div>
-
-              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Margem resultante por canal
-              </Label>
-              <div className="space-y-2">
-                {resultadosSimulacaoCMV.map(canal => (
-                  <div 
-                    key={canal.id}
-                    className={cn(
-                      "p-3 rounded-lg border transition-all",
-                      canal.destaque 
-                        ? "border-primary/20" 
-                        : "border-muted"
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {canal.icone}
-                        <span className="text-sm font-medium">{canal.nome}</span>
-                        {canal.taxa > 0 && (
-                          <Badge variant="outline" className="text-[9px] px-1.5 h-4">
-                            -{canal.taxa}%
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <p className={cn("text-base font-bold", getCorMargem(canal.margem))}>
-                          {formatPercent(canal.margem)}
-                        </p>
-                        <p className={cn("text-[10px]", getCorMargem(canal.lucro))}>
-                          lucro: {formatCurrency(canal.lucro)}/un
-                        </p>
-                      </div>
+              {resultadosSimulacaoCMV.map(canal => (
+                <div 
+                  key={canal.id}
+                  className={cn(
+                    "p-3 rounded-lg border transition-all cursor-pointer",
+                    canalParaAplicar === canal.id 
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/20" 
+                      : canal.destaque 
+                        ? "border-primary/20 hover:border-primary/40" 
+                        : "hover:border-muted-foreground/30"
+                  )}
+                  onClick={() => canal.precoIdeal && setCanalParaAplicar(canal.id)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {canal.icone}
+                      <span className="text-sm font-medium">{canal.nome}</span>
+                      {canal.taxa > 0 && (
+                        <Badge variant="outline" className="text-[9px] px-1.5 h-4">
+                          -{canal.taxa}%
+                        </Badge>
+                      )}
                     </div>
+                    {canal.precoIdeal ? (
+                      <div className="text-right">
+                        <p className="text-base font-bold text-amber-600">
+                          {formatCurrency(canal.precoIdeal)}
+                        </p>
+                        <p className={cn("text-[10px]", getCorMargem(canal.margem))}>
+                          margem: {formatPercent(canal.margem)} • {formatCurrency(canal.lucro)}/un
+                        </p>
+                      </div>
+                    ) : (
+                      <Badge variant="destructive" className="text-xs">Inviável</Badge>
+                    )}
                   </div>
-                ))}
-              </div>
-
-              {/* Botão aplicar */}
-              <Button
-                size="lg"
-                className="w-full gap-2 mt-2"
-                onClick={() => handleAplicar(precoParaCMV)}
-                disabled={isAplicando || precoParaCMV === produto.preco_venda}
-              >
-                <Zap className="h-4 w-4" />
-                Aplicar {formatCurrency(precoParaCMV)}
-              </Button>
+                </div>
+              ))}
             </div>
+          </div>
+
+          {/* Botão aplicar */}
+          {canalParaAplicar && activeTab === 'cmv' && (
+            <Button
+              size="lg"
+              className="w-full gap-2"
+              onClick={() => {
+                const canal = resultadosSimulacaoCMV.find(c => c.id === canalParaAplicar);
+                if (canal?.precoIdeal) handleAplicar(canal.precoIdeal);
+              }}
+              disabled={isAplicando}
+            >
+              <Zap className="h-4 w-4" />
+              Aplicar {formatCurrency(resultadosSimulacaoCMV.find(c => c.id === canalParaAplicar)?.precoIdeal || 0)}
+            </Button>
           )}
         </TabsContent>
 
