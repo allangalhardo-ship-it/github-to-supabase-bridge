@@ -425,19 +425,6 @@ const Produtos = () => {
                   placeholder="Selecione ou crie uma categoria"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="preco_venda">Preço de Venda (R$)</Label>
-                <Input
-                  id="preco_venda"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.preco_venda}
-                  onChange={(e) => setFormData({ ...formData, preco_venda: e.target.value })}
-                  placeholder="0,00"
-                  required
-                />
-              </div>
               <div className="flex items-center justify-between">
                 <Label htmlFor="ativo">Produto Ativo</Label>
                 <Switch

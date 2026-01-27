@@ -256,13 +256,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
                       {!temFichaTecnica && <MissingFichaBadge />}
                     </div>
                   </div>
-                  {/* Preço base só aparece se NÃO tem preços customizados */}
-                  {!temPrecosCustomizados && (
-                    <div className="text-right shrink-0">
-                      <p className="text-[10px] text-muted-foreground">Preço</p>
-                      <p className="font-bold text-sm">{formatCurrency(precoVenda)}</p>
-                    </div>
-                  )}
                 </div>
 
                 {temFichaTecnica ? (
