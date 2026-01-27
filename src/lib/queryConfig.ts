@@ -52,8 +52,6 @@ export const QUERY_KEYS = {
     ['config-dashboard', empresaId] as const,
   custosFixos: (empresaId: string) => 
     ['custos-fixos-dashboard', empresaId] as const,
-  taxasApps: (empresaId: string) => 
-    ['taxas_apps', empresaId] as const,
   
   // Listas
   produtos: (empresaId: string) => 

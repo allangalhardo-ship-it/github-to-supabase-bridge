@@ -8,7 +8,6 @@ import {
   ProdutoAnalise,
   QuadranteMenu,
   ConfiguracoesPrecificacao,
-  TaxaApp,
   MetricasGerais,
   ResumoQuadrante,
   getQuadranteInfo,
@@ -96,21 +95,6 @@ export function useMenuEngineering() {
     enabled: !!usuario?.empresa_id,
   });
 
-  // Buscar taxas de apps
-  const { data: taxasApps } = useQuery({
-    queryKey: ['taxas-apps-menu-engineering', usuario?.empresa_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('taxas_apps')
-        .select('id, nome_app, taxa_percentual, ativo')
-        .eq('empresa_id', usuario?.empresa_id)
-        .eq('ativo', true);
-
-      if (error) throw error;
-      return data as TaxaApp[];
-    },
-    enabled: !!usuario?.empresa_id,
-  });
 
   // Buscar vendas dos últimos 30 dias para popularidade
   const { data: vendasAgregadas } = useQuery({
@@ -301,7 +285,6 @@ export function useMenuEngineering() {
     metricas,
     categorias,
     config,
-    taxasApps,
     isLoading: loadingProdutos,
   };
 }
