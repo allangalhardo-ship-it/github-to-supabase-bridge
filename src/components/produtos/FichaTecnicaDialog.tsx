@@ -474,10 +474,10 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
               <Calculator className="h-5 w-5 text-primary" />
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm text-primary group-hover:underline">
-                  Calculador de Ficha Técnica
+                  Calculador de Preço por Lote
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Calcule o preço de venda ideal com base no custo, margem desejada e taxas de apps
+                  Informe as quantidades de ingredientes que você compra e descubra quantas unidades rende e o preço ideal de venda
                 </p>
               </div>
               <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
