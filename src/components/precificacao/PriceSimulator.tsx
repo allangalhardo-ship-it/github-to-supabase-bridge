@@ -74,17 +74,18 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
   const [showChannelComparison, setShowChannelComparison] = useState(false);
 
   // Calcular margem do preço atual
+  // NOTA: SEM custo fixo - ele é coberto pelo volume de vendas
   const calcularMargemDoPreco = (preco: number) => {
     if (!produto || preco <= 0) return 0;
-    const { percCustoFixo, percImposto } = custosPercentuais;
+    const { percImposto } = custosPercentuais;
     const taxaAppAtual = appSelecionado === 'balcao'
       ? 0
       : (taxasApps.find(a => a.id === appSelecionado)?.taxa_percentual || 0);
     
-    const custoFixoValor = preco * (percCustoFixo / 100);
     const impostoValor = preco * (percImposto / 100);
     const taxaAppValor = preco * (taxaAppAtual / 100);
-    const lucro = preco - produto.custoInsumos - custoFixoValor - impostoValor - taxaAppValor;
+    // Lucro de contribuição (sem custo fixo)
+    const lucro = preco - produto.custoInsumos - impostoValor - taxaAppValor;
     return (lucro / preco) * 100;
   };
 
@@ -96,13 +97,14 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
 
   const lucroAtual = useMemo(() => {
     if (!produto || produto.preco_venda <= 0) return 0;
-    const { percCustoFixo, percImposto } = custosPercentuais;
+    const { percImposto } = custosPercentuais;
     const taxaAppAtual = appSelecionado === 'balcao'
       ? 0
       : (taxasApps.find(a => a.id === appSelecionado)?.taxa_percentual || 0);
     
     const preco = produto.preco_venda;
-    return preco - produto.custoInsumos - (preco * percCustoFixo / 100) - (preco * percImposto / 100) - (preco * taxaAppAtual / 100);
+    // SEM custo fixo no cálculo do lucro por unidade
+    return preco - produto.custoInsumos - (preco * percImposto / 100) - (preco * taxaAppAtual / 100);
   }, [produto, custosPercentuais, appSelecionado, taxasApps]);
 
   const cmvAtual = useMemo(() => {
@@ -111,42 +113,44 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
   }, [produto]);
 
   // Calcular margem máxima viável para o canal
+  // NOTA: SEM custo fixo - agora há mais espaço para margem
   const margemMaximaViavel = useMemo(() => {
-    const { percCustoFixo, percImposto } = custosPercentuais;
+    const { percImposto } = custosPercentuais;
     const taxaAppAtual = appSelecionado === 'balcao'
       ? 0
       : (taxasApps.find(a => a.id === appSelecionado)?.taxa_percentual || 0);
     
-    // Margem máxima = 100% - impostos - custos fixos - taxa app - margem mínima para viabilidade (~5%)
-    const espacoDisponivel = 100 - percImposto - percCustoFixo - taxaAppAtual;
+    // Margem máxima = 100% - impostos - taxa app - margem mínima para CMV (~5%)
+    const espacoDisponivel = 100 - percImposto - taxaAppAtual;
     // Deixar 5% de "folga" para CMV mínimo viável
     return Math.max(0, espacoDisponivel - 5);
   }, [custosPercentuais, appSelecionado, taxasApps]);
 
   // Calcular preço baseado nos parâmetros
+  // FÓRMULA CORRETA: SEM custo fixo no divisor
   const calcs = useMemo(() => {
     if (!produto) return null;
 
-    const { percCustoFixo, percImposto } = custosPercentuais;
+    const { percImposto, percCustoFixo } = custosPercentuais;
     const taxaAppAtual = appSelecionado === 'balcao'
       ? 0
       : (taxasApps.find(a => a.id === appSelecionado)?.taxa_percentual || 0);
 
     const margem = margemDesejada / 100;
     const imposto = percImposto / 100;
-    const custoFixo = percCustoFixo / 100;
     const taxaApp = taxaAppAtual / 100;
 
-    const divisor = 1 - margem - imposto - custoFixo - taxaApp;
+    // SEM custo fixo no divisor
+    const divisor = 1 - margem - imposto - taxaApp;
     
     // Se divisor <= 0, é matematicamente impossível
     const isViavel = divisor > 0.01; // Mínimo 1% para CMV
     const novoPreco = isViavel ? produto.custoInsumos / divisor : null;
 
     const valorImposto = novoPreco ? novoPreco * imposto : 0;
-    const valorCustoFixo = novoPreco ? novoPreco * custoFixo : 0;
     const valorTaxaApp = novoPreco ? novoPreco * taxaApp : 0;
-    const lucroLiquido = novoPreco ? novoPreco - produto.custoInsumos - valorImposto - valorCustoFixo - valorTaxaApp : 0;
+    // Lucro de contribuição (sem custo fixo)
+    const lucroLiquido = novoPreco ? novoPreco - produto.custoInsumos - valorImposto - valorTaxaApp : 0;
 
     // Preços por canal
     const precosCanais = [
@@ -165,22 +169,23 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
     ];
 
     function calcularPrecoCanal(custo: number, taxa: number) {
-      const div = 1 - margem - imposto - custoFixo - (taxa / 100);
+      // SEM custo fixo no divisor
+      const div = 1 - margem - imposto - (taxa / 100);
       return div > 0.01 ? custo / div : null;
     }
 
-    // Calcular composição total dos custos percentuais
-    const totalCustosPercentuais = percImposto + percCustoFixo + taxaAppAtual;
+    // Calcular composição total dos custos percentuais (informativo)
+    const totalCustosPercentuais = percImposto + taxaAppAtual;
 
     return {
       novoPreco,
       valorImposto,
-      valorCustoFixo,
+      valorCustoFixo: 0,  // Não calculamos mais por unidade
       valorTaxaApp,
       lucroLiquido,
       isViavel,
       percImposto,
-      percCustoFixo,
+      percCustoFixo,  // Mantido para exibição informativa
       percTaxaApp: taxaAppAtual,
       precosCanais,
       totalCustosPercentuais,
@@ -203,8 +208,9 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
     ? margemCalculada > 0
     : calcs?.isViavel;
 
+  // SEM custo fixo no cálculo do lucro
   const lucroFinal = modoPreco === 'manual' && produto
-    ? (precoFinal - produto.custoInsumos - (precoFinal * (calcs?.percCustoFixo || 0) / 100) - (precoFinal * (calcs?.percImposto || 0) / 100) - (precoFinal * (calcs?.percTaxaApp || 0) / 100))
+    ? (precoFinal - produto.custoInsumos - (precoFinal * (calcs?.percImposto || 0) / 100) - (precoFinal * (calcs?.percTaxaApp || 0) / 100))
     : calcs?.lucroLiquido || 0;
 
   const cmvNovo = precoFinal > 0 && produto ? (produto.custoInsumos / precoFinal) * 100 : 0;

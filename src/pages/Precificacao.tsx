@@ -228,16 +228,19 @@ const Precificacao = () => {
   });
 
   // Calcular percentuais de custos
+  // NOTA: Custo fixo NÃO entra no cálculo do preço unitário
+  // Ele é informativo e usado para calcular ponto de equilíbrio
   const custosPercentuais = useMemo(() => {
     const faturamento = config?.faturamento_mensal || 0;
     const totalCustosFixos = custosFixos?.reduce((acc, cf) => acc + cf.valor_mensal, 0) || 0;
     
+    // Mantemos o cálculo para exibição informativa, mas NÃO usamos no preço
     const percCustoFixo = faturamento > 0 ? (totalCustosFixos / faturamento) * 100 : 0;
     const percImposto = config?.imposto_medio_sobre_vendas || 0;
     const margemDesejadaPadrao = config?.margem_desejada_padrao || 30;
     
     return {
-      percCustoFixo,
+      percCustoFixo,  // Informativo apenas
       percImposto,
       margemDesejadaPadrao,
       totalCustosFixos,
@@ -253,15 +256,17 @@ const Precificacao = () => {
   }, [config?.margem_desejada_padrao]);
 
   // Função para calcular preço sugerido
+  // FÓRMULA CORRETA: Preço = Custo / (1 - Margem - Imposto - TaxaApp)
+  // Custo fixo NÃO entra - é coberto pelo volume de vendas
   const calcularPrecoSugerido = (custoInsumos: number, taxaApp: number = 0) => {
-    const { percCustoFixo, percImposto, margemDesejadaPadrao } = custosPercentuais;
+    const { percImposto, margemDesejadaPadrao } = custosPercentuais;
     
     const margem = margemDesejadaPadrao / 100;
     const imposto = percImposto / 100;
-    const custoFixo = percCustoFixo / 100;
     const taxa = taxaApp / 100;
     
-    const divisor = 1 - margem - imposto - custoFixo - taxa;
+    // SEM custo fixo no divisor
+    const divisor = 1 - margem - imposto - taxa;
     
     if (divisor <= 0) {
       return { preco: custoInsumos * 3, viavel: false };
@@ -281,6 +286,8 @@ const Precificacao = () => {
   }, [produtos]);
 
   // Calcular métricas de cada produto
+  // NOTA: Lucro e margem são calculados SEM custo fixo no divisor
+  // O custo fixo é coberto pelo volume de vendas (verificado no Dashboard)
   const produtosComMetricas: ProdutoComMetricas[] = useMemo(() => {
     return produtosComFicha.map(produto => {
       const custoInsumos = produto.fichas_tecnicas?.reduce((acc, ft) => {
@@ -295,10 +302,12 @@ const Precificacao = () => {
         ...calcularPrecoSugerido(custoInsumos, app.taxa_percentual)
       })) || [];
       
-      const { percCustoFixo, percImposto } = custosPercentuais;
-      const custoFixoValor = precoVenda * (percCustoFixo / 100);
+      // Cálculo do lucro SEM custo fixo (ele é coberto pelo volume)
+      const { percImposto } = custosPercentuais;
       const impostoValor = precoVenda * (percImposto / 100);
-      const lucroLiquido = precoVenda - custoInsumos - custoFixoValor - impostoValor;
+      // Lucro de contribuição = Preço - Custo Insumos - Impostos
+      // Este lucro contribui para cobrir custos fixos + gerar lucro real
+      const lucroLiquido = precoVenda - custoInsumos - impostoValor;
       const margemLiquida = precoVenda > 0 ? (lucroLiquido / precoVenda) * 100 : 0;
       
       const diferencaPreco = precoVenda - precoBalcao.preco;
@@ -433,17 +442,17 @@ const Precificacao = () => {
   const calcularPrecoParaSimulador = () => {
     if (!produtoSimulador) return { novoPreco: 0 };
     
-    const { percCustoFixo, percImposto } = custosPercentuais;
+    const { percImposto } = custosPercentuais;
     const taxaAppAtual = appSelecionado === 'balcao'
       ? 0
       : (taxasApps?.find(a => a.id === appSelecionado)?.taxa_percentual || 0);
 
     const margem = margemDesejada / 100;
     const imposto = percImposto / 100;
-    const custoFixo = percCustoFixo / 100;
     const taxaApp = taxaAppAtual / 100;
 
-    const divisor = 1 - margem - imposto - custoFixo - taxaApp;
+    // SEM custo fixo no divisor
+    const divisor = 1 - margem - imposto - taxaApp;
     const novoPreco = divisor > 0 ? produtoSimulador.custoInsumos / divisor : produtoSimulador.custoInsumos * 3;
 
     return { novoPreco };
