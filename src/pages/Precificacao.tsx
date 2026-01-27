@@ -223,6 +223,8 @@ const Precificacao = () => {
             onAplicarPreco={handleAplicarPreco}
             isAplicando={updatePrecoMutation.isPending}
             isMobile={isMobile}
+            taxasApps={taxasApps}
+            config={config}
           />
         </>
       )}
