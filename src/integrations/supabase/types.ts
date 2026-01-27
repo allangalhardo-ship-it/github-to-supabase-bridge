@@ -137,6 +137,44 @@ export type Database = {
           },
         ]
       }
+      canais_venda: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          empresa_id: string
+          id: string
+          nome: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          empresa_id: string
+          id?: string
+          nome: string
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nome?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canais_venda_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clientes: {
         Row: {
           created_at: string
@@ -890,6 +928,38 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      taxas_canais: {
+        Row: {
+          canal_id: string
+          created_at: string
+          id: string
+          nome: string
+          percentual: number
+        }
+        Insert: {
+          canal_id: string
+          created_at?: string
+          id?: string
+          nome: string
+          percentual?: number
+        }
+        Update: {
+          canal_id?: string
+          created_at?: string
+          id?: string
+          nome?: string
+          percentual?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "taxas_canais_canal_id_fkey"
+            columns: ["canal_id"]
+            isOneToOne: false
+            referencedRelation: "canais_venda"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       unidades_compra: {
         Row: {

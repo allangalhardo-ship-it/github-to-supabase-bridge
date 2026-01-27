@@ -6,14 +6,15 @@ import { useToast } from '@/hooks/use-toast';
 export interface PrecoCanal {
   id: string;
   produto_id: string;
-  canal: string; // 'balcao' ou ID do taxas_apps
+  canal: string; // ID do canal_venda
   preco: number;
 }
 
 export interface CanalConfig {
   id: string;
   nome: string;
-  taxa: number;
+  taxa: number; // Soma de todas as taxas do canal
+  tipo: 'presencial' | 'app_delivery' | 'proprio';
   isBalcao: boolean;
 }
 
@@ -22,27 +23,40 @@ export function usePrecosCanais(produtoId?: string) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Buscar todos os canais configurados (Balcão + Apps)
+  // Buscar todos os canais configurados com suas taxas
   const { data: canaisConfigurados } = useQuery({
     queryKey: ['canais-configurados', usuario?.empresa_id],
     queryFn: async () => {
-      const { data: taxasApps, error } = await supabase
-        .from('taxas_apps')
-        .select('id, nome_app, taxa_percentual, ativo')
+      // Buscar canais ativos
+      const { data: canaisData, error: canaisError } = await supabase
+        .from('canais_venda')
+        .select('*')
         .eq('ativo', true)
-        .order('nome_app');
+        .order('tipo')
+        .order('nome');
 
-      if (error) throw error;
+      if (canaisError) throw canaisError;
 
-      const canais: CanalConfig[] = [
-        { id: 'balcao', nome: 'Balcão', taxa: 0, isBalcao: true },
-        ...(taxasApps || []).map(app => ({
-          id: app.id,
-          nome: app.nome_app,
-          taxa: app.taxa_percentual,
-          isBalcao: false,
-        })),
-      ];
+      // Buscar todas as taxas
+      const { data: taxasData, error: taxasError } = await supabase
+        .from('taxas_canais')
+        .select('*');
+
+      if (taxasError) throw taxasError;
+
+      // Calcular taxa total por canal
+      const canais: CanalConfig[] = (canaisData || []).map(canal => {
+        const taxasDoCanal = (taxasData || []).filter(t => t.canal_id === canal.id);
+        const taxaTotal = taxasDoCanal.reduce((sum, t) => sum + Number(t.percentual), 0);
+        
+        return {
+          id: canal.id,
+          nome: canal.nome,
+          taxa: taxaTotal,
+          tipo: canal.tipo as 'presencial' | 'app_delivery' | 'proprio',
+          isBalcao: canal.tipo === 'presencial',
+        };
+      });
 
       return canais;
     },
