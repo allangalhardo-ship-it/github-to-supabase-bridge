@@ -31,18 +31,18 @@ import {
   XCircle,
   BarChart3
 } from 'lucide-react';
-import { ProdutoComMetricas, TaxaApp, CustosPercentuais, formatCurrency, formatPercent } from './types';
+import { ProdutoComMetricas, CanalVenda, CustosPercentuais, formatCurrency, formatPercent } from './types';
 import MarketPriceSearch from '@/components/produtos/MarketPriceSearch';
 import ChannelComparisonTable from './ChannelComparisonTable';
 
 interface PriceSimulatorProps {
   produto: ProdutoComMetricas | null;
-  taxasApps: TaxaApp[];
+  canaisVenda: CanalVenda[];
   custosPercentuais: CustosPercentuais;
   margemDesejada: number;
   setMargemDesejada: (value: number) => void;
-  appSelecionado: string;
-  setAppSelecionado: (value: string) => void;
+  canalSelecionado: string;
+  setCanalSelecionado: (value: string) => void;
   precoManual: string;
   setPrecoManual: (value: string) => void;
   modoPreco: 'margem' | 'manual';
@@ -56,12 +56,12 @@ interface PriceSimulatorProps {
 
 const PriceSimulator: React.FC<PriceSimulatorProps> = ({
   produto,
-  taxasApps,
+  canaisVenda,
   custosPercentuais,
   margemDesejada,
   setMargemDesejada,
-  appSelecionado,
-  setAppSelecionado,
+  canalSelecionado,
+  setCanalSelecionado,
   precoManual,
   setPrecoManual,
   modoPreco,
@@ -80,14 +80,13 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
   const calcularMargemDoPreco = (preco: number) => {
     if (!produto || preco <= 0) return 0;
     const { percImposto } = custosPercentuais;
-    const taxaAppAtual = appSelecionado === 'balcao'
-      ? 0
-      : (taxasApps.find(a => a.id === appSelecionado)?.taxa_percentual || 0);
+    const canalAtual = canaisVenda.find(c => c.id === canalSelecionado);
+    const taxaCanalAtual = canalAtual?.taxa || 0;
     
     const impostoValor = preco * (percImposto / 100);
-    const taxaAppValor = preco * (taxaAppAtual / 100);
+    const taxaCanalValor = preco * (taxaCanalAtual / 100);
     // Lucro de contribuição (sem custo fixo)
-    const lucro = preco - produto.custoInsumos - impostoValor - taxaAppValor;
+    const lucro = preco - produto.custoInsumos - impostoValor - taxaCanalValor;
     return (lucro / preco) * 100;
   };
 
@@ -95,19 +94,18 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
   const margemAtual = useMemo(() => {
     if (!produto) return 0;
     return calcularMargemDoPreco(produto.preco_venda);
-  }, [produto, custosPercentuais, appSelecionado, taxasApps]);
+  }, [produto, custosPercentuais, canalSelecionado, canaisVenda]);
 
   const lucroAtual = useMemo(() => {
     if (!produto || produto.preco_venda <= 0) return 0;
     const { percImposto } = custosPercentuais;
-    const taxaAppAtual = appSelecionado === 'balcao'
-      ? 0
-      : (taxasApps.find(a => a.id === appSelecionado)?.taxa_percentual || 0);
+    const canalAtual = canaisVenda.find(c => c.id === canalSelecionado);
+    const taxaCanalAtual = canalAtual?.taxa || 0;
     
     const preco = produto.preco_venda;
     // SEM custo fixo no cálculo do lucro por unidade
-    return preco - produto.custoInsumos - (preco * percImposto / 100) - (preco * taxaAppAtual / 100);
-  }, [produto, custosPercentuais, appSelecionado, taxasApps]);
+    return preco - produto.custoInsumos - (preco * percImposto / 100) - (preco * taxaCanalAtual / 100);
+  }, [produto, custosPercentuais, canalSelecionado, canaisVenda]);
 
   const cmvAtual = useMemo(() => {
     if (!produto || produto.preco_venda <= 0) return 0;
@@ -118,15 +116,14 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
   // NOTA: SEM custo fixo - agora há mais espaço para margem
   const margemMaximaViavel = useMemo(() => {
     const { percImposto } = custosPercentuais;
-    const taxaAppAtual = appSelecionado === 'balcao'
-      ? 0
-      : (taxasApps.find(a => a.id === appSelecionado)?.taxa_percentual || 0);
+    const canalAtual = canaisVenda.find(c => c.id === canalSelecionado);
+    const taxaCanalAtual = canalAtual?.taxa || 0;
     
-    // Margem máxima = 100% - impostos - taxa app - margem mínima para CMV (~5%)
-    const espacoDisponivel = 100 - percImposto - taxaAppAtual;
+    // Margem máxima = 100% - impostos - taxa canal - margem mínima para CMV (~5%)
+    const espacoDisponivel = 100 - percImposto - taxaCanalAtual;
     // Deixar 5% de "folga" para CMV mínimo viável
     return Math.max(0, espacoDisponivel - 5);
-  }, [custosPercentuais, appSelecionado, taxasApps]);
+  }, [custosPercentuais, canalSelecionado, canaisVenda]);
 
   // Calcular preço baseado nos parâmetros
   // FÓRMULA CORRETA: SEM custo fixo no divisor
@@ -134,41 +131,32 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
     if (!produto) return null;
 
     const { percImposto, percCustoFixo } = custosPercentuais;
-    const taxaAppAtual = appSelecionado === 'balcao'
-      ? 0
-      : (taxasApps.find(a => a.id === appSelecionado)?.taxa_percentual || 0);
+    const canalAtual = canaisVenda.find(c => c.id === canalSelecionado);
+    const taxaCanalAtual = canalAtual?.taxa || 0;
 
     const margem = margemDesejada / 100;
     const imposto = percImposto / 100;
-    const taxaApp = taxaAppAtual / 100;
+    const taxaCanal = taxaCanalAtual / 100;
 
     // SEM custo fixo no divisor
-    const divisor = 1 - margem - imposto - taxaApp;
+    const divisor = 1 - margem - imposto - taxaCanal;
     
     // Se divisor <= 0, é matematicamente impossível
     const isViavel = divisor > 0.01; // Mínimo 1% para CMV
     const novoPreco = isViavel ? produto.custoInsumos / divisor : null;
 
     const valorImposto = novoPreco ? novoPreco * imposto : 0;
-    const valorTaxaApp = novoPreco ? novoPreco * taxaApp : 0;
+    const valorTaxaCanal = novoPreco ? novoPreco * taxaCanal : 0;
     // Lucro de contribuição (sem custo fixo)
-    const lucroLiquido = novoPreco ? novoPreco - produto.custoInsumos - valorImposto - valorTaxaApp : 0;
+    const lucroLiquido = novoPreco ? novoPreco - produto.custoInsumos - valorImposto - valorTaxaCanal : 0;
 
     // Preços por canal
-    const precosCanais = [
-      { 
-        nome: 'Balcão', 
-        taxa: 0, 
-        preco: calcularPrecoCanal(produto.custoInsumos, 0),
-        icone: Store
-      },
-      ...taxasApps.map(app => ({
-        nome: app.nome_app,
-        taxa: app.taxa_percentual,
-        preco: calcularPrecoCanal(produto.custoInsumos, app.taxa_percentual),
-        icone: Smartphone
-      }))
-    ];
+    const precosCanais = canaisVenda.map(canal => ({
+      nome: canal.nome,
+      taxa: canal.taxa,
+      preco: calcularPrecoCanal(produto.custoInsumos, canal.taxa),
+      icone: canal.isBalcao ? Store : Smartphone
+    }));
 
     function calcularPrecoCanal(custo: number, taxa: number) {
       // SEM custo fixo no divisor
@@ -177,23 +165,23 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
     }
 
     // Calcular composição total dos custos percentuais (informativo)
-    const totalCustosPercentuais = percImposto + taxaAppAtual;
+    const totalCustosPercentuais = percImposto + taxaCanalAtual;
 
     return {
       novoPreco,
       valorImposto,
       valorCustoFixo: 0,  // Não calculamos mais por unidade
-      valorTaxaApp,
+      valorTaxaCanal,
       lucroLiquido,
       isViavel,
       percImposto,
       percCustoFixo,  // Mantido para exibição informativa
-      percTaxaApp: taxaAppAtual,
+      percTaxaCanal: taxaCanalAtual,
       precosCanais,
       totalCustosPercentuais,
       divisor: divisor * 100
     };
-  }, [produto, margemDesejada, appSelecionado, custosPercentuais, taxasApps]);
+  }, [produto, margemDesejada, canalSelecionado, custosPercentuais, canaisVenda]);
 
   // Verificar se margem é viável
   const isMargemInviavel = !calcs?.isViavel && modoPreco === 'margem';
@@ -212,7 +200,7 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
 
   // SEM custo fixo no cálculo do lucro
   const lucroFinal = modoPreco === 'manual' && produto
-    ? (precoFinal - produto.custoInsumos - (precoFinal * (calcs?.percImposto || 0) / 100) - (precoFinal * (calcs?.percTaxaApp || 0) / 100))
+    ? (precoFinal - produto.custoInsumos - (precoFinal * (calcs?.percImposto || 0) / 100) - (precoFinal * (calcs?.percTaxaCanal || 0) / 100))
     : calcs?.lucroLiquido || 0;
 
   const cmvNovo = precoFinal > 0 && produto ? (produto.custoInsumos / precoFinal) * 100 : 0;
@@ -232,9 +220,8 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
     );
   }
 
-  const canalAtualNome = appSelecionado === 'balcao' 
-    ? 'Balcão' 
-    : taxasApps.find(a => a.id === appSelecionado)?.nome_app || 'Canal';
+  const canalAtual = canaisVenda.find(c => c.id === canalSelecionado);
+  const canalAtualNome = canalAtual?.nome || 'Canal';
 
   // Helper para cor do CMV
   const getCmvColor = (cmv: number) => {
@@ -366,26 +353,23 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
       <div className="space-y-1.5">
         <span className="text-xs text-muted-foreground">Canal de venda:</span>
         <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
-          <Button
-            size="sm"
-            variant={appSelecionado === 'balcao' ? 'default' : 'outline'}
-            onClick={() => setAppSelecionado('balcao')}
-            className="h-9 px-3 text-xs gap-1.5 shrink-0 touch-manipulation"
-          >
-            <Store className="h-3.5 w-3.5" />
-            Balcão
-          </Button>
-          {taxasApps.map(app => (
+          {canaisVenda.map(canal => (
             <Button
-              key={app.id}
+              key={canal.id}
               size="sm"
-              variant={appSelecionado === app.id ? 'default' : 'outline'}
-              onClick={() => setAppSelecionado(app.id)}
+              variant={canalSelecionado === canal.id ? 'default' : 'outline'}
+              onClick={() => setCanalSelecionado(canal.id)}
               className="h-9 px-3 text-xs gap-1.5 shrink-0 touch-manipulation"
             >
-              <Smartphone className="h-3.5 w-3.5" />
-              <span className="truncate max-w-[70px]">{app.nome_app}</span>
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">{app.taxa_percentual}%</Badge>
+              {canal.isBalcao ? (
+                <Store className="h-3.5 w-3.5" />
+              ) : (
+                <Smartphone className="h-3.5 w-3.5" />
+              )}
+              <span className="truncate max-w-[70px]">{canal.nome}</span>
+              {canal.taxa > 0 && (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">{canal.taxa.toFixed(1)}%</Badge>
+              )}
             </Button>
           ))}
         </div>
@@ -487,7 +471,7 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
               Custos totais: {formatPercent(calcs?.totalCustosPercentuais || 0)} 
               (Impostos {formatPercent(calcs?.percImposto || 0)} + 
               Fixos {formatPercent(calcs?.percCustoFixo || 0)} + 
-              Taxa {formatPercent(calcs?.percTaxaApp || 0)})
+              Taxa {formatPercent(calcs?.percTaxaCanal || 0)})
             </p>
             <p>Margem máxima viável: <strong>{formatPercent(margemMaximaViavel)}</strong></p>
           </AlertDescription>
@@ -549,13 +533,13 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
                 </span>
                 <span>{formatCurrency((precoFinal * (calcs?.percImposto || 0)) / 100)}</span>
               </div>
-              {(calcs?.percTaxaApp || 0) > 0 && (
+              {(calcs?.percTaxaCanal || 0) > 0 && (
                 <div className="flex justify-between py-1 items-center">
                   <span className="text-muted-foreground flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-purple-500" />
-                    Taxa {canalAtualNome} ({formatPercent(calcs?.percTaxaApp || 0)})
+                    Taxa {canalAtualNome} ({formatPercent(calcs?.percTaxaCanal || 0)})
                   </span>
-                  <span>{formatCurrency((precoFinal * (calcs?.percTaxaApp || 0)) / 100)}</span>
+                  <span>{formatCurrency((precoFinal * (calcs?.percTaxaCanal || 0)) / 100)}</span>
                 </div>
               )}
               <div className="flex justify-between py-2 items-center border-t mt-2 pt-2">
@@ -572,7 +556,7 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
         </Collapsible>
 
         {/* Comparativo de Canais - Novo componente com mesma margem/mesmo preço */}
-        {taxasApps.length > 0 && (
+        {canaisVenda.length > 1 && (
           <Collapsible open={showChannelComparison} onOpenChange={setShowChannelComparison}>
             <CollapsibleTrigger asChild>
               <button className="flex items-center justify-between w-full p-2.5 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors">
@@ -586,7 +570,7 @@ const PriceSimulator: React.FC<PriceSimulatorProps> = ({
             <CollapsibleContent className="pt-2">
               <ChannelComparisonTable
                 produto={produto}
-                taxasApps={taxasApps}
+                canaisVenda={canaisVenda}
                 percImposto={calcs?.percImposto || 0}
                 cmvAlvo={cmvAlvo}
                 margemReferencia={margemAtual > 0 ? margemAtual : undefined}
