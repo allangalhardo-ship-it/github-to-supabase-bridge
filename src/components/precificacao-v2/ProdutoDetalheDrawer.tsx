@@ -62,7 +62,6 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
   isAplicando,
 }) => {
   const isMobile = useIsMobile();
-  const [margemDesejada, setMargemDesejada] = useState(config?.margem_desejada_padrao || 30);
   const [cmvDesejado, setCmvDesejado] = useState(config?.cmv_alvo || 35);
   const [canalParaAplicar, setCanalParaAplicar] = useState<string | null>(null);
   // Preços editáveis por canal (inicializa com valores calculados)
@@ -90,6 +89,14 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
   const quadInfo = getQuadranteInfo(produto.quadrante);
   const imposto = (config?.imposto_medio_sobre_vendas || 0) / 100;
 
+  // Obter preço de um canal específico (usa preço customizado se existir)
+  const getPrecoCanal = (canalId: string): number => {
+    if (produto.precosCanais && produto.precosCanais[canalId] !== undefined) {
+      return produto.precosCanais[canalId];
+    }
+    return produto.preco_venda;
+  };
+
   // Calcular margem e lucro dado um preço e taxa
   const calcularResultado = (preco: number, taxa: number) => {
     if (preco <= 0) return { margem: 0, lucro: 0 };
@@ -98,41 +105,23 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
     return { margem, lucro };
   };
 
-  // Calcular preço necessário para atingir margem em um canal
-  const calcularPrecoParaMargem = (margemAlvo: number, taxa: number) => {
-    const m = margemAlvo / 100;
-    const t = taxa / 100;
-    const divisor = 1 - m - imposto - t;
-    if (divisor <= 0.01) return null;
-    return produto.custoInsumos / divisor;
-  };
-
   // Calcular preço necessário para atingir CMV em um canal
-  // CMV efetivo = custoInsumos / (preco * (1 - taxaCanal))
-  // Para manter CMV após taxa do canal: preco = custoInsumos / (CMV * (1 - taxaCanal))
   const calcularPrecoParaCMV = (cmvAlvo: number, taxaCanal: number) => {
     if (cmvAlvo <= 0 || cmvAlvo >= 100) return null;
     const cmv = cmvAlvo / 100;
     const taxa = taxaCanal / 100;
-    const fatorReceita = 1 - taxa; // O que você recebe após a taxa
+    const fatorReceita = 1 - taxa;
     if (fatorReceita <= 0) return null;
     return produto.custoInsumos / (cmv * fatorReceita);
   };
 
-  // Resultados atuais (preço atual)
-  const resultadosAtuais = canais.map(canal => ({
-    ...canal,
-    ...calcularResultado(produto.preco_venda, canal.taxa)
-  }));
-
-  // Resultados da simulação por margem
-  const resultadosSimulacaoMargem = canais.map(canal => {
-    const precoIdeal = calcularPrecoParaMargem(margemDesejada, canal.taxa);
+  // Resultados atuais por canal (usa preço específico de cada canal)
+  const resultadosAtuais = canais.map(canal => {
+    const precoCanal = getPrecoCanal(canal.id);
     return {
       ...canal,
-      precoIdeal,
-      margem: margemDesejada,
-      lucro: precoIdeal ? calcularResultado(precoIdeal, canal.taxa).lucro : 0
+      preco: precoCanal,
+      ...calcularResultado(precoCanal, canal.taxa)
     };
   });
 
@@ -204,11 +193,11 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
         </div>
       </div>
 
-      {/* Situação Atual - Grid compacto */}
+      {/* Situação Atual - Grid com preços por canal */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Situação Atual (preço {formatCurrency(produto.preco_venda)})
+            Situação Atual
           </Label>
           <button
             onClick={() => setShowComposicao(true)}
@@ -244,6 +233,9 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
                   {formatCurrency(canal.lucro)}
                 </span>
               </div>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                Preço: {formatCurrency(canal.preco)}
+              </p>
             </div>
           ))}
         </div>
