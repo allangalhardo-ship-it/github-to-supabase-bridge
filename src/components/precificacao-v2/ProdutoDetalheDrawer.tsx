@@ -62,6 +62,7 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
   const [margemDesejada, setMargemDesejada] = useState(config?.margem_desejada_padrao || 30);
   const [precoSimulado, setPrecoSimulado] = useState('');
   const [canalParaAplicar, setCanalParaAplicar] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('margem');
 
   // Montar lista de canais: Balcão + plataformas (antes do early return!)
   const canais: CanalInfo[] = useMemo(() => {
@@ -201,7 +202,7 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
       <Separator />
 
       {/* Simulador com Tabs */}
-      <Tabs defaultValue="margem" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 h-9">
           <TabsTrigger value="margem" className="text-xs gap-1.5">
             <Target className="h-3.5 w-3.5" />
