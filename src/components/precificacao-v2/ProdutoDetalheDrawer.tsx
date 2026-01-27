@@ -318,6 +318,8 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
                 placeholder="0,00"
                 value={precoSimulado}
                 onChange={(e) => setPrecoSimulado(e.target.value)}
+                onPointerDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
                 className="pl-10 text-lg font-semibold h-12"
               />
             </div>
