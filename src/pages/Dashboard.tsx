@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -309,30 +310,22 @@ const Dashboard = () => {
   const impostoPercent = config?.imposto_medio_sobre_vendas ?? 10;
   const impostos = receitaBruta * (impostoPercent / 100);
   
-  // Fetch taxas por app
-  const { data: taxasApps } = useQuery({
-    queryKey: ['taxas_apps', usuario?.empresa_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('taxas_apps')
-        .select('nome_app, taxa_percentual')
-        .eq('ativo', true);
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!usuario?.empresa_id,
-  });
+  // Buscar canais configurados com taxas agregadas
+  const { canaisConfigurados } = usePrecosCanais();
 
-  // Taxa do app de delivery (aplicada por canal)
+  // Taxa total aplicada por canal (usando nova estrutura de canais)
   const taxaAppTotal = vendas?.reduce((total, venda) => {
     if (!venda.canal) return total;
-    const canalLower = venda.canal.toLowerCase();
-    const taxaApp = taxasApps?.find(t => 
-      t.nome_app && (canalLower.includes(t.nome_app.toLowerCase()) || 
-      t.nome_app.toLowerCase().includes(canalLower))
+    const canalVenda = venda.canal.toLowerCase();
+    
+    // Buscar canal correspondente na nova estrutura
+    const canalConfig = canaisConfigurados?.find(c => 
+      c.nome.toLowerCase() === canalVenda ||
+      c.id === venda.canal
     );
-    if (taxaApp) {
-      return total + (Number(venda.valor_total) * Number(taxaApp.taxa_percentual) / 100);
+    
+    if (canalConfig && canalConfig.taxa > 0) {
+      return total + (Number(venda.valor_total) * canalConfig.taxa / 100);
     }
     return total;
   }, 0) || 0;
@@ -366,38 +359,39 @@ const Dashboard = () => {
       .filter((p) => p.lucro < 0 && p.custo_insumos > 0);
   }, [produtosAnalise]);
 
-  // Calcular impacto dos apps de delivery
+  // Calcular impacto dos canais de venda (taxas)
   const impactoApps = useMemo(() => {
-    if (!vendas || !taxasApps) return [];
+    if (!vendas || !canaisConfigurados) return [];
 
-    const porApp: Record<string, { taxaTotal: number; vendas: number }> = {};
+    const porCanal: Record<string, { taxaTotal: number; vendas: number }> = {};
 
     vendas.forEach((venda) => {
       if (!venda.canal) return;
-      const canalLower = venda.canal.toLowerCase();
+      const canalVenda = venda.canal.toLowerCase();
       
-      const taxaApp = taxasApps.find(t =>
-        t.nome_app && (canalLower.includes(t.nome_app.toLowerCase()) ||
-        t.nome_app.toLowerCase().includes(canalLower))
+      // Buscar canal correspondente na nova estrutura
+      const canalConfig = canaisConfigurados.find(c => 
+        c.nome.toLowerCase() === canalVenda ||
+        c.id === venda.canal
       );
 
-      if (taxaApp) {
-        const nomeApp = taxaApp.nome_app;
-        if (!porApp[nomeApp]) {
-          porApp[nomeApp] = { taxaTotal: 0, vendas: 0 };
+      if (canalConfig && canalConfig.taxa > 0) {
+        const nomeCanal = canalConfig.nome;
+        if (!porCanal[nomeCanal]) {
+          porCanal[nomeCanal] = { taxaTotal: 0, vendas: 0 };
         }
-        porApp[nomeApp].taxaTotal += (Number(venda.valor_total) * Number(taxaApp.taxa_percentual) / 100);
-        porApp[nomeApp].vendas += 1;
+        porCanal[nomeCanal].taxaTotal += (Number(venda.valor_total) * canalConfig.taxa / 100);
+        porCanal[nomeCanal].vendas += 1;
       }
     });
 
-    return Object.entries(porApp).map(([nome, dados]) => ({
+    return Object.entries(porCanal).map(([nome, dados]) => ({
       nome,
       taxaTotal: dados.taxaTotal,
       percentualLucro: lucroEstimado > 0 ? (dados.taxaTotal / lucroEstimado) * 100 : 0,
       vendas: dados.vendas,
     }));
-  }, [vendas, taxasApps, lucroEstimado]);
+  }, [vendas, canaisConfigurados, lucroEstimado]);
 
   // Melhor produto do mês
   const melhorProduto = useMemo(() => {
@@ -630,7 +624,7 @@ const Dashboard = () => {
       <BusinessCoach
         vendas={vendas as any}
         produtos={produtosAnalise as any}
-        taxasApps={taxasApps as any}
+        canaisConfigurados={canaisConfigurados as any}
         config={config}
         custosFixos={custosFixos as any}
         historicoPrecos={historicoPrecos as any}
@@ -671,7 +665,7 @@ const Dashboard = () => {
             <SmartInsights
               vendas={vendas as any}
               produtos={produtosAnalise as any}
-              taxasApps={taxasApps as any}
+              canaisConfigurados={canaisConfigurados as any}
               config={config}
               custosFixos={custosFixos as any}
               periodo={periodo}

@@ -53,9 +53,12 @@ interface Produto {
   }>;
 }
 
-interface TaxaApp {
-  nome_app: string;
-  taxa_percentual: number;
+interface CanalConfig {
+  id: string;
+  nome: string;
+  taxa: number;
+  tipo: 'presencial' | 'app_delivery' | 'proprio';
+  isBalcao: boolean;
 }
 
 interface Config {
@@ -83,7 +86,7 @@ interface HistoricoPreco {
 interface BusinessCoachProps {
   vendas: Venda[] | null;
   produtos: Produto[] | null;
-  taxasApps: TaxaApp[] | null;
+  canaisConfigurados: CanalConfig[] | null;
   config: Config | null;
   custosFixos: CustoFixo[] | null;
   historicoPrecos: HistoricoPreco[] | null;
@@ -118,7 +121,7 @@ interface CoachHistoricoItem {
 export const BusinessCoach: React.FC<BusinessCoachProps> = ({
   vendas,
   produtos,
-  taxasApps,
+  canaisConfigurados,
   config,
   custosFixos,
   historicoPrecos,
@@ -282,11 +285,12 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
         unidadesReais = valorTotal / precoVenda;
       }
       
-      const taxaApp = taxasApps?.find(t => 
-        t.nome_app && (canalLower.includes(t.nome_app.toLowerCase()) || 
-        t.nome_app.toLowerCase().includes(canalLower))
+      // Buscar taxa do canal na nova estrutura
+      const canalConfig = canaisConfigurados?.find(c => 
+        c.nome.toLowerCase() === canalLower ||
+        c.id === canal
       );
-      const taxaValor = taxaApp ? (valorTotal * Number(taxaApp.taxa_percentual) / 100) : 0;
+      const taxaValor = canalConfig ? (valorTotal * canalConfig.taxa / 100) : 0;
       
       const lucroVenda = valorTotal - (custoUnitario * unidadesReais) - taxaValor;
       
@@ -433,7 +437,7 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
     }
     
     return main;
-  }, [vendas, produtos, taxasApps, config, custosFixos, historicoPrecos, periodo, margemMeta, custoFixoMensal, formatCurrency]);
+  }, [vendas, produtos, canaisConfigurados, config, custosFixos, historicoPrecos, periodo, margemMeta, custoFixoMensal, formatCurrency]);
 
   // Query para buscar histórico
   const { data: coachHistorico } = useQuery({
