@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { invalidateAndRefetch } from '@/lib/queryConfig';
 
 export interface PrecoCanal {
   id: string;
@@ -121,8 +122,12 @@ export function usePrecosCanais(produtoId?: string) {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['precos-canais'] });
-      queryClient.invalidateQueries({ queryKey: ['todos-precos-canais'] });
+      invalidateAndRefetch([
+        ['precos-canais'],
+        ['todos-precos-canais'],
+        ['precos-canais-todos'],
+        ['produtos-menu-engineering'],
+      ]);
     },
     onError: (error) => {
       toast({ 
@@ -154,8 +159,12 @@ export function usePrecosCanais(produtoId?: string) {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['precos-canais'] });
-      queryClient.invalidateQueries({ queryKey: ['todos-precos-canais'] });
+      invalidateAndRefetch([
+        ['precos-canais'],
+        ['todos-precos-canais'],
+        ['precos-canais-todos'],
+        ['produtos-menu-engineering'],
+      ]);
       toast({ title: 'Preços salvos com sucesso!' });
     },
     onError: (error) => {

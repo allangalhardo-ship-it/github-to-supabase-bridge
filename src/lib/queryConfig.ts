@@ -11,11 +11,11 @@ import { QueryClient } from '@tanstack/react-query';
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Dados são considerados frescos por 2 minutos
-      staleTime: 2 * 60 * 1000,
+      // Dados são considerados frescos por 30 segundos (reduzido para melhor responsividade)
+      staleTime: 30 * 1000,
       
-      // Manter em cache por 15 minutos
-      gcTime: 15 * 60 * 1000,
+      // Manter em cache por 10 minutos
+      gcTime: 10 * 60 * 1000,
       
       // Não re-buscar automaticamente ao focar janela (economiza requests)
       refetchOnWindowFocus: false,
@@ -26,7 +26,7 @@ export const queryClient = new QueryClient({
       // Delay exponencial entre retries
       retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
       
-      // Não re-buscar ao reconectar (dados em cache são suficientes)
+      // Re-buscar ao reconectar
       refetchOnReconnect: 'always',
     },
     mutations: {
@@ -34,6 +34,19 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+/**
+ * Helper para invalidar e forçar refetch imediato de queries ativas
+ * Use isso após mutations para garantir que a UI atualize
+ */
+export function invalidateAndRefetch(queryKeys: string[][]) {
+  queryKeys.forEach(key => {
+    queryClient.invalidateQueries({ 
+      queryKey: key,
+      refetchType: 'active', // Força refetch imediato para queries ativas
+    });
+  });
+}
 
 /**
  * Cache keys padronizados para facilitar invalidação
