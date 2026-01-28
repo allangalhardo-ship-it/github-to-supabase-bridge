@@ -67,7 +67,19 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
   const [showComposicao, setShowComposicao] = useState(false);
   
   // Usar hook que busca canais da nova estrutura
-  const { canaisConfigurados } = usePrecosCanais();
+  const { canaisConfigurados } = usePrecosCanais(produto?.id);
+
+  // CRÍTICO: Resetar estados quando muda o produto selecionado
+  // Isso evita que dados do produto anterior fiquem "presos" no drawer
+  React.useEffect(() => {
+    if (produto?.id) {
+      // Limpar estados quando abre um novo produto
+      setCmvDesejado(config?.cmv_alvo || 35);
+      setCanalParaAplicar(null);
+      setPrecosEditaveis({});
+      setShowComposicao(false);
+    }
+  }, [produto?.id, config?.cmv_alvo]);
 
   // Montar lista de canais a partir da nova estrutura
   const canais: CanalInfo[] = useMemo(() => {
@@ -81,6 +93,7 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
       destaque: canal.isBalcao
     }));
   }, [canaisConfigurados]);
+
   if (!produto) return null;
 
   const quadInfo = getQuadranteInfo(produto.quadrante);
