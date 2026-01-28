@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { invalidateEmpresaCachesAndRefetch } from "@/lib/queryConfig";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -31,14 +33,14 @@ export function IngredientesReceitaDialog({
   insumosSimples,
   todasReceitas,
 }: IngredientesReceitaDialogProps) {
-  const queryClient = useQueryClient();
+  const { usuario } = useAuth();
   const [novoIngrediente, setNovoIngrediente] = useState({ insumo_id: '', quantidade: '' });
   const [localQuantidades, setLocalQuantidades] = useState<Record<string, number>>({});
   const [hasChanges, setHasChanges] = useState(false);
 
   // Fetch ingredientes da receita selecionada
   const { data: ingredientesReceita } = useQuery({
-    queryKey: ["ingredientes-receita", receita?.id],
+    queryKey: ["ingredientes-receita", usuario?.empresa_id, receita?.id],
     queryFn: async () => {
       if (!receita) return [];
       
@@ -70,7 +72,7 @@ export function IngredientesReceitaDialog({
       
       return data as ReceitaIngrediente[];
     },
-    enabled: !!receita?.id,
+    enabled: !!receita?.id && !!usuario?.empresa_id,
   });
 
   // Combina insumos simples + outras receitas (intermediários) para seleção
@@ -120,12 +122,7 @@ export function IngredientesReceitaDialog({
       .eq("id", receita.id);
 
     if (!error) {
-      // Invalidar todas as queries relacionadas com refetch forçado
-      await queryClient.invalidateQueries({ queryKey: ["receitas"], refetchType: 'all' });
-      await queryClient.invalidateQueries({ queryKey: ["insumos"], refetchType: 'all' });
-      await queryClient.invalidateQueries({ queryKey: ["insumos-select"], refetchType: 'all' });
-      await queryClient.invalidateQueries({ queryKey: ["insumos-busca"], refetchType: 'all' });
-      await queryClient.invalidateQueries({ queryKey: ["ingredientes-receita"], refetchType: 'all' });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
     }
   };
 
@@ -141,8 +138,7 @@ export function IngredientesReceitaDialog({
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["ingredientes-receita"] });
-      queryClient.invalidateQueries({ queryKey: ["receitas"] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       setNovoIngrediente({ insumo_id: '', quantidade: '' });
       toast.success("Ingrediente adicionado!");
       recalcularCustoReceita();
@@ -158,8 +154,7 @@ export function IngredientesReceitaDialog({
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["ingredientes-receita"] });
-      queryClient.invalidateQueries({ queryKey: ["receitas"] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       toast.success("Ingrediente removido!");
       recalcularCustoReceita();
     },
@@ -194,9 +189,7 @@ export function IngredientesReceitaDialog({
         );
       
       await Promise.all(updates);
-      
-      await queryClient.invalidateQueries({ queryKey: ["ingredientes-receita"] });
-      await queryClient.invalidateQueries({ queryKey: ["receitas"] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       await recalcularCustoReceita();
       
       toast.success("Alterações salvas!");

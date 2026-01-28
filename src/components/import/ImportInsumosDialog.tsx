@@ -10,7 +10,7 @@ import { Download, Upload, FileSpreadsheet, CheckCircle2, XCircle, AlertTriangle
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQueryClient } from '@tanstack/react-query';
+import { invalidateEmpresaCachesAndRefetch } from '@/lib/queryConfig';
 import {
   downloadTemplate,
   parseExcelFile,
@@ -41,7 +41,6 @@ interface ImportInsumosDialogProps {
 const ImportInsumosDialog = ({ open, onOpenChange, existingInsumos }: ImportInsumosDialogProps) => {
   const { usuario } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   
   const [step, setStep] = useState<'upload' | 'review' | 'importing'>('upload');
   const [parsedData, setParsedData] = useState<ParsedInsumo[]>([]);
@@ -137,7 +136,7 @@ const ImportInsumosDialog = ({ open, onOpenChange, existingInsumos }: ImportInsu
         description: `${validItems.length} insumos importados com sucesso.` 
       });
       
-      queryClient.invalidateQueries({ queryKey: ['insumos'] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       handleClose();
     } catch (error) {
       toast({

@@ -19,6 +19,10 @@ export const queryClient = new QueryClient({
       
       // Não re-buscar automaticamente ao focar janela (economiza requests)
       refetchOnWindowFocus: false,
+
+      // Ao entrar numa tela (mount), sempre buscar do backend para evitar lista “desatualizada”
+      // quando o usuário acabou de cadastrar algo em outra tela.
+      refetchOnMount: 'always',
       
       // Apenas 1 retry em caso de erro
       retry: 1,
@@ -45,6 +49,19 @@ export function invalidateAndRefetch(queryKeys: string[][]) {
       queryKey: key,
       refetchType: 'active', // Força refetch imediato para queries ativas
     });
+  });
+}
+
+/**
+ * Helper para invalidar TUDO que pertence à empresa e forçar refetch imediato
+ * Útil quando uma mutation impacta múltiplas telas (ex: criar insumo e ele precisa
+ * aparecer imediatamente em Receitas, Produtos, etc.)
+ */
+export function invalidateEmpresaCachesAndRefetch(empresaId?: string) {
+  if (!empresaId) return;
+  queryClient.invalidateQueries({
+    predicate: (query) => query.queryKey.includes(empresaId),
+    refetchType: 'active',
   });
 }
 

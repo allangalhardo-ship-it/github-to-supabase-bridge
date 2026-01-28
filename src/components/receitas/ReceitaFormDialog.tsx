@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { invalidateEmpresaCachesAndRefetch } from "@/lib/queryConfig";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,7 +43,6 @@ export function ReceitaFormDialog({
   receitas,
 }: ReceitaFormDialogProps) {
   const { usuario } = useAuth();
-  const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
     nome: editingReceita?.nome || '',
@@ -166,9 +166,7 @@ export function ReceitaFormDialog({
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["receitas"] });
-      queryClient.invalidateQueries({ queryKey: ["insumos"] });
-      queryClient.invalidateQueries({ queryKey: ["todos-insumos"] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       toast.success("Receita criada com sucesso!");
       handleOpenChange(false);
     },
@@ -190,8 +188,7 @@ export function ReceitaFormDialog({
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["receitas"] });
-      queryClient.invalidateQueries({ queryKey: ["insumos"] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       toast.success("Receita atualizada!");
       handleOpenChange(false);
     },
