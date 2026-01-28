@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { invalidateEmpresaCachesAndRefetch } from '@/lib/queryConfig';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,7 +32,6 @@ interface Cliente {
 const Vendas = () => {
   const { usuario } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   
   // Filtros
@@ -177,7 +177,7 @@ const Vendas = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['vendas'] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       toast({ title: 'Venda registrada!' });
       resetForm();
     },
@@ -192,7 +192,7 @@ const Vendas = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['vendas'] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       toast({ title: 'Venda excluída!' });
       setDeleteConfirmOpen(false);
       setVendaToDelete(null);

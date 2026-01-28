@@ -1,7 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { invalidateEmpresaCachesAndRefetch } from '@/lib/queryConfig';
 
 export interface Cliente {
   id: string;
@@ -42,7 +43,6 @@ export interface ClienteFormData {
 export function useClientes() {
   const { usuario } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   const { data: clientes, isLoading } = useQuery({
     queryKey: ['clientes', usuario?.empresa_id],
@@ -75,7 +75,7 @@ export function useClientes() {
       return cliente;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clientes'] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       toast({ title: 'Cliente cadastrado!' });
     },
     onError: (error) => {
@@ -93,7 +93,7 @@ export function useClientes() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clientes'] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       toast({ title: 'Cliente atualizado!' });
     },
     onError: (error) => {
@@ -111,7 +111,7 @@ export function useClientes() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clientes'] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       toast({ title: 'Cliente removido!' });
     },
     onError: (error) => {

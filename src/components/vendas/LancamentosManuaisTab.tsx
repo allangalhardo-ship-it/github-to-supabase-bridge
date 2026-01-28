@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { invalidateEmpresaCachesAndRefetch } from '@/lib/queryConfig';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -74,7 +75,7 @@ const CATEGORIAS_SAIDA = [
 const LancamentosManuaisTab = () => {
   const { usuario } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  
   
   const [filtroDataInicio, setFiltroDataInicio] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [filtroDataFim, setFiltroDataFim] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
@@ -132,7 +133,7 @@ const LancamentosManuaisTab = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['caixa-movimentos'] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       setDialogOpen(false);
       resetForm();
       toast({ title: 'Lançamento criado!' });
@@ -159,7 +160,7 @@ const LancamentosManuaisTab = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['caixa-movimentos'] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       setDialogOpen(false);
       resetForm();
       toast({ title: 'Lançamento atualizado!' });
@@ -175,7 +176,7 @@ const LancamentosManuaisTab = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['caixa-movimentos'] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       toast({ title: 'Lançamento excluído!' });
       setDeleteConfirmOpen(false);
       setMovimentoToDelete(null);
