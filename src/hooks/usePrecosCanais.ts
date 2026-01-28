@@ -100,11 +100,13 @@ export function usePrecosCanais(produtoId?: string) {
     mutationFn: async ({ 
       produtoId, 
       canal, 
-      preco 
+      preco,
+      canalNome,
     }: { 
       produtoId: string; 
       canal: string; 
       preco: number;
+      canalNome?: string;
     }) => {
       if (!usuario?.empresa_id) throw new Error('Empresa não encontrada');
 
@@ -121,13 +123,18 @@ export function usePrecosCanais(produtoId?: string) {
 
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       invalidateAndRefetch([
         ['precos-canais'],
         ['todos-precos-canais'],
         ['precos-canais-todos'],
         ['produtos-menu-engineering'],
       ]);
+      toast({ 
+        title: variables.canalNome 
+          ? `Preço do ${variables.canalNome} salvo!` 
+          : 'Preço salvo com sucesso!',
+      });
     },
     onError: (error) => {
       toast({ 

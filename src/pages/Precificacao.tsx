@@ -48,7 +48,7 @@ const Precificacao = () => {
   } = useMenuEngineering();
 
   // Hook para gerenciar preços por canal
-  const { upsertPreco, isSaving: isSavingPrecoCanal } = usePrecosCanais();
+  const { upsertPreco, isSaving: isSavingPrecoCanal, canaisConfigurados } = usePrecosCanais();
 
   // Mutation para atualizar preço
   const updatePrecoMutation = useMutation({
@@ -105,8 +105,12 @@ const Precificacao = () => {
 
   // Handler para aplicar preço em um canal específico
   const handleAplicarPrecoCanal = (produtoId: string, canal: string, novoPreco: number, precoAnterior: number) => {
+    // Buscar nome do canal para exibir no toast
+    const canalInfo = canaisConfigurados?.find(c => c.id === canal);
+    const canalNome = canalInfo?.nome;
+    
     // Salvar no canal específico
-    upsertPreco({ produtoId, canal, preco: novoPreco });
+    upsertPreco({ produtoId, canal, preco: novoPreco, canalNome });
     
     // Se for balcão, também atualizar o preço base do produto
     if (canal === 'balcao') {
