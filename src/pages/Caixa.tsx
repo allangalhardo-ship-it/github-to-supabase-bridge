@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { invalidateEmpresaCachesAndRefetch } from '@/lib/queryConfig';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -95,7 +96,7 @@ const CATEGORIAS_SAIDA = [
 const Caixa = () => {
   const { usuario } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [tipoMovimento, setTipoMovimento] = useState<'entrada' | 'saida'>('entrada');
@@ -224,7 +225,7 @@ const Caixa = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['caixa-movimentos'] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       setDialogOpen(false);
       resetForm();
       toast({ title: 'Movimento registrado!', description: 'O lançamento foi salvo com sucesso.' });

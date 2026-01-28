@@ -92,6 +92,32 @@ export const QUERY_KEYS = {
     ['producoes', empresaId] as const,
   clientes: (empresaId: string) => 
     ['clientes', empresaId] as const,
+  
+  // Caixa
+  caixaMovimentos: (empresaId: string, inicio: string, fim: string) =>
+    ['caixa-movimentos', empresaId, inicio, fim] as const,
+  caixaMovimentosTotal: (empresaId: string) =>
+    ['caixa-movimentos-total', empresaId] as const,
+  caixaVendas: (empresaId: string, inicio: string, fim: string) =>
+    ['caixa-vendas', empresaId, inicio, fim] as const,
+  caixaVendasTotal: (empresaId: string) =>
+    ['caixa-vendas-total', empresaId] as const,
+  caixaNotas: (empresaId: string, inicio: string, fim: string) =>
+    ['caixa-notas', empresaId, inicio, fim] as const,
+  caixaNotasTotal: (empresaId: string) =>
+    ['caixa-notas-total', empresaId] as const,
+    
+  // Vendas
+  vendasLista: (empresaId: string, inicio: string, fim: string) =>
+    ['vendas', empresaId, inicio, fim] as const,
+    
+  // Compras
+  xmlNotas: (empresaId: string) =>
+    ['xml-notas', empresaId] as const,
+  xmlItens: (empresaId: string) =>
+    ['xml-itens-all', empresaId] as const,
+  comprasManuais: (empresaId: string) =>
+    ['compras-manuais', empresaId] as const,
 } as const;
 
 /**

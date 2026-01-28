@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { invalidateEmpresaCachesAndRefetch } from '@/lib/queryConfig';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,7 +29,7 @@ interface XmlNota {
 const ComprasTab = () => {
   const { usuario } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  
   
   const [filtroDataInicio, setFiltroDataInicio] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [filtroDataFim, setFiltroDataFim] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
@@ -57,8 +58,7 @@ const ComprasTab = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['xml-notas'] });
-      queryClient.invalidateQueries({ queryKey: ['caixa'] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       toast({ title: 'Nota excluída!' });
       setDeleteConfirmOpen(false);
       setNotaToDelete(null);
