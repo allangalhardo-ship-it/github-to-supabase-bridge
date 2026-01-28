@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { invalidateAndRefetch } from '@/lib/queryConfig';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -77,9 +78,13 @@ const Precificacao = () => {
       if (historicoError) throw historicoError;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['produtos-menu-engineering'] });
-      queryClient.invalidateQueries({ queryKey: ['vendas-popularidade'] });
-      queryClient.invalidateQueries({ queryKey: ['produtos'] });
+      // Força refetch imediato para atualizar a UI
+      invalidateAndRefetch([
+        ['produtos-menu-engineering'],
+        ['vendas-popularidade'],
+        ['produtos'],
+        ['precos-canais-todos'],
+      ]);
       toast({
         title: 'Preço atualizado',
         description: 'O preço de venda foi atualizado com sucesso.',
@@ -117,7 +122,11 @@ const Precificacao = () => {
         origem: 'precificacao',
         observacao: `Canal: ${canal}`,
       });
-      queryClient.invalidateQueries({ queryKey: ['produtos-menu-engineering'] });
+      // Força refetch imediato
+      invalidateAndRefetch([
+        ['produtos-menu-engineering'],
+        ['precos-canais-todos'],
+      ]);
     }
   };
 
