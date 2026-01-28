@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { invalidateEmpresaCachesAndRefetch } from "@/lib/queryConfig";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChefHat, Calculator } from "lucide-react";
@@ -19,7 +20,6 @@ import { toast } from "sonner";
 
 export default function Receitas() {
   const { usuario } = useAuth();
-  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("receitas");
 
   // Receitas Tab State
@@ -114,8 +114,7 @@ export default function Receitas() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["receitas"] });
-      queryClient.invalidateQueries({ queryKey: ["insumos"] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       toast.success("Receita excluída!");
       setDeleteConfirmOpen(false);
       setItemToDelete(null);

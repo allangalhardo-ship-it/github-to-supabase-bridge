@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { invalidateEmpresaCachesAndRefetch } from '@/lib/queryConfig';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SearchableSelect } from '@/components/ui/searchable-select';
@@ -26,13 +28,13 @@ interface FichaTecnicaFormProps {
 }
 
 const FichaTecnicaForm: React.FC<FichaTecnicaFormProps> = ({ produtoId, fichaTecnica }) => {
+  const { usuario } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [novoInsumo, setNovoInsumo] = useState({ insumo_id: '', quantidade: '' });
 
   // Fetch todos os insumos disponíveis (inclui intermediários)
   const { data: insumos } = useQuery({
-    queryKey: ['insumos-select'],
+    queryKey: ['insumos-select', usuario?.empresa_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('insumos')
@@ -41,6 +43,7 @@ const FichaTecnicaForm: React.FC<FichaTecnicaFormProps> = ({ produtoId, fichaTec
       if (error) throw error;
       return data;
     },
+    enabled: !!usuario?.empresa_id,
   });
 
   const addMutation = useMutation({
@@ -53,7 +56,7 @@ const FichaTecnicaForm: React.FC<FichaTecnicaFormProps> = ({ produtoId, fichaTec
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['produtos'] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       setNovoInsumo({ insumo_id: '', quantidade: '' });
       toast({ title: 'Insumo adicionado à ficha técnica!' });
     },
@@ -68,7 +71,7 @@ const FichaTecnicaForm: React.FC<FichaTecnicaFormProps> = ({ produtoId, fichaTec
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['produtos'] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       toast({ title: 'Insumo removido!' });
     },
     onError: (error) => {
@@ -85,7 +88,7 @@ const FichaTecnicaForm: React.FC<FichaTecnicaFormProps> = ({ produtoId, fichaTec
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['produtos'] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
     },
   });
 

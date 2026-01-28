@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { invalidateEmpresaCachesAndRefetch } from '@/lib/queryConfig';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,7 +45,6 @@ interface Produto {
 const Produtos = () => {
   const { usuario } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importProdutosOpen, setImportProdutosOpen] = useState(false);
   const [importFichasOpen, setImportFichasOpen] = useState(false);
@@ -132,7 +132,7 @@ const Produtos = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['produtos'] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       toast({ title: 'Produto criado com sucesso!' });
       resetForm();
     },
@@ -156,7 +156,7 @@ const Produtos = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['produtos'] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       toast({ title: 'Produto atualizado!' });
       resetForm();
     },
@@ -171,7 +171,7 @@ const Produtos = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['produtos'] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       toast({ title: 'Produto excluído!' });
       setDeleteConfirmOpen(false);
       setItemToDelete(null);
@@ -191,7 +191,7 @@ const Produtos = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['produtos'] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       toast({ title: 'Preço atualizado!', description: 'O preço sugerido foi aplicado com sucesso.' });
     },
     onError: (error) => {

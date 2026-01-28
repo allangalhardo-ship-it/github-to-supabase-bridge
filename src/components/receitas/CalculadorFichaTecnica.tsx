@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { invalidateEmpresaCachesAndRefetch } from "@/lib/queryConfig";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,7 +58,7 @@ export function CalculadorFichaTecnica({
   todosInsumos,
   isLoading,
 }: CalculadorFichaTecnicaProps) {
-  const queryClient = useQueryClient();
+  const { usuario } = useAuth();
   const [calculadorDialogOpen, setCalculadorDialogOpen] = useState(false);
   const [produtoSelecionado, setProdutoSelecionado] = useState("");
   const [rendimento, setRendimento] = useState("");
@@ -195,8 +197,7 @@ export function CalculadorFichaTecnica({
       if (insertError) throw insertError;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["produtos"] });
-      queryClient.invalidateQueries({ queryKey: ["produtos-receitas"] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       toast.success(`Ficha técnica de ${produtoInfo?.nome} salva com sucesso!`);
       setCalculadorDialogOpen(false);
       resetForm();

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -30,10 +31,11 @@ const BuscarInsumoDialog: React.FC<BuscarInsumoDialogProps> = ({
   onSelect,
   insumosExistentes = [],
 }) => {
+  const { usuario } = useAuth();
   const [busca, setBusca] = useState('');
 
   const { data: insumos, isLoading } = useQuery({
-    queryKey: ['insumos-busca'],
+    queryKey: ['insumos-busca', usuario?.empresa_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('insumos')
@@ -42,7 +44,7 @@ const BuscarInsumoDialog: React.FC<BuscarInsumoDialogProps> = ({
       if (error) throw error;
       return data as Insumo[];
     },
-    enabled: open,
+    enabled: open && !!usuario?.empresa_id,
   });
 
   const insumosFiltrados = useMemo(() => {

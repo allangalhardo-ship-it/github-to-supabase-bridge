@@ -11,7 +11,8 @@ import { Download, Upload, FileSpreadsheet, CheckCircle2, XCircle, AlertTriangle
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { invalidateEmpresaCachesAndRefetch } from '@/lib/queryConfig';
 import {
   downloadTemplate,
   parseExcelFile,
@@ -60,7 +61,6 @@ const ImportFichaTecnicaDialog = ({
 }: ImportFichaTecnicaDialogProps) => {
   const { usuario } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   // Fetch existing produtos
   const { data: existingProdutos = [] } = useQuery({
@@ -251,8 +251,7 @@ const ImportFichaTecnicaDialog = ({
         description: `${newItems.length} itens importados para fichas técnicas.` 
       });
       
-      queryClient.invalidateQueries({ queryKey: ['produtos'] });
-      queryClient.invalidateQueries({ queryKey: ['fichas-tecnicas'] });
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       handleClose();
     } catch (error) {
       toast({
