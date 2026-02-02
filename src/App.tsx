@@ -47,6 +47,7 @@ const Sobre = lazy(() => import("@/pages/Sobre"));
 const Contato = lazy(() => import("@/pages/Contato"));
 const FAQ = lazy(() => import("@/pages/FAQ"));
 const VerificarEmail = lazy(() => import("@/pages/VerificarEmail"));
+const LandingPage = lazy(() => import("@/pages/LandingPage"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -102,6 +103,9 @@ const AppRoutes = () => {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
+        {/* Landing page pública */}
+        <Route path="/home" element={<LandingPage />} />
+        
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/cadastro" element={<PublicRoute><Cadastro /></PublicRoute>} />
         <Route path="/verificar-email" element={<VerificarEmail />} />
