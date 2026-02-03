@@ -108,6 +108,14 @@ serve(async (req) => {
     // Create default configuracoes
     await admin.from("configuracoes").insert({ empresa_id: empresa.id });
 
+    // Mark onboarding as complete (skip wizard)
+    await admin.from("onboarding_progress").insert({
+      user_id: user.id,
+      empresa_id: empresa.id,
+      current_step: 6,
+      completed: true,
+    });
+
     return new Response(JSON.stringify({ 
       success: true,
       user: { id: user.id, email: user.email },

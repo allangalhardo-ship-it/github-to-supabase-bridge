@@ -184,6 +184,18 @@ serve(async (req) => {
       // ignore
     }
 
+    // Mark onboarding as complete (skip wizard for new users)
+    try {
+      await admin.from("onboarding_progress").insert({
+        user_id: user.id,
+        empresa_id: empresa.id,
+        current_step: 6,
+        completed: true,
+      });
+    } catch (_) {
+      // ignore
+    }
+
     return new Response(JSON.stringify({ usuario }), {
       status: 200,
       headers: corsHeaders,
