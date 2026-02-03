@@ -361,7 +361,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, 
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="insumo-unidade">Unidade de medida</Label>
                   <Select
@@ -423,7 +423,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, 
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="produto-preco">Preço de venda *</Label>
                   <div className="relative">
@@ -645,7 +645,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, 
             <Button
               onClick={handleNext}
               disabled={!canProceed() || isLoading}
-              className="min-w-[120px]"
+              className="w-full sm:w-auto sm:min-w-[120px]"
             >
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

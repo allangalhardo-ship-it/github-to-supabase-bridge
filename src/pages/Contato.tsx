@@ -122,13 +122,13 @@ const Contato = () => {
         </Button>
 
         <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold text-foreground mb-3">Fale Conosco</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">Fale Conosco</h1>
           <p className="text-muted-foreground max-w-xl mx-auto">
             Tem alguma dúvida, sugestão ou precisa de ajuda? Estamos aqui para ajudar!
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6 mb-10">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
           {canaisContato.map((canal, index) => (
             <Card key={index} className="text-center">
               <CardContent className="pt-6">
