@@ -18,7 +18,7 @@ const PoliticaPrivacidade = () => {
         </Button>
 
         <div className="prose prose-slate dark:prose-invert max-w-none">
-          <h1 className="text-3xl font-bold text-foreground mb-6">Política de Privacidade</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-6">Política de Privacidade</h1>
           
           <p className="text-muted-foreground mb-4">
             <strong>Última atualização:</strong> {new Date().toLocaleDateString('pt-BR')}

@@ -81,7 +81,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({
 
   // Desktop: horizontal row
   return (
-    <div className="grid grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
       {metrics.map((metric) => (
         <Card key={metric.label}>
           <CardContent className="pt-4 p-4">
