@@ -4,45 +4,33 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
+const corsHeaders = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 type BootstrapRequest = {
   nome?: string;
   nomeEmpresa?: string;
   telefone?: string;
   cpfCnpj?: string;
   segmento?: string;
+  userId?: string; // Optional: for cases where token is not available yet
+  email?: string;  // Optional: for cases where token is not available yet
 };
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-      },
-    });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
     if (req.method !== "POST") {
       return new Response(JSON.stringify({ error: "Method not allowed" }), {
         status: 405,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      });
-    }
-
-    const authHeader = req.headers.get("Authorization") ?? "";
-    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-    if (!token) {
-      return new Response(JSON.stringify({ error: "Missing bearer token" }), {
-        status: 401,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
+        headers: corsHeaders,
       });
     }
 
@@ -52,10 +40,7 @@ serve(async (req) => {
     if (!supabaseUrl || !serviceRoleKey) {
       return new Response(JSON.stringify({ error: "Server misconfigured" }), {
         status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
+        headers: corsHeaders,
       });
     }
 
@@ -63,20 +48,38 @@ serve(async (req) => {
       auth: { persistSession: false },
     });
 
-    const { data: authData, error: authErr } = await admin.auth.getUser(token);
-    if (authErr || !authData?.user) {
-      return new Response(JSON.stringify({ error: "Invalid token" }), {
+    const body: BootstrapRequest = await req.json().catch(() => ({}));
+    
+    // Try to get user from token first
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    
+    let user = null;
+    
+    if (token) {
+      // Try to validate the token
+      const { data: authData, error: authErr } = await admin.auth.getUser(token);
+      if (!authErr && authData?.user) {
+        user = authData.user;
+      }
+    }
+    
+    // If no valid token but userId and email provided (for signup flow before email confirmation)
+    if (!user && body.userId && body.email) {
+      // Verify the user exists in auth
+      const { data: authData, error: authErr } = await admin.auth.admin.getUserById(body.userId);
+      if (!authErr && authData?.user && authData.user.email === body.email) {
+        user = authData.user;
+      }
+    }
+    
+    if (!user) {
+      return new Response(JSON.stringify({ error: "Invalid token or user not found" }), {
         status: 401,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
+        headers: corsHeaders,
       });
     }
 
-    const user = authData.user;
-
-    const body: BootstrapRequest = await req.json().catch(() => ({}));
     const email = user.email ?? "";
     
     // Get data from body or user metadata
@@ -102,20 +105,14 @@ serve(async (req) => {
     if (existingErr) {
       return new Response(JSON.stringify({ error: existingErr.message }), {
         status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
+        headers: corsHeaders,
       });
     }
 
     if (existingUsuario) {
       return new Response(JSON.stringify({ usuario: existingUsuario }), {
         status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
+        headers: corsHeaders,
       });
     }
 
@@ -132,10 +129,7 @@ serve(async (req) => {
     if (empresaErr) {
       return new Response(JSON.stringify({ error: empresaErr.message }), {
         status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
+        headers: corsHeaders,
       });
     }
 
@@ -165,20 +159,14 @@ serve(async (req) => {
         if (retryUsuario) {
           return new Response(JSON.stringify({ usuario: retryUsuario }), {
             status: 200,
-            headers: {
-              "Content-Type": "application/json",
-              "Access-Control-Allow-Origin": "*",
-            },
+            headers: corsHeaders,
           });
         }
       }
       
       return new Response(JSON.stringify({ error: usuarioErr.message }), {
         status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
+        headers: corsHeaders,
       });
     }
 
@@ -198,18 +186,13 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ usuario }), {
       status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
+      headers: corsHeaders,
     });
   } catch (e) {
+    console.error("Bootstrap error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
+      headers: corsHeaders,
     });
   }
 });
