@@ -609,13 +609,12 @@ const Admin = () => {
                     variant="destructive"
                     className="bg-red-600 hover:bg-red-700 whitespace-nowrap"
                     onClick={() => {
+                      window.open('https://supabase.com/dashboard/project/jvhrgmfjindegihbhxdu/settings/compute-and-disk', '_blank');
                       toast({
-                        title: '🚀 Abrindo Cloud Settings',
-                        description: 'Clique no ícone ☁️ Cloud no menu superior → Advanced → Selecione uma instância maior',
-                        duration: 10000,
+                        title: '🚀 Abrindo Supabase Dashboard',
+                        description: 'Acesse Settings → Compute and Disk para fazer upgrade da instância',
+                        duration: 8000,
                       });
-                      // Tentar abrir a view do Cloud
-                      window.dispatchEvent(new CustomEvent('open-cloud-view'));
                     }}
                   >
                     <Server className="h-4 w-4 mr-2" />
