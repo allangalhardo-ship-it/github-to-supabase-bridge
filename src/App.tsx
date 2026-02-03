@@ -48,6 +48,7 @@ const Contato = lazy(() => import("@/pages/Contato"));
 const FAQ = lazy(() => import("@/pages/FAQ"));
 const VerificarEmail = lazy(() => import("@/pages/VerificarEmail"));
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
+const ImportarBackup = lazy(() => import("@/pages/ImportarBackup"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -147,6 +148,7 @@ const AppRoutes = () => {
           <Route path="assistente" element={<Assistente />} />
           <Route path="admin" element={<Admin />} />
           <Route path="meus-dados" element={<MeusDados />} />
+          <Route path="importar-backup" element={<ImportarBackup />} />
         </Route>
         
         <Route path="*" element={<NotFound />} />
