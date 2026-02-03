@@ -233,7 +233,15 @@ export type Database = {
           updated_at?: string
           whatsapp?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clientes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       coach_historico: {
         Row: {
@@ -520,6 +528,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "historico_precos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "historico_precos_insumo_id_fkey"
             columns: ["insumo_id"]
             isOneToOne: false
@@ -698,7 +713,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_progress_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pedidos: {
         Row: {
@@ -843,6 +866,13 @@ export type Database = {
           shelf_life_dias?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "producoes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "producoes_produto_id_fkey"
             columns: ["produto_id"]
