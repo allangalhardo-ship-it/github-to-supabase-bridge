@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+// Force rebuild v2
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { queryClient } from "@/lib/queryConfig";
