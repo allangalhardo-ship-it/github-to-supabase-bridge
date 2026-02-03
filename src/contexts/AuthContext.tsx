@@ -147,6 +147,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!authData.user) throw new Error('Erro ao criar usuário');
 
       // 2. Ensure app profile exists (empresa + usuario + defaults)
+      // Pass userId and email for cases where email confirmation is required
+      // and no valid session token exists yet
       const { data: bootstrapData, error: bootstrapError } = await supabase.functions.invoke(
         'bootstrap-account',
         {
@@ -156,6 +158,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             telefone: extra?.telefone,
             cpfCnpj: extra?.cpfCnpj,
             segmento: extra?.segmento,
+            userId: authData.user.id,
+            email: authData.user.email,
           },
         }
       );
