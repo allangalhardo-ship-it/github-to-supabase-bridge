@@ -38,7 +38,7 @@ import {
   CalendarPlus,
   RotateCcw
 } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
+// Progress component removed - no longer needed for fake metrics
 import { ScrollableTableWrapper } from '@/components/ui/scrollable-table-wrapper';
 import { useToast } from '@/hooks/use-toast';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -111,16 +111,7 @@ interface AdminStats {
   totalPageViews: number;
 }
 
-interface InfraMetrics {
-  dbConnections: number;
-  maxDbConnections: number;
-  cacheHitRate: number;
-  avgQueryTime: number;
-  peakUsers: number;
-  capacityUsage: number;
-  instanceSize: string;
-  maxSimultaneousUsers: number;
-}
+// InfraMetrics interface removed - using Supabase Dashboard for real metrics
 
 const Admin = () => {
   const { user } = useAuth();
@@ -129,16 +120,7 @@ const Admin = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
-  const [infraMetrics, setInfraMetrics] = useState<InfraMetrics>({
-    dbConnections: 0,
-    maxDbConnections: 200,
-    cacheHitRate: 0,
-    avgQueryTime: 0,
-    peakUsers: 0,
-    capacityUsage: 0,
-    instanceSize: 'Large',
-    maxSimultaneousUsers: 3000,
-  });
+  // infraMetrics state removed - using Supabase Dashboard for real metrics
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
@@ -183,41 +165,7 @@ const Admin = () => {
 
       setUsers(data.users);
       setStats(data.stats);
-      
-      // Calcular métricas de infraestrutura baseadas nos dados
-      // Instância Large: 200 conexões DB, 4GB RAM, 2 vCPU
-      const activeSessions = data.stats?.totalActiveSessions || 0;
-      const maxDbConnections = 200; // Large instance = 200 conexões
-      const peakCapacity = 3000; // Capacidade estimada com Large + otimizações
-      const estimatedDbConnections = Math.min(activeSessions * 2.5, maxDbConnections);
-      const capacityUsage = (activeSessions / peakCapacity) * 100;
-      
-      // Alerta de capacidade
-      if (capacityUsage >= 70) {
-        toast({
-          title: '⚠️ Alerta de Capacidade',
-          description: `O sistema está em ${capacityUsage.toFixed(0)}% da capacidade. Considere fazer upgrade da instância.`,
-          variant: 'destructive',
-          duration: 10000,
-        });
-      } else if (capacityUsage >= 50) {
-        toast({
-          title: '📊 Monitoramento',
-          description: `Capacidade em ${capacityUsage.toFixed(0)}%. Sistema funcionando normalmente.`,
-          duration: 5000,
-        });
-      }
-      
-      setInfraMetrics({
-        dbConnections: estimatedDbConnections,
-        maxDbConnections: maxDbConnections,
-        cacheHitRate: 85 + Math.random() * 10,
-        avgQueryTime: 15 + Math.random() * 25,
-        peakUsers: Math.max(activeSessions, data.stats?.activeToday || 0),
-        capacityUsage: capacityUsage,
-        instanceSize: 'Large',
-        maxSimultaneousUsers: peakCapacity,
-      });
+      // Métricas de infraestrutura removidas - acessar Supabase Dashboard para dados reais
     } catch (error) {
       console.error('Error fetching admin data:', error);
       toast({
@@ -477,97 +425,100 @@ const Admin = () => {
             </Card>
           </div>
 
-          {/* Infrastructure Monitoring */}
+          {/* Infrastructure Monitoring - Link to Supabase */}
           <Card className="border-2 border-dashed border-primary/30">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Server className="h-5 w-5 text-primary" />
                 Monitoramento de Infraestrutura
-                <Badge className="ml-2 bg-blue-100 text-blue-700 border-blue-300">
-                  {infraMetrics.instanceSize}
+                <Badge className="ml-2 bg-green-100 text-green-700 border-green-300">
+                  Supabase Pro
                 </Badge>
               </CardTitle>
               <CardDescription>
-                Capacidade: ~{infraMetrics.maxSimultaneousUsers.toLocaleString()} usuários simultâneos | {infraMetrics.maxDbConnections} conexões DB
+                Métricas detalhadas disponíveis no Supabase Dashboard
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                {/* Capacity Usage */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-1 text-muted-foreground">
-                      <Gauge className="h-4 w-4" />
-                      Uso de Capacidade
-                    </span>
-                    <span className={`font-semibold ${
-                      infraMetrics.capacityUsage > 80 ? 'text-red-600' : 
-                      infraMetrics.capacityUsage > 50 ? 'text-yellow-600' : 
-                      'text-green-600'
-                    }`}>
-                      {infraMetrics.capacityUsage.toFixed(1)}%
-                    </span>
-                  </div>
-                  <Progress 
-                    value={infraMetrics.capacityUsage} 
-                    className={`h-2 ${
-                      infraMetrics.capacityUsage > 80 ? '[&>div]:bg-red-500' : 
-                      infraMetrics.capacityUsage > 50 ? '[&>div]:bg-yellow-500' : 
-                      '[&>div]:bg-green-500'
-                    }`}
-                  />
-                </div>
-
-                {/* DB Connections */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {/* Real metrics from our data */}
                 <div className="bg-muted/50 rounded-lg p-3">
                   <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                    <Database className="h-4 w-4" />
-                    Conexões DB
+                    <Wifi className="h-4 w-4" />
+                    Sessões Ativas
                   </div>
-                  <p className="text-xl font-bold mt-1">
-                    {Math.round(infraMetrics.dbConnections)}
-                    <span className="text-xs text-muted-foreground font-normal">/{infraMetrics.maxDbConnections}</span>
+                  <p className="text-xl font-bold mt-1 text-green-600">
+                    {stats.totalActiveSessions}
                   </p>
                 </div>
 
-                {/* Cache Hit Rate */}
-                <div className="bg-muted/50 rounded-lg p-3">
-                  <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                    <Zap className="h-4 w-4" />
-                    Cache Hit Rate
-                  </div>
-                  <p className={`text-xl font-bold mt-1 ${
-                    infraMetrics.cacheHitRate > 80 ? 'text-green-600' : 'text-yellow-600'
-                  }`}>
-                    {infraMetrics.cacheHitRate.toFixed(0)}%
-                  </p>
-                </div>
-
-                {/* Avg Query Time */}
-                <div className="bg-muted/50 rounded-lg p-3">
-                  <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                    <Timer className="h-4 w-4" />
-                    Query Média
-                  </div>
-                  <p className={`text-xl font-bold mt-1 ${
-                    infraMetrics.avgQueryTime < 50 ? 'text-green-600' : 
-                    infraMetrics.avgQueryTime < 100 ? 'text-yellow-600' : 
-                    'text-red-600'
-                  }`}>
-                    {infraMetrics.avgQueryTime.toFixed(0)}ms
-                  </p>
-                </div>
-
-                {/* Peak Users */}
                 <div className="bg-muted/50 rounded-lg p-3">
                   <div className="flex items-center gap-2 text-muted-foreground text-xs">
                     <TrendingUp className="h-4 w-4" />
-                    Pico Hoje
+                    Ativos Hoje
                   </div>
                   <p className="text-xl font-bold mt-1">
-                    {infraMetrics.peakUsers}
-                    <span className="text-xs text-muted-foreground font-normal ml-1">usuários</span>
+                    {stats.activeToday}
                   </p>
+                </div>
+
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                    <Eye className="h-4 w-4" />
+                    Page Views
+                  </div>
+                  <p className="text-xl font-bold mt-1">
+                    {stats.totalPageViews}
+                  </p>
+                </div>
+              </div>
+
+              {/* Links to Supabase Dashboard */}
+              <div className="mt-4 pt-4 border-t">
+                <p className="text-sm text-muted-foreground mb-3">
+                  Para métricas detalhadas de banco de dados, performance e logs:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open('https://supabase.com/dashboard/project/jvhrgmfjindegihbhxdu', '_blank')}
+                  >
+                    <Server className="h-4 w-4 mr-2" />
+                    Dashboard Geral
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open('https://supabase.com/dashboard/project/jvhrgmfjindegihbhxdu/reports/database', '_blank')}
+                  >
+                    <Database className="h-4 w-4 mr-2" />
+                    Database Reports
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open('https://supabase.com/dashboard/project/jvhrgmfjindegihbhxdu/reports/api-overview', '_blank')}
+                  >
+                    <Activity className="h-4 w-4 mr-2" />
+                    API Overview
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open('https://supabase.com/dashboard/project/jvhrgmfjindegihbhxdu/logs/edge-logs', '_blank')}
+                  >
+                    <Zap className="h-4 w-4 mr-2" />
+                    Edge Function Logs
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open('https://supabase.com/dashboard/project/jvhrgmfjindegihbhxdu/settings/compute-and-disk', '_blank')}
+                  >
+                    <Gauge className="h-4 w-4 mr-2" />
+                    Compute & Disk
+                  </Button>
                 </div>
               </div>
 
@@ -575,69 +526,20 @@ const Admin = () => {
               <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
                 <Badge className="bg-green-100 text-green-700 border-green-300">
                   <CheckCircle className="h-3 w-3 mr-1" />
-                  Índices Otimizados
+                  Supabase Pro Ativo
                 </Badge>
                 <Badge className="bg-green-100 text-green-700 border-green-300">
                   <CheckCircle className="h-3 w-3 mr-1" />
-                  Funções SQL Ativas
+                  Edge Functions Ativas
                 </Badge>
                 <Badge className="bg-green-100 text-green-700 border-green-300">
                   <CheckCircle className="h-3 w-3 mr-1" />
-                  Cache Configurado
+                  RLS Configurado
                 </Badge>
                 <Badge className="bg-blue-100 text-blue-700 border-blue-300">
                   <Zap className="h-3 w-3 mr-1" />
-                  Connection Pooling Auto
+                  Connection Pooling
                 </Badge>
-              </div>
-
-              {/* Emergency Upgrade Button */}
-              <div className="mt-4 pt-4 border-t border-dashed border-red-200">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-lg border border-red-200">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-red-100 rounded-full">
-                      <AlertTriangle className="h-5 w-5 text-red-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-red-800">Upgrade de Emergência</h4>
-                      <p className="text-sm text-red-600">
-                        Se o sistema estiver lento, faça upgrade da instância (~10 min para aplicar)
-                      </p>
-                    </div>
-                  </div>
-                  <Button 
-                    variant="destructive"
-                    className="bg-red-600 hover:bg-red-700 whitespace-nowrap"
-                    onClick={() => {
-                      window.open('https://supabase.com/dashboard/project/jvhrgmfjindegihbhxdu/settings/compute-and-disk', '_blank');
-                      toast({
-                        title: '🚀 Abrindo Supabase Dashboard',
-                        description: 'Acesse Settings → Compute and Disk para fazer upgrade da instância',
-                        duration: 8000,
-                      });
-                    }}
-                  >
-                    <Server className="h-4 w-4 mr-2" />
-                    Fazer Upgrade Agora
-                  </Button>
-                </div>
-                
-                {/* Capacity Warning */}
-                {infraMetrics.capacityUsage >= 50 && (
-                  <div className={`mt-3 p-3 rounded-lg flex items-center gap-2 ${
-                    infraMetrics.capacityUsage >= 70 
-                      ? 'bg-red-100 text-red-800 border border-red-300' 
-                      : 'bg-yellow-100 text-yellow-800 border border-yellow-300'
-                  }`}>
-                    <AlertTriangle className="h-4 w-4" />
-                    <span className="text-sm font-medium">
-                      {infraMetrics.capacityUsage >= 70 
-                        ? `⚠️ ATENÇÃO: Sistema em ${infraMetrics.capacityUsage.toFixed(0)}% da capacidade! Faça upgrade agora.`
-                        : `📊 Capacidade em ${infraMetrics.capacityUsage.toFixed(0)}%. Monitore de perto.`
-                      }
-                    </span>
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
