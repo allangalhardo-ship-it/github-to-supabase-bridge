@@ -17,10 +17,13 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { data: backupData } = await req.json();
+    const requestBody = await req.json();
+    
+    // Aceita tanto { data: backupData } quanto backupData diretamente
+    const backupData = requestBody.data || requestBody;
     
     if (!backupData || !backupData.data) {
-      throw new Error("Dados de backup inválidos");
+      throw new Error("Dados de backup inválidos - estrutura esperada: { data: { empresas: [...], ... } }");
     }
 
     const results: Record<string, { success: number; errors: string[] }> = {};
@@ -40,11 +43,6 @@ serve(async (req) => {
       "receitas_intermediarias",
       "historico_precos",
       "historico_precos_produtos",
-      // Estas tabelas têm triggers, importar por último
-      // "vendas",
-      // "producoes", 
-      // "estoque_movimentos",
-      // "pedidos"
     ];
 
     for (const tableName of tableOrder) {
@@ -77,8 +75,7 @@ serve(async (req) => {
       }
     }
 
-    // Importar tabelas com triggers desabilitando temporariamente (não temos acesso via RPC)
-    // Por isso, vamos importar estoque_movimentos sem trigger
+    // Importar tabelas com triggers desabilitando temporariamente
     const movementTables = ["estoque_movimentos", "vendas", "producoes", "pedidos"];
     
     for (const tableName of movementTables) {
