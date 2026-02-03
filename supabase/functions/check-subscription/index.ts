@@ -50,7 +50,7 @@ serve(async (req) => {
     logStep("Function started");
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
+    const stripeConfigured = !!stripeKey;
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
@@ -96,7 +96,48 @@ serve(async (req) => {
     
     const trialEndOverride = usuarioData?.trial_end_override;
 
-    logStep("User authenticated", { userId, email: userEmail });
+    logStep("User authenticated", { userId, email: userEmail, stripeConfigured });
+
+    // If Stripe is not configured, return trial status based on user creation date
+    if (!stripeConfigured) {
+      logStep("Stripe not configured - returning trial status");
+      
+      let trialDaysRemaining = 7;
+      let isInTrial = true;
+
+      if (trialEndOverride) {
+        const overrideDate = new Date(trialEndOverride);
+        if (!isNaN(overrideDate.getTime())) {
+          const now = new Date();
+          trialDaysRemaining = Math.max(0, Math.ceil((overrideDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+          isInTrial = trialDaysRemaining > 0;
+        }
+      } else if (userCreatedAt) {
+        const createdAt = new Date(userCreatedAt);
+        if (!isNaN(createdAt.getTime())) {
+          const now = new Date();
+          const daysSinceCreation = Math.floor(
+            (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24),
+          );
+          trialDaysRemaining = Math.max(0, 7 - daysSinceCreation);
+          isInTrial = trialDaysRemaining > 0;
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          subscribed: true, // Allow access when Stripe is not configured
+          status: "trialing",
+          plan: "pro", // Give full access when Stripe is not set up
+          trial_days_remaining: trialDaysRemaining,
+          subscription_end: null,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        },
+      );
+    }
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
