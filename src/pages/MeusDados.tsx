@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, Crown, CreditCard, Building2, Mail, Phone, FileText, Loader2, ArrowRight, RefreshCw, Camera, Save, X, Pencil } from 'lucide-react';
+import { User, Crown, CreditCard, Building2, Mail, Phone, FileText, Loader2, ArrowRight, RefreshCw, Camera, Save, X, Pencil, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
@@ -26,6 +26,14 @@ const MeusDados = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  
+  // Password change state
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [passwordLoading, setPasswordLoading] = useState(false);
   
   const [formData, setFormData] = useState({
     nome: usuario?.nome || '',
@@ -176,6 +184,51 @@ const MeusDados = () => {
       telefone: usuario?.telefone || '',
     });
     setIsEditing(false);
+  };
+
+  const handleChangePassword = async () => {
+    if (!passwordData.newPassword || passwordData.newPassword.length < 6) {
+      toast({
+        title: 'Senha inválida',
+        description: 'A senha deve ter pelo menos 6 caracteres.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast({
+        title: 'Senhas não conferem',
+        description: 'A confirmação da senha deve ser igual à nova senha.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: passwordData.newPassword,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Senha alterada!',
+        description: 'Sua senha foi atualizada com sucesso.',
+      });
+      setIsChangingPassword(false);
+      setPasswordData({ newPassword: '', confirmPassword: '' });
+    } catch (error: any) {
+      console.error('Error changing password:', error);
+      toast({
+        title: 'Erro ao alterar senha',
+        description: error.message || 'Tente novamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setPasswordLoading(false);
+    }
   };
 
   const handleManageSubscription = async () => {
@@ -385,6 +438,73 @@ const MeusDados = () => {
               <p className="text-xs text-muted-foreground">O CPF/CNPJ não pode ser alterado</p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Segurança - Alterar Senha */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5" />
+              Segurança
+            </CardTitle>
+          </div>
+          <CardDescription>
+            Altere sua senha de acesso
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isChangingPassword ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">Nova senha</Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  value={passwordData.newPassword}
+                  onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                  placeholder="Mínimo 6 caracteres"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirmar nova senha</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={passwordData.confirmPassword}
+                  onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                  placeholder="Digite novamente"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsChangingPassword(false);
+                    setPasswordData({ newPassword: '', confirmPassword: '' });
+                  }}
+                  disabled={passwordLoading}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Cancelar
+                </Button>
+                <Button onClick={handleChangePassword} disabled={passwordLoading}>
+                  {passwordLoading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  Salvar Nova Senha
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button variant="outline" onClick={() => setIsChangingPassword(true)}>
+              <Lock className="h-4 w-4 mr-2" />
+              Alterar Senha
+            </Button>
+          )}
         </CardContent>
       </Card>
 
