@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.create-auth-for-existing-users]
 verify_jwt = false
+
+[functions.migrate-base]
+verify_jwt = false

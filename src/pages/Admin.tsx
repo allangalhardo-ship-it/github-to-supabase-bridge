@@ -43,6 +43,7 @@ import { ScrollableTableWrapper } from '@/components/ui/scrollable-table-wrapper
 import { useToast } from '@/hooks/use-toast';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import MigrateBaseSection from '@/components/admin/MigrateBaseSection';
 
 interface SessionInfo {
   id: string;
@@ -543,6 +544,9 @@ const Admin = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Migrate Base Section */}
+          <MigrateBaseSection users={users} />
         </>
       )}
 
