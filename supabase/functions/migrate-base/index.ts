@@ -285,6 +285,7 @@ Deno.serve(async (req) => {
               rendimento_padrao: produto.rendimento_padrao,
               observacoes_ficha: produto.observacoes_ficha,
               ativo: produto.ativo,
+              imagem_url: produto.imagem_url,
             })
             .eq('id', existingId);
 
@@ -304,6 +305,7 @@ Deno.serve(async (req) => {
               rendimento_padrao: produto.rendimento_padrao,
               observacoes_ficha: produto.observacoes_ficha,
               ativo: produto.ativo,
+              imagem_url: produto.imagem_url,
               estoque_acabado: 0, // Não copiar estoque
             })
             .select('id')
