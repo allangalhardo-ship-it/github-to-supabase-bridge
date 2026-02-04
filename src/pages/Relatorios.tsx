@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { 
   ReportCard, 
   DREGerencial, 
   AnaliseVendas, 
-  MargensRelatorio 
+  MargensRelatorio,
+  FluxoCaixa,
+  PosicaoEstoque,
+  PerdasDesperdicio
 } from '@/components/relatorios';
 import { 
   FileText, 
@@ -12,14 +14,12 @@ import {
   ShoppingCart, 
   Package, 
   Wallet, 
-  AlertTriangle,
-  BarChart3
+  AlertTriangle
 } from 'lucide-react';
 
 type ReportView = 'hub' | 'dre' | 'vendas' | 'margens' | 'estoque' | 'fluxo' | 'perdas';
 
 const Relatorios = () => {
-  const { usuario } = useAuth();
   const [currentView, setCurrentView] = useState<ReportView>('hub');
 
   // Renderizar o relatório selecionado
@@ -33,6 +33,18 @@ const Relatorios = () => {
 
   if (currentView === 'margens') {
     return <MargensRelatorio onBack={() => setCurrentView('hub')} />;
+  }
+
+  if (currentView === 'fluxo') {
+    return <FluxoCaixa onBack={() => setCurrentView('hub')} />;
+  }
+
+  if (currentView === 'estoque') {
+    return <PosicaoEstoque onBack={() => setCurrentView('hub')} />;
+  }
+
+  if (currentView === 'perdas') {
+    return <PerdasDesperdicio onBack={() => setCurrentView('hub')} />;
   }
 
   // Hub da Central de Relatórios
@@ -62,7 +74,6 @@ const Relatorios = () => {
             icon={FileText}
             category="financeiro"
             onClick={() => setCurrentView('dre')}
-            isNew
           />
           <ReportCard
             title="Fluxo de Caixa"
@@ -70,7 +81,6 @@ const Relatorios = () => {
             icon={Wallet}
             category="financeiro"
             onClick={() => setCurrentView('fluxo')}
-            isComingSoon
           />
         </div>
       </section>
@@ -91,7 +101,6 @@ const Relatorios = () => {
             icon={ShoppingCart}
             category="vendas"
             onClick={() => setCurrentView('vendas')}
-            isNew
           />
           <ReportCard
             title="Análise de Margens"
@@ -119,7 +128,6 @@ const Relatorios = () => {
             icon={Package}
             category="operacional"
             onClick={() => setCurrentView('estoque')}
-            isComingSoon
           />
           <ReportCard
             title="Perdas e Desperdícios"
@@ -127,7 +135,6 @@ const Relatorios = () => {
             icon={AlertTriangle}
             category="operacional"
             onClick={() => setCurrentView('perdas')}
-            isComingSoon
           />
         </div>
       </section>
