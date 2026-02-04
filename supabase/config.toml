@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.migrate-base]
 verify_jwt = false
+
+[functions.populate-demo-data]
+verify_jwt = false
+
+[functions.create-test-user]
+verify_jwt = false
