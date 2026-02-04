@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -65,9 +65,10 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
   const [canalParaAplicar, setCanalParaAplicar] = useState<string | null>(null);
   const [precosEditaveis, setPrecosEditaveis] = useState<Record<string, string>>({});
   const [showComposicao, setShowComposicao] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // Usar hook que busca canais da nova estrutura
-  const { canaisConfigurados } = usePrecosCanais(produto?.id);
+  const { canaisConfigurados, isLoadingPrecos } = usePrecosCanais(produto?.id);
 
   // CRÍTICO: Resetar estados quando muda o produto selecionado
   // Isso evita que dados do produto anterior fiquem "presos" no drawer
@@ -94,61 +95,87 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
     }));
   }, [canaisConfigurados]);
 
-  if (!produto) return null;
-
-  const quadInfo = getQuadranteInfo(produto.quadrante);
   const imposto = (config?.imposto_medio_sobre_vendas || 0) / 100;
 
   // Obter preço de um canal específico (usa preço customizado se existir)
-  const getPrecoCanal = (canalId: string): number => {
-    if (produto.precosCanais && produto.precosCanais[canalId] !== undefined) {
+  const getPrecoCanal = useCallback((canalId: string): number => {
+    if (produto?.precosCanais && produto.precosCanais[canalId] !== undefined) {
       return produto.precosCanais[canalId];
     }
-    return produto.preco_venda;
-  };
+    return produto?.preco_venda ?? 0;
+  }, [produto?.precosCanais, produto?.preco_venda]);
 
   // Calcular margem e lucro dado um preço e taxa
-  const calcularResultado = (preco: number, taxa: number) => {
-    if (preco <= 0) return { margem: 0, lucro: 0 };
+  const calcularResultado = useCallback((preco: number, taxa: number) => {
+    if (preco <= 0 || !produto) return { margem: 0, lucro: 0 };
     const lucro = preco - produto.custoInsumos - preco * imposto - preco * (taxa / 100);
     const margem = (lucro / preco) * 100;
     return { margem, lucro };
-  };
+  }, [produto?.custoInsumos, imposto]);
 
   // Calcular preço necessário para atingir CMV em um canal
-  const calcularPrecoParaCMV = (cmvAlvo: number, taxaCanal: number) => {
-    if (cmvAlvo <= 0 || cmvAlvo >= 100) return null;
+  const calcularPrecoParaCMV = useCallback((cmvAlvo: number, taxaCanal: number): number | null => {
+    if (!produto || cmvAlvo <= 0 || cmvAlvo >= 100) return null;
     const cmv = cmvAlvo / 100;
     const taxa = taxaCanal / 100;
     const fatorReceita = 1 - taxa;
     if (fatorReceita <= 0) return null;
     return produto.custoInsumos / (cmv * fatorReceita);
-  };
+  }, [produto?.custoInsumos]);
 
   // Resultados atuais por canal (usa preço específico de cada canal)
-  const resultadosAtuais = canais.map(canal => {
-    const precoCanal = getPrecoCanal(canal.id);
-    return {
-      ...canal,
-      preco: precoCanal,
-      ...calcularResultado(precoCanal, canal.taxa)
-    };
-  });
+  const resultadosAtuais = useMemo(() => {
+    if (!produto) return [];
+    try {
+      return canais.map(canal => {
+        const precoCanal = getPrecoCanal(canal.id);
+        return {
+          ...canal,
+          preco: precoCanal,
+          ...calcularResultado(precoCanal, canal.taxa)
+        };
+      });
+    } catch (e) {
+      console.error('Erro ao calcular resultados atuais:', e);
+      return [];
+    }
+  }, [canais, getPrecoCanal, calcularResultado, produto]);
 
   // Resultados da simulação por CMV - preço diferente por canal!
-  const resultadosSimulacaoCMV = canais.map(canal => {
-    const precoCalculado = calcularPrecoParaCMV(cmvDesejado, canal.taxa);
-    // Usar preço editável se existir, senão usar calculado
-    const precoEditavel = precosEditaveis[canal.id];
-    const precoFinal = precoEditavel ? parseFloat(precoEditavel.replace(',', '.')) || 0 : precoCalculado;
-    const resultado = precoFinal > 0 ? calcularResultado(precoFinal, canal.taxa) : { margem: 0, lucro: 0 };
-    return {
-      ...canal,
-      precoCalculado,
-      precoFinal,
-      ...resultado
-    };
-  });
+  const resultadosSimulacaoCMV = useMemo(() => {
+    if (!produto) return [];
+    try {
+      return canais.map(canal => {
+        const precoCalculado = calcularPrecoParaCMV(cmvDesejado, canal.taxa);
+        // Usar preço editável se existir, senão usar calculado
+        const precoEditavel = precosEditaveis[canal.id];
+        const precoFinal = precoEditavel ? parseFloat(precoEditavel.replace(',', '.')) || 0 : (precoCalculado ?? 0);
+        const resultado = precoFinal > 0 ? calcularResultado(precoFinal, canal.taxa) : { margem: 0, lucro: 0 };
+        return {
+          ...canal,
+          precoCalculado,
+          precoFinal,
+          ...resultado
+        };
+      });
+    } catch (e) {
+      console.error('Erro ao calcular simulação CMV:', e);
+      return [];
+    }
+  }, [canais, cmvDesejado, precosEditaveis, calcularPrecoParaCMV, calcularResultado, produto]);
+
+  const quadInfo = useMemo(() => {
+    if (!produto) return null;
+    return getQuadranteInfo(produto.quadrante);
+  }, [produto?.quadrante]);
+
+  // Retornar null se não houver produto ou se ainda está carregando
+  if (!produto || !quadInfo) return null;
+
+  // Tratamento de erro para evitar travamento
+  if (error) {
+    console.error('Erro no drawer de precificação:', error);
+  }
 
   // Atualizar preços editáveis quando CMV muda
   const atualizarPrecosParaCMV = () => {
