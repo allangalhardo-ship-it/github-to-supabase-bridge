@@ -15,6 +15,15 @@ function randomDate(daysAgo: number): string {
   return date.toISOString().split('T')[0];
 }
 
+// Helper to get random date in current month
+function randomDateCurrentMonth(): string {
+  const today = new Date();
+  const currentDay = today.getDate();
+  const randomDay = Math.floor(Math.random() * currentDay) + 1;
+  const date = new Date(today.getFullYear(), today.getMonth(), randomDay);
+  return date.toISOString().split('T')[0];
+}
+
 // Helper to get random item from array
 function randomItem<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -140,8 +149,11 @@ serve(async (req) => {
     
     const otherProdutos = produtos.filter(p => !topProdutos.includes(p));
 
-    // Generate 200-300 sales over 90 days
-    const numVendas = randomInt(200, 300);
+    // Check if we need to focus on current month
+    const focusCurrentMonth = body.focus_current_month === true;
+    
+    // Generate 200-300 sales over 90 days OR 100-150 for current month
+    const numVendas = focusCurrentMonth ? randomInt(100, 150) : randomInt(200, 300);
     
     for (let i = 0; i < numVendas; i++) {
       // 70% chance of top product, 30% other
@@ -151,7 +163,7 @@ serve(async (req) => {
       
       const quantidade = randomInt(1, 4);
       const canal = randomItem(canais);
-      const dataVenda = randomDate(90);
+      const dataVenda = focusCurrentMonth ? randomDateCurrentMonth() : randomDate(90);
       const cliente = allClientes?.length ? randomItem(allClientes) : null;
       
       // Weekend boost (more sales on weekends)
@@ -190,13 +202,14 @@ serve(async (req) => {
     }
     console.log(`Created ${vendasData.length} sales`);
 
-    // 5. Generate productions for last 60 days
+    // 5. Generate productions for last 60 days (or current month)
     const producoesData: any[] = [];
-    const numProducoes = randomInt(40, 70);
+    const numProducoes = focusCurrentMonth ? randomInt(20, 40) : randomInt(40, 70);
     
     for (let i = 0; i < numProducoes; i++) {
       const produto = randomItem(produtos);
-      const createdAt = randomDate(60) + "T" + String(randomInt(6, 18)).padStart(2, '0') + ":00:00Z";
+      const baseDate = focusCurrentMonth ? randomDateCurrentMonth() : randomDate(60);
+      const createdAt = baseDate + "T" + String(randomInt(6, 18)).padStart(2, '0') + ":00:00Z";
       const shelfLife = randomInt(3, 14);
       const dataVencimento = new Date(createdAt);
       dataVencimento.setDate(dataVencimento.getDate() + shelfLife);
