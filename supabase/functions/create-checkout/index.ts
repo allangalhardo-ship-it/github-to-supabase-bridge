@@ -110,8 +110,8 @@ serve(async (req) => {
       allow_promotion_codes: true,
       billing_address_collection: "required",
       locale: "pt-BR",
-      // Pix + Cartão de crédito habilitados
-      payment_method_types: ["card", "boleto"],
+      // Cartão, Pix e Boleto habilitados
+      payment_method_types: ["card", "pix", "boleto"],
     };
 
     if (trialDaysRemaining > 0) {

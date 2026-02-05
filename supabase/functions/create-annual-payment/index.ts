@@ -93,8 +93,8 @@ serve(async (req) => {
       cancel_url: `${origin}/assinatura?checkout=canceled`,
       billing_address_collection: "required",
       locale: "pt-BR",
-      // Cartão e boleto (Pix requer ativação manual no Stripe Dashboard)
-      payment_method_types: ["card", "boleto"],
+      // Cartão, Pix e Boleto
+      payment_method_types: ["card", "pix", "boleto"],
       metadata: {
         user_id: user.id,
         plan: plan,
