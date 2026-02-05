@@ -11,6 +11,10 @@ const logStep = (step: string, details?: Record<string, unknown>) => {
   console.log(`[ASAAS-WEBHOOK] ${step}${detailsStr}`);
 };
 
+// Usar ambiente sandbox para testes, produção para live
+const ASAAS_API_URL = "https://api.asaas.com/v3";
+// Para testes use: const ASAAS_API_URL = "https://sandbox.asaas.com/api/v3";
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -29,6 +33,37 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
+    const asaasApiKey = Deno.env.get("ASAAS_API_KEY");
+
+    // Helper function to get subscription details
+    const getSubscriptionDetails = async (subscriptionId: string) => {
+      if (!asaasApiKey) return null;
+      
+      const subscriptionResp = await fetch(
+        `${ASAAS_API_URL}/subscriptions/${subscriptionId}`,
+        {
+          headers: {
+            "access_token": asaasApiKey,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (subscriptionResp.ok) {
+        return await subscriptionResp.json();
+      }
+      return null;
+    };
+
+    // Helper function to parse external reference
+    const parseExternalReference = (ref: string) => {
+      try {
+        return JSON.parse(ref);
+      } catch {
+        return null;
+      }
+    };
+
     // Eventos de pagamento do Asaas
     switch (body.event) {
       case "PAYMENT_CONFIRMED":
@@ -41,58 +76,45 @@ serve(async (req) => {
 
         // Extrair informações do externalReference
         if (body.payment?.subscription) {
-          const ASAAS_API_URL = "https://api.asaas.com/v3";
-          const asaasApiKey = Deno.env.get("ASAAS_API_KEY");
+          const subscriptionData = await getSubscriptionDetails(body.payment.subscription);
           
-          if (asaasApiKey) {
-            // Buscar detalhes da assinatura para pegar o externalReference
-            const subscriptionResp = await fetch(
-              `${ASAAS_API_URL}/subscriptions/${body.payment.subscription}`,
-              {
-                headers: {
-                  "access_token": asaasApiKey,
-                  "Content-Type": "application/json",
-                },
-              }
-            );
-
-            if (subscriptionResp.ok) {
-              const subscriptionData = await subscriptionResp.json();
+          if (subscriptionData?.externalReference) {
+            const externalRef = parseExternalReference(subscriptionData.externalReference);
+            
+            if (externalRef?.user_id) {
+              const userId = externalRef.user_id;
+              const plan = externalRef.plan;
+              const billingCycle = externalRef.billing_cycle;
               
-              if (subscriptionData.externalReference) {
-                try {
-                  const externalRef = JSON.parse(subscriptionData.externalReference);
-                  const userId = externalRef.user_id;
-                  const plan = externalRef.plan;
-                  
-                  logStep("Processing subscription activation", { userId, plan });
+              logStep("Processing subscription activation", { userId, plan, billingCycle });
 
-                  // Calcular data de expiração baseada no ciclo
-                  const billingCycle = externalRef.billing_cycle;
-                  const subscriptionEnd = new Date();
-                  if (billingCycle === "YEARLY") {
-                    subscriptionEnd.setFullYear(subscriptionEnd.getFullYear() + 1);
-                  } else {
-                    subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1);
-                  }
+              // Calcular data de expiração baseada no ciclo
+              const subscriptionEnd = new Date();
+              if (billingCycle === "YEARLY") {
+                subscriptionEnd.setFullYear(subscriptionEnd.getFullYear() + 1);
+              } else {
+                subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1);
+              }
 
-                  // Atualizar trial_end_override como flag de assinatura ativa
-                  // (podemos criar uma tabela dedicada se precisar no futuro)
-                  const { error: updateError } = await supabaseAdmin
-                    .from("usuarios")
-                    .update({
-                      trial_end_override: subscriptionEnd.toISOString(),
-                    })
-                    .eq("id", userId);
+              // Atualizar dados de assinatura no usuário
+              const { error: updateError } = await supabaseAdmin
+                .from("usuarios")
+                .update({
+                  trial_end_override: subscriptionEnd.toISOString(),
+                  asaas_subscription_id: body.payment.subscription,
+                  asaas_plan: plan,
+                  asaas_subscription_end: subscriptionEnd.toISOString(),
+                })
+                .eq("id", userId);
 
-                  if (updateError) {
-                    logStep("Error updating user subscription", { error: updateError });
-                  } else {
-                    logStep("User subscription activated", { userId, plan, subscriptionEnd: subscriptionEnd.toISOString() });
-                  }
-                } catch (parseError) {
-                  logStep("Error parsing externalReference", { error: String(parseError) });
-                }
+              if (updateError) {
+                logStep("Error updating user subscription", { error: updateError });
+              } else {
+                logStep("User subscription activated", { 
+                  userId, 
+                  plan, 
+                  subscriptionEnd: subscriptionEnd.toISOString() 
+                });
               }
             }
           }
@@ -105,7 +127,7 @@ serve(async (req) => {
           paymentId: body.payment?.id,
           dueDate: body.payment?.dueDate,
         });
-        // Podemos enviar notificação para o usuário
+        // Pode enviar notificação para o usuário
         break;
       }
 
@@ -114,6 +136,56 @@ serve(async (req) => {
         logStep("Payment deleted/refunded", {
           paymentId: body.payment?.id,
         });
+        break;
+      }
+
+      case "SUBSCRIPTION_CREATED": {
+        logStep("Subscription created", {
+          subscriptionId: body.subscription?.id,
+        });
+        break;
+      }
+
+      case "SUBSCRIPTION_UPDATED": {
+        logStep("Subscription updated", {
+          subscriptionId: body.subscription?.id,
+          status: body.subscription?.status,
+        });
+        break;
+      }
+
+      case "SUBSCRIPTION_DELETED":
+      case "SUBSCRIPTION_INACTIVATED": {
+        logStep("Subscription deleted/inactivated", {
+          subscriptionId: body.subscription?.id,
+        });
+
+        // Buscar usuário pela subscription_id e remover acesso
+        if (body.subscription?.id) {
+          const { data: usuario } = await supabaseAdmin
+            .from("usuarios")
+            .select("id")
+            .eq("asaas_subscription_id", body.subscription.id)
+            .maybeSingle();
+
+          if (usuario) {
+            const { error: updateError } = await supabaseAdmin
+              .from("usuarios")
+              .update({
+                asaas_subscription_id: null,
+                asaas_plan: null,
+                asaas_subscription_end: null,
+                trial_end_override: null,
+              })
+              .eq("id", usuario.id);
+
+            if (updateError) {
+              logStep("Error removing user subscription", { error: updateError });
+            } else {
+              logStep("User subscription removed", { userId: usuario.id });
+            }
+          }
+        }
         break;
       }
 

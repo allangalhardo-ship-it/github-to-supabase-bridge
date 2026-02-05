@@ -17,23 +17,13 @@ const ProFeatureGate: React.FC<ProFeatureGateProps> = ({
   featureName = 'Esta funcionalidade',
   featureDescription = 'Faça upgrade para o plano Pro e desbloqueie recursos avançados.',
 }) => {
-  const { isPro, subscription, openCheckout } = useSubscription();
+  const { isPro, subscription } = useSubscription();
   const navigate = useNavigate();
-  const [checkoutLoading, setCheckoutLoading] = React.useState(false);
 
   // Se é Pro, mostra o conteúdo normalmente
   if (isPro) {
     return <>{children}</>;
   }
-
-  const handleUpgrade = async () => {
-    setCheckoutLoading(true);
-    try {
-      await openCheckout('pro');
-    } finally {
-      setCheckoutLoading(false);
-    }
-  };
 
   const handleViewPlans = () => {
     navigate('/assinatura');
@@ -94,31 +84,15 @@ const ProFeatureGate: React.FC<ProFeatureGateProps> = ({
             )}
           </div>
 
-          {/* Botões */}
-          <div className="flex flex-col gap-2">
-            <Button
-              size="lg"
-              className="w-full"
-              onClick={handleUpgrade}
-              disabled={checkoutLoading}
-            >
-              {checkoutLoading ? (
-                'Processando...'
-              ) : (
-                <>
-                  Fazer Upgrade para Pro
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </>
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full"
-              onClick={handleViewPlans}
-            >
-              Ver todos os planos
-            </Button>
-          </div>
+          {/* Botão */}
+          <Button
+            size="lg"
+            className="w-full"
+            onClick={handleViewPlans}
+          >
+            Ver Planos
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
         </CardContent>
       </Card>
     </div>

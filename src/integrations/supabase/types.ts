@@ -1179,6 +1179,9 @@ export type Database = {
       }
       usuarios: {
         Row: {
+          asaas_plan: string | null
+          asaas_subscription_end: string | null
+          asaas_subscription_id: string | null
           avatar_url: string | null
           cpf_cnpj: string | null
           created_at: string
@@ -1191,6 +1194,9 @@ export type Database = {
           trial_end_override: string | null
         }
         Insert: {
+          asaas_plan?: string | null
+          asaas_subscription_end?: string | null
+          asaas_subscription_id?: string | null
           avatar_url?: string | null
           cpf_cnpj?: string | null
           created_at?: string
@@ -1203,6 +1209,9 @@ export type Database = {
           trial_end_override?: string | null
         }
         Update: {
+          asaas_plan?: string | null
+          asaas_subscription_end?: string | null
+          asaas_subscription_id?: string | null
           avatar_url?: string | null
           cpf_cnpj?: string | null
           created_at?: string

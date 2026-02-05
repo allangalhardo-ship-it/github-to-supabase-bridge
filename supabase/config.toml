@@ -6,9 +6,6 @@ verify_jwt = false
 [functions.process-nfe]
 verify_jwt = false
 
-[functions.stripe-webhook]
-verify_jwt = false
-
 [functions.ai-assistant]
 verify_jwt = false
 
@@ -28,4 +25,10 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.asaas-webhook]
+verify_jwt = false
+
+[functions.asaas-customer-portal]
+verify_jwt = false
+
+[functions.asaas-cancel-subscription]
 verify_jwt = false

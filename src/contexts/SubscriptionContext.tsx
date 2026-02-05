@@ -17,8 +17,8 @@ interface SubscriptionContextType {
   subscription: SubscriptionStatus;
   loading: boolean;
   checkSubscription: () => Promise<void>;
-  openCheckout: (plan?: PlanType) => Promise<void>;
-  openCustomerPortal: () => Promise<void>;
+  openCustomerPortal: () => Promise<{ subscriptions: any[]; pendingPayments: any[] }>;
+  cancelSubscription: () => Promise<void>;
   hasAccess: boolean;
   isPro: boolean;
   isAdmin: boolean;
@@ -155,40 +155,40 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, [session?.access_token, user]);
 
-  const openCheckout = async (plan: PlanType = 'standard') => {
-    try {
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { plan: plan || 'standard' },
-      });
-
-      if (error) {
-        console.error('Error creating checkout:', error);
-        throw error;
-      }
-
-      if (data?.url) {
-        window.open(data.url, '_blank');
-      }
-    } catch (err) {
-      console.error('Error opening checkout:', err);
-      throw err;
-    }
-  };
-
   const openCustomerPortal = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('customer-portal');
+      const { data, error } = await supabase.functions.invoke('asaas-customer-portal');
 
       if (error) {
         console.error('Error opening customer portal:', error);
         throw error;
       }
 
-      if (data?.url) {
-        window.open(data.url, '_blank');
-      }
+      return {
+        subscriptions: data?.subscriptions || [],
+        pendingPayments: data?.pendingPayments || [],
+      };
     } catch (err) {
       console.error('Error opening customer portal:', err);
+      throw err;
+    }
+  };
+
+  const cancelSubscription = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('asaas-cancel-subscription');
+
+      if (error) {
+        console.error('Error canceling subscription:', error);
+        throw error;
+      }
+
+      // Refresh subscription status
+      await checkSubscription();
+      
+      return data;
+    } catch (err) {
+      console.error('Error canceling subscription:', err);
       throw err;
     }
   };
@@ -231,8 +231,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         subscription,
         loading,
         checkSubscription,
-        openCheckout,
         openCustomerPortal,
+        cancelSubscription,
         hasAccess,
         isPro,
         isAdmin,
