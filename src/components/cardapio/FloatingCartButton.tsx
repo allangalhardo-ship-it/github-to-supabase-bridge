@@ -13,7 +13,7 @@ export function FloatingCartButton({ quantidade, total, onClick }: FloatingCartB
     // Botão simples quando vazio
     return (
       <Button
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-xl bg-emerald-500 hover:bg-emerald-600 text-white z-30"
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white z-30 transition-all hover:scale-110"
         size="icon"
         onClick={onClick}
       >
@@ -26,12 +26,12 @@ export function FloatingCartButton({ quantidade, total, onClick }: FloatingCartB
   return (
     <button
       onClick={onClick}
-      className="fixed bottom-6 left-4 right-4 max-w-md mx-auto bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl shadow-xl py-4 px-5 flex items-center justify-between z-30 transition-all active:scale-[0.98]"
+      className="fixed bottom-6 left-4 right-4 max-w-md mx-auto bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white rounded-2xl shadow-2xl py-4 px-6 flex items-center justify-between z-30 transition-all active:scale-[0.98] animate-fade-in"
     >
       <div className="flex items-center gap-3">
         <div className="relative">
           <ShoppingCart className="h-6 w-6" />
-          <span className="absolute -top-2 -right-2 bg-white text-emerald-600 text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+          <span className="absolute -top-2 -right-2 bg-white text-rose-600 text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-md">
             {quantidade}
           </span>
         </div>
