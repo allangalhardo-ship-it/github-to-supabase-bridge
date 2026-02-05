@@ -442,7 +442,7 @@ const Insumos = () => {
                     <Input
                       id="custo_unitario"
                       type="number"
-                      step="0.01"
+                      step="any"
                       min="0"
                       value={formData.custo_unitario}
                       onChange={(e) => setFormData({ ...formData, custo_unitario: e.target.value })}
