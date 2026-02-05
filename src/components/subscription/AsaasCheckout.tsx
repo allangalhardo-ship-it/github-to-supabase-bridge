@@ -92,9 +92,10 @@ export const AsaasCheckout: React.FC<AsaasCheckoutProps> = ({
       });
       
       if (paymentMethod === 'CREDIT_CARD' && (data.checkoutUrl || data.invoiceUrl)) {
-        // Para cartão, redireciona direto para o checkout do Asaas
+        // Para cartão, mostra tela de pagamento e abre checkout
+        setStep('payment');
         window.open(data.checkoutUrl || data.invoiceUrl, '_blank');
-        toast.success('Redirecionando para o checkout...');
+        toast.success('Checkout aberto em nova aba. Complete o pagamento.');
       } else {
         setStep('payment');
         if (paymentMethod === 'PIX') {
