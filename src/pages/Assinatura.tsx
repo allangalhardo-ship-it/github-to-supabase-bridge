@@ -5,12 +5,21 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, Crown, Loader2, AlertTriangle, ArrowRight, Sparkles, Bot, CreditCard, QrCode, LogOut } from 'lucide-react';
+import { Check, Crown, Loader2, AlertTriangle, ArrowRight, Sparkles, Bot, QrCode, LogOut } from 'lucide-react';
 import { Logo } from '@/components/brand/Logo';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { AsaasPixCheckout } from '@/components/subscription/AsaasPixCheckout';
+import { AsaasCheckout } from '@/components/subscription/AsaasCheckout';
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from '@/components/ui/alert-dialog';
 
 const plans = [
   {
@@ -60,19 +69,18 @@ const plans = [
 
 const Assinatura = () => {
   const navigate = useNavigate();
-  const { subscription, loading, openCheckout, openCustomerPortal, hasAccess } = useSubscription();
+  const { subscription, loading, cancelSubscription, hasAccess } = useSubscription();
   const { signOut, usuario } = useAuth();
-  const [checkoutLoading, setCheckoutLoading] = React.useState<PlanType | null>(null);
-  const [annualLoading, setAnnualLoading] = React.useState<PlanType | null>(null);
-  const [portalLoading, setPortalLoading] = React.useState(false);
-  const [billingPeriod, setBillingPeriod] = React.useState<'monthly' | 'pix' | 'annual'>('monthly');
+  const [billingPeriod, setBillingPeriod] = React.useState<'monthly' | 'annual'>('monthly');
   const [logoutLoading, setLogoutLoading] = React.useState(false);
-  const [pixCheckoutOpen, setPixCheckoutOpen] = React.useState(false);
-  const [selectedPixPlan, setSelectedPixPlan] = React.useState<PlanType>('standard');
+  const [checkoutOpen, setCheckoutOpen] = React.useState(false);
+  const [selectedPlan, setSelectedPlan] = React.useState<PlanType>('standard');
+  const [cancelDialogOpen, setCancelDialogOpen] = React.useState(false);
+  const [cancelLoading, setCancelLoading] = React.useState(false);
 
-  const handlePixCheckout = (plan: PlanType) => {
-    setSelectedPixPlan(plan);
-    setPixCheckoutOpen(true);
+  const handleCheckout = (plan: PlanType) => {
+    setSelectedPlan(plan);
+    setCheckoutOpen(true);
   };
 
   const handleLogout = async () => {
@@ -88,48 +96,18 @@ const Assinatura = () => {
     }
   };
 
-  const handleCheckout = async (plan: PlanType) => {
-    setCheckoutLoading(plan);
+  const handleCancelSubscription = async () => {
+    setCancelLoading(true);
     try {
-      await openCheckout(plan);
-    } finally {
-      setCheckoutLoading(null);
-    }
-  };
-
-  const handleAnnualCheckout = async (plan: PlanType) => {
-    setAnnualLoading(plan);
-    try {
-      const { data, error } = await supabase.functions.invoke('create-annual-payment', {
-        body: { plan },
-      });
-      
-      if (error) throw error;
-      if (data?.url) {
-        window.open(data.url, '_blank');
-      }
+      await cancelSubscription();
+      toast.success('Assinatura cancelada com sucesso');
+      setCancelDialogOpen(false);
     } catch (err) {
-      console.error('Annual checkout error:', err);
-      toast.error('Erro ao iniciar pagamento anual');
+      console.error('Cancel subscription error:', err);
+      toast.error('Erro ao cancelar assinatura');
     } finally {
-      setAnnualLoading(null);
+      setCancelLoading(false);
     }
-  };
-
-  const handlePortal = async () => {
-    setPortalLoading(true);
-    try {
-      await openCustomerPortal();
-    } finally {
-      setPortalLoading(false);
-    }
-  };
-
-  const getCurrentPlanLabel = () => {
-    if (!subscription.subscribed && subscription.status !== 'trialing') return null;
-    if (subscription.plan === 'pro') return 'Pro';
-    if (subscription.plan === 'standard') return 'Standard';
-    return null;
   };
 
   if (loading) {
@@ -220,6 +198,50 @@ const Assinatura = () => {
           </Card>
         )}
 
+        {subscription.status === 'active' && subscription.subscribed && (
+          <Card className="border-green-500/50 bg-green-500/5">
+            <CardContent className="pt-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <Check className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="font-medium text-green-700 dark:text-green-400">
+                      Assinatura {subscription.plan === 'pro' ? 'Pro' : 'Standard'} ativa
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {subscription.subscriptionEnd && (
+                        <>
+                          Próxima cobrança em{' '}
+                          <strong>
+                            {new Date(subscription.subscriptionEnd).toLocaleDateString('pt-BR')}
+                          </strong>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/dashboard')}
+                    className="whitespace-nowrap"
+                  >
+                    Ir para o sistema
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setCancelDialogOpen(true)}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {subscription.status === 'expired' && (
           <Card className="border-destructive/50 bg-destructive/10">
             <CardContent className="pt-6">
@@ -241,14 +263,10 @@ const Assinatura = () => {
         {/* Billing Period Toggle */}
         <div className="flex justify-center">
           <Tabs value={billingPeriod} onValueChange={(v) => setBillingPeriod(v as 'monthly' | 'annual')} className="w-auto">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="monthly" className="gap-2">
-                <CreditCard className="h-4 w-4" />
-                Mensal
-              </TabsTrigger>
-              <TabsTrigger value="pix" className="gap-2">
                 <QrCode className="h-4 w-4" />
-                Pix Mensal
+                Mensal
               </TabsTrigger>
               <TabsTrigger value="annual" className="gap-2">
                 <QrCode className="h-4 w-4" />
@@ -258,26 +276,13 @@ const Assinatura = () => {
           </Tabs>
         </div>
 
-        {billingPeriod === 'pix' && (
-          <Card className="border-primary/50 bg-primary/5">
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center justify-center gap-2 text-primary">
-                <QrCode className="h-5 w-5" />
-                <span className="font-medium">
-                  Pague via Pix com cobrança recorrente automática
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {billingPeriod === 'annual' && (
           <Card className="border-green-500/50 bg-green-500/5">
             <CardContent className="pt-4 pb-4">
               <div className="flex items-center justify-center gap-2 text-green-700 dark:text-green-400">
                 <QrCode className="h-5 w-5" />
                 <span className="font-medium">
-                  Pague com Pix, Boleto ou Cartão e economize 2 meses!
+                  Pague via Pix ou Boleto e economize 2 meses!
                 </span>
               </div>
             </CardContent>
@@ -290,17 +295,6 @@ const Assinatura = () => {
             const isCurrentPlan = subscription.subscribed && subscription.plan === plan.id;
             const isUpgrade = subscription.subscribed && subscription.plan === 'standard' && plan.id === 'pro';
             const isAnnual = billingPeriod === 'annual';
-            const isPix = billingPeriod === 'pix';
-            
-            const handlePlanClick = () => {
-              if (isPix) {
-                handlePixCheckout(plan.id);
-              } else if (isAnnual) {
-                handleAnnualCheckout(plan.id);
-              } else {
-                handleCheckout(plan.id);
-              }
-            };
             
             return (
               <Card 
@@ -389,55 +383,29 @@ const Assinatura = () => {
                     <Button
                       variant="outline"
                       className="w-full"
-                      onClick={handlePortal}
-                      disabled={portalLoading}
+                      onClick={() => setCancelDialogOpen(true)}
                     >
-                      {portalLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Gerenciar Assinatura
                     </Button>
                   ) : isUpgrade ? (
                     <Button
                       className="w-full"
                       size="lg"
-                      onClick={handlePlanClick}
-                      disabled={isAnnual ? annualLoading === plan.id : checkoutLoading === plan.id}
+                      onClick={() => handleCheckout(plan.id)}
                     >
-                      {(isAnnual ? annualLoading === plan.id : checkoutLoading === plan.id) && (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      )}
-                      {isPix ? (
-                        <>
-                          <QrCode className="mr-2 h-4 w-4" />
-                          Upgrade com Pix
-                        </>
-                      ) : isAnnual ? (
-                        <>
-                          <QrCode className="mr-2 h-4 w-4" />
-                          Upgrade Anual
-                        </>
-                      ) : 'Fazer Upgrade para Pro'}
+                      <QrCode className="mr-2 h-4 w-4" />
+                      Upgrade para Pro
                     </Button>
                   ) : (
                     <Button
                       className="w-full"
                       size="lg"
                       variant={plan.popular ? 'default' : 'outline'}
-                      onClick={handlePlanClick}
-                      disabled={isAnnual ? annualLoading === plan.id : checkoutLoading === plan.id}
+                      onClick={() => handleCheckout(plan.id)}
                     >
-                      {(isAnnual ? annualLoading === plan.id : checkoutLoading === plan.id) && (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      )}
-                      {isPix ? (
-                        <>
-                          <QrCode className="mr-2 h-4 w-4" />
-                          Pagar {plan.priceMonthly} (Pix)
-                        </>
-                      ) : isAnnual ? (
-                        <>
-                          <QrCode className="mr-2 h-4 w-4" />
-                          Pagar {plan.priceAnnual}
-                        </>
+                      <QrCode className="mr-2 h-4 w-4" />
+                      {isAnnual ? (
+                        `Pagar ${plan.priceAnnual}`
                       ) : (
                         subscription.status === 'expired' || (subscription.status === 'trialing' && !subscription.subscribed)
                           ? 'Assinar Agora' 
@@ -473,7 +441,7 @@ const Assinatura = () => {
               <CardContent>
                 <p className="text-sm text-muted-foreground">
                   No plano anual você paga 10 meses e ganha 12 meses de acesso! 
-                  Além disso, pode pagar com Pix, que tem taxa menor.
+                  Além disso, pode pagar com Pix ou Boleto.
                 </p>
               </CardContent>
             </Card>
@@ -503,12 +471,40 @@ const Assinatura = () => {
         </div>
       </div>
 
-      <AsaasPixCheckout
-        open={pixCheckoutOpen}
-        onOpenChange={setPixCheckoutOpen}
-        plan={selectedPixPlan}
-        billingCycle={billingPeriod === 'annual' ? 'annual' : 'monthly'}
+      <AsaasCheckout
+        open={checkoutOpen}
+        onOpenChange={setCheckoutOpen}
+        plan={selectedPlan}
+        billingCycle={billingPeriod}
       />
+
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar assinatura?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja cancelar sua assinatura? Você terá acesso até o fim do período pago.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelSubscription}
+              disabled={cancelLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {cancelLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Cancelando...
+                </>
+              ) : (
+                'Sim, cancelar'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

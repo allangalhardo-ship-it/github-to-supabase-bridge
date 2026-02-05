@@ -56,12 +56,13 @@ serve(async (req) => {
     const billingCycle: BillingCycle = body.billingCycle === "YEARLY" ? "YEARLY" : "MONTHLY";
     const cpfCnpj = body.cpfCnpj;
     const name = body.name || user.email.split("@")[0];
+    const paymentMethod = body.paymentMethod || "PIX"; // PIX, BOLETO, CREDIT_CARD
 
     if (!cpfCnpj) {
-      throw new Error("CPF/CNPJ é obrigatório para pagamentos via Pix");
+      throw new Error("CPF/CNPJ é obrigatório para pagamentos");
     }
 
-    logStep("Plan selected", { plan, billingCycle });
+    logStep("Plan selected", { plan, billingCycle, paymentMethod });
 
     const asaasApiKey = Deno.env.get("ASAAS_API_KEY");
     if (!asaasApiKey) {
@@ -115,7 +116,7 @@ serve(async (req) => {
       logStep("Customer created", { customerId });
     }
 
-    // 2. Criar assinatura com Pix
+    // 2. Criar assinatura
     const value = billingCycle === "YEARLY" 
       ? PLAN_VALUES[plan].annual 
       : PLAN_VALUES[plan].monthly;
@@ -124,7 +125,7 @@ serve(async (req) => {
     nextDueDate.setDate(nextDueDate.getDate() + 1); // Cobrança começa amanhã
     const dueDateStr = nextDueDate.toISOString().split("T")[0];
 
-    logStep("Creating subscription", { customerId, value, billingCycle });
+    logStep("Creating subscription", { customerId, value, billingCycle, paymentMethod });
 
     const subscriptionResp = await fetch(`${ASAAS_API_URL}/subscriptions`, {
       method: "POST",
@@ -134,7 +135,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         customer: customerId,
-        billingType: "PIX",
+        billingType: paymentMethod,
         cycle: billingCycle,
         value: value,
         nextDueDate: dueDateStr,
@@ -157,7 +158,7 @@ serve(async (req) => {
     logStep("Subscription created", { subscriptionId: subscriptionData.id });
 
     // 3. Buscar o primeiro pagamento para obter o link do Pix
-    logStep("Fetching first payment for PIX link");
+    logStep("Fetching first payment");
     
     // Aguardar um pouco para o Asaas processar
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -175,24 +176,33 @@ serve(async (req) => {
     const paymentsData = await paymentsResp.json();
     let pixQrCode = null;
     let pixCopyPaste = null;
+    let boletoUrl = null;
     let paymentId = null;
+    let invoiceUrl = null;
 
     if (paymentsData.data && paymentsData.data.length > 0) {
       paymentId = paymentsData.data[0].id;
+      invoiceUrl = paymentsData.data[0].invoiceUrl;
       
-      // Buscar QR Code do Pix
-      const pixResp = await fetch(`${ASAAS_API_URL}/payments/${paymentId}/pixQrCode`, {
-        headers: {
-          "access_token": asaasApiKey,
-          "Content-Type": "application/json",
-        },
-      });
+      if (paymentMethod === "PIX") {
+        // Buscar QR Code do Pix
+        const pixResp = await fetch(`${ASAAS_API_URL}/payments/${paymentId}/pixQrCode`, {
+          headers: {
+            "access_token": asaasApiKey,
+            "Content-Type": "application/json",
+          },
+        });
 
-      if (pixResp.ok) {
-        const pixData = await pixResp.json();
-        pixQrCode = pixData.encodedImage;
-        pixCopyPaste = pixData.payload;
-        logStep("PIX QR Code obtained", { paymentId });
+        if (pixResp.ok) {
+          const pixData = await pixResp.json();
+          pixQrCode = pixData.encodedImage;
+          pixCopyPaste = pixData.payload;
+          logStep("PIX QR Code obtained", { paymentId });
+        }
+      } else if (paymentMethod === "BOLETO") {
+        // Para boleto, usar a URL da fatura
+        boletoUrl = invoiceUrl;
+        logStep("Boleto URL obtained", { paymentId, boletoUrl });
       }
     }
 
@@ -203,9 +213,12 @@ serve(async (req) => {
         paymentId: paymentId,
         pixQrCode: pixQrCode,
         pixCopyPaste: pixCopyPaste,
+        boletoUrl: boletoUrl,
+        invoiceUrl: invoiceUrl,
         value: value,
         plan: plan,
         billingCycle: billingCycle,
+        paymentMethod: paymentMethod,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
