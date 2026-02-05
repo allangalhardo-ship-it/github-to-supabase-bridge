@@ -101,8 +101,9 @@ export function CardapioConfig() {
   };
 
   const getLinkCardapio = () => {
-    const baseUrl = window.location.origin;
-    return `${baseUrl}/cardapio/${formData.slug}`;
+    // Usa o domínio publicado se disponível, senão usa o origin atual
+    const publishedDomain = "https://app.gastrogestor.com.br";
+    return `${publishedDomain}/cardapio/${formData.slug}`;
   };
 
   const copiarLink = () => {
