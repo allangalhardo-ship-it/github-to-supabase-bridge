@@ -27,21 +27,32 @@ function verificarAberto(horario: string | null): boolean {
 
 export function CardapioHeader({ empresa }: CardapioHeaderProps) {
   const estaAberto = verificarAberto(empresa.horario_funcionamento);
+  const hasBanner = !!empresa.banner_url;
+  const hasLogo = !!empresa.logo_url;
 
   return (
     <header className="relative">
       {/* Banner Hero */}
       <div className="relative h-[200px] md:h-[280px] bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-900 overflow-hidden">
-        {/* Pattern overlay para dar textura */}
-        <div 
-          className="absolute inset-0 opacity-10"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }}
-        />
+        {/* Imagem de banner se existir */}
+        {hasBanner ? (
+          <img 
+            src={empresa.banner_url!} 
+            alt={`Banner ${empresa.nome}`}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          /* Pattern overlay para dar textura quando não tem banner */
+          <div 
+            className="absolute inset-0 opacity-10"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+            }}
+          />
+        )}
         
         {/* Gradient overlay escuro */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/20" />
         
         {/* Conteúdo do header */}
         <div className="absolute inset-0 flex flex-col justify-end p-4 md:p-6 max-w-4xl mx-auto">
@@ -60,10 +71,19 @@ export function CardapioHeader({ empresa }: CardapioHeaderProps) {
             )}
           </div>
           
-          {/* Logo/Nome */}
-          <h1 className="text-2xl md:text-4xl font-bold text-white mb-2 drop-shadow-lg">
-            {empresa.nome}
-          </h1>
+          {/* Logo + Nome */}
+          <div className="flex items-center gap-3 mb-2">
+            {hasLogo && (
+              <img 
+                src={empresa.logo_url!}
+                alt={`Logo ${empresa.nome}`}
+                className="w-12 h-12 md:w-16 md:h-16 rounded-xl object-cover border-2 border-white/30 shadow-lg"
+              />
+            )}
+            <h1 className="text-2xl md:text-4xl font-bold text-white drop-shadow-lg">
+              {empresa.nome}
+            </h1>
+          </div>
           
           {/* Descrição */}
           {empresa.cardapio_descricao && (

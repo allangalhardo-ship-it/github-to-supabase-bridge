@@ -13,6 +13,8 @@ export interface Empresa {
   cardapio_descricao: string | null;
   horario_funcionamento: string | null;
   whatsapp_dono: string | null;
+  logo_url?: string | null;
+  banner_url?: string | null;
 }
 
 export interface CarrinhoItem {
