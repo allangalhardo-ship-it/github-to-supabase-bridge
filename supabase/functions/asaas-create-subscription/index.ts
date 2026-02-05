@@ -179,6 +179,7 @@ serve(async (req) => {
     let boletoUrl = null;
     let paymentId = null;
     let invoiceUrl = null;
+    let checkoutUrl = null;
 
     if (paymentsData.data && paymentsData.data.length > 0) {
       paymentId = paymentsData.data[0].id;
@@ -203,6 +204,10 @@ serve(async (req) => {
         // Para boleto, usar a URL da fatura
         boletoUrl = invoiceUrl;
         logStep("Boleto URL obtained", { paymentId, boletoUrl });
+      } else if (paymentMethod === "CREDIT_CARD") {
+        // Para cartão, usar a URL de checkout do Asaas
+        checkoutUrl = invoiceUrl;
+        logStep("Credit Card checkout URL obtained", { paymentId, checkoutUrl });
       }
     }
 
@@ -214,6 +219,7 @@ serve(async (req) => {
         pixQrCode: pixQrCode,
         pixCopyPaste: pixCopyPaste,
         boletoUrl: boletoUrl,
+        checkoutUrl: checkoutUrl,
         invoiceUrl: invoiceUrl,
         value: value,
         plan: plan,

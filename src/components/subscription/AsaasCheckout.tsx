@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, QrCode, Copy, Check, AlertCircle, CreditCard, FileText } from 'lucide-react';
+import { Loader2, QrCode, Copy, Check, AlertCircle, CreditCard, FileText, Wallet } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { PlanType } from '@/contexts/SubscriptionContext';
@@ -20,6 +20,7 @@ interface PaymentData {
   pixQrCode?: string;
   pixCopyPaste?: string;
   boletoUrl?: string;
+  checkoutUrl?: string;
   invoiceUrl?: string;
   value: number;
   subscriptionId: string;
@@ -38,7 +39,7 @@ export const AsaasCheckout: React.FC<AsaasCheckoutProps> = ({
   const [name, setName] = useState('');
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
   const [copied, setCopied] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'BOLETO'>('PIX');
+  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'BOLETO' | 'CREDIT_CARD'>('PIX');
 
   const formatCpfCnpj = (value: string) => {
     const numbers = value.replace(/\D/g, '');
@@ -83,17 +84,24 @@ export const AsaasCheckout: React.FC<AsaasCheckoutProps> = ({
         pixQrCode: data.pixQrCode,
         pixCopyPaste: data.pixCopyPaste,
         boletoUrl: data.boletoUrl,
+        checkoutUrl: data.checkoutUrl,
         invoiceUrl: data.invoiceUrl,
         value: data.value,
         subscriptionId: data.subscriptionId,
         paymentMethod: data.paymentMethod,
       });
-      setStep('payment');
       
-      if (paymentMethod === 'PIX') {
-        toast.success('QR Code gerado! Escaneie para pagar.');
+      if (paymentMethod === 'CREDIT_CARD' && (data.checkoutUrl || data.invoiceUrl)) {
+        // Para cartão, redireciona direto para o checkout do Asaas
+        window.open(data.checkoutUrl || data.invoiceUrl, '_blank');
+        toast.success('Redirecionando para o checkout...');
       } else {
-        toast.success('Boleto gerado com sucesso!');
+        setStep('payment');
+        if (paymentMethod === 'PIX') {
+          toast.success('QR Code gerado! Escaneie para pagar.');
+        } else {
+          toast.success('Boleto gerado com sucesso!');
+        }
       }
     } catch (err) {
       console.error('Error creating Asaas subscription:', err);
@@ -148,11 +156,15 @@ export const AsaasCheckout: React.FC<AsaasCheckoutProps> = ({
 
         {step === 'form' && (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <Tabs value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as 'PIX' | 'BOLETO')}>
-              <TabsList className="grid w-full grid-cols-2">
+            <Tabs value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as 'PIX' | 'BOLETO' | 'CREDIT_CARD')}>
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="PIX" className="gap-2">
                   <QrCode className="h-4 w-4" />
                   Pix
+                </TabsTrigger>
+                <TabsTrigger value="CREDIT_CARD" className="gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Cartão
                 </TabsTrigger>
                 <TabsTrigger value="BOLETO" className="gap-2">
                   <FileText className="h-4 w-4" />
@@ -191,6 +203,8 @@ export const AsaasCheckout: React.FC<AsaasCheckoutProps> = ({
               <p className="text-xs text-muted-foreground">
                 {paymentMethod === 'PIX' 
                   ? 'Após gerar o QR Code, você terá 30 minutos para efetuar o pagamento.'
+                  : paymentMethod === 'CREDIT_CARD'
+                  ? 'O pagamento será processado imediatamente após a confirmação.'
                   : 'O boleto tem vencimento em 3 dias úteis.'
                 }
               </p>
@@ -200,12 +214,17 @@ export const AsaasCheckout: React.FC<AsaasCheckoutProps> = ({
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Gerando...
+                  Processando...
                 </>
               ) : paymentMethod === 'PIX' ? (
                 <>
                   <QrCode className="mr-2 h-4 w-4" />
                   Gerar QR Code Pix
+                </>
+              ) : paymentMethod === 'CREDIT_CARD' ? (
+                <>
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Pagar com Cartão
                 </>
               ) : (
                 <>
@@ -272,6 +291,26 @@ export const AsaasCheckout: React.FC<AsaasCheckoutProps> = ({
                 <Button onClick={handleOpenBoleto} className="w-full">
                   <FileText className="mr-2 h-4 w-4" />
                   Abrir Boleto
+                </Button>
+              </div>
+            )}
+
+            {paymentData.paymentMethod === 'CREDIT_CARD' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-center p-8 bg-muted rounded-lg">
+                  <CreditCard className="h-16 w-16 text-muted-foreground" />
+                </div>
+                
+                <p className="text-sm text-center text-muted-foreground">
+                  Uma nova janela foi aberta para você completar o pagamento com cartão.
+                </p>
+                
+                <Button 
+                  onClick={() => window.open(paymentData.checkoutUrl || paymentData.invoiceUrl, '_blank')} 
+                  className="w-full"
+                >
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Abrir Checkout Novamente
                 </Button>
               </div>
             )}
