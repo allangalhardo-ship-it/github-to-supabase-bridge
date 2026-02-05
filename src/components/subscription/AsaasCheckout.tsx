@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, QrCode, Copy, Check, AlertCircle, CreditCard, FileText, Wallet } from 'lucide-react';
+import { Loader2, QrCode, Copy, Check, AlertCircle, CreditCard, FileText, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { PlanType } from '@/contexts/SubscriptionContext';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { PlanType, useSubscription } from '@/contexts/SubscriptionContext';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface AsaasCheckoutProps {
   open: boolean;
@@ -33,6 +33,7 @@ export const AsaasCheckout: React.FC<AsaasCheckoutProps> = ({
   plan,
   billingCycle,
 }) => {
+  const { checkSubscription } = useSubscription();
   const [step, setStep] = useState<'form' | 'payment'>('form');
   const [loading, setLoading] = useState(false);
   const [cpfCnpj, setCpfCnpj] = useState('');
@@ -40,6 +41,8 @@ export const AsaasCheckout: React.FC<AsaasCheckoutProps> = ({
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
   const [copied, setCopied] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'BOLETO' | 'CREDIT_CARD'>('PIX');
+  const [checkingPayment, setCheckingPayment] = useState(false);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const formatCpfCnpj = (value: string) => {
     const numbers = value.replace(/\D/g, '');
@@ -127,7 +130,54 @@ export const AsaasCheckout: React.FC<AsaasCheckoutProps> = ({
     }
   };
 
-  const handleClose = () => {
+  // Função para verificar se o pagamento foi confirmado
+  const checkPaymentStatus = async () => {
+    setCheckingPayment(true);
+    try {
+      await checkSubscription();
+      toast.success('Status da assinatura atualizado!');
+    } catch (err) {
+      console.error('Error checking subscription:', err);
+    } finally {
+      setCheckingPayment(false);
+    }
+  };
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Start polling when payment step is shown
+  useEffect(() => {
+    if (step === 'payment' && paymentData) {
+      // Poll every 10 seconds for payment confirmation
+      pollIntervalRef.current = setInterval(() => {
+        checkSubscription();
+      }, 10000);
+    } else {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, paymentData]);
+
+  const handleClose = async () => {
+    // Stop polling
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+    
+    // Force refresh subscription status
+    await checkSubscription();
+    
     setStep('form');
     setPaymentData(null);
     setCpfCnpj('');
@@ -273,7 +323,7 @@ export const AsaasCheckout: React.FC<AsaasCheckoutProps> = ({
                       className="flex-shrink-0"
                     >
                       {copied ? (
-                        <Check className="h-4 w-4 text-green-500" />
+                        <Check className="h-4 w-4 text-primary" />
                       ) : (
                         <Copy className="h-4 w-4" />
                       )}
@@ -316,16 +366,31 @@ export const AsaasCheckout: React.FC<AsaasCheckoutProps> = ({
               </div>
             )}
 
-            <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-              <Check className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
-              <p className="text-xs text-green-700 dark:text-green-300">
-                Após o pagamento, sua assinatura será ativada automaticamente em alguns minutos.
+            <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-lg border border-primary/20">
+              <Loader2 className="h-4 w-4 text-primary flex-shrink-0 animate-spin" />
+              <p className="text-xs text-primary">
+                Verificando pagamento automaticamente... Pode levar alguns minutos.
               </p>
             </div>
 
-            <Button variant="outline" onClick={handleClose} className="w-full">
-              Fechar
-            </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button 
+                variant="outline" 
+                onClick={checkPaymentStatus} 
+                disabled={checkingPayment}
+                className="w-full"
+              >
+                {checkingPayment ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                Verificar Agora
+              </Button>
+              <Button variant="outline" onClick={handleClose} className="w-full">
+                Fechar
+              </Button>
+            </div>
           </div>
         )}
       </DialogContent>

@@ -162,7 +162,50 @@ serve(async (req) => {
       case "SUBSCRIPTION_CREATED": {
         logStep("Subscription created", {
           subscriptionId: body.subscription?.id,
+          externalReference: body.subscription?.externalReference,
         });
+
+        // Pré-registrar dados da assinatura quando criada
+        if (body.subscription?.externalReference) {
+          const externalRef = parseExternalReference(body.subscription.externalReference);
+          
+          if (externalRef?.user_id) {
+            const userId = externalRef.user_id;
+            const plan = externalRef.plan;
+            const billingCycle = externalRef.billing_cycle;
+            
+            logStep("Pre-registering subscription", { userId, plan, billingCycle });
+
+            // Calcular data de expiração provisória (será atualizada quando pagamento confirmar)
+            let subscriptionEnd: Date;
+            if (body.subscription.nextDueDate) {
+              subscriptionEnd = new Date(body.subscription.nextDueDate);
+            } else {
+              subscriptionEnd = new Date();
+              if (billingCycle === "YEARLY") {
+                subscriptionEnd.setFullYear(subscriptionEnd.getFullYear() + 1);
+              } else {
+                subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1);
+              }
+            }
+
+            // Pré-registrar a assinatura (status pendente até confirmar pagamento)
+            const { error: updateError } = await supabaseAdmin
+              .from("usuarios")
+              .update({
+                asaas_subscription_id: body.subscription.id,
+                asaas_plan: plan,
+                // Não define trial_end_override ainda - só após pagamento confirmado
+              })
+              .eq("id", userId);
+
+            if (updateError) {
+              logStep("Error pre-registering subscription", { error: updateError });
+            } else {
+              logStep("Subscription pre-registered", { userId, plan, subscriptionId: body.subscription.id });
+            }
+          }
+        }
         break;
       }
 
