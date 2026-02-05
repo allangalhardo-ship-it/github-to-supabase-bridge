@@ -118,7 +118,7 @@ export function usePrecosCanais(produtoId?: string) {
           canal,
           preco,
         }, {
-          onConflict: 'produto_id,canal',
+          onConflict: 'produto_id,canal,empresa_id',
         });
 
       if (error) throw error;
@@ -160,7 +160,7 @@ export function usePrecosCanais(produtoId?: string) {
       const { error } = await supabase
         .from('precos_canais')
         .upsert(registros, {
-          onConflict: 'produto_id,canal',
+          onConflict: 'produto_id,canal,empresa_id',
         });
 
       if (error) throw error;
@@ -192,7 +192,8 @@ export function usePrecosCanais(produtoId?: string) {
   };
 
   // Mapear preços do produto para um objeto por canal
-  const precosMap = (precosProduto || []).reduce((acc, p) => {
+  const precosProdutoArray = Array.isArray(precosProduto) ? precosProduto : [];
+  const precosMap = precosProdutoArray.reduce((acc, p) => {
     acc[p.canal] = p.preco;
     return acc;
   }, {} as Record<string, number>);
