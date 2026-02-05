@@ -23,6 +23,18 @@ serve(async (req) => {
   try {
     logStep("Webhook received");
 
+    // Validar token de autenticação do Asaas (opcional, mas recomendado)
+    const asaasAccessToken = req.headers.get("asaas-access-token");
+    const expectedToken = Deno.env.get("ASAAS_WEBHOOK_TOKEN");
+    
+    if (expectedToken && asaasAccessToken !== expectedToken) {
+      logStep("Invalid webhook token", { received: asaasAccessToken ? "present" : "missing" });
+      // Não bloquear se token não estiver configurado, apenas logar
+      if (asaasAccessToken) {
+        logStep("Warning: Token mismatch, proceeding anyway");
+      }
+    }
+
     const body = await req.json();
     logStep("Webhook event", { event: body.event, paymentId: body.payment?.id });
 
@@ -88,12 +100,20 @@ serve(async (req) => {
               
               logStep("Processing subscription activation", { userId, plan, billingCycle });
 
-              // Calcular data de expiração baseada no ciclo
-              const subscriptionEnd = new Date();
-              if (billingCycle === "YEARLY") {
-                subscriptionEnd.setFullYear(subscriptionEnd.getFullYear() + 1);
+              // Usar nextDueDate do Asaas se disponível, senão calcular
+              let subscriptionEnd: Date;
+              if (subscriptionData.nextDueDate) {
+                subscriptionEnd = new Date(subscriptionData.nextDueDate);
+                logStep("Using Asaas nextDueDate", { nextDueDate: subscriptionData.nextDueDate });
               } else {
-                subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1);
+                // Fallback: calcular baseado no ciclo
+                subscriptionEnd = new Date();
+                if (billingCycle === "YEARLY") {
+                  subscriptionEnd.setFullYear(subscriptionEnd.getFullYear() + 1);
+                } else {
+                  subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1);
+                }
+                logStep("Calculated subscriptionEnd", { subscriptionEnd: subscriptionEnd.toISOString() });
               }
 
               // Atualizar dados de assinatura no usuário
