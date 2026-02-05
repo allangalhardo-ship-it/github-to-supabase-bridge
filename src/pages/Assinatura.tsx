@@ -5,10 +5,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, Crown, Loader2, AlertTriangle, ArrowRight, Sparkles, Bot, QrCode, LogOut } from 'lucide-react';
+import { Check, Crown, Loader2, AlertTriangle, ArrowRight, Sparkles, Bot, QrCode, LogOut, RefreshCw } from 'lucide-react';
 import { Logo } from '@/components/brand/Logo';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { AsaasCheckout } from '@/components/subscription/AsaasCheckout';
 import { 
   AlertDialog, 
@@ -69,7 +70,7 @@ const plans = [
 
 const Assinatura = () => {
   const navigate = useNavigate();
-  const { subscription, loading, cancelSubscription, hasAccess } = useSubscription();
+  const { subscription, loading, cancelSubscription, hasAccess, checkSubscription } = useSubscription();
   const { signOut, usuario } = useAuth();
   const [billingPeriod, setBillingPeriod] = React.useState<'monthly' | 'annual'>('monthly');
   const [logoutLoading, setLogoutLoading] = React.useState(false);
@@ -77,6 +78,7 @@ const Assinatura = () => {
   const [selectedPlan, setSelectedPlan] = React.useState<PlanType>('standard');
   const [cancelDialogOpen, setCancelDialogOpen] = React.useState(false);
   const [cancelLoading, setCancelLoading] = React.useState(false);
+  const [syncLoading, setSyncLoading] = React.useState(false);
 
   const handleCheckout = (plan: PlanType) => {
     setSelectedPlan(plan);
@@ -107,6 +109,27 @@ const Assinatura = () => {
       toast.error('Erro ao cancelar assinatura');
     } finally {
       setCancelLoading(false);
+    }
+  };
+
+  const handleSyncAsaas = async () => {
+    setSyncLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('asaas-sync-subscription');
+      if (error) throw error;
+
+      await checkSubscription();
+
+      if (data?.confirmedPayment) {
+        toast.success('Pagamento confirmado! Assinatura ativada.');
+      } else {
+        toast('Sincronizado, mas o pagamento ainda não consta como confirmado.');
+      }
+    } catch (err) {
+      console.error('Sync Asaas error:', err);
+      toast.error('Não consegui sincronizar com o Asaas. Tente novamente em 1-2 minutos.');
+    } finally {
+      setSyncLoading(false);
     }
   };
 
@@ -185,14 +208,29 @@ const Assinatura = () => {
                     </p>
                   </div>
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={() => navigate('/dashboard')}
-                  className="whitespace-nowrap"
-                >
-                  Ir para o sistema
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleSyncAsaas}
+                    disabled={syncLoading}
+                    className="whitespace-nowrap"
+                  >
+                    {syncLoading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                    )}
+                    Já paguei, sincronizar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/dashboard')}
+                    className="whitespace-nowrap"
+                  >
+                    Ir para o sistema
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

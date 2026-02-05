@@ -157,9 +157,30 @@ serve(async (req) => {
     const subscriptionData = await subscriptionResp.json();
     logStep("Subscription created", { subscriptionId: subscriptionData.id });
 
+    // 2.1 Salvar subscription_id/plano no nosso banco imediatamente (evita depender do webhook)
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { persistSession: false } }
+    );
+
+    const { error: updateUserError } = await supabaseAdmin
+      .from("usuarios")
+      .update({
+        asaas_subscription_id: subscriptionData.id,
+        asaas_plan: plan,
+      })
+      .eq("id", user.id);
+
+    if (updateUserError) {
+      logStep("Error saving subscription id to user", { error: updateUserError });
+    } else {
+      logStep("User updated with subscription id", { userId: user.id, subscriptionId: subscriptionData.id, plan });
+    }
+
     // 3. Buscar o primeiro pagamento para obter o link do Pix
     logStep("Fetching first payment");
-    
+
     // Aguardar um pouco para o Asaas processar
     await new Promise(resolve => setTimeout(resolve, 1000));
 

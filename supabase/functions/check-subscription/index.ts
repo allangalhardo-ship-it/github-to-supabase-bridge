@@ -96,33 +96,71 @@ serve(async (req) => {
           
           // Status do Asaas: ACTIVE, INACTIVE, EXPIRED
           if (subscriptionData.status === "ACTIVE") {
-            // Calculate subscription end based on cycle
-            let subscriptionEnd = asaasSubscriptionEnd;
-            if (!subscriptionEnd) {
-              const nextDue = new Date(subscriptionData.nextDueDate);
-              subscriptionEnd = nextDue.toISOString();
+            // Confirmar se existe pagamento confirmado/recebido para essa assinatura
+            let hasConfirmedPayment = false;
+            try {
+              const paymentsResp = await fetch(
+                `${ASAAS_API_URL}/payments?subscription=${asaasSubscriptionId}`,
+                {
+                  headers: {
+                    "access_token": asaasApiKey,
+                    "Content-Type": "application/json",
+                  },
+                }
+              );
+
+              if (paymentsResp.ok) {
+                const paymentsData = await paymentsResp.json();
+                const payments = Array.isArray(paymentsData?.data) ? paymentsData.data : [];
+
+                hasConfirmedPayment = payments.some((p: any) =>
+                  ["RECEIVED", "CONFIRMED"].includes(String(p?.status || "").toUpperCase())
+                );
+
+                logStep("Payments checked", {
+                  subscriptionId: asaasSubscriptionId,
+                  paymentsCount: payments.length,
+                  hasConfirmedPayment,
+                });
+              } else {
+                logStep("Payments check failed", { status: paymentsResp.status });
+              }
+            } catch (paymentsError) {
+              logStep("Payments check error", { error: String(paymentsError) });
             }
 
-            logStep("Active Asaas subscription found", {
-              status: subscriptionData.status,
-              plan: asaasPlan,
-              subscriptionEnd,
-            });
-
-            return new Response(
-              JSON.stringify({
-                subscribed: true,
-                status: "active",
-                plan: asaasPlan || "standard",
-                subscription_end: subscriptionEnd,
-                trial_end: null,
-                trial_days_remaining: 0,
-              }),
-              {
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-                status: 200,
+            if (!hasConfirmedPayment) {
+              logStep("Subscription ACTIVE but no confirmed payment yet", { subscriptionId: asaasSubscriptionId });
+              // Não libera como ativa ainda; segue para fallback (trial / override)
+            } else {
+              // Calculate subscription end based on cycle
+              let subscriptionEnd = asaasSubscriptionEnd;
+              if (!subscriptionEnd) {
+                const nextDue = new Date(subscriptionData.nextDueDate);
+                subscriptionEnd = nextDue.toISOString();
               }
-            );
+
+              logStep("Active Asaas subscription found", {
+                status: subscriptionData.status,
+                plan: asaasPlan,
+                subscriptionEnd,
+              });
+
+              return new Response(
+                JSON.stringify({
+                  subscribed: true,
+                  status: "active",
+                  plan: asaasPlan || "standard",
+                  subscription_end: subscriptionEnd,
+                  trial_end: null,
+                  trial_days_remaining: 0,
+                }),
+                {
+                  headers: { ...corsHeaders, "Content-Type": "application/json" },
+                  status: 200,
+                }
+              );
+            }
           }
         }
       } catch (asaasError) {
