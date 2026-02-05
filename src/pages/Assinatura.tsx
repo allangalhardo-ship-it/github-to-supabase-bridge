@@ -7,9 +7,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { Check, Crown, Loader2, AlertTriangle, ArrowRight, Sparkles, Bot, CreditCard, QrCode, LogOut } from 'lucide-react';
 import { Logo } from '@/components/brand/Logo';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { AsaasPixCheckout } from '@/components/subscription/AsaasPixCheckout';
 
 const plans = [
   {
@@ -64,8 +65,15 @@ const Assinatura = () => {
   const [checkoutLoading, setCheckoutLoading] = React.useState<PlanType | null>(null);
   const [annualLoading, setAnnualLoading] = React.useState<PlanType | null>(null);
   const [portalLoading, setPortalLoading] = React.useState(false);
-  const [billingPeriod, setBillingPeriod] = React.useState<'monthly' | 'annual'>('monthly');
+  const [billingPeriod, setBillingPeriod] = React.useState<'monthly' | 'pix' | 'annual'>('monthly');
   const [logoutLoading, setLogoutLoading] = React.useState(false);
+  const [pixCheckoutOpen, setPixCheckoutOpen] = React.useState(false);
+  const [selectedPixPlan, setSelectedPixPlan] = React.useState<PlanType>('standard');
+
+  const handlePixCheckout = (plan: PlanType) => {
+    setSelectedPixPlan(plan);
+    setPixCheckoutOpen(true);
+  };
 
   const handleLogout = async () => {
     setLogoutLoading(true);
@@ -233,18 +241,35 @@ const Assinatura = () => {
         {/* Billing Period Toggle */}
         <div className="flex justify-center">
           <Tabs value={billingPeriod} onValueChange={(v) => setBillingPeriod(v as 'monthly' | 'annual')} className="w-auto">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="monthly" className="gap-2">
                 <CreditCard className="h-4 w-4" />
                 Mensal
               </TabsTrigger>
+              <TabsTrigger value="pix" className="gap-2">
+                <QrCode className="h-4 w-4" />
+                Pix Mensal
+              </TabsTrigger>
               <TabsTrigger value="annual" className="gap-2">
                 <QrCode className="h-4 w-4" />
-                Anual (Pix)
+                Anual
               </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
+
+        {billingPeriod === 'pix' && (
+          <Card className="border-primary/50 bg-primary/5">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center justify-center gap-2 text-primary">
+                <QrCode className="h-5 w-5" />
+                <span className="font-medium">
+                  Pague via Pix com cobrança recorrente automática
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {billingPeriod === 'annual' && (
           <Card className="border-green-500/50 bg-green-500/5">
@@ -265,6 +290,17 @@ const Assinatura = () => {
             const isCurrentPlan = subscription.subscribed && subscription.plan === plan.id;
             const isUpgrade = subscription.subscribed && subscription.plan === 'standard' && plan.id === 'pro';
             const isAnnual = billingPeriod === 'annual';
+            const isPix = billingPeriod === 'pix';
+            
+            const handlePlanClick = () => {
+              if (isPix) {
+                handlePixCheckout(plan.id);
+              } else if (isAnnual) {
+                handleAnnualCheckout(plan.id);
+              } else {
+                handleCheckout(plan.id);
+              }
+            };
             
             return (
               <Card 
@@ -363,16 +399,21 @@ const Assinatura = () => {
                     <Button
                       className="w-full"
                       size="lg"
-                      onClick={() => isAnnual ? handleAnnualCheckout(plan.id) : handleCheckout(plan.id)}
+                      onClick={handlePlanClick}
                       disabled={isAnnual ? annualLoading === plan.id : checkoutLoading === plan.id}
                     >
                       {(isAnnual ? annualLoading === plan.id : checkoutLoading === plan.id) && (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       )}
-                      {isAnnual ? (
+                      {isPix ? (
                         <>
                           <QrCode className="mr-2 h-4 w-4" />
-                          Upgrade Anual com Pix
+                          Upgrade com Pix
+                        </>
+                      ) : isAnnual ? (
+                        <>
+                          <QrCode className="mr-2 h-4 w-4" />
+                          Upgrade Anual
                         </>
                       ) : 'Fazer Upgrade para Pro'}
                     </Button>
@@ -381,16 +422,21 @@ const Assinatura = () => {
                       className="w-full"
                       size="lg"
                       variant={plan.popular ? 'default' : 'outline'}
-                      onClick={() => isAnnual ? handleAnnualCheckout(plan.id) : handleCheckout(plan.id)}
+                      onClick={handlePlanClick}
                       disabled={isAnnual ? annualLoading === plan.id : checkoutLoading === plan.id}
                     >
                       {(isAnnual ? annualLoading === plan.id : checkoutLoading === plan.id) && (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       )}
-                      {isAnnual ? (
+                      {isPix ? (
                         <>
                           <QrCode className="mr-2 h-4 w-4" />
-                          Pagar {plan.priceAnnual} (Pix)
+                          Pagar {plan.priceMonthly} (Pix)
+                        </>
+                      ) : isAnnual ? (
+                        <>
+                          <QrCode className="mr-2 h-4 w-4" />
+                          Pagar {plan.priceAnnual}
                         </>
                       ) : (
                         subscription.status === 'expired' || (subscription.status === 'trialing' && !subscription.subscribed)
@@ -456,6 +502,13 @@ const Assinatura = () => {
           </div>
         </div>
       </div>
+
+      <AsaasPixCheckout
+        open={pixCheckoutOpen}
+        onOpenChange={setPixCheckoutOpen}
+        plan={selectedPixPlan}
+        billingCycle={billingPeriod === 'annual' ? 'annual' : 'monthly'}
+      />
     </div>
   );
 };
