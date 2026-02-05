@@ -46,7 +46,7 @@ export default function Cardapio() {
     try {
       const { data: empresaData, error: empresaError } = await supabase
         .from("empresas")
-        .select("id, nome, cardapio_descricao, horario_funcionamento, whatsapp_dono")
+        .select("id, nome, cardapio_descricao, horario_funcionamento, whatsapp_dono, logo_url, banner_url")
         .eq("slug", slug)
         .eq("cardapio_ativo", true)
         .single();

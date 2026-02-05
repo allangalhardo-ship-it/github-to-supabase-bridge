@@ -371,33 +371,39 @@ export type Database = {
       }
       empresas: {
         Row: {
+          banner_url: string | null
           cardapio_ativo: boolean
           cardapio_descricao: string | null
           created_at: string
           horario_funcionamento: string | null
           id: string
+          logo_url: string | null
           nome: string
           segmento: string | null
           slug: string | null
           whatsapp_dono: string | null
         }
         Insert: {
+          banner_url?: string | null
           cardapio_ativo?: boolean
           cardapio_descricao?: string | null
           created_at?: string
           horario_funcionamento?: string | null
           id?: string
+          logo_url?: string | null
           nome: string
           segmento?: string | null
           slug?: string | null
           whatsapp_dono?: string | null
         }
         Update: {
+          banner_url?: string | null
           cardapio_ativo?: boolean
           cardapio_descricao?: string | null
           created_at?: string
           horario_funcionamento?: string | null
           id?: string
+          logo_url?: string | null
           nome?: string
           segmento?: string | null
           slug?: string | null

@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Copy, ExternalLink, Share2 } from "lucide-react";
+import { ImageUploadField } from "./ImageUploadField";
 
 interface EmpresaCardapio {
   id: string;
@@ -19,6 +20,8 @@ interface EmpresaCardapio {
   cardapio_descricao: string | null;
   horario_funcionamento: string | null;
   whatsapp_dono: string | null;
+  logo_url: string | null;
+  banner_url: string | null;
 }
 
 export function CardapioConfig() {
@@ -34,6 +37,8 @@ export function CardapioConfig() {
     horario_funcionamento: "",
     whatsapp_dono: "",
     slug: "",
+    logo_url: null as string | null,
+    banner_url: null as string | null,
   });
 
   useEffect(() => {
@@ -46,7 +51,7 @@ export function CardapioConfig() {
     try {
       const { data, error } = await supabase
         .from("empresas")
-        .select("id, nome, slug, cardapio_ativo, cardapio_descricao, horario_funcionamento, whatsapp_dono")
+        .select("id, nome, slug, cardapio_ativo, cardapio_descricao, horario_funcionamento, whatsapp_dono, logo_url, banner_url")
         .eq("id", empresaId)
         .single();
 
@@ -59,6 +64,8 @@ export function CardapioConfig() {
         horario_funcionamento: data.horario_funcionamento || "",
         whatsapp_dono: data.whatsapp_dono || "",
         slug: data.slug || "",
+        logo_url: data.logo_url || null,
+        banner_url: data.banner_url || null,
       });
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
@@ -81,6 +88,8 @@ export function CardapioConfig() {
           horario_funcionamento: formData.horario_funcionamento || null,
           whatsapp_dono: formData.whatsapp_dono || null,
           slug: formData.slug || null,
+          logo_url: formData.logo_url,
+          banner_url: formData.banner_url,
         })
         .eq("id", empresaId);
 
@@ -179,6 +188,31 @@ export function CardapioConfig() {
               </div>
             </div>
           )}
+
+          {/* Imagens */}
+          <div className="grid gap-6 md:grid-cols-2">
+            <ImageUploadField
+              label="Logo da empresa"
+              description="Recomendado: imagem quadrada (ex: 200x200px)"
+              value={formData.logo_url}
+              onChange={(url) => setFormData({ ...formData, logo_url: url })}
+              empresaId={empresaId!}
+              folder="logo"
+              aspectRatio="aspect-square"
+              previewHeight="h-24"
+            />
+
+            <ImageUploadField
+              label="Banner do cardápio"
+              description="Recomendado: 1200x400px (proporção 3:1)"
+              value={formData.banner_url}
+              onChange={(url) => setFormData({ ...formData, banner_url: url })}
+              empresaId={empresaId!}
+              folder="banner"
+              aspectRatio="aspect-[3/1]"
+              previewHeight="h-24"
+            />
+          </div>
 
           {/* Configurações */}
           <div className="grid gap-4">
