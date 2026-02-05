@@ -17,6 +17,15 @@ import {
   FloatingCartButton,
 } from "@/components/cardapio";
 
+// Simulated badges - in production, these would come from the database
+function getBadgeForProduct(produto: Produto, index: number): 'mais_vendido' | 'favorito' | 'novidade' | null {
+  // For demo: assign badges based on position
+  if (index === 0) return 'mais_vendido';
+  if (index === 1) return 'favorito';
+  if (index === 2) return 'novidade';
+  return null;
+}
+
 export default function Cardapio() {
   const { slug } = useParams<{ slug: string }>();
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
@@ -100,7 +109,7 @@ export default function Cardapio() {
     setCategoriaAtiva(categoria);
     const section = sectionRefs.current[categoria];
     if (section) {
-      const offset = 60; // altura da barra de categorias
+      const offset = 80; // altura da barra de categorias
       const top = section.getBoundingClientRect().top + window.scrollY - offset;
       window.scrollTo({ top, behavior: "smooth" });
     }
@@ -255,9 +264,9 @@ export default function Cardapio() {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-[#faf9f7] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-500 border-t-transparent mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-rose-500 border-t-transparent mx-auto"></div>
           <p className="mt-4 text-gray-600">Carregando cardápio...</p>
         </div>
       </div>
@@ -267,7 +276,7 @@ export default function Cardapio() {
   // Not found state
   if (!empresa) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-[#faf9f7] flex flex-col items-center justify-center p-4">
         <Store className="h-20 w-20 text-gray-300 mb-4" />
         <h1 className="text-2xl font-bold text-gray-800 mb-2">Cardápio não encontrado</h1>
         <p className="text-gray-500 text-center max-w-md">
@@ -283,7 +292,13 @@ export default function Cardapio() {
     : undefined;
 
   return (
-    <div className="min-h-screen bg-white overflow-auto">
+    <div 
+      className="min-h-screen overflow-auto"
+      style={{ 
+        backgroundColor: '#faf9f7',
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e5e0d8' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+      }}
+    >
       {/* Header com banner */}
       <CardapioHeader empresa={empresa} />
 
@@ -295,20 +310,39 @@ export default function Cardapio() {
       />
 
       {/* Produtos */}
-      <main className="max-w-4xl mx-auto px-4 py-6 pb-32">
-        {categorias.map((categoria) => (
+      <main className="max-w-4xl mx-auto px-4 md:px-6 py-8 pb-36">
+        {categorias.map((categoria, catIndex) => (
           <section
             key={categoria}
             ref={(el) => { sectionRefs.current[categoria] = el; }}
-            className="mb-8 scroll-mt-20"
+            className={`mb-12 scroll-mt-24 py-8 px-4 md:px-6 rounded-3xl ${
+              catIndex % 2 === 0 
+                ? 'bg-white/60 backdrop-blur-sm' 
+                : 'bg-gradient-to-br from-rose-50/50 to-orange-50/50'
+            }`}
           >
-            <h2 className="text-xl font-bold text-gray-800 mb-4">
-              {categoria}
-            </h2>
+            {/* Título da categoria com estilo decorativo */}
+            <div className="text-center mb-8">
+              <h2 
+                className="text-2xl md:text-3xl font-bold text-gray-800 inline-block"
+                style={{ fontFamily: "'Playfair Display', serif" }}
+              >
+                {categoria}
+              </h2>
+              {/* Linha decorativa */}
+              <div className="flex items-center justify-center gap-2 mt-2">
+                <div className="h-[1px] w-12 bg-gradient-to-r from-transparent to-rose-300" />
+                <div className="w-2 h-2 rounded-full bg-rose-400" />
+                <div className="h-[1px] w-12 bg-gradient-to-l from-transparent to-rose-300" />
+              </div>
+            </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {produtosPorCategoria[categoria].map((produto) => {
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+              {produtosPorCategoria[categoria].map((produto, index) => {
                 const itemCarrinho = carrinho.find((i) => i.produto.id === produto.id);
+                // Only show badges for first category products for demo
+                const badge = catIndex === 0 ? getBadgeForProduct(produto, index) : null;
+                
                 return (
                   <ProductCard
                     key={produto.id}
@@ -316,6 +350,8 @@ export default function Cardapio() {
                     itemCarrinho={itemCarrinho}
                     onAddToCart={(p) => adicionarAoCarrinho(p, 1, "")}
                     onOpenDetails={setProdutoDetalhe}
+                    badge={badge}
+                    index={index}
                   />
                 );
               })}

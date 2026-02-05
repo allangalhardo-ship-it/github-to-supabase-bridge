@@ -37,14 +37,16 @@ export function CategoryTabs({ categorias, categoriaAtiva, onCategoriaChange }: 
   return (
     <div 
       className={cn(
-        "sticky top-0 z-30 bg-white border-b transition-shadow",
-        isSticky && "shadow-md"
+        "sticky top-0 z-30 border-b transition-all duration-300",
+        isSticky 
+          ? "bg-white/95 backdrop-blur-md shadow-lg" 
+          : "bg-[#faf9f7]"
       )}
     >
       <div className="max-w-4xl mx-auto">
         <div
           ref={scrollRef}
-          className="flex overflow-x-auto scrollbar-hide py-3 px-4 gap-2"
+          className="flex overflow-x-auto scrollbar-hide py-4 px-4 gap-3"
         >
           {categorias.map((categoria) => (
             <button
@@ -52,10 +54,10 @@ export function CategoryTabs({ categorias, categoriaAtiva, onCategoriaChange }: 
               data-categoria={categoria}
               onClick={() => onCategoriaChange(categoria)}
               className={cn(
-                "flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all",
+                "flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200",
                 categoriaAtiva === categoria
-                  ? "bg-emerald-500 text-white shadow-md"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  ? "bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg scale-105"
+                  : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 hover:border-rose-200 hover:text-rose-500"
               )}
             >
               {categoria}
