@@ -5,3 +5,4 @@ export * from "./ProductCard";
 export * from "./ProductDetailModal";
 export * from "./CartDrawer";
 export * from "./FloatingCartButton";
+export * from "./SearchBar";

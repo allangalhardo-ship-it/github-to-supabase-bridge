@@ -70,7 +70,8 @@ export function verificarAberto(horario: string | null): { aberto: boolean; prox
 }
 
 export function CardapioHeader({ empresa }: CardapioHeaderProps) {
-  const estaAberto = verificarAberto(empresa.horario_funcionamento);
+  const statusHorario = verificarAberto(empresa.horario_funcionamento);
+  const estaAberto = statusHorario.aberto;
   const hasBanner = !!empresa.banner_url;
   const hasLogo = !!empresa.logo_url;
 
