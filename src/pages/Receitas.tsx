@@ -6,6 +6,7 @@ import { invalidateEmpresaCachesAndRefetch } from "@/lib/queryConfig";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChefHat, Calculator } from "lucide-react";
+import ContextualTip from '@/components/onboarding/ContextualTip';
 
 import {
   Receita,
