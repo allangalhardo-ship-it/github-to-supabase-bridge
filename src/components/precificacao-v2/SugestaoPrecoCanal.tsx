@@ -78,7 +78,7 @@ const SugestaoPrecoCanal: React.FC<SugestaoPrecosCanalProps> = ({ produtos, conf
           <Badge variant="secondary" className="ml-auto">{sugestoes.length}</Badge>
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Preço ideal por canal considerando taxas, impostos e margem alvo de {config?.margem_desejada_padrao}%
+          Preço ideal por canal considerando taxas e CMV alvo de {config?.cmv_alvo || 35}%
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
