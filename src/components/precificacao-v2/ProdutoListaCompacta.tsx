@@ -121,8 +121,16 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
               </>
             ) : (
               <>
-                📦 Todos os Produtos
+            📦 Todos os Produtos
                 <Badge variant="secondary">{produtosFiltrados.length}</Badge>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-xs text-muted-foreground cursor-help ml-1">ⓘ</span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs max-w-[220px]">
+                    As margens exibidas já são líquidas de impostos ({((config?.imposto_medio_sobre_vendas || 0)).toFixed(1)}%) e taxas do canal.
+                  </TooltipContent>
+                </Tooltip>
               </>
             )}
           </CardTitle>
@@ -229,6 +237,11 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
                       <div className="flex items-center gap-2">
                         {getSaudeIcon(produto.saudeMargem)}
                         <p className="font-medium text-sm truncate">{produto.nome}</p>
+                        {produto.quantidadeVendida === 0 && (
+                          <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-muted-foreground/40 text-muted-foreground shrink-0">
+                            Sem vendas
+                          </Badge>
+                        )}
                         {precisaAjuste && (
                           <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-amber-500 text-amber-600 shrink-0 hidden sm:inline-flex">
                             Defasado
@@ -284,7 +297,7 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
                                 <TooltipContent side="top" className="text-xs">
                                   <p className="font-medium">{canal.nome}</p>
                                   <p>Preço: {formatCurrency(precoCanal)} {temPrecoCustom ? '✓' : '(base)'}</p>
-                                  <p>Margem: {formatPercent(margem)}</p>
+                                  <p>Margem: {formatPercent(margem)} <span className="text-muted-foreground">(líq. impostos)</span></p>
                                   {canal.taxa > 0 && <p className="text-muted-foreground">Taxa: {canal.taxa}%</p>}
                                 </TooltipContent>
                               </Tooltip>

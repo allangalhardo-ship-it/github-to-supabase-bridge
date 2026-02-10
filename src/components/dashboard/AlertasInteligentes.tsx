@@ -18,6 +18,7 @@ interface AlertasInteligentesProps {
   cmvAtual: number;
   cmvAlvo: number;
   produtosDefasados: number;
+  produtosMargemNegativa?: number;
 }
 
 const AlertasInteligentes: React.FC<AlertasInteligentesProps> = ({
@@ -25,6 +26,7 @@ const AlertasInteligentes: React.FC<AlertasInteligentesProps> = ({
   cmvAtual,
   cmvAlvo,
   produtosDefasados,
+  produtosMargemNegativa = 0,
 }) => {
   const navigate = useNavigate();
 
@@ -54,6 +56,16 @@ const AlertasInteligentes: React.FC<AlertasInteligentesProps> = ({
     descricao: string;
     acao?: { label: string; rota: string };
   }> = [];
+
+  if (produtosMargemNegativa > 0) {
+    alertas.push({
+      tipo: 'critico',
+      icone: <AlertTriangle className="h-4 w-4" />,
+      titulo: `${produtosMargemNegativa} produto(s) com margem negativa`,
+      descricao: 'Esses produtos dão prejuízo a cada venda. Ajuste os preços urgentemente.',
+      acao: { label: 'Corrigir preços', rota: '/precificacao' },
+    });
+  }
 
   if (cmvAtual > 0 && cmvAtual > cmvAlvo + 5) {
     alertas.push({
