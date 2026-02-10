@@ -379,7 +379,7 @@ const AppLayout = () => {
             WebkitOverflowScrolling: 'touch'
           }}
         >
-          <div className="w-full min-w-0 p-4 md:p-6 pb-24 lg:pb-6 max-w-7xl mx-auto box-border">
+          <div className="w-full min-w-0 p-4 md:p-6 pb-6 max-w-7xl mx-auto box-border">
             <Outlet />
           </div>
         </main>
