@@ -41,6 +41,8 @@ const Dashboard = () => {
   const { usuario } = useAuth();
   const [periodo, setPeriodo] = useState<PeriodoType>('mes');
   const [showSmartInsights, setShowSmartInsights] = useState(true);
+  const [customDateFrom, setCustomDateFrom] = useState<Date | undefined>(undefined);
+  const [customDateTo, setCustomDateTo] = useState<Date | undefined>(undefined);
 
   const getDateRange = () => {
     const hoje = new Date();
@@ -53,6 +55,11 @@ const Dashboard = () => {
         return { inicio: format(startOfMonth(hoje), 'yyyy-MM-dd'), fim: format(hoje, 'yyyy-MM-dd') };
       case 'ultimos30':
         return { inicio: format(subDays(hoje, 30), 'yyyy-MM-dd'), fim: format(hoje, 'yyyy-MM-dd') };
+      case 'personalizado':
+        return {
+          inicio: customDateFrom ? format(customDateFrom, 'yyyy-MM-dd') : format(startOfMonth(hoje), 'yyyy-MM-dd'),
+          fim: customDateTo ? format(customDateTo, 'yyyy-MM-dd') : format(hoje, 'yyyy-MM-dd'),
+        };
       default:
         return { inicio: format(startOfMonth(hoje), 'yyyy-MM-dd'), fim: format(hoje, 'yyyy-MM-dd') };
     }
