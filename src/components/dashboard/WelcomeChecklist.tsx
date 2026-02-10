@@ -120,15 +120,20 @@ const WelcomeChecklist = () => {
     },
   ];
 
+  // Required steps for completion check (exclude optional)
+  const requiredSteps = steps.filter((s) => !s.optional);
+  const completedRequired = requiredSteps.filter((s) => s.done).length;
   const completedCount = steps.filter((s) => s.done).length;
-  const allDone = completedCount === steps.length;
+  const allDone = requiredSteps.every((s) => s.done);
 
   if (allDone) return null;
 
-  const progressPercent = (completedCount / steps.length) * 100;
+  const progressPercent = (completedRequired / requiredSteps.length) * 100;
 
-  // Find the next step to do
-  const nextStepIndex = steps.findIndex((s) => !s.done);
+  // Find the next required step to do (skip optional if previous required isn't done)
+  const nextStepIndex = steps.findIndex((s) => !s.done && !s.optional);
+  // If all required before an optional are done, show optional as next
+  const effectiveNextIndex = nextStepIndex >= 0 ? nextStepIndex : steps.findIndex((s) => !s.done);
 
   return (
     <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-background to-primary/5 overflow-hidden">
