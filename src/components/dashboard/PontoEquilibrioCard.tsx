@@ -202,35 +202,37 @@ export const PontoEquilibrioCard: React.FC<PontoEquilibrioCardProps> = ({
           </div>
         </div>
 
-        {/* Barra de progresso */}
-        <div className="space-y-2">
-          <div className="relative">
-            <Progress 
-              value={Math.min(progressoEquilibrio, 100)} 
-              className="h-3"
-            />
-            {/* Marcador do ponto de equilíbrio */}
-            <div 
-              className="absolute top-0 h-3 w-0.5 bg-foreground/50"
-              style={{ left: `${Math.min((100 / 150) * 100, 66.67)}%` }}
-            />
-          </div>
-          
-          <div className="flex justify-between text-xs">
-            <span className="text-muted-foreground">
-              {progressoEquilibrio.toFixed(0)}% do ponto de equilíbrio
-            </span>
-            {atingiuEquilibrio ? (
-              <span className="text-green-600 font-semibold">
-                +{formatCurrencyBRL(diferencaEquilibrio)} de lucro potencial
+        {/* Barra de progresso - só mostra quando há vendas reais */}
+        {!usandoEstimativa && (
+          <div className="space-y-2">
+            <div className="relative">
+              <Progress 
+                value={Math.min(progressoEquilibrio, 100)} 
+                className="h-3"
+              />
+              {/* Marcador do ponto de equilíbrio */}
+              <div 
+                className="absolute top-0 h-3 w-0.5 bg-foreground/50"
+                style={{ left: `${Math.min((100 / 150) * 100, 66.67)}%` }}
+              />
+            </div>
+            
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">
+                {progressoEquilibrio.toFixed(0)}% do ponto de equilíbrio
               </span>
-            ) : (
-              <span className="text-amber-600 font-semibold">
-                Falta {formatCurrencyBRL(Math.abs(diferencaEquilibrio))}
-              </span>
-            )}
+              {atingiuEquilibrio ? (
+                <span className="text-green-600 font-semibold">
+                  +{formatCurrencyBRL(diferencaEquilibrio)} de lucro potencial
+                </span>
+              ) : (
+                <span className="text-amber-600 font-semibold">
+                  Falta {formatCurrencyBRL(Math.abs(diferencaEquilibrio))}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Dica contextual */}
         {custoFixoMensal > 0 && margemContribuicaoPercent > 0 && !usandoEstimativa && (
