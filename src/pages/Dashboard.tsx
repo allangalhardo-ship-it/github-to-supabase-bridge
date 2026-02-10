@@ -270,6 +270,39 @@ const Dashboard = () => {
 
   const cmvPercent = receitaBruta > 0 ? (cmvTotal / receitaBruta) * 100 : 0;
   const margemContribuicao = receitaBruta - cmvTotal;
+
+  // Quando não há vendas, estimar margem de contribuição a partir dos produtos cadastrados
+  const margemContribuicaoEstimada = useMemo(() => {
+    if (receitaBruta > 0 || !produtosAnalise || produtosAnalise.length === 0) return null;
+
+    let totalPreco = 0;
+    let totalCusto = 0;
+    let produtosComFicha = 0;
+
+    produtosAnalise.forEach((produto) => {
+      if (!produto.preco_venda || produto.preco_venda <= 0) return;
+      const custoInsumos = produto.fichas_tecnicas?.reduce((sum: number, ft: any) => {
+        return sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0));
+      }, 0) || 0;
+
+      if (custoInsumos > 0) {
+        totalPreco += produto.preco_venda;
+        totalCusto += custoInsumos;
+        produtosComFicha++;
+      }
+    });
+
+    if (produtosComFicha === 0 || totalPreco === 0) return null;
+
+    // Margem de contribuição média estimada (preço - custo) / preço
+    const margemPercent = ((totalPreco - totalCusto) / totalPreco) * 100;
+    // Simular receitaBruta = 1 e margemContribuicao proporcional para o card calcular
+    return {
+      receitaSimulada: totalPreco,
+      margemSimulada: totalPreco - totalCusto,
+      margemPercent,
+    };
+  }, [receitaBruta, produtosAnalise]);
   
   const custoFixoMensal = custosFixos?.reduce((sum, c) => sum + Number(c.valor_mensal), 0) || 0;
   const faturamentoMensal = config?.faturamento_mensal || 0;
