@@ -27,6 +27,8 @@ import {
   QuadranteMenu,
   ProdutoAnalise,
 } from '@/components/precificacao-v2';
+import SimuladorVisual from '@/components/precificacao-v2/SimuladorVisual';
+import ContextualTip from '@/components/onboarding/ContextualTip';
 
 const Precificacao = () => {
   const { usuario } = useAuth();
