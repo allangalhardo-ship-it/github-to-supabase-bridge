@@ -310,6 +310,89 @@ export function CardapioConfig() {
         </CardContent>
       </Card>
 
+      {/* Gestão de Categorias */}
+      {categoriasDisponiveis.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">📂 Categorias do Cardápio</CardTitle>
+            <CardDescription>
+              Ordene e controle quais categorias aparecem no cardápio digital
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {(categoriasConfig.ordem.length > 0 ? categoriasConfig.ordem : categoriasDisponiveis)
+              .filter(cat => categoriasDisponiveis.includes(cat))
+              .concat(categoriasDisponiveis.filter(c => !categoriasConfig.ordem.includes(c)))
+              .filter((c, i, a) => a.indexOf(c) === i) // dedupe
+              .map((categoria, index, arr) => {
+                const isOculta = categoriasConfig.ocultas.includes(categoria);
+                return (
+                  <div
+                    key={categoria}
+                    className={cn(
+                      "flex items-center justify-between gap-3 p-3 rounded-lg border transition-colors",
+                      isOculta ? "bg-muted/50 border-muted opacity-60" : "bg-background border-border"
+                    )}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <span className={cn("text-sm font-medium truncate", isOculta && "line-through")}>
+                        {categoria}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        disabled={index === 0}
+                        onClick={() => {
+                          const newOrdem = [...arr];
+                          [newOrdem[index - 1], newOrdem[index]] = [newOrdem[index], newOrdem[index - 1]];
+                          setCategoriasConfig(prev => ({ ...prev, ordem: newOrdem }));
+                        }}
+                      >
+                        <ArrowUp className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        disabled={index === arr.length - 1}
+                        onClick={() => {
+                          const newOrdem = [...arr];
+                          [newOrdem[index], newOrdem[index + 1]] = [newOrdem[index + 1], newOrdem[index]];
+                          setCategoriasConfig(prev => ({ ...prev, ordem: newOrdem }));
+                        }}
+                      >
+                        <ArrowDown className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => {
+                          setCategoriasConfig(prev => ({
+                            ...prev,
+                            ocultas: isOculta
+                              ? prev.ocultas.filter(c => c !== categoria)
+                              : [...prev.ocultas, categoria],
+                          }));
+                        }}
+                      >
+                        {isOculta ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            <p className="text-xs text-muted-foreground">
+              Use as setas para reordenar e o ícone do olho para ocultar categorias. Salve as configurações acima para aplicar.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Dicas */}
       <Card>
         <CardHeader>
