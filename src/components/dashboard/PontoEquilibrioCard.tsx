@@ -49,6 +49,15 @@ export const PontoEquilibrioCard: React.FC<PontoEquilibrioCardProps> = ({
         progressColor: 'bg-muted',
       };
     }
+    if (receitaBruta === 0) {
+      return {
+        icon: Target,
+        label: 'Aguardando vendas',
+        color: 'text-muted-foreground',
+        bgColor: 'bg-muted',
+        progressColor: 'bg-muted',
+      };
+    }
     if (margemContribuicaoPercent <= 0) {
       return {
         icon: AlertTriangle,
