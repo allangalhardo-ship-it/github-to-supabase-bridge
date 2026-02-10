@@ -110,6 +110,7 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, onSubmit, isLoa
         </ResponsiveDialogHeader>
         
         <ResponsiveDialogBody>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <Tabs defaultValue="dados" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="dados" className="text-xs sm:text-sm">
