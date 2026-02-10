@@ -225,7 +225,7 @@ export function ReceitaFormDialog({
           </ResponsiveDialogTitle>
         </ResponsiveDialogHeader>
         
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+        <ResponsiveDialogBody className="space-y-4">
           <div className="p-3 bg-muted/50 rounded-lg text-xs sm:text-sm text-muted-foreground">
             <strong>💡 Receitas</strong> são preparações base que podem ser usadas como ingrediente em produtos finais.
           </div>
