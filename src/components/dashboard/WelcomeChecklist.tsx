@@ -21,36 +21,38 @@ const WelcomeChecklist = () => {
   const { data: counts, isLoading } = useQuery({
     queryKey: ['welcome-checklist', empresaId],
     queryFn: async () => {
-      const [insumosRes, produtosRes, fichasRes, estoqueRes, vendasRes] = await Promise.all([
-        // 1. Tem pelo menos 2 insumos?
+      // Get produto IDs first for subqueries
+      const { data: produtosData } = await supabase
+        .from('produtos')
+        .select('id')
+        .eq('empresa_id', empresaId!);
+      const produtoIds = produtosData?.map(p => p.id) || [];
+
+      const [insumosRes, produtosRes, fichasRes, receitasRes, estoqueRes, vendasRes] = await Promise.all([
         supabase
           .from('insumos')
           .select('id', { count: 'exact', head: true })
           .eq('empresa_id', empresaId!)
           .eq('is_intermediario', false),
-        // 2. Tem pelo menos 1 produto?
         supabase
           .from('produtos')
           .select('id', { count: 'exact', head: true })
           .eq('empresa_id', empresaId!),
-        // 3. Tem pelo menos 1 produto COM ficha técnica (ingredientes vinculados)?
+        produtoIds.length > 0
+          ? supabase
+              .from('fichas_tecnicas')
+              .select('produto_id', { count: 'exact', head: true })
+              .in('produto_id', produtoIds)
+          : Promise.resolve({ count: 0 }),
         supabase
-          .from('fichas_tecnicas')
-          .select('produto_id', { count: 'exact', head: true })
-          .in('produto_id', 
-            // subquery: produtos da empresa
-            (await supabase
-              .from('produtos')
-              .select('id')
-              .eq('empresa_id', empresaId!)
-            ).data?.map(p => p.id) || []
-          ),
-        // 4. Tem pelo menos 1 movimento de estoque (implantação)?
+          .from('insumos')
+          .select('id', { count: 'exact', head: true })
+          .eq('empresa_id', empresaId!)
+          .eq('is_intermediario', true),
         supabase
           .from('estoque_movimentos')
           .select('id', { count: 'exact', head: true })
           .eq('empresa_id', empresaId!),
-        // 5. Tem pelo menos 1 venda?
         supabase
           .from('vendas')
           .select('id', { count: 'exact', head: true })
@@ -61,6 +63,7 @@ const WelcomeChecklist = () => {
         insumos: insumosRes.count || 0,
         produtos: produtosRes.count || 0,
         fichas: fichasRes.count || 0,
+        receitas: receitasRes.count || 0,
         estoque: estoqueRes.count || 0,
         vendas: vendasRes.count || 0,
       };
