@@ -27,7 +27,7 @@ import {
   QuadranteMenu,
   ProdutoAnalise,
 } from '@/components/precificacao-v2';
-import SimuladorVisual from '@/components/precificacao-v2/SimuladorVisual';
+
 import SugestaoPrecoCanal from '@/components/precificacao-v2/SugestaoPrecoCanal';
 import ImpactoReajusteReport from '@/components/precificacao-v2/ImpactoReajusteReport';
 import ContextualTip from '@/components/onboarding/ContextualTip';
@@ -251,8 +251,6 @@ const Precificacao = () => {
             />
           </div>
 
-          {/* Simulador "E se?" */}
-          <SimuladorVisual produtos={produtosAnalisados} config={config} />
 
           {/* Sugestão de preço por canal */}
           <SugestaoPrecoCanal 
