@@ -6,6 +6,7 @@ import { invalidateEmpresaCachesAndRefetch } from "@/lib/queryConfig";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChefHat, Calculator } from "lucide-react";
+import ContextualTip from '@/components/onboarding/ContextualTip';
 
 import {
   Receita,
@@ -150,6 +151,11 @@ export default function Receitas() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
+      <ContextualTip
+        tipKey="receitas-intro"
+        title="👩‍🍳 O que é uma receita base?"
+        description="É uma preparação que você faz e usa dentro de outros produtos. Ex: uma calda de chocolate que vai no bolo e no brigadeiro. Assim você cadastra uma vez e reutiliza! Se você não trabalha com preparo intermediário, pode pular essa parte."
+      />
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>

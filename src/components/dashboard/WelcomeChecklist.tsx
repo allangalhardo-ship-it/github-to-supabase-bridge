@@ -3,11 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
 import { 
   Check, Carrot, UtensilsCrossed, ClipboardList, 
   PackageOpen, ShoppingCart, ArrowRight, Sparkles, 
-  ChevronDown, ChevronUp 
+  ChevronDown, ChevronUp, ChefHat
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -20,36 +21,38 @@ const WelcomeChecklist = () => {
   const { data: counts, isLoading } = useQuery({
     queryKey: ['welcome-checklist', empresaId],
     queryFn: async () => {
-      const [insumosRes, produtosRes, fichasRes, estoqueRes, vendasRes] = await Promise.all([
-        // 1. Tem pelo menos 2 insumos?
+      // Get produto IDs first for subqueries
+      const { data: produtosData } = await supabase
+        .from('produtos')
+        .select('id')
+        .eq('empresa_id', empresaId!);
+      const produtoIds = produtosData?.map(p => p.id) || [];
+
+      const [insumosRes, produtosRes, fichasRes, receitasRes, estoqueRes, vendasRes] = await Promise.all([
         supabase
           .from('insumos')
           .select('id', { count: 'exact', head: true })
           .eq('empresa_id', empresaId!)
           .eq('is_intermediario', false),
-        // 2. Tem pelo menos 1 produto?
         supabase
           .from('produtos')
           .select('id', { count: 'exact', head: true })
           .eq('empresa_id', empresaId!),
-        // 3. Tem pelo menos 1 produto COM ficha técnica (ingredientes vinculados)?
+        produtoIds.length > 0
+          ? supabase
+              .from('fichas_tecnicas')
+              .select('produto_id', { count: 'exact', head: true })
+              .in('produto_id', produtoIds)
+          : Promise.resolve({ count: 0 }),
         supabase
-          .from('fichas_tecnicas')
-          .select('produto_id', { count: 'exact', head: true })
-          .in('produto_id', 
-            // subquery: produtos da empresa
-            (await supabase
-              .from('produtos')
-              .select('id')
-              .eq('empresa_id', empresaId!)
-            ).data?.map(p => p.id) || []
-          ),
-        // 4. Tem pelo menos 1 movimento de estoque (implantação)?
+          .from('insumos')
+          .select('id', { count: 'exact', head: true })
+          .eq('empresa_id', empresaId!)
+          .eq('is_intermediario', true),
         supabase
           .from('estoque_movimentos')
           .select('id', { count: 'exact', head: true })
           .eq('empresa_id', empresaId!),
-        // 5. Tem pelo menos 1 venda?
         supabase
           .from('vendas')
           .select('id', { count: 'exact', head: true })
@@ -60,6 +63,7 @@ const WelcomeChecklist = () => {
         insumos: insumosRes.count || 0,
         produtos: produtosRes.count || 0,
         fichas: fichasRes.count || 0,
+        receitas: receitasRes.count || 0,
         estoque: estoqueRes.count || 0,
         vendas: vendasRes.count || 0,
       };
@@ -86,8 +90,16 @@ const WelcomeChecklist = () => {
       icon: UtensilsCrossed,
     },
     {
+      label: 'Crie uma receita base',
+      description: 'Ex: calda, massa, recheio — preparações que entram em vários produtos. Se não usa, pode pular!',
+      done: counts.receitas > 0,
+      to: '/receitas',
+      icon: ChefHat,
+      optional: true,
+    },
+    {
       label: 'Monte a ficha técnica',
-      description: 'Vincule os ingredientes ao produto para calcular o custo automaticamente.',
+      description: 'Vincule os ingredientes (e receitas) ao produto para calcular o custo automaticamente.',
       done: counts.fichas > 0,
       to: '/produtos',
       icon: ClipboardList,
@@ -108,15 +120,20 @@ const WelcomeChecklist = () => {
     },
   ];
 
+  // Required steps for completion check (exclude optional)
+  const requiredSteps = steps.filter((s) => !s.optional);
+  const completedRequired = requiredSteps.filter((s) => s.done).length;
   const completedCount = steps.filter((s) => s.done).length;
-  const allDone = completedCount === steps.length;
+  const allDone = requiredSteps.every((s) => s.done);
 
   if (allDone) return null;
 
-  const progressPercent = (completedCount / steps.length) * 100;
+  const progressPercent = (completedRequired / requiredSteps.length) * 100;
 
-  // Find the next step to do
-  const nextStepIndex = steps.findIndex((s) => !s.done);
+  // Find the next required step to do (skip optional if previous required isn't done)
+  const nextStepIndex = steps.findIndex((s) => !s.done && !s.optional);
+  // If all required before an optional are done, show optional as next
+  const effectiveNextIndex = nextStepIndex >= 0 ? nextStepIndex : steps.findIndex((s) => !s.done);
 
   return (
     <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-background to-primary/5 overflow-hidden">
@@ -131,7 +148,7 @@ const WelcomeChecklist = () => {
             Configure seu negócio
           </h2>
           <span className="text-xs text-muted-foreground ml-auto mr-2">
-            {completedCount}/{steps.length}
+            {completedRequired}/{requiredSteps.length}
           </span>
           {expanded ? (
             <ChevronUp className="h-4 w-4 text-muted-foreground" />
@@ -148,13 +165,13 @@ const WelcomeChecklist = () => {
           />
         </div>
 
-        {!expanded && nextStepIndex >= 0 && (
+        {!expanded && effectiveNextIndex >= 0 && (
           <div className="mt-3 flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Próximo: <span className="font-medium text-foreground">{steps[nextStepIndex].label}</span>
+              Próximo: <span className="font-medium text-foreground">{steps[effectiveNextIndex].label}</span>
             </p>
             <Button size="sm" asChild className="shrink-0 gap-1">
-              <Link to={steps[nextStepIndex].to}>
+              <Link to={steps[effectiveNextIndex].to}>
                 Ir <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </Button>
@@ -165,7 +182,9 @@ const WelcomeChecklist = () => {
         {expanded && (
           <div className="space-y-2.5 mt-4">
             {steps.map((step, i) => {
-              const isNextStep = i === nextStepIndex;
+              const isNextStep = i === effectiveNextIndex;
+              const prevRequiredDone = steps.slice(0, i).filter(s => !s.optional).every(s => s.done);
+              const showAsAvailable = step.optional && !step.done && prevRequiredDone;
 
               return (
                 <div
@@ -176,10 +195,11 @@ const WelcomeChecklist = () => {
                       ? 'bg-primary/10 opacity-70'
                       : isNextStep
                         ? 'bg-card border-2 border-primary/30 shadow-sm'
-                        : 'bg-card border border-border opacity-60'
+                        : showAsAvailable
+                          ? 'bg-card border border-dashed border-primary/20'
+                          : 'bg-card border border-border opacity-60'
                   )}
                 >
-                  {/* Step number/check */}
                   <div
                     className={cn(
                       'h-9 w-9 rounded-full flex items-center justify-center shrink-0 text-sm font-bold',
@@ -193,32 +213,37 @@ const WelcomeChecklist = () => {
                     {step.done ? (
                       <Check className="h-4 w-4" />
                     ) : (
-                      <span>{i + 1}</span>
+                      <step.icon className="h-4 w-4" />
                     )}
                   </div>
 
-                  {/* Text */}
                   <div className="flex-1 min-w-0">
-                    <p
-                      className={cn(
-                        'text-sm font-semibold',
-                        step.done ? 'line-through text-muted-foreground' : 'text-foreground'
+                    <div className="flex items-center gap-1.5">
+                      <p
+                        className={cn(
+                          'text-sm font-semibold',
+                          step.done ? 'line-through text-muted-foreground' : 'text-foreground'
+                        )}
+                      >
+                        {step.label}
+                      </p>
+                      {step.optional && !step.done && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">
+                          opcional
+                        </Badge>
                       )}
-                    >
-                      {step.label}
-                    </p>
-                    {!step.done && isNextStep && (
+                    </div>
+                    {!step.done && (isNextStep || showAsAvailable) && (
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {step.description}
                       </p>
                     )}
                   </div>
 
-                  {/* Action */}
-                  {!step.done && isNextStep && (
-                    <Button size="sm" asChild className="shrink-0 gap-1">
+                  {!step.done && (isNextStep || showAsAvailable) && (
+                    <Button size="sm" variant={step.optional ? 'outline' : 'default'} asChild className="shrink-0 gap-1">
                       <Link to={step.to}>
-                        Ir
+                        {step.optional ? 'Ver' : 'Ir'}
                         <ArrowRight className="h-3.5 w-3.5" />
                       </Link>
                     </Button>
