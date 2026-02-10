@@ -1,9 +1,14 @@
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Store } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogBody,
+  ResponsiveDialogTrigger,
+} from '@/components/ui/responsive-dialog';
 import PrecosCanaisEditor from './PrecosCanaisEditor';
 
 interface PrecosCanaisDialogProps {
@@ -23,7 +28,6 @@ const PrecosCanaisDialog: React.FC<PrecosCanaisDialogProps> = ({
   impostoPercentual = 0,
   trigger,
 }) => {
-  const isMobile = useIsMobile();
   const [open, setOpen] = React.useState(false);
 
   const defaultTrigger = (
@@ -33,54 +37,29 @@ const PrecosCanaisDialog: React.FC<PrecosCanaisDialogProps> = ({
     </Button>
   );
 
-  const content = (
-    <div className="px-1">
-      <PrecosCanaisEditor
-        produtoId={produtoId}
-        precoBase={precoBase}
-        custoInsumos={custoInsumos}
-        impostoPercentual={impostoPercentual}
-        onSave={() => setOpen(false)}
-      />
-    </div>
-  );
-
-  if (isMobile) {
-    return (
-      <Drawer open={open} onOpenChange={setOpen}>
-        <DrawerTrigger asChild>
-          {trigger ?? defaultTrigger}
-        </DrawerTrigger>
-        <DrawerContent className="max-h-[85vh]">
-          <DrawerHeader className="text-left pb-2">
-            <DrawerTitle className="text-base flex items-center gap-2">
-              <Store className="h-4 w-4" />
-              Preços por Canal - {produtoNome}
-            </DrawerTitle>
-          </DrawerHeader>
-          <div className="overflow-y-auto pb-6 px-4">
-            {content}
-          </div>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <ResponsiveDialog open={open} onOpenChange={setOpen}>
+      <ResponsiveDialogTrigger asChild>
         {trigger ?? defaultTrigger}
-      </DialogTrigger>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-base flex items-center gap-2">
+      </ResponsiveDialogTrigger>
+      <ResponsiveDialogContent className="sm:max-w-md">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle className="text-base flex items-center gap-2">
             <Store className="h-4 w-4" />
             Preços por Canal - {produtoNome}
-          </DialogTitle>
-        </DialogHeader>
-        {content}
-      </DialogContent>
-    </Dialog>
+          </ResponsiveDialogTitle>
+        </ResponsiveDialogHeader>
+        <ResponsiveDialogBody>
+          <PrecosCanaisEditor
+            produtoId={produtoId}
+            precoBase={precoBase}
+            custoInsumos={custoInsumos}
+            impostoPercentual={impostoPercentual}
+            onSave={() => setOpen(false)}
+          />
+        </ResponsiveDialogBody>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 };
 
