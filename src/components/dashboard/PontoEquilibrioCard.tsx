@@ -5,11 +5,18 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Target, TrendingUp, HelpCircle, CheckCircle, AlertTriangle } from 'lucide-react';
 import { formatCurrencyBRL } from '@/lib/format';
 
+interface MargemEstimada {
+  receitaSimulada: number;
+  margemSimulada: number;
+  margemPercent: number;
+}
+
 interface PontoEquilibrioCardProps {
   receitaBruta: number;
   margemContribuicao: number;
   custoFixoMensal: number;
   isLoading?: boolean;
+  margemEstimada?: MargemEstimada | null;
 }
 
 export const PontoEquilibrioCard: React.FC<PontoEquilibrioCardProps> = ({
@@ -17,14 +24,19 @@ export const PontoEquilibrioCard: React.FC<PontoEquilibrioCardProps> = ({
   margemContribuicao,
   custoFixoMensal,
   isLoading = false,
+  margemEstimada,
 }) => {
+  // Se não há vendas mas temos estimativa dos produtos, usar margem estimada
+  const usandoEstimativa = receitaBruta === 0 && !!margemEstimada;
+  
   // Margem de contribuição média (%)
-  const margemContribuicaoPercent = receitaBruta > 0 
-    ? (margemContribuicao / receitaBruta) * 100 
-    : 0;
+  const margemContribuicaoPercent = usandoEstimativa
+    ? margemEstimada!.margemPercent
+    : receitaBruta > 0 
+      ? (margemContribuicao / receitaBruta) * 100 
+      : 0;
 
   // Ponto de equilíbrio = Custos Fixos / Margem de Contribuição %
-  // É o faturamento necessário para cobrir todos os custos fixos
   const pontoEquilibrio = margemContribuicaoPercent > 0 
     ? custoFixoMensal / (margemContribuicaoPercent / 100) 
     : 0;
@@ -49,13 +61,22 @@ export const PontoEquilibrioCard: React.FC<PontoEquilibrioCardProps> = ({
         progressColor: 'bg-muted',
       };
     }
-    if (receitaBruta === 0) {
+    if (receitaBruta === 0 && !usandoEstimativa) {
       return {
         icon: Target,
         label: 'Aguardando vendas',
         color: 'text-muted-foreground',
         bgColor: 'bg-muted',
         progressColor: 'bg-muted',
+      };
+    }
+    if (usandoEstimativa) {
+      return {
+        icon: Target,
+        label: 'Projeção',
+        color: 'text-primary',
+        bgColor: 'bg-primary/10',
+        progressColor: 'bg-primary',
       };
     }
     if (margemContribuicaoPercent <= 0) {
@@ -155,7 +176,9 @@ export const PontoEquilibrioCard: React.FC<PontoEquilibrioCardProps> = ({
         {/* Valores principais */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">Faturamento Necessário</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">
+              Faturamento Necessário {usandoEstimativa && '(projeção)'}
+            </p>
             <p className="text-2xl font-bold text-foreground">
               {formatCurrencyBRL(pontoEquilibrio)}
             </p>
@@ -165,48 +188,54 @@ export const PontoEquilibrioCard: React.FC<PontoEquilibrioCardProps> = ({
           </div>
           
           <div className="space-y-1 text-right">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">Seu Faturamento</p>
-            <p className={`text-2xl font-bold ${atingiuEquilibrio ? 'text-green-600' : 'text-foreground'}`}>
-              {formatCurrencyBRL(receitaBruta)}
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">
+              {usandoEstimativa ? 'Margem Estimada' : 'Seu Faturamento'}
+            </p>
+            <p className={`text-2xl font-bold ${usandoEstimativa ? 'text-primary' : atingiuEquilibrio ? 'text-green-600' : 'text-foreground'}`}>
+              {usandoEstimativa ? `${margemContribuicaoPercent.toFixed(1)}%` : formatCurrencyBRL(receitaBruta)}
             </p>
             <p className="text-xs text-muted-foreground">
-              margem contribuição: {margemContribuicaoPercent.toFixed(1)}%
+              {usandoEstimativa 
+                ? 'baseada nos seus produtos' 
+                : `margem contribuição: ${margemContribuicaoPercent.toFixed(1)}%`}
             </p>
           </div>
         </div>
 
-        {/* Barra de progresso */}
-        <div className="space-y-2">
-          <div className="relative">
-            <Progress 
-              value={Math.min(progressoEquilibrio, 100)} 
-              className="h-3"
-            />
-            {/* Marcador do ponto de equilíbrio */}
-            <div 
-              className="absolute top-0 h-3 w-0.5 bg-foreground/50"
-              style={{ left: `${Math.min((100 / 150) * 100, 66.67)}%` }}
-            />
-          </div>
-          
-          <div className="flex justify-between text-xs">
-            <span className="text-muted-foreground">
-              {progressoEquilibrio.toFixed(0)}% do ponto de equilíbrio
-            </span>
-            {atingiuEquilibrio ? (
-              <span className="text-green-600 font-semibold">
-                +{formatCurrencyBRL(diferencaEquilibrio)} de lucro potencial
+        {/* Barra de progresso - só mostra quando há vendas reais */}
+        {!usandoEstimativa && (
+          <div className="space-y-2">
+            <div className="relative">
+              <Progress 
+                value={Math.min(progressoEquilibrio, 100)} 
+                className="h-3"
+              />
+              {/* Marcador do ponto de equilíbrio */}
+              <div 
+                className="absolute top-0 h-3 w-0.5 bg-foreground/50"
+                style={{ left: `${Math.min((100 / 150) * 100, 66.67)}%` }}
+              />
+            </div>
+            
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">
+                {progressoEquilibrio.toFixed(0)}% do ponto de equilíbrio
               </span>
-            ) : (
-              <span className="text-amber-600 font-semibold">
-                Falta {formatCurrencyBRL(Math.abs(diferencaEquilibrio))}
-              </span>
-            )}
+              {atingiuEquilibrio ? (
+                <span className="text-green-600 font-semibold">
+                  +{formatCurrencyBRL(diferencaEquilibrio)} de lucro potencial
+                </span>
+              ) : (
+                <span className="text-amber-600 font-semibold">
+                  Falta {formatCurrencyBRL(Math.abs(diferencaEquilibrio))}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Dica contextual */}
-        {custoFixoMensal > 0 && margemContribuicaoPercent > 0 && (
+        {custoFixoMensal > 0 && margemContribuicaoPercent > 0 && !usandoEstimativa && (
           <div className={`p-3 rounded-lg text-sm ${atingiuEquilibrio ? 'bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400' : 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400'}`}>
             {atingiuEquilibrio ? (
               <p>
@@ -217,6 +246,15 @@ export const PontoEquilibrioCard: React.FC<PontoEquilibrioCardProps> = ({
                 💡 Com sua margem média de {margemContribuicaoPercent.toFixed(0)}%, você precisa vender mais {formatCurrencyBRL(Math.abs(diferencaEquilibrio))} para começar a lucrar.
               </p>
             )}
+          </div>
+        )}
+
+        {/* Mensagem de projeção */}
+        {usandoEstimativa && pontoEquilibrio > 0 && (
+          <div className="p-3 rounded-lg bg-primary/5 text-sm text-primary dark:text-primary">
+            <p>
+              📊 Projeção baseada na margem média dos seus produtos ({margemContribuicaoPercent.toFixed(0)}%). Registre suas <strong>vendas</strong> para ter o cálculo real.
+            </p>
           </div>
         )}
 
