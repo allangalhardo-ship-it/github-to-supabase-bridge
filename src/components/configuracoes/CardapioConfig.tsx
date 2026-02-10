@@ -23,6 +23,10 @@ interface EmpresaCardapio {
   whatsapp_dono: string | null;
   logo_url: string | null;
   banner_url: string | null;
+  cardapio_config: {
+    categorias_ordem?: string[];
+    categorias_ocultas?: string[];
+  } | null;
 }
 
 export function CardapioConfig() {
