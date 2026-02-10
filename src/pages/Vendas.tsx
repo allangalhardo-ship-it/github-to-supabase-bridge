@@ -22,6 +22,7 @@ import { ptBR } from 'date-fns/locale';
 import ImportarVendasDialog from '@/components/vendas/ImportarVendasDialog';
 import { formatCurrencyBRL } from '@/lib/format';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
+import ContextualTip from '@/components/onboarding/ContextualTip';
 
 interface Cliente {
   id: string;
