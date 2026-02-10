@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, ArrowUp, ArrowDown, Warehouse, Package, AlertTriangle, Search, Filter, X, Factory, Clock } from 'lucide-react';
+import { Plus, ArrowUp, ArrowDown, Warehouse, Package, AlertTriangle, Search, Filter, X, Factory, Clock, PackageOpen } from 'lucide-react';
+import ImplantacaoSaldoDialog from '@/components/estoque/ImplantacaoSaldoDialog';
 import { InsumoIcon } from '@/lib/insumoIconUtils';
 import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { format, startOfMonth, endOfMonth, subMonths, differenceInDays, isBefore } from 'date-fns';
