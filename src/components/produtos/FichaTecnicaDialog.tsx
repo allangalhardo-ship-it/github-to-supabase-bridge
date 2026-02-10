@@ -71,6 +71,16 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
   const [showDuplicateAlert, setShowDuplicateAlert] = useState(false);
   const [pendingDuplicateInsumo, setPendingDuplicateInsumo] = useState<InsumoSelecionado | null>(null);
 
+  // Tutorial: show only on first open ever
+  const [showTutorial, setShowTutorial] = useState(() => {
+    return localStorage.getItem('ficha-tecnica-tutorial-seen') !== 'true';
+  });
+
+  const dismissTutorial = () => {
+    localStorage.setItem('ficha-tecnica-tutorial-seen', 'true');
+    setShowTutorial(false);
+  };
+
   // Sync with defaultOpen prop
   useEffect(() => {
     if (defaultOpen) {
