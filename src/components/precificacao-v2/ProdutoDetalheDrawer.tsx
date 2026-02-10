@@ -233,8 +233,8 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
       {/* Situação Atual - Grid com preços por canal */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Situação Atual
+          <Label className="text-sm font-bold text-foreground">
+            📊 Situação Atual
           </Label>
           <button
             onClick={() => setShowComposicao(true)}
