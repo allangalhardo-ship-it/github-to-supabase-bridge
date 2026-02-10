@@ -61,13 +61,22 @@ export const PontoEquilibrioCard: React.FC<PontoEquilibrioCardProps> = ({
         progressColor: 'bg-muted',
       };
     }
-    if (receitaBruta === 0) {
+    if (receitaBruta === 0 && !usandoEstimativa) {
       return {
         icon: Target,
         label: 'Aguardando vendas',
         color: 'text-muted-foreground',
         bgColor: 'bg-muted',
         progressColor: 'bg-muted',
+      };
+    }
+    if (usandoEstimativa) {
+      return {
+        icon: Target,
+        label: 'Projeção',
+        color: 'text-primary',
+        bgColor: 'bg-primary/10',
+        progressColor: 'bg-primary',
       };
     }
     if (margemContribuicaoPercent <= 0) {
