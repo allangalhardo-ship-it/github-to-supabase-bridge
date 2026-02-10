@@ -399,9 +399,9 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
         {/* Aplicar canal individual (inline) */}
         {canalParaAplicar && (
           <Button
-            size="sm"
-            variant="outline"
-            className="w-full gap-2"
+            size="lg"
+            variant="secondary"
+            className="w-full gap-2 font-semibold"
             onClick={() => {
               const canal = resultadosSimulacaoCMV.find(c => c.id === canalParaAplicar);
               if (canal?.precoFinal > 0) handleAplicar(canal.precoFinal, canal.id);
