@@ -26,6 +26,7 @@ const AlertasInteligentes: React.FC<AlertasInteligentesProps> = ({
   cmvAtual,
   cmvAlvo,
   produtosDefasados,
+  produtosMargemNegativa = 0,
 }) => {
   const navigate = useNavigate();
 
