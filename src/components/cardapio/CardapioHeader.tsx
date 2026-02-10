@@ -116,10 +116,17 @@ export function CardapioHeader({ empresa }: CardapioHeaderProps) {
           {/* Badge de status */}
           <div className="mb-4">
             {estaAberto ? (
-              <Badge className="bg-emerald-500 text-white border-0 px-4 py-1.5 text-xs font-semibold shadow-lg">
-                <span className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse" />
-                Aberto agora
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge className="bg-emerald-500 text-white border-0 px-4 py-1.5 text-xs font-semibold shadow-lg">
+                  <span className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse" />
+                  Aberto agora
+                </Badge>
+                {statusHorario.proximoEvento && (
+                  <span className="text-xs text-gray-600 bg-white/80 backdrop-blur-sm rounded-full px-3 py-1 shadow-sm">
+                    {statusHorario.proximoEvento}
+                  </span>
+                )}
+              </div>
             ) : (
               <Badge variant="secondary" className="bg-rose-500/90 text-white border-0 px-4 py-1.5 text-xs font-semibold shadow-lg">
                 <span className="w-2 h-2 bg-white/60 rounded-full mr-2" />
