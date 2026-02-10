@@ -103,13 +103,13 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, onSubmit, isLoa
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{cliente ? 'Editar Cliente' : 'Novo Cliente'}</DialogTitle>
-        </DialogHeader>
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent className="max-w-[95vw] sm:max-w-lg">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>{cliente ? 'Editar Cliente' : 'Novo Cliente'}</ResponsiveDialogTitle>
+        </ResponsiveDialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <ResponsiveDialogBody>
           <Tabs defaultValue="dados" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="dados" className="text-xs sm:text-sm">
