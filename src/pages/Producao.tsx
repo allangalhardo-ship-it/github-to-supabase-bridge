@@ -20,6 +20,7 @@ import { ptBR } from 'date-fns/locale';
 import { AlertaVencimento } from '@/components/producao/AlertaVencimento';
 import { inserirMovimentoEstoque } from '@/lib/estoqueUtils';
 import { formatCurrencyBRL } from '@/lib/format';
+import ContextualTip from '@/components/onboarding/ContextualTip';
 
 type TipoProducao = 'produto' | 'receita';
 
@@ -288,6 +289,11 @@ const Producao = () => {
 
   return (
     <div className="space-y-6">
+      <ContextualTip
+        tipKey="producao-intro"
+        title="🏭 Registre suas produções aqui!"
+        description="Ao registrar uma produção, o sistema baixa automaticamente os insumos do estoque e adiciona o produto acabado. Você também pode definir a validade para receber alertas."
+      />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Produção</h1>

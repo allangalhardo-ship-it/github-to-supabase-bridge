@@ -44,6 +44,7 @@ import { format, startOfMonth, endOfMonth, subMonths, parseISO, addMonths } from
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
+import ContextualTip from '@/components/onboarding/ContextualTip';
 
 interface CaixaMovimento {
   id: string;
@@ -375,7 +376,12 @@ const Caixa = () => {
 
   return (
     <div className="space-y-6">
-        {/* Header */}
+      <ContextualTip
+        tipKey="caixa-intro"
+        title="💵 Controle o dinheiro que entra e sai!"
+        description="O Caixa consolida vendas, compras e lançamentos manuais. Use para ter uma visão real do seu fluxo financeiro."
+      />
+      {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">

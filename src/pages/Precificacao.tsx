@@ -27,6 +27,8 @@ import {
   QuadranteMenu,
   ProdutoAnalise,
 } from '@/components/precificacao-v2';
+import SimuladorVisual from '@/components/precificacao-v2/SimuladorVisual';
+import ContextualTip from '@/components/onboarding/ContextualTip';
 
 const Precificacao = () => {
   const { usuario } = useAuth();
@@ -157,6 +159,11 @@ const Precificacao = () => {
 
   return (
     <div className="space-y-6">
+      <ContextualTip
+        tipKey="precificacao-intro"
+        title="📊 Descubra quanto cobrar em cada produto!"
+        description="O Menu Engineering cruza popularidade × rentabilidade. Use o simulador 'E se?' para ver o impacto de reajustes antes de aplicar."
+      />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

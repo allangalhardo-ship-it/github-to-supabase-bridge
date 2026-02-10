@@ -31,10 +31,13 @@ import {
   Lightbulb,
   CalendarIcon,
 } from 'lucide-react';
-import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysInMonth } from 'date-fns';
+import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysInMonth, endOfMonth, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCurrencyBRL } from '@/lib/format';
 import WelcomeChecklist from '@/components/dashboard/WelcomeChecklist';
+import AlertasInteligentes from '@/components/dashboard/AlertasInteligentes';
+import MargemEvolutionChart from '@/components/dashboard/MargemEvolutionChart';
+import { AlertaVencimento } from '@/components/producao/AlertaVencimento';
 type PeriodoType = 'hoje' | 'semana' | 'mes' | 'ultimos30' | 'personalizado';
 
 const Dashboard = () => {
@@ -66,6 +69,32 @@ const Dashboard = () => {
   };
 
   const { inicio, fim } = getDateRange();
+
+  // Período anterior para comparativo
+  const getPreviousDateRange = () => {
+    const hoje = new Date();
+    switch (periodo) {
+      case 'hoje':
+        return { inicio: format(subDays(hoje, 1), 'yyyy-MM-dd'), fim: format(subDays(hoje, 1), 'yyyy-MM-dd') };
+      case 'semana': {
+        const inicioSemanaPassada = subDays(startOfWeek(hoje, { locale: ptBR }), 7);
+        return { inicio: format(inicioSemanaPassada, 'yyyy-MM-dd'), fim: format(subDays(startOfWeek(hoje, { locale: ptBR }), 1), 'yyyy-MM-dd') };
+      }
+      case 'mes':
+        return { inicio: format(startOfMonth(subMonths(hoje, 1)), 'yyyy-MM-dd'), fim: format(endOfMonth(subMonths(hoje, 1)), 'yyyy-MM-dd') };
+      case 'ultimos30':
+        return { inicio: format(subDays(hoje, 60), 'yyyy-MM-dd'), fim: format(subDays(hoje, 31), 'yyyy-MM-dd') };
+      case 'personalizado':
+        if (customDateFrom && customDateTo) {
+          const duracao = differenceInDays(customDateTo, customDateFrom);
+          return { inicio: format(subDays(customDateFrom, duracao + 1), 'yyyy-MM-dd'), fim: format(subDays(customDateFrom, 1), 'yyyy-MM-dd') };
+        }
+        return { inicio: format(startOfMonth(subMonths(hoje, 1)), 'yyyy-MM-dd'), fim: format(endOfMonth(subMonths(hoje, 1)), 'yyyy-MM-dd') };
+      default:
+        return { inicio: format(startOfMonth(subMonths(hoje, 1)), 'yyyy-MM-dd'), fim: format(endOfMonth(subMonths(hoje, 1)), 'yyyy-MM-dd') };
+    }
+  };
+  const { inicio: inicioAnterior, fim: fimAnterior } = getPreviousDateRange();
 
   // Fetch nome da empresa
   const { data: empresa } = useQuery({
@@ -99,8 +128,24 @@ const Dashboard = () => {
       return data;
     },
     enabled: !!usuario?.empresa_id,
-    staleTime: 2 * 60 * 1000, // 2 minutos - dados do dashboard podem ser ligeiramente atrasados
-    gcTime: 10 * 60 * 1000, // 10 minutos em cache
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+
+  // Fetch vendas do período anterior para comparativo
+  const { data: vendasAnterior } = useQuery({
+    queryKey: ['vendas-anterior', usuario?.empresa_id, inicioAnterior, fimAnterior],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_dashboard_vendas', {
+        p_empresa_id: usuario?.empresa_id,
+        p_data_inicio: inicioAnterior,
+        p_data_fim: fimAnterior,
+      });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!usuario?.empresa_id,
+    staleTime: 5 * 60 * 1000,
   });
 
   // Fetch custos fixos
@@ -281,6 +326,43 @@ const Dashboard = () => {
 
   const cmvPercent = receitaBruta > 0 ? (cmvTotal / receitaBruta) * 100 : 0;
   const margemContribuicao = receitaBruta - cmvTotal;
+
+  // Comparativo com período anterior
+  const receitaBrutaAnterior = vendasAnterior?.reduce((sum, v) => sum + Number(v.valor_total), 0) || 0;
+  const cmvTotalAnterior = vendasAnterior?.reduce((sum, venda) => {
+    if (!venda.custo_insumos) return sum;
+    const custoUnit = Number(venda.custo_insumos) || 0;
+    const precoVenda = Number(venda.produto_preco_venda) || 0;
+    const valorTotal = Number(venda.valor_total) || 0;
+    const unidades = precoVenda > 0 ? valorTotal / precoVenda : Number(venda.quantidade);
+    return sum + (custoUnit * unidades);
+  }, 0) || 0;
+  const margemAnterior = receitaBrutaAnterior - cmvTotalAnterior;
+  const deltaReceita = receitaBrutaAnterior > 0 ? ((receitaBruta - receitaBrutaAnterior) / receitaBrutaAnterior) * 100 : null;
+  const deltaLucroBruto = margemAnterior > 0 ? ((margemContribuicao - margemAnterior) / margemAnterior) * 100 : null;
+
+  // Produtos com preço defasado
+  const produtosDefasados = useMemo(() => {
+    if (!produtosAnalise) return 0;
+    return produtosAnalise.filter(p => {
+      const custoInsumos = p.fichas_tecnicas?.reduce((sum: number, ft: any) => {
+        return sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0));
+      }, 0) || 0;
+      if (custoInsumos <= 0 || p.preco_venda <= 0) return false;
+      const margem = ((p.preco_venda - custoInsumos) / p.preco_venda) * 100;
+      return margem < (config?.margem_desejada_padrao || 30) * 0.7;
+    }).length;
+  }, [produtosAnalise, config]);
+
+  const renderDelta = (delta: number | null, invertColors = false) => {
+    if (delta === null) return null;
+    const isPositive = invertColors ? delta < 0 : delta > 0;
+    return (
+      <p className={`text-[10px] flex items-center gap-0.5 mt-0.5 ${isPositive ? 'text-green-600' : 'text-destructive'}`}>
+        {delta > 0 ? '↑' : '↓'} {Math.abs(delta).toFixed(1)}% vs anterior
+      </p>
+    );
+  };
 
   // Quando não há vendas, estimar margem de contribuição a partir dos produtos cadastrados
   const margemContribuicaoEstimada = useMemo(() => {
@@ -556,6 +638,7 @@ const Dashboard = () => {
               <Skeleton className="h-8 w-24" />
             ) : (
               <div className="text-2xl sm:text-2xl font-bold">{formatCurrency(receitaBruta)}</div>
+              {renderDelta(deltaReceita)}
             )}
           </CardContent>
         </StaggeredCard>
@@ -630,6 +713,7 @@ const Dashboard = () => {
             ) : (
               <>
                 <div className="text-2xl sm:text-2xl font-bold">{formatCurrency(margemContribuicao)}</div>
+                {renderDelta(deltaLucroBruto)}
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                   Receita - CMV ({receitaBruta > 0 ? ((margemContribuicao / receitaBruta) * 100).toFixed(1) : 0}%)
                 </p>
@@ -783,6 +867,16 @@ const Dashboard = () => {
         </CollapsibleContent>
       </Collapsible>
 
+      {/* Alertas Inteligentes */}
+      <AlertasInteligentes
+        historicoPrecos={historicoPrecos}
+        cmvAtual={cmvPercent}
+        cmvAlvo={config?.cmv_alvo || 35}
+        produtosDefasados={produtosDefasados}
+      />
+
+      {/* Evolução da Margem */}
+      <MargemEvolutionChart />
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 animate-fade-in">
         {/* Top 5 Produtos */}
