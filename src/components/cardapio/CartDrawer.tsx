@@ -15,11 +15,16 @@ interface CartDrawerProps {
   carrinho: CarrinhoItem[];
   dadosCliente: DadosCliente;
   onDadosClienteChange: (dados: DadosCliente) => void;
-  onAddItem: (produtoId: string) => void;
-  onRemoveItem: (produtoId: string) => void;
-  onDeleteItem: (produtoId: string) => void;
+  onAddItem: (carrinhoKey: string) => void;
+  onRemoveItem: (carrinhoKey: string) => void;
+  onDeleteItem: (carrinhoKey: string) => void;
   onEnviarPedido: () => void;
   enviando: boolean;
+}
+
+function calcularPrecoItem(item: CarrinhoItem) {
+  const totalOpcionais = item.opcionais.reduce((sum, op) => sum + op.preco_adicional, 0);
+  return (item.produto.preco_venda + totalOpcionais) * item.quantidade;
 }
 
 export function CartDrawer({
@@ -34,11 +39,7 @@ export function CartDrawer({
   onEnviarPedido,
   enviando
 }: CartDrawerProps) {
-  const totalCarrinho = carrinho.reduce(
-    (total, item) => total + item.produto.preco_venda * item.quantidade,
-    0
-  );
-
+  const totalCarrinho = carrinho.reduce((total, item) => total + calcularPrecoItem(item), 0);
   const quantidadeTotal = carrinho.reduce((total, item) => total + item.quantidade, 0);
 
   return (
@@ -66,15 +67,10 @@ export function CartDrawer({
           <>
             <ScrollArea className="flex-1">
               <div className="p-5 space-y-5">
-                {/* Itens do carrinho */}
                 <div className="space-y-3">
                   {carrinho.map((item) => (
-                    <div 
-                      key={item.produto.id} 
-                      className="bg-gray-50 rounded-xl p-4"
-                    >
+                    <div key={item.carrinhoKey} className="bg-gray-50 rounded-xl p-4">
                       <div className="flex items-start gap-3">
-                        {/* Imagem pequena */}
                         {item.produto.imagem_url && (
                           <img 
                             src={item.produto.imagem_url} 
@@ -89,12 +85,28 @@ export function CartDrawer({
                               {item.produto.nome}
                             </h4>
                             <button 
-                              onClick={() => onDeleteItem(item.produto.id)}
+                              onClick={() => onDeleteItem(item.carrinhoKey)}
                               className="text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </div>
+
+                          {/* Opcionais selecionados */}
+                          {item.opcionais.length > 0 && (
+                            <div className="mt-1 space-y-0.5">
+                              {item.opcionais.map((op) => (
+                                <p key={op.item_id} className="text-xs text-gray-500">
+                                  + {op.item_nome}
+                                  {op.preco_adicional > 0 && (
+                                    <span className="text-emerald-600 ml-1">
+                                      ({formatCurrencyBRL(op.preco_adicional)})
+                                    </span>
+                                  )}
+                                </p>
+                              ))}
+                            </div>
+                          )}
                           
                           {item.observacao && (
                             <p className="text-xs text-gray-500 mt-0.5 italic">
@@ -104,15 +116,14 @@ export function CartDrawer({
                           
                           <div className="flex items-center justify-between mt-2">
                             <span className="font-bold text-emerald-600">
-                              {formatCurrencyBRL(item.produto.preco_venda * item.quantidade)}
+                              {formatCurrencyBRL(calcularPrecoItem(item))}
                             </span>
                             
                             <div className="flex items-center gap-1 bg-white rounded-full shadow-sm p-1">
                               <Button
-                                size="icon"
-                                variant="ghost"
+                                size="icon" variant="ghost"
                                 className="h-7 w-7 rounded-full"
-                                onClick={() => onRemoveItem(item.produto.id)}
+                                onClick={() => onRemoveItem(item.carrinhoKey)}
                               >
                                 <Minus className="h-3 w-3" />
                               </Button>
@@ -120,10 +131,9 @@ export function CartDrawer({
                                 {item.quantidade}
                               </span>
                               <Button
-                                size="icon"
-                                variant="ghost"
+                                size="icon" variant="ghost"
                                 className="h-7 w-7 rounded-full"
-                                onClick={() => onAddItem(item.produto.id)}
+                                onClick={() => onAddItem(item.carrinhoKey)}
                               >
                                 <Plus className="h-3 w-3" />
                               </Button>
@@ -140,67 +150,38 @@ export function CartDrawer({
                 {/* Dados do cliente */}
                 <div className="space-y-4">
                   <h3 className="font-semibold text-gray-800">Seus dados</h3>
-                  
                   <div className="space-y-3">
                     <div>
                       <Label htmlFor="nome" className="text-sm text-gray-600">Nome *</Label>
-                      <Input
-                        id="nome"
-                        placeholder="Seu nome completo"
-                        value={dadosCliente.nome}
-                        onChange={(e) => onDadosClienteChange({ ...dadosCliente, nome: e.target.value })}
-                        className="mt-1"
-                      />
+                      <Input id="nome" placeholder="Seu nome completo" value={dadosCliente.nome}
+                        onChange={(e) => onDadosClienteChange({ ...dadosCliente, nome: e.target.value })} className="mt-1" />
                     </div>
-                    
                     <div>
                       <Label htmlFor="whatsapp" className="text-sm text-gray-600">WhatsApp *</Label>
-                      <Input
-                        id="whatsapp"
-                        placeholder="(00) 00000-0000"
-                        value={dadosCliente.whatsapp}
-                        onChange={(e) => onDadosClienteChange({ ...dadosCliente, whatsapp: e.target.value })}
-                        className="mt-1"
-                      />
+                      <Input id="whatsapp" placeholder="(00) 00000-0000" value={dadosCliente.whatsapp}
+                        onChange={(e) => onDadosClienteChange({ ...dadosCliente, whatsapp: e.target.value })} className="mt-1" />
                     </div>
-                    
                     <div>
                       <Label htmlFor="endereco" className="text-sm text-gray-600">Endereço de entrega</Label>
-                      <Textarea
-                        id="endereco"
-                        placeholder="Rua, número, bairro..."
-                        value={dadosCliente.endereco}
-                        onChange={(e) => onDadosClienteChange({ ...dadosCliente, endereco: e.target.value })}
-                        className="mt-1 resize-none"
-                        rows={2}
-                      />
+                      <Textarea id="endereco" placeholder="Rua, número, bairro..." value={dadosCliente.endereco}
+                        onChange={(e) => onDadosClienteChange({ ...dadosCliente, endereco: e.target.value })} className="mt-1 resize-none" rows={2} />
                     </div>
-                    
                     <div>
                       <Label htmlFor="obs-pedido" className="text-sm text-gray-600">Observações do pedido</Label>
-                      <Textarea
-                        id="obs-pedido"
-                        placeholder="Alguma observação geral?"
-                        value={dadosCliente.observacoes}
-                        onChange={(e) => onDadosClienteChange({ ...dadosCliente, observacoes: e.target.value })}
-                        className="mt-1 resize-none"
-                        rows={2}
-                      />
+                      <Textarea id="obs-pedido" placeholder="Alguma observação geral?" value={dadosCliente.observacoes}
+                        onChange={(e) => onDadosClienteChange({ ...dadosCliente, observacoes: e.target.value })} className="mt-1 resize-none" rows={2} />
                     </div>
                   </div>
                 </div>
               </div>
             </ScrollArea>
 
-            {/* Footer com total e botão */}
+            {/* Footer */}
             <div className="border-t bg-white p-4 flex-shrink-0 space-y-3">
               <div className="flex items-center justify-between text-lg">
                 <span className="font-medium text-gray-700">Total</span>
-                <span className="font-bold text-emerald-600 text-xl">
-                  {formatCurrencyBRL(totalCarrinho)}
-                </span>
+                <span className="font-bold text-emerald-600 text-xl">{formatCurrencyBRL(totalCarrinho)}</span>
               </div>
-              
               <Button
                 className="w-full h-14 bg-emerald-500 hover:bg-emerald-600 text-white text-base font-semibold rounded-xl shadow-lg gap-2"
                 onClick={onEnviarPedido}
