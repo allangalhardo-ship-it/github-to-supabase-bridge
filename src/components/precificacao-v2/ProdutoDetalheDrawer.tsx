@@ -203,7 +203,7 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
     } else {
       onAplicarPreco(produto.id, preco, produto.preco_venda);
     }
-    onClose();
+    // Não fecha o drawer para permitir editar outros canais sem sair
   };
 
   const conteudoDrawer = (
