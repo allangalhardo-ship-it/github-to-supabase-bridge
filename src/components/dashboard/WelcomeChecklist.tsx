@@ -90,8 +90,16 @@ const WelcomeChecklist = () => {
       icon: UtensilsCrossed,
     },
     {
+      label: 'Crie uma receita base',
+      description: 'Ex: calda, massa, recheio — preparações que entram em vários produtos. Se não usa, pode pular!',
+      done: counts.receitas > 0,
+      to: '/receitas',
+      icon: ChefHat,
+      optional: true,
+    },
+    {
       label: 'Monte a ficha técnica',
-      description: 'Vincule os ingredientes ao produto para calcular o custo automaticamente.',
+      description: 'Vincule os ingredientes (e receitas) ao produto para calcular o custo automaticamente.',
       done: counts.fichas > 0,
       to: '/produtos',
       icon: ClipboardList,
