@@ -152,13 +152,20 @@ export function useMenuEngineering() {
       // Buscar preços por canal deste produto
       const precosCanaisProduto = precosCanaisTodos?.[produto.id] || {};
 
-      const precoVenda = produto.preco_venda || 0;
-      const cmv = precoVenda > 0 ? (custoInsumos / precoVenda) * 100 : 100;
+      // Usar preço efetivo de venda (receita/quantidade) quando há vendas,
+      // senão usar preco_venda do cadastro. Isso garante consistência entre
+      // receitaTotal e o preço usado nos cálculos de margem/CMV.
+      const precoVendaCadastro = produto.preco_venda || 0;
+      const precoEfetivo = (quantidadeVendida > 0 && receitaTotal > 0)
+        ? receitaTotal / quantidadeVendida
+        : precoVendaCadastro;
+
+      const cmv = precoEfetivo > 0 ? (custoInsumos / precoEfetivo) * 100 : 100;
       
       // Margem de contribuição (sem custos fixos)
-      const impostoValor = precoVenda * (config.imposto_medio_sobre_vendas / 100);
-      const lucroUnitario = precoVenda - custoInsumos - impostoValor;
-      const margemContribuicao = precoVenda > 0 ? (lucroUnitario / precoVenda) * 100 : 0;
+      const impostoValor = precoEfetivo * (config.imposto_medio_sobre_vendas / 100);
+      const lucroUnitario = precoEfetivo - custoInsumos - impostoValor;
+      const margemContribuicao = precoEfetivo > 0 ? (lucroUnitario / precoEfetivo) * 100 : 0;
 
       // Calcular preço sugerido
       const margem = config.margem_desejada_padrao / 100;
@@ -196,11 +203,18 @@ export function useMenuEngineering() {
       };
     });
 
-    // Calcular medianas
+    // Calcular medianas — usar apenas produtos COM vendas para não distorcer
+    const produtosComVendas = produtosComMetricas.filter(p => p.quantidadeVendida > 0);
+    const margensComVendas = produtosComVendas.map(p => p.margemContribuicao).sort((a, b) => a - b);
+    const qtdsComVendas = produtosComVendas.map(p => p.quantidadeVendida).sort((a, b) => a - b);
+    
     const sortedMargens = [...todasMargens].sort((a, b) => a - b);
-    const sortedQtds = [...todasQuantidades].sort((a, b) => a - b);
+    // Mediana de margem usa todos (para classificar margem alta/baixa)
     const medianaMargens = sortedMargens[Math.floor(sortedMargens.length / 2)] || config.margem_desejada_padrao;
-    const medianaQtds = sortedQtds[Math.floor(sortedQtds.length / 2)] || 0;
+    // Mediana de quantidade usa apenas quem vendeu (produtos sem venda ficam automaticamente como baixa popularidade)
+    const medianaQtds = qtdsComVendas.length > 0
+      ? qtdsComVendas[Math.floor(qtdsComVendas.length / 2)]
+      : 1; // Se ninguém vendeu, qualquer valor > 0 seria alta popularidade
 
     // Classificar em quadrantes
     return produtosComMetricas.map(produto => {
@@ -253,14 +267,17 @@ export function useMenuEngineering() {
       };
     }
 
+    // Média ponderada por quantidade vendida (produtos sem venda usam peso 1)
     const margemMedia = produtosAnalisados.reduce((acc, p) => acc + p.margemContribuicao, 0) / produtosAnalisados.length;
     const cmvMedio = produtosAnalisados.reduce((acc, p) => acc + p.cmv, 0) / produtosAnalisados.length;
     const produtosCriticos = produtosAnalisados.filter(p => p.saudeMargem === 'critico').length;
     
     // Receita potencial: diferença se todos estivessem no preço sugerido
+    // Só considerar produtos que realmente vendem
     const receitaPotencial = produtosAnalisados.reduce((acc, p) => {
+      if (p.quantidadeVendida === 0) return acc; // Sem vendas = sem receita potencial real
       const diferencaPreco = p.precoSugerido - p.preco_venda;
-      const ganhoMensal = diferencaPreco * (p.quantidadeVendida || 1);
+      const ganhoMensal = diferencaPreco * p.quantidadeVendida;
       return acc + (ganhoMensal > 0 ? ganhoMensal : 0);
     }, 0);
 
