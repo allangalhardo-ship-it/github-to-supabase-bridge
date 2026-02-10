@@ -463,14 +463,27 @@ const ImplantacaoSaldoDialog: React.FC<ImplantacaoSaldoDialogProps> = ({
 
                 {/* Resumo da conversão */}
                 {usandoConversao && fator > 0 && qtdOriginal > 0 && (
-                  <div className="mt-2 p-2 rounded bg-muted/50 flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>{qtdOriginal} {saldo.unidade_compra_id
-                      ? unidades.find(u => u.id === saldo.unidade_compra_id)?.nome || ''
-                      : saldo.nova_unidade_nome || 'un'}</span>
-                    <ArrowRight className="h-3 w-3" />
-                    <span className="font-semibold text-foreground">
-                      {qtdConvertida.toFixed(2)} {insumo.unidade_medida}
-                    </span>
+                  <div className="mt-2 p-2 rounded bg-muted/50 space-y-1 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <span>{qtdOriginal} {saldo.unidade_compra_id
+                        ? unidades.find(u => u.id === saldo.unidade_compra_id)?.nome || ''
+                        : saldo.nova_unidade_nome || 'un'}</span>
+                      <ArrowRight className="h-3 w-3" />
+                      <span className="font-semibold text-foreground">
+                        {qtdConvertida.toFixed(2)} {insumo.unidade_medida}
+                      </span>
+                    </div>
+                    {custoNum > 0 && (
+                      <div className="flex items-center gap-2">
+                        <span>R$ {custoNum.toFixed(2).replace('.', ',')} / {saldo.unidade_compra_id
+                          ? unidades.find(u => u.id === saldo.unidade_compra_id)?.nome || ''
+                          : saldo.nova_unidade_nome || 'un'}</span>
+                        <ArrowRight className="h-3 w-3" />
+                        <span className="font-semibold text-foreground">
+                          R$ {(custoNum / fator).toFixed(4).replace('.', ',')} / {insumo.unidade_medida}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
 
