@@ -35,6 +35,9 @@ import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysIn
 import { ptBR } from 'date-fns/locale';
 import { formatCurrencyBRL } from '@/lib/format';
 import WelcomeChecklist from '@/components/dashboard/WelcomeChecklist';
+import AlertasInteligentes from '@/components/dashboard/AlertasInteligentes';
+import MargemEvolutionChart from '@/components/dashboard/MargemEvolutionChart';
+import { AlertaVencimento } from '@/components/producao/AlertaVencimento';
 type PeriodoType = 'hoje' | 'semana' | 'mes' | 'ultimos30' | 'personalizado';
 
 const Dashboard = () => {
