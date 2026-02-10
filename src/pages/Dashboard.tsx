@@ -354,8 +354,8 @@ const Dashboard = () => {
     }).length;
   }, [produtosAnalise, config]);
 
-  // Produtos com margem negativa (prejuízo por unidade vendida)
-  const produtosMargemNegativa = useMemo(() => {
+  // Contagem de produtos com margem negativa para alertas
+  const qtdProdutosMargemNegativa = useMemo(() => {
     if (!produtosAnalise) return 0;
     return produtosAnalise.filter(p => {
       const custoInsumos = p.fichas_tecnicas?.reduce((sum: number, ft: any) => {
