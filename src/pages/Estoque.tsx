@@ -21,6 +21,7 @@ import { format, startOfMonth, endOfMonth, subMonths, differenceInDays, isBefore
 import { ptBR } from 'date-fns/locale';
 import { inserirMovimentoEstoque, calcularEstoqueDeMovimentos } from '@/lib/estoqueUtils';
 import { formatCurrencySmartBRL } from '@/lib/format';
+import ContextualTip from '@/components/onboarding/ContextualTip';
 const Estoque = () => {
   const { usuario } = useAuth();
   const { toast } = useToast();
