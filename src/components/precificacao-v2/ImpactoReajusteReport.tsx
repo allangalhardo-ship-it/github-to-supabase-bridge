@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/button';
 import { TrendingUp, Check, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { ProdutoAnalise, formatCurrency } from './types';
+import { ProdutoAnalise, ConfiguracoesPrecificacao, formatCurrency } from './types';
 import { cn } from '@/lib/utils';
 import { subDays } from 'date-fns';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 
 interface ImpactoReajusteReportProps {
   produtos: ProdutoAnalise[];
+  config?: ConfiguracoesPrecificacao;
   onAplicarPreco?: (produtoId: string, novoPreco: number, precoAnterior: number) => void;
   onAplicarPrecoCanal?: (produtoId: string, canal: string, novoPreco: number, precoAnterior: number) => void;
   isAplicando?: boolean;
@@ -20,6 +21,7 @@ interface ImpactoReajusteReportProps {
 
 const ImpactoReajusteReport: React.FC<ImpactoReajusteReportProps> = ({ 
   produtos, 
+  config,
   onAplicarPreco,
   onAplicarPrecoCanal,
   isAplicando 
@@ -60,6 +62,8 @@ const ImpactoReajusteReport: React.FC<ImpactoReajusteReportProps> = ({
     },
     enabled: !!usuario?.empresa_id,
   });
+
+  const cmvAlvo = config?.cmv_alvo || 35;
 
   const impactos = useMemo(() => {
     if (!historicoInsumos || !fichas || produtos.length === 0) return [];
@@ -104,6 +108,9 @@ const ImpactoReajusteReport: React.FC<ImpactoReajusteReportProps> = ({
             insumosAfetados.push({ nome: info.nome, variacao: info.variacao });
           }
         });
+
+        // Se o CMV atual do produto ainda está dentro do alvo, não precisa reajustar
+        if (produto.cmv <= cmvAlvo) return null;
 
         if (insumosAfetados.length === 0 || impactoCustoTotal < 0.05) return null;
 

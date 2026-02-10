@@ -265,6 +265,7 @@ const Precificacao = () => {
           {/* Relatório de impacto de reajustes */}
           <ImpactoReajusteReport 
             produtos={produtosAnalisados} 
+            config={config}
             onAplicarPreco={handleAplicarPreco}
             onAplicarPrecoCanal={handleAplicarPrecoCanal}
             isAplicando={updatePrecoMutation.isPending || isSavingPrecoCanal}
