@@ -15,6 +15,9 @@ import { PontoEquilibrioCard } from '@/components/dashboard/PontoEquilibrioCard'
 import { BusinessCoach } from '@/components/dashboard/BusinessCoach';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -26,17 +29,20 @@ import {
   HelpCircle,
   ChevronDown,
   Lightbulb,
+  CalendarIcon,
 } from 'lucide-react';
 import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysInMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCurrencyBRL } from '@/lib/format';
 
-type PeriodoType = 'hoje' | 'semana' | 'mes' | 'ultimos30';
+type PeriodoType = 'hoje' | 'semana' | 'mes' | 'ultimos30' | 'personalizado';
 
 const Dashboard = () => {
   const { usuario } = useAuth();
   const [periodo, setPeriodo] = useState<PeriodoType>('mes');
   const [showSmartInsights, setShowSmartInsights] = useState(true);
+  const [customDateFrom, setCustomDateFrom] = useState<Date | undefined>(undefined);
+  const [customDateTo, setCustomDateTo] = useState<Date | undefined>(undefined);
 
   const getDateRange = () => {
     const hoje = new Date();
@@ -49,6 +55,11 @@ const Dashboard = () => {
         return { inicio: format(startOfMonth(hoje), 'yyyy-MM-dd'), fim: format(hoje, 'yyyy-MM-dd') };
       case 'ultimos30':
         return { inicio: format(subDays(hoje, 30), 'yyyy-MM-dd'), fim: format(hoje, 'yyyy-MM-dd') };
+      case 'personalizado':
+        return {
+          inicio: customDateFrom ? format(customDateFrom, 'yyyy-MM-dd') : format(startOfMonth(hoje), 'yyyy-MM-dd'),
+          fim: customDateTo ? format(customDateTo, 'yyyy-MM-dd') : format(hoje, 'yyyy-MM-dd'),
+        };
       default:
         return { inicio: format(startOfMonth(hoje), 'yyyy-MM-dd'), fim: format(hoje, 'yyyy-MM-dd') };
     }
@@ -452,20 +463,80 @@ const Dashboard = () => {
             {empresa?.nome ? `Olá, ${empresa.nome}!` : 'Meu Negócio'}
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground">
-            Veja como está o seu negócio {periodo === 'hoje' ? 'hoje' : periodo === 'semana' ? 'esta semana' : periodo === 'mes' ? 'este mês' : 'nos últimos 30 dias'}
+            Veja como está o seu negócio {
+              periodo === 'hoje' ? 'hoje' 
+              : periodo === 'semana' ? 'esta semana' 
+              : periodo === 'mes' ? 'este mês' 
+              : periodo === 'personalizado' && customDateFrom && customDateTo
+                ? `de ${format(customDateFrom, 'dd/MM/yyyy')} a ${format(customDateTo, 'dd/MM/yyyy')}`
+                : 'nos últimos 30 dias'
+            }
           </p>
         </div>
-        <Select value={periodo} onValueChange={(v) => setPeriodo(v as PeriodoType)}>
-          <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10">
-            <SelectValue placeholder="Selecione o período" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="hoje">Hoje</SelectItem>
-            <SelectItem value="semana">Esta semana</SelectItem>
-            <SelectItem value="mes">Este mês</SelectItem>
-            <SelectItem value="ultimos30">Últimos 30 dias</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <Select value={periodo} onValueChange={(v) => setPeriodo(v as PeriodoType)}>
+            <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10">
+              <SelectValue placeholder="Selecione o período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="hoje">Hoje</SelectItem>
+              <SelectItem value="semana">Esta semana</SelectItem>
+              <SelectItem value="mes">Este mês</SelectItem>
+              <SelectItem value="ultimos30">Últimos 30 dias</SelectItem>
+              <SelectItem value="personalizado">Personalizado</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          {periodo === 'personalizado' && (
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn(
+                    "h-9 sm:h-10 justify-start text-left font-normal min-w-[130px]",
+                    !customDateFrom && "text-muted-foreground"
+                  )}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {customDateFrom ? format(customDateFrom, 'dd/MM/yyyy') : 'Início'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={customDateFrom}
+                    onSelect={setCustomDateFrom}
+                    disabled={(date) => date > new Date() || (customDateTo ? date > customDateTo : false)}
+                    initialFocus
+                    locale={ptBR}
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+              <span className="text-muted-foreground text-sm">a</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn(
+                    "h-9 sm:h-10 justify-start text-left font-normal min-w-[130px]",
+                    !customDateTo && "text-muted-foreground"
+                  )}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {customDateTo ? format(customDateTo, 'dd/MM/yyyy') : 'Fim'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={customDateTo}
+                    onSelect={setCustomDateTo}
+                    disabled={(date) => date > new Date() || (customDateFrom ? date < customDateFrom : false)}
+                    initialFocus
+                    locale={ptBR}
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* KPIs - empilhados verticalmente no mobile */}
