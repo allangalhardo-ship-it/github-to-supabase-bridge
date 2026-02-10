@@ -209,21 +209,21 @@ export function ReceitaFormDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
+    <ResponsiveDialog open={open} onOpenChange={handleOpenChange}>
+      <ResponsiveDialogTrigger asChild>
         <Button>
           <Plus className="mr-2 h-4 w-4" />
           <span className="hidden sm:inline">Nova Receita</span>
           <span className="sm:hidden">Nova</span>
         </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
-        <DialogHeader className="p-4 sm:p-6 pb-2 sm:pb-4 border-b shrink-0">
-          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+      </ResponsiveDialogTrigger>
+      <ResponsiveDialogContent className="sm:max-w-2xl">
+        <ResponsiveDialogHeader className="border-b pb-2 sm:pb-4">
+          <ResponsiveDialogTitle className="flex items-center gap-2 text-base sm:text-lg">
             <ChefHat className="h-5 w-5 text-primary shrink-0" />
             {editingReceita ? 'Editar Receita' : 'Nova Receita'}
-          </DialogTitle>
-        </DialogHeader>
+          </ResponsiveDialogTitle>
+        </ResponsiveDialogHeader>
         
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
           <div className="p-3 bg-muted/50 rounded-lg text-xs sm:text-sm text-muted-foreground">
