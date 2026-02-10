@@ -889,6 +889,7 @@ const Dashboard = () => {
         cmvAtual={cmvPercent}
         cmvAlvo={config?.cmv_alvo || 35}
         produtosDefasados={produtosDefasados}
+        produtosMargemNegativa={produtosMargemNegativa}
       />
 
       {/* Evolução da Margem */}
