@@ -373,6 +373,7 @@ export type Database = {
         Row: {
           banner_url: string | null
           cardapio_ativo: boolean
+          cardapio_config: Json | null
           cardapio_descricao: string | null
           created_at: string
           horario_funcionamento: string | null
@@ -386,6 +387,7 @@ export type Database = {
         Insert: {
           banner_url?: string | null
           cardapio_ativo?: boolean
+          cardapio_config?: Json | null
           cardapio_descricao?: string | null
           created_at?: string
           horario_funcionamento?: string | null
@@ -399,6 +401,7 @@ export type Database = {
         Update: {
           banner_url?: string | null
           cardapio_ativo?: boolean
+          cardapio_config?: Json | null
           cardapio_descricao?: string | null
           created_at?: string
           horario_funcionamento?: string | null
