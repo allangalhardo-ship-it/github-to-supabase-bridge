@@ -229,10 +229,18 @@ export const PontoEquilibrioCard: React.FC<PontoEquilibrioCardProps> = ({
           </div>
         )}
 
-        {margemContribuicaoPercent <= 0 && custoFixoMensal > 0 && (
+        {margemContribuicaoPercent <= 0 && custoFixoMensal > 0 && receitaBruta > 0 && (
           <div className="p-3 rounded-lg bg-destructive/10 text-sm text-destructive">
             <p>
               ⚠️ Sua margem de contribuição está negativa. Revise os preços e custos dos seus produtos na página de <strong>Precificação</strong>.
+            </p>
+          </div>
+        )}
+
+        {receitaBruta === 0 && custoFixoMensal > 0 && (
+          <div className="p-3 rounded-lg bg-muted text-sm text-muted-foreground">
+            <p>
+              📊 Registre suas <strong>vendas</strong> para calcular o ponto de equilíbrio do seu negócio.
             </p>
           </div>
         )}
