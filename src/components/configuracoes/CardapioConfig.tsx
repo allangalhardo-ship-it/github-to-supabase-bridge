@@ -121,6 +121,10 @@ export function CardapioConfig() {
           slug: formData.slug || null,
           logo_url: formData.logo_url,
           banner_url: formData.banner_url,
+          cardapio_config: {
+            categorias_ordem: categoriasConfig.ordem,
+            categorias_ocultas: categoriasConfig.ocultas,
+          },
         })
         .eq("id", empresaId);
 
