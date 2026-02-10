@@ -109,6 +109,9 @@ const ImpactoReajusteReport: React.FC<ImpactoReajusteReportProps> = ({
           }
         });
 
+        // Se o CMV atual do produto ainda está dentro do alvo, não precisa reajustar
+        if (produto.cmv <= cmvAlvo) return null;
+
         if (insumosAfetados.length === 0 || impactoCustoTotal < 0.05) return null;
 
         const custoAnterior = produto.custoInsumos - impactoCustoTotal;
