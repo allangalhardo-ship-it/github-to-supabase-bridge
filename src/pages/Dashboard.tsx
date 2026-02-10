@@ -15,6 +15,9 @@ import { PontoEquilibrioCard } from '@/components/dashboard/PontoEquilibrioCard'
 import { BusinessCoach } from '@/components/dashboard/BusinessCoach';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -26,12 +29,13 @@ import {
   HelpCircle,
   ChevronDown,
   Lightbulb,
+  CalendarIcon,
 } from 'lucide-react';
 import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysInMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCurrencyBRL } from '@/lib/format';
 
-type PeriodoType = 'hoje' | 'semana' | 'mes' | 'ultimos30';
+type PeriodoType = 'hoje' | 'semana' | 'mes' | 'ultimos30' | 'personalizado';
 
 const Dashboard = () => {
   const { usuario } = useAuth();
