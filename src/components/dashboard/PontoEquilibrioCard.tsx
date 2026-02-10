@@ -5,11 +5,18 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Target, TrendingUp, HelpCircle, CheckCircle, AlertTriangle } from 'lucide-react';
 import { formatCurrencyBRL } from '@/lib/format';
 
+interface MargemEstimada {
+  receitaSimulada: number;
+  margemSimulada: number;
+  margemPercent: number;
+}
+
 interface PontoEquilibrioCardProps {
   receitaBruta: number;
   margemContribuicao: number;
   custoFixoMensal: number;
   isLoading?: boolean;
+  margemEstimada?: MargemEstimada | null;
 }
 
 export const PontoEquilibrioCard: React.FC<PontoEquilibrioCardProps> = ({
@@ -17,14 +24,19 @@ export const PontoEquilibrioCard: React.FC<PontoEquilibrioCardProps> = ({
   margemContribuicao,
   custoFixoMensal,
   isLoading = false,
+  margemEstimada,
 }) => {
+  // Se não há vendas mas temos estimativa dos produtos, usar margem estimada
+  const usandoEstimativa = receitaBruta === 0 && !!margemEstimada;
+  
   // Margem de contribuição média (%)
-  const margemContribuicaoPercent = receitaBruta > 0 
-    ? (margemContribuicao / receitaBruta) * 100 
-    : 0;
+  const margemContribuicaoPercent = usandoEstimativa
+    ? margemEstimada!.margemPercent
+    : receitaBruta > 0 
+      ? (margemContribuicao / receitaBruta) * 100 
+      : 0;
 
   // Ponto de equilíbrio = Custos Fixos / Margem de Contribuição %
-  // É o faturamento necessário para cobrir todos os custos fixos
   const pontoEquilibrio = margemContribuicaoPercent > 0 
     ? custoFixoMensal / (margemContribuicaoPercent / 100) 
     : 0;
