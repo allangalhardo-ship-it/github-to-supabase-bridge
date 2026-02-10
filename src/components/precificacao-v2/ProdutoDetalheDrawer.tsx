@@ -246,7 +246,6 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
         </div>
         <div className="grid grid-cols-2 gap-2">
           {resultadosAtuais.map(canal => {
-            // CMV efetivo considera a taxa do canal (receita líquida)
             const receitaLiquida = canal.preco * (1 - canal.taxa / 100);
             const cmvCanal = receitaLiquida > 0 ? (produto.custoInsumos / receitaLiquida) * 100 : 0;
             
@@ -254,34 +253,41 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
               <div 
                 key={canal.id} 
                 className={cn(
-                  "p-2.5 rounded-lg border",
+                  "p-2.5 rounded-lg border space-y-1.5",
                   canal.destaque ? "border-primary/30 bg-primary/5" : "bg-muted/30"
                 )}
               >
-                <div className="flex items-center gap-1.5 mb-1">
+                {/* Header: nome + taxa */}
+                <div className="flex items-center gap-1.5">
                   {canal.icone}
-                  <span className="text-xs font-medium truncate">{canal.nome}</span>
+                  <span className="text-xs font-semibold truncate">{canal.nome}</span>
                   {canal.taxa > 0 && (
                     <Badge variant="secondary" className="text-[9px] px-1 h-4 ml-auto">
                       {canal.taxa}%
                     </Badge>
                   )}
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className={cn("text-base font-bold", getCorMargem(canal.margem))}>
-                    {formatPercent(canal.margem)}
-                  </span>
-                  <span className={cn("text-xs", getCorMargem(canal.lucro))}>
-                    {formatCurrency(canal.lucro)}
+                {/* Linha 1: Preço */}
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-muted-foreground">Preço</span>
+                  <span className="text-sm font-bold">{formatCurrency(canal.preco)}</span>
+                </div>
+                {/* Linha 2: Margem + Lucro */}
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-muted-foreground">Margem</span>
+                  <span className={cn("text-sm font-semibold", getCorMargem(canal.margem))}>
+                    {formatPercent(canal.margem)} <span className="text-xs font-normal">({formatCurrency(canal.lucro)})</span>
                   </span>
                 </div>
-                <div className="flex items-center justify-between mt-1 text-[10px] text-muted-foreground">
-                  <span>{formatCurrency(canal.preco)}</span>
+                {/* Linha 3: CMV */}
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-muted-foreground">CMV</span>
                   <span className={cn(
+                    "text-xs font-medium",
                     cmvCanal > (config?.cmv_alvo || 35) + 10 ? "text-destructive" :
                     cmvCanal > (config?.cmv_alvo || 35) ? "text-amber-600" : "text-emerald-600"
                   )}>
-                    CMV {formatPercent(cmvCanal)}
+                    {formatPercent(cmvCanal)}
                   </span>
                 </div>
               </div>
