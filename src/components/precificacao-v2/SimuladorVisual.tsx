@@ -70,8 +70,12 @@ const SimuladorVisual: React.FC<SimuladorVisualProps> = ({ produtos, config }) =
     const lucroLiquidoAtual = lucroBrutoMensal - custoFixoTotal;
     const lucroLiquidoNovo = lucroBrutoMensal - custoFixoNovo;
 
-    const margemBrutaPct = faturamentoMensal > 0 ? lucroBrutoMensal / faturamentoMensal : 0;
-    const faturamentoExtraNecessario = margemBrutaPct > 0 ? diferencaMensal / margemBrutaPct : 0;
+    // Margem de contribuição: quanto de cada R$1 faturado sobra após custos variáveis
+    // Usar faturamento como base e garantir que fique entre 0 e 1
+    const margemBrutaPct = faturamentoMensal > 0
+      ? Math.min(Math.max(lucroBrutoMensal / faturamentoMensal, 0), 0.99)
+      : 0;
+    const faturamentoExtraNecessario = margemBrutaPct > 0 ? diferencaMensal / margemBrutaPct : diferencaMensal;
 
     return {
       custoFixoTotal,
