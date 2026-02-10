@@ -867,6 +867,16 @@ const Dashboard = () => {
         </CollapsibleContent>
       </Collapsible>
 
+      {/* Alertas Inteligentes */}
+      <AlertasInteligentes
+        historicoPrecos={historicoPrecos}
+        cmvAtual={cmvPercent}
+        cmvAlvo={config?.cmv_alvo || 35}
+        produtosDefasados={produtosDefasados}
+      />
+
+      {/* Evolução da Margem */}
+      <MargemEvolutionChart />
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 animate-fade-in">
         {/* Top 5 Produtos */}

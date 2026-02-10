@@ -229,6 +229,11 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
                       <div className="flex items-center gap-2">
                         {getSaudeIcon(produto.saudeMargem)}
                         <p className="font-medium text-sm truncate">{produto.nome}</p>
+                        {precisaAjuste && (
+                          <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-amber-500 text-amber-600 shrink-0 hidden sm:inline-flex">
+                            Defasado
+                          </Badge>
+                        )}
                       </div>
 
                       {/* Verificar se tem preços customizados */}

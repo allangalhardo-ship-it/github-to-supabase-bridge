@@ -359,6 +359,25 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, 
                 <span className="text-sm">Montar a ficha técnica (custo)</span>
               </div>
             </div>
+            <div className="mt-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-xs text-muted-foreground">ou</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={loadDemoData}
+                disabled={isLoading}
+              >
+                {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                Carregar dados de exemplo
+              </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                Preenche o sistema com dados fictícios para você explorar
+              </p>
+            </div>
           </div>
         );
 
