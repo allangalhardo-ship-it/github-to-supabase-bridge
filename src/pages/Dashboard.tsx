@@ -31,7 +31,7 @@ import {
   Lightbulb,
   CalendarIcon,
 } from 'lucide-react';
-import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysInMonth } from 'date-fns';
+import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysInMonth, endOfMonth, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCurrencyBRL } from '@/lib/format';
 import WelcomeChecklist from '@/components/dashboard/WelcomeChecklist';
