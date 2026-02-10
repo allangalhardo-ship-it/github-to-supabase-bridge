@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Trash2, FileText, Search, Calculator, ExternalLink } from 'lucide-react';
+import { Trash2, FileText, Search, Calculator, ExternalLink, Lightbulb, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import BuscarInsumoDialog from './BuscarInsumoDialog';
 import { InsumoIcon } from '@/lib/insumoIconUtils';
