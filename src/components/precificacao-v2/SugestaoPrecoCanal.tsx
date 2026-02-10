@@ -122,6 +122,21 @@ const SugestaoPrecoCanal: React.FC<SugestaoPrecosCanalProps> = ({ produtos, conf
                           >
                             {canal.diferenca > 0 ? '+' : ''}{canal.diferencaPercent.toFixed(0)}%
                           </Badge>
+                          {onAplicarPrecoCanal && (
+                            <Button
+                              size="sm"
+                              variant={aplicados.has(`${sug.produtoId}-${canal.canalId}`) ? "ghost" : "secondary"}
+                              className="h-5 text-[9px] px-1.5 ml-0.5"
+                              disabled={aplicados.has(`${sug.produtoId}-${canal.canalId}`) || isAplicando}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onAplicarPrecoCanal(sug.produtoId, canal.canalId, canal.precoIdeal, canal.precoAtual);
+                                setAplicados(prev => new Set(prev).add(`${sug.produtoId}-${canal.canalId}`));
+                              }}
+                            >
+                              {aplicados.has(`${sug.produtoId}-${canal.canalId}`) ? <Check className="h-3 w-3" /> : 'Aplicar'}
+                            </Button>
+                          )}
                         </>
                       )}
                       {!canal.precisaAjuste && (

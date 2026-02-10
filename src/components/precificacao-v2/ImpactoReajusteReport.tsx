@@ -3,26 +3,31 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { TrendingUp, Check, ArrowRight } from 'lucide-react';
+import { TrendingUp, Check, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProdutoAnalise, formatCurrency } from './types';
 import { cn } from '@/lib/utils';
 import { subDays } from 'date-fns';
+import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 
 interface ImpactoReajusteReportProps {
   produtos: ProdutoAnalise[];
   onAplicarPreco?: (produtoId: string, novoPreco: number, precoAnterior: number) => void;
+  onAplicarPrecoCanal?: (produtoId: string, canal: string, novoPreco: number, precoAnterior: number) => void;
   isAplicando?: boolean;
 }
 
 const ImpactoReajusteReport: React.FC<ImpactoReajusteReportProps> = ({ 
   produtos, 
   onAplicarPreco,
+  onAplicarPrecoCanal,
   isAplicando 
 }) => {
   const { usuario } = useAuth();
   const [aplicados, setAplicados] = useState<Set<string>>(new Set());
+  const [expandido, setExpandido] = useState<Set<string>>(new Set());
+  const { canaisConfigurados } = usePrecosCanais();
 
   // Buscar variações de preço de insumos dos últimos 60 dias
   const { data: historicoInsumos } = useQuery({
@@ -59,8 +64,6 @@ const ImpactoReajusteReport: React.FC<ImpactoReajusteReportProps> = ({
   const impactos = useMemo(() => {
     if (!historicoInsumos || !fichas || produtos.length === 0) return [];
 
-    // Pegar a variação mais recente por insumo (só de alta: 5-50%)
-    // Só mostramos altas — se um insumo caiu de preço, não precisa reajustar pra cima
     const variacoesPorInsumo: Record<string, { nome: string; variacao: number }> = {};
 
     historicoInsumos.forEach(h => {
@@ -90,13 +93,9 @@ const ImpactoReajusteReport: React.FC<ImpactoReajusteReportProps> = ({
           const info = variacoesPorInsumo[ficha.insumo_id];
           if (!info) return;
 
-          // custo_unitario ATUAL do insumo (já incorpora o reajuste)
           const custoUnitAtual = (ficha.insumos as any)?.custo_unitario ?? 0;
           const custoInsumoNoProduto = custoUnitAtual * ficha.quantidade;
 
-          // Impacto = quanto esse insumo SUBIU no custo do produto
-          // custoAntes = custoAtual / (1 + var/100)
-          // impacto = custoAtual - custoAntes
           const varFraction = info.variacao / 100;
           const impacto = custoInsumoNoProduto * (varFraction / (1 + varFraction));
 
@@ -108,12 +107,6 @@ const ImpactoReajusteReport: React.FC<ImpactoReajusteReportProps> = ({
 
         if (insumosAfetados.length === 0 || impactoCustoTotal < 0.05) return null;
 
-        // LÓGICA DO PREÇO SUGERIDO:
-        // O custo dos insumos JÁ subiu, mas o preço de venda NÃO foi atualizado.
-        // O custo ANTES do reajuste era: custoAnterior = custoAtual - impacto
-        // A margem que o usuário TINHA era: margem = (preco - custoAnterior) / preco
-        // Para MANTER essa margem com o custo novo:
-        // precoNovo = custoAtual / (1 - margemAnterior)
         const custoAnterior = produto.custoInsumos - impactoCustoTotal;
         const margemAnterior = produto.preco_venda > 0
           ? (produto.preco_venda - custoAnterior) / produto.preco_venda
@@ -123,7 +116,6 @@ const ImpactoReajusteReport: React.FC<ImpactoReajusteReportProps> = ({
         if (margemAnterior > 0 && margemAnterior < 1) {
           precoSugerido = produto.custoInsumos / (1 - margemAnterior);
         } else {
-          // Fallback: simplesmente repassa o aumento de custo
           precoSugerido = produto.preco_venda + impactoCustoTotal;
         }
 
@@ -153,11 +145,30 @@ const ImpactoReajusteReport: React.FC<ImpactoReajusteReportProps> = ({
 
   if (impactos.length === 0) return null;
 
-  const handleAplicar = (imp: typeof impactos[0]) => {
+  const temCanais = canaisConfigurados && canaisConfigurados.length > 1;
+
+  const handleAplicarBase = (imp: typeof impactos[0]) => {
     if (onAplicarPreco) {
       onAplicarPreco(imp.produtoId, imp.precoSugerido, imp.precoAtual);
       setAplicados(prev => new Set(prev).add(imp.produtoId));
     }
+  };
+
+  const handleAplicarCanal = (imp: typeof impactos[0], canalId: string, precoAtualCanal: number) => {
+    if (!onAplicarPrecoCanal) return;
+    const fator = imp.precoAtual > 0 ? imp.precoSugerido / imp.precoAtual : 1;
+    const precoSugeridoCanal = Math.ceil(precoAtualCanal * fator * 100) / 100;
+    onAplicarPrecoCanal(imp.produtoId, canalId, precoSugeridoCanal, precoAtualCanal);
+    setAplicados(prev => new Set(prev).add(`${imp.produtoId}-${canalId}`));
+  };
+
+  const toggleExpandido = (produtoId: string) => {
+    setExpandido(prev => {
+      const next = new Set(prev);
+      if (next.has(produtoId)) next.delete(produtoId);
+      else next.add(produtoId);
+      return next;
+    });
   };
 
   return (
@@ -173,50 +184,104 @@ const ImpactoReajusteReport: React.FC<ImpactoReajusteReportProps> = ({
       </CardHeader>
       <CardContent className="space-y-3">
         {impactos.map((imp) => {
-          const jaAplicou = aplicados.has(imp.produtoId);
+          const jaAplicouBase = aplicados.has(imp.produtoId);
+          const isExpandido = expandido.has(imp.produtoId);
+          const produto = produtos.find(p => p.id === imp.produtoId);
 
           return (
-            <div
-              key={imp.produtoId}
-              className={cn(
-                "border rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3",
-                jaAplicou && "opacity-60"
-              )}
-            >
-              <div className="flex-1 min-w-0 space-y-1">
-                <span className="font-semibold text-sm block truncate">{imp.produtoNome}</span>
-                <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                  {imp.insumosAfetados.map((ins, i) => (
-                    <Badge key={i} variant="outline" className="text-[10px] border-destructive/30 text-destructive">
-                      {ins.nome} ↑{Math.abs(ins.variacao).toFixed(0)}%
-                    </Badge>
-                  ))}
+            <div key={imp.produtoId} className="border rounded-lg overflow-hidden">
+              {/* Linha principal */}
+              <div className={cn(
+                "p-3 flex flex-col sm:flex-row sm:items-center gap-3",
+                jaAplicouBase && !temCanais && "opacity-60"
+              )}>
+                <div className="flex-1 min-w-0 space-y-1">
+                  <span className="font-semibold text-sm block truncate">{imp.produtoNome}</span>
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                    {imp.insumosAfetados.map((ins, i) => (
+                      <Badge key={i} variant="outline" className="text-[10px] border-destructive/30 text-destructive">
+                        {ins.nome} ↑{Math.abs(ins.variacao).toFixed(0)}%
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 text-sm shrink-0">
+                  <span className="text-muted-foreground">{formatCurrency(imp.precoAtual)}</span>
+                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="font-bold text-foreground">{formatCurrency(imp.precoSugerido)}</span>
+                  <Badge variant="secondary" className="text-[10px]">
+                    +{formatCurrency(imp.aumento)}
+                  </Badge>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {/* Se não tem múltiplos canais, botão simples */}
+                  {onAplicarPreco && !temCanais && (
+                    <Button
+                      size="sm"
+                      variant={jaAplicouBase ? "ghost" : "default"}
+                      className="h-8 text-xs"
+                      disabled={jaAplicouBase || isAplicando}
+                      onClick={() => handleAplicarBase(imp)}
+                    >
+                      {jaAplicouBase ? (
+                        <><Check className="h-3.5 w-3.5 mr-1" /> Aplicado</>
+                      ) : (
+                        'Aplicar'
+                      )}
+                    </Button>
+                  )}
+                  {/* Se tem múltiplos canais, botão para expandir */}
+                  {temCanais && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs gap-1"
+                      onClick={() => toggleExpandido(imp.produtoId)}
+                    >
+                      Canais
+                      {isExpandido ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    </Button>
+                  )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 text-sm shrink-0">
-                <span className="text-muted-foreground">{formatCurrency(imp.precoAtual)}</span>
-                <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="font-bold text-foreground">{formatCurrency(imp.precoSugerido)}</span>
-                <Badge variant="secondary" className="text-[10px]">
-                  +{formatCurrency(imp.aumento)}
-                </Badge>
-              </div>
+              {/* Preços por canal expandido */}
+              {temCanais && isExpandido && (
+                <div className="border-t bg-muted/20 p-3 space-y-1.5">
+                  {canaisConfigurados!.map(canal => {
+                    const precoAtualCanal = produto?.precosCanais?.[canal.id] ?? imp.precoAtual;
+                    const fator = imp.precoAtual > 0 ? imp.precoSugerido / imp.precoAtual : 1;
+                    const precoSugeridoCanal = Math.ceil(precoAtualCanal * fator * 100) / 100;
+                    const jaAplicouCanal = aplicados.has(`${imp.produtoId}-${canal.id}`);
 
-              {onAplicarPreco && (
-                <Button
-                  size="sm"
-                  variant={jaAplicou ? "ghost" : "default"}
-                  className="shrink-0 h-8 text-xs"
-                  disabled={jaAplicou || isAplicando}
-                  onClick={() => handleAplicar(imp)}
-                >
-                  {jaAplicou ? (
-                    <><Check className="h-3.5 w-3.5 mr-1" /> Aplicado</>
-                  ) : (
-                    'Aplicar'
-                  )}
-                </Button>
+                    return (
+                      <div key={canal.id} className="flex items-center justify-between text-xs gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="font-medium truncate">{canal.nome}</span>
+                          {canal.taxa > 0 && (
+                            <span className="text-muted-foreground shrink-0">({canal.taxa}%)</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-muted-foreground">{formatCurrency(precoAtualCanal)}</span>
+                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                          <span className="font-bold">{formatCurrency(precoSugeridoCanal)}</span>
+                          <Button
+                            size="sm"
+                            variant={jaAplicouCanal ? "ghost" : "secondary"}
+                            className="h-6 text-[10px] px-2"
+                            disabled={jaAplicouCanal || isAplicando}
+                            onClick={() => handleAplicarCanal(imp, canal.id, precoAtualCanal)}
+                          >
+                            {jaAplicouCanal ? <Check className="h-3 w-3" /> : 'Aplicar'}
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           );

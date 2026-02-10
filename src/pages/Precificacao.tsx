@@ -255,13 +255,19 @@ const Precificacao = () => {
           <SimuladorVisual produtos={produtosAnalisados} config={config} />
 
           {/* Sugestão de preço por canal */}
-          <SugestaoPrecoCanal produtos={produtosAnalisados} config={config} />
+          <SugestaoPrecoCanal 
+            produtos={produtosAnalisados} 
+            config={config}
+            onAplicarPrecoCanal={handleAplicarPrecoCanal}
+            isAplicando={updatePrecoMutation.isPending || isSavingPrecoCanal}
+          />
 
           {/* Relatório de impacto de reajustes */}
           <ImpactoReajusteReport 
             produtos={produtosAnalisados} 
             onAplicarPreco={handleAplicarPreco}
-            isAplicando={updatePrecoMutation.isPending}
+            onAplicarPrecoCanal={handleAplicarPrecoCanal}
+            isAplicando={updatePrecoMutation.isPending || isSavingPrecoCanal}
           />
 
 
