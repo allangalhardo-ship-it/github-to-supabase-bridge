@@ -35,6 +35,7 @@ interface CanalComposicao {
   nome: string;
   taxa: number;
   isBalcao?: boolean;
+  precoCanal?: number; // Preço específico do canal (fallback para preco_venda)
 }
 
 interface ComposicaoPrecoModalProps {
@@ -60,31 +61,42 @@ const ComposicaoPrecoModal: React.FC<ComposicaoPrecoModalProps> = ({
 
   if (!produto) return null;
 
-  const { preco_venda, custoInsumos } = produto;
+  const { custoInsumos } = produto;
   const impostoDecimal = impostoPercentual / 100;
 
-  // Calcula composição para cada canal
+  // Calcula composição para cada canal usando preço específico do canal
   const composicoesPorCanal = canais.map(canal => {
+    const precoCanal = canal.precoCanal ?? produto.preco_venda;
     const taxaDecimal = canal.taxa / 100;
     
-    const valorImposto = preco_venda * impostoDecimal;
-    const valorTaxa = preco_venda * taxaDecimal;
-    const lucro = preco_venda - custoInsumos - valorImposto - valorTaxa;
-    const margem = preco_venda > 0 ? (lucro / preco_venda) * 100 : 0;
-    const cmv = preco_venda > 0 ? (custoInsumos / preco_venda) * 100 : 0;
+    const valorImposto = precoCanal * impostoDecimal;
+    const valorTaxa = precoCanal * taxaDecimal;
+    const lucro = precoCanal - custoInsumos - valorImposto - valorTaxa;
+    const margem = precoCanal > 0 ? (lucro / precoCanal) * 100 : 0;
+    
+    // CMV considerando receita líquida (após taxa do canal)
+    const receitaLiquida = precoCanal * (1 - taxaDecimal);
+    const cmv = receitaLiquida > 0 ? (custoInsumos / receitaLiquida) * 100 : 0;
+    
+    // Percentuais relativos ao preço de venda (para barra visual)
+    const percCusto = precoCanal > 0 ? (custoInsumos / precoCanal) * 100 : 0;
+    const percImposto = precoCanal > 0 ? (valorImposto / precoCanal) * 100 : 0;
+    const percTaxa = precoCanal > 0 ? (valorTaxa / precoCanal) * 100 : 0;
+    const percMargem = precoCanal > 0 ? (lucro / precoCanal) * 100 : 0;
     
     return {
       ...canal,
+      precoCanal,
       custoInsumos,
       valorImposto,
       valorTaxa,
       lucro,
       margem,
       cmv,
-      percentualCusto: cmv,
-      percentualImposto: impostoPercentual,
-      percentualTaxa: canal.taxa,
-      percentualMargem: margem,
+      percentualCusto: percCusto,
+      percentualImposto: percImposto,
+      percentualTaxa: percTaxa,
+      percentualMargem: percMargem,
     };
   });
 
