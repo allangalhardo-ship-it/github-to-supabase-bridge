@@ -327,6 +327,43 @@ const Dashboard = () => {
   const cmvPercent = receitaBruta > 0 ? (cmvTotal / receitaBruta) * 100 : 0;
   const margemContribuicao = receitaBruta - cmvTotal;
 
+  // Comparativo com período anterior
+  const receitaBrutaAnterior = vendasAnterior?.reduce((sum, v) => sum + Number(v.valor_total), 0) || 0;
+  const cmvTotalAnterior = vendasAnterior?.reduce((sum, venda) => {
+    if (!venda.custo_insumos) return sum;
+    const custoUnit = Number(venda.custo_insumos) || 0;
+    const precoVenda = Number(venda.produto_preco_venda) || 0;
+    const valorTotal = Number(venda.valor_total) || 0;
+    const unidades = precoVenda > 0 ? valorTotal / precoVenda : Number(venda.quantidade);
+    return sum + (custoUnit * unidades);
+  }, 0) || 0;
+  const margemAnterior = receitaBrutaAnterior - cmvTotalAnterior;
+  const deltaReceita = receitaBrutaAnterior > 0 ? ((receitaBruta - receitaBrutaAnterior) / receitaBrutaAnterior) * 100 : null;
+  const deltaLucroBruto = margemAnterior > 0 ? ((margemContribuicao - margemAnterior) / margemAnterior) * 100 : null;
+
+  // Produtos com preço defasado
+  const produtosDefasados = useMemo(() => {
+    if (!produtosAnalise) return 0;
+    return produtosAnalise.filter(p => {
+      const custoInsumos = p.fichas_tecnicas?.reduce((sum: number, ft: any) => {
+        return sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0));
+      }, 0) || 0;
+      if (custoInsumos <= 0 || p.preco_venda <= 0) return false;
+      const margem = ((p.preco_venda - custoInsumos) / p.preco_venda) * 100;
+      return margem < (config?.margem_desejada_padrao || 30) * 0.7;
+    }).length;
+  }, [produtosAnalise, config]);
+
+  const renderDelta = (delta: number | null, invertColors = false) => {
+    if (delta === null) return null;
+    const isPositive = invertColors ? delta < 0 : delta > 0;
+    return (
+      <p className={`text-[10px] flex items-center gap-0.5 mt-0.5 ${isPositive ? 'text-green-600' : 'text-destructive'}`}>
+        {delta > 0 ? '↑' : '↓'} {Math.abs(delta).toFixed(1)}% vs anterior
+      </p>
+    );
+  };
+
   // Quando não há vendas, estimar margem de contribuição a partir dos produtos cadastrados
   const margemContribuicaoEstimada = useMemo(() => {
     if (receitaBruta > 0 || !produtosAnalise || produtosAnalise.length === 0) return null;
