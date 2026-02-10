@@ -22,6 +22,7 @@ import ListaCompras from '@/components/insumos/ListaCompras';
 import ImportInsumosDialog from '@/components/import/ImportInsumosDialog';
 import HistoricoPrecos from '@/components/insumos/HistoricoPrecos';
 import { ImportarBasePadraoDialog } from '@/components/insumos/ImportarBasePadraoDialog';
+import ContextualTip from '@/components/onboarding/ContextualTip';
 const unidadesMedida = [
   { value: 'un', label: 'Unidade (un)' },
   { value: 'kg', label: 'Quilograma (kg)' },
