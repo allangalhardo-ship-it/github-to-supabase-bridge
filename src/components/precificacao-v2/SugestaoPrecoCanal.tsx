@@ -17,25 +17,28 @@ const SugestaoPrecoCanal: React.FC<SugestaoPrecosCanalProps> = ({ produtos, conf
   const sugestoes = useMemo(() => {
     if (!canaisConfigurados || canaisConfigurados.length <= 1 || !config || produtos.length === 0) return [];
 
-    const margemAlvo = config.margem_desejada_padrao / 100;
-    const imposto = config.imposto_medio_sobre_vendas / 100;
+    const cmvAlvo = (config.cmv_alvo || 35) / 100;
 
     return produtos
       .filter(p => p.custoInsumos > 0)
       .map(produto => {
         const canaisComSugestao = canaisConfigurados.map(canal => {
           const taxa = canal.taxa / 100;
-          const divisor = 1 - margemAlvo - imposto - taxa;
-          const precoIdeal = divisor > 0 ? produto.custoInsumos / divisor : produto.custoInsumos * 3;
+          // Fórmula baseada em CMV alvo (mesma do simulador do drawer)
+          // preço = custo / (cmvAlvo * fatorReceitaLiquida)
+          const fatorReceita = 1 - taxa;
+          const precoIdeal = fatorReceita > 0 && cmvAlvo > 0
+            ? produto.custoInsumos / (cmvAlvo * fatorReceita)
+            : produto.custoInsumos * 3;
 
           // Preço atual neste canal
           const precoAtual = produto.precosCanais?.[canal.id] ?? produto.preco_venda;
           const diferenca = precoIdeal - precoAtual;
           const diferencaPercent = precoAtual > 0 ? (diferenca / precoAtual) * 100 : 0;
 
-          // Margem atual no canal
-          const lucroAtual = precoAtual - produto.custoInsumos - precoAtual * imposto - precoAtual * taxa;
-          const margemAtual = precoAtual > 0 ? (lucroAtual / precoAtual) * 100 : 0;
+          // CMV atual no canal
+          const receitaLiquida = precoAtual * fatorReceita;
+          const cmvAtual = receitaLiquida > 0 ? (produto.custoInsumos / receitaLiquida) * 100 : 100;
 
           return {
             canalId: canal.id,
@@ -43,10 +46,10 @@ const SugestaoPrecoCanal: React.FC<SugestaoPrecosCanalProps> = ({ produtos, conf
             taxa: canal.taxa,
             isBalcao: canal.isBalcao,
             precoAtual,
-            precoIdeal: Math.ceil(precoIdeal * 100) / 100, // arredonda pra cima
+            precoIdeal: Math.ceil(precoIdeal * 100) / 100,
             diferenca,
             diferencaPercent,
-            margemAtual,
+            cmvAtual,
             precisaAjuste: Math.abs(diferencaPercent) > 5,
           };
         });
@@ -75,7 +78,7 @@ const SugestaoPrecoCanal: React.FC<SugestaoPrecosCanalProps> = ({ produtos, conf
           <Badge variant="secondary" className="ml-auto">{sugestoes.length}</Badge>
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Preço ideal por canal considerando taxas, impostos e margem alvo de {config?.margem_desejada_padrao}%
+          Preço ideal por canal considerando taxas e CMV alvo de {config?.cmv_alvo || 35}%
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
