@@ -176,7 +176,9 @@ export const PontoEquilibrioCard: React.FC<PontoEquilibrioCardProps> = ({
         {/* Valores principais */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">Faturamento Necessário</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">
+              Faturamento Necessário {usandoEstimativa && '(projeção)'}
+            </p>
             <p className="text-2xl font-bold text-foreground">
               {formatCurrencyBRL(pontoEquilibrio)}
             </p>
@@ -186,12 +188,16 @@ export const PontoEquilibrioCard: React.FC<PontoEquilibrioCardProps> = ({
           </div>
           
           <div className="space-y-1 text-right">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">Seu Faturamento</p>
-            <p className={`text-2xl font-bold ${atingiuEquilibrio ? 'text-green-600' : 'text-foreground'}`}>
-              {formatCurrencyBRL(receitaBruta)}
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">
+              {usandoEstimativa ? 'Margem Estimada' : 'Seu Faturamento'}
+            </p>
+            <p className={`text-2xl font-bold ${usandoEstimativa ? 'text-primary' : atingiuEquilibrio ? 'text-green-600' : 'text-foreground'}`}>
+              {usandoEstimativa ? `${margemContribuicaoPercent.toFixed(1)}%` : formatCurrencyBRL(receitaBruta)}
             </p>
             <p className="text-xs text-muted-foreground">
-              margem contribuição: {margemContribuicaoPercent.toFixed(1)}%
+              {usandoEstimativa 
+                ? 'baseada nos seus produtos' 
+                : `margem contribuição: ${margemContribuicaoPercent.toFixed(1)}%`}
             </p>
           </div>
         </div>
