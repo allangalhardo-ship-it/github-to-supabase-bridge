@@ -5,6 +5,31 @@ export interface Produto {
   categoria: string | null;
   imagem_url: string | null;
   observacoes_ficha: string | null;
+  grupos_opcionais?: GrupoOpcional[];
+}
+
+export interface GrupoOpcional {
+  id: string;
+  nome: string;
+  min_selecao: number;
+  max_selecao: number;
+  ordem: number;
+  itens: ItemOpcional[];
+}
+
+export interface ItemOpcional {
+  id: string;
+  nome: string;
+  preco_adicional: number;
+  ordem: number;
+  ativo: boolean;
+}
+
+export interface OpcionalSelecionado {
+  grupo_nome: string;
+  item_id: string;
+  item_nome: string;
+  preco_adicional: number;
 }
 
 export interface Empresa {
@@ -25,6 +50,9 @@ export interface CarrinhoItem {
   produto: Produto;
   quantidade: number;
   observacao: string;
+  opcionais: OpcionalSelecionado[];
+  /** Unique key to differentiate same product with different options */
+  carrinhoKey: string;
 }
 
 export interface DadosCliente {
