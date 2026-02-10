@@ -249,6 +249,9 @@ const Precificacao = () => {
             />
           </div>
 
+          {/* Simulador "E se?" */}
+          <SimuladorVisual produtos={produtosAnalisados} config={config} />
+
 
           {/* Lista de Produtos */}
           <ProdutoListaCompacta
