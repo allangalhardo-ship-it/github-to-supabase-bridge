@@ -90,7 +90,7 @@ interface BusinessCoachProps {
   config: Config | null;
   custosFixos: CustoFixo[] | null;
   historicoPrecos: HistoricoPreco[] | null;
-  periodo: 'hoje' | 'semana' | 'mes' | 'ultimos30';
+  periodo: 'hoje' | 'semana' | 'mes' | 'ultimos30' | 'personalizado';
   formatCurrency: (value: number) => string;
 }
 
