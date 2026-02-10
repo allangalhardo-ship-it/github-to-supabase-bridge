@@ -218,7 +218,7 @@ const ComposicaoPrecoModal: React.FC<ComposicaoPrecoModalProps> = ({
                 <div className="text-right">
                   <span className="font-medium">-{formatCurrency(canal.custoInsumos)}</span>
                   <span className="text-xs text-muted-foreground ml-1">
-                    ({formatPercent(canal.percentualCusto)})
+                    ({formatPercent(canal.cmv)})
                   </span>
                 </div>
               </div>
