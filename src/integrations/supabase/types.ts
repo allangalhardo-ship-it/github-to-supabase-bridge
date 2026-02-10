@@ -516,6 +516,54 @@ export type Database = {
           },
         ]
       }
+      grupos_opcionais: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          max_selecao: number
+          min_selecao: number
+          nome: string
+          ordem: number
+          produto_id: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id?: string
+          max_selecao?: number
+          min_selecao?: number
+          nome: string
+          ordem?: number
+          produto_id: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          max_selecao?: number
+          min_selecao?: number
+          nome?: string
+          ordem?: number
+          produto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grupos_opcionais_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grupos_opcionais_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       historico_precos: {
         Row: {
           created_at: string
@@ -699,6 +747,44 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      itens_opcionais: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          grupo_id: string
+          id: string
+          nome: string
+          ordem: number
+          preco_adicional: number
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          grupo_id: string
+          id?: string
+          nome: string
+          ordem?: number
+          preco_adicional?: number
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          grupo_id?: string
+          id?: string
+          nome?: string
+          ordem?: number
+          preco_adicional?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itens_opcionais_grupo_id_fkey"
+            columns: ["grupo_id"]
+            isOneToOne: false
+            referencedRelation: "grupos_opcionais"
             referencedColumns: ["id"]
           },
         ]
