@@ -20,6 +20,7 @@ import { ptBR } from 'date-fns/locale';
 import { AlertaVencimento } from '@/components/producao/AlertaVencimento';
 import { inserirMovimentoEstoque } from '@/lib/estoqueUtils';
 import { formatCurrencyBRL } from '@/lib/format';
+import ContextualTip from '@/components/onboarding/ContextualTip';
 
 type TipoProducao = 'produto' | 'receita';
 
