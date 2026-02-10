@@ -713,6 +713,7 @@ const Dashboard = () => {
             ) : (
               <>
                 <div className="text-2xl sm:text-2xl font-bold">{formatCurrency(margemContribuicao)}</div>
+                {renderDelta(deltaLucroBruto)}
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                   Receita - CMV ({receitaBruta > 0 ? ((margemContribuicao / receitaBruta) * 100).toFixed(1) : 0}%)
                 </p>
