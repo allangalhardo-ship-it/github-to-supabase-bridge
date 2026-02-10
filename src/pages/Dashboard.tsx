@@ -651,6 +651,7 @@ const Dashboard = () => {
         margemContribuicao={margemContribuicao}
         custoFixoMensal={custoFixoMensal}
         isLoading={isLoading}
+        margemEstimada={margemContribuicaoEstimada}
       />
 
       {/* Business Coach - Resumo Inteligente */}
