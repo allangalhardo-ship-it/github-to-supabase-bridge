@@ -7,26 +7,71 @@ interface CardapioHeaderProps {
 }
 
 // Helper para verificar se está aberto baseado no horário
-function verificarAberto(horario: string | null): boolean {
-  if (!horario) return true; // Se não tem horário, assume aberto
+export function verificarAberto(horario: string | null): { aberto: boolean; proximoEvento?: string } {
+  if (!horario) return { aberto: true };
   
-  // Lógica simplificada - em produção seria mais complexa
   const agora = new Date();
   const hora = agora.getHours();
+  const minuto = agora.getMinutes();
+  const horaDecimal = hora + minuto / 60;
+  const diaSemana = agora.getDay(); // 0=Dom, 1=Seg...
   
-  // Exemplo: se contém "9h às 18h", considera aberto entre 9h e 18h
-  const match = horario.match(/(\d{1,2})h?\s*(?:às|a|-)\s*(\d{1,2})h?/i);
-  if (match) {
-    const inicio = parseInt(match[1]);
-    const fim = parseInt(match[2]);
-    return hora >= inicio && hora < fim;
+  const diasMap: Record<string, number[]> = {
+    'seg': [1], 'ter': [2], 'qua': [3], 'qui': [4], 'sex': [5], 'sab': [6], 'sáb': [6], 'dom': [0],
+    'segunda': [1], 'terca': [2], 'terça': [2], 'quarta': [3], 'quinta': [4], 'sexta': [5], 'sabado': [6], 'sábado': [6], 'domingo': [0],
+    'seg-sex': [1,2,3,4,5], 'seg-sab': [1,2,3,4,5,6], 'seg-sáb': [1,2,3,4,5,6],
+  };
+
+  // Tentar parsear intervalos como "Seg-Sex 9h às 18h | Sáb 9h às 14h"
+  const partes = horario.split(/[|;]/);
+  
+  for (const parte of partes) {
+    const textoLimpo = parte.trim().toLowerCase();
+    
+    // Extrair horários
+    const horaMatch = textoLimpo.match(/(\d{1,2})[:h]?(\d{0,2})\s*(?:às|a|-|–)\s*(\d{1,2})[:h]?(\d{0,2})/i);
+    if (!horaMatch) continue;
+    
+    const inicioH = parseInt(horaMatch[1]) + (parseInt(horaMatch[2] || '0') / 60);
+    const fimH = parseInt(horaMatch[3]) + (parseInt(horaMatch[4] || '0') / 60);
+    
+    // Extrair dias da semana
+    let diasValidos: number[] | null = null;
+    for (const [key, dias] of Object.entries(diasMap)) {
+      if (textoLimpo.includes(key)) {
+        diasValidos = diasValidos ? [...diasValidos, ...dias] : [...dias];
+      }
+    }
+    
+    // Se não especificou dia, vale para todos
+    if (!diasValidos) diasValidos = [0, 1, 2, 3, 4, 5, 6];
+    
+    if (diasValidos.includes(diaSemana) && horaDecimal >= inicioH && horaDecimal < fimH) {
+      const horaFim = Math.floor(fimH);
+      const minFim = Math.round((fimH - horaFim) * 60);
+      return { 
+        aberto: true, 
+        proximoEvento: `Fecha às ${horaFim}${minFim > 0 ? ':' + String(minFim).padStart(2, '0') : 'h'}` 
+      };
+    }
   }
   
-  return true;
+  // Fallback simples se não matchou nenhum padrão
+  const matchSimples = horario.match(/(\d{1,2})[:h]?\s*(?:às|a|-)\s*(\d{1,2})[:h]?/i);
+  if (matchSimples) {
+    const inicio = parseInt(matchSimples[1]);
+    const fim = parseInt(matchSimples[2]);
+    if (hora >= inicio && hora < fim) {
+      return { aberto: true, proximoEvento: `Fecha às ${fim}h` };
+    }
+  }
+  
+  return { aberto: false };
 }
 
 export function CardapioHeader({ empresa }: CardapioHeaderProps) {
-  const estaAberto = verificarAberto(empresa.horario_funcionamento);
+  const statusHorario = verificarAberto(empresa.horario_funcionamento);
+  const estaAberto = statusHorario.aberto;
   const hasBanner = !!empresa.banner_url;
   const hasLogo = !!empresa.logo_url;
 
@@ -71,10 +116,17 @@ export function CardapioHeader({ empresa }: CardapioHeaderProps) {
           {/* Badge de status */}
           <div className="mb-4">
             {estaAberto ? (
-              <Badge className="bg-emerald-500 text-white border-0 px-4 py-1.5 text-xs font-semibold shadow-lg">
-                <span className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse" />
-                Aberto agora
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge className="bg-emerald-500 text-white border-0 px-4 py-1.5 text-xs font-semibold shadow-lg">
+                  <span className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse" />
+                  Aberto agora
+                </Badge>
+                {statusHorario.proximoEvento && (
+                  <span className="text-xs text-gray-600 bg-white/80 backdrop-blur-sm rounded-full px-3 py-1 shadow-sm">
+                    {statusHorario.proximoEvento}
+                  </span>
+                )}
+              </div>
             ) : (
               <Badge variant="secondary" className="bg-rose-500/90 text-white border-0 px-4 py-1.5 text-xs font-semibold shadow-lg">
                 <span className="w-2 h-2 bg-white/60 rounded-full mr-2" />
