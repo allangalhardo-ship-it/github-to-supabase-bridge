@@ -662,6 +662,11 @@ const Estoque = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <ImplantacaoSaldoDialog
+        open={implantacaoOpen}
+        onOpenChange={setImplantacaoOpen}
+      />
     </div>
   );
 };
