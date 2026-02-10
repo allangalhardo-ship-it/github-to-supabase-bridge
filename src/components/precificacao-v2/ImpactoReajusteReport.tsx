@@ -69,17 +69,22 @@ const ImpactoReajusteReport: React.FC<ImpactoReajusteReportProps> = ({ produtos 
     }> = {};
 
     historicoInsumos.forEach(h => {
-      if (!variacoesPorInsumo[h.insumo_id] && h.variacao_percentual && h.variacao_percentual !== 0) {
+      // Filtrar variações realistas (5% a 200%) — ignorar conversões de unidade
+      const variacaoRealista = h.variacao_percentual && 
+        Math.abs(h.variacao_percentual) > 5 && 
+        Math.abs(h.variacao_percentual) < 200;
+
+      if (!variacoesPorInsumo[h.insumo_id] && variacaoRealista) {
         variacoesPorInsumo[h.insumo_id] = {
           nome: h.insumos?.nome || 'Insumo',
-          variacao: h.variacao_percentual,
+          variacao: h.variacao_percentual!,
           precoAnterior: h.preco_anterior || 0,
           precoNovo: h.preco_novo,
         };
       }
     });
 
-    const insumosComAlta = Object.entries(variacoesPorInsumo).filter(([, v]) => Math.abs(v.variacao) > 5);
+    const insumosComAlta = Object.entries(variacoesPorInsumo);
     if (insumosComAlta.length === 0) return [];
 
     // Para cada produto, calcular impacto dos reajustes
