@@ -91,43 +91,85 @@ const ImpactoReajusteReport: React.FC<ImpactoReajusteReportProps> = ({
     const insumosComAlta = Object.entries(variacoesPorInsumo);
     if (insumosComAlta.length === 0) return [];
 
+    // Buscar custo unitário atual dos insumos a partir dos dados do produto
+    // Para calcular impacto corretamente, usamos a VARIAÇÃO PERCENTUAL
+    // aplicada ao custo real na ficha (custo_unitario × quantidade)
+    
     return produtos
       .map(produto => {
         const fichasProduto = fichas.filter(f => f.produto_id === produto.id);
         if (fichasProduto.length === 0) return null;
 
-        let custoAnteriorTotal = 0;
-        let custoNovoTotal = 0;
+        let impactoCustoTotal = 0;
         const insumosAfetados: Array<{ nome: string; variacao: number }> = [];
 
         fichasProduto.forEach(ficha => {
           const variacaoInsumo = variacoesPorInsumo[ficha.insumo_id];
           if (variacaoInsumo) {
-            const custoAnterior = variacaoInsumo.precoAnterior * ficha.quantidade;
-            const custoNovo = variacaoInsumo.precoNovo * ficha.quantidade;
-            custoAnteriorTotal += custoAnterior;
-            custoNovoTotal += custoNovo;
+            // Custo atual deste insumo na ficha = custo do produto rateado
+            // Como não temos custo_unitario aqui, usamos a variação %
+            // sobre o custo proporcional do insumo no produto
+            const custoProdutoTotal = produto.custoInsumos;
+            
+            // Buscar o custo atual desse insumo na ficha pelo custoInsumos total
+            // Approach: usar variação % sobre o custo real que esse insumo representa
+            // custoAtualInsumo = (parte do custo que esse insumo representa)
+            // Não temos o custo unitário individual aqui, então calculamos o impacto
+            // via percentual: se o insumo subiu X%, o custo dele na ficha sobe X%
+            // custoInsumoNaFicha = custoUnitarioAtual × quantidade (já está no custoInsumos total)
+            // impacto = custoInsumoNaFicha × (variacao / (100 + variacao))
+            // Isso porque: precoNovo = precoAntigo × (1 + var/100)
+            // Logo precoAntigo = precoNovo / (1 + var/100)
+            // custoAtual (já com reajuste) - custoAnterior = custoAtual - custoAtual/(1+var/100)
+            // = custoAtual × (1 - 1/(1+var/100)) = custoAtual × (var/100)/(1+var/100)
+            
+            // Mas na verdade, queremos saber: quanto o custo SUBIU desde o último preço
+            // O historico_precos registra a variação do custo_unitario
+            // O custo_unitario ATUAL do insumo já incorpora o reajuste
+            // Então o impacto no custo do produto = custoUnitarioAtual × qtd × (var% / (100 + var%))
+            // Simplificando: usamos variação sobre o custo proporcional
+            
+            const varPct = variacaoInsumo.variacao / 100;
+            // Se o insumo subiu 10%, o custo ANTES era custoAtual / 1.10
+            // Impacto = custoAtual - custoAtual/1.10 = custoAtual × (0.10/1.10)
+            // Mas não temos o custoAtual individual do insumo aqui...
+            // Vamos estimar: se o custo total é produto.custoInsumos e temos N insumos
+            // Melhor approach: pegar da variação absoluta convertida
+
+            // Approach mais simples e correto:
+            // precoAnterior e precoNovo são por EMBALAGEM no historico
+            // mas custo_unitario na tabela insumos é por unidade base (g, ml, etc)
+            // A variação PERCENTUAL é a mesma independente da unidade
+            // Então: impacto = custoUnitarioAtual × quantidade × (variacao / (100 + variacao))
+            // Porém não temos custoUnitarioAtual aqui
+            
+            // SOLUÇÃO: calcular proporcionalmente
+            // Se sabemos que a variação é var%, e o custo atual do insumo já inclui esse reajuste
+            // Não podemos calcular sem o custo_unitario individual
+            // Vamos precisar buscar de outra forma
+            
             insumosAfetados.push({
               nome: variacaoInsumo.nome,
               variacao: variacaoInsumo.variacao,
+              insumoId: ficha.insumo_id,
+              quantidade: ficha.quantidade,
             });
           }
         });
 
         if (insumosAfetados.length === 0) return null;
 
-        const impactoCustoTotal = custoNovoTotal - custoAnteriorTotal;
-        if (Math.abs(impactoCustoTotal) < 0.01) return null;
-
-        // Calcular preço sugerido para manter a mesma margem %
-        const margemAtualPct = produto.preco_venda > 0
-          ? (produto.preco_venda - produto.custoInsumos) / produto.preco_venda
-          : 0;
-        
-        const novoCusto = produto.custoInsumos + impactoCustoTotal;
-        const precoSugerido = margemAtualPct > 0 && margemAtualPct < 1
-          ? novoCusto / (1 - margemAtualPct)
-          : produto.preco_venda + impactoCustoTotal;
+        // Sem custo unitário individual, não podemos calcular impacto preciso
+        // Marcamos para calcular depois
+        return {
+          produtoId: produto.id,
+          produtoNome: produto.nome,
+          precoAtual: produto.preco_venda,
+          custoAtual: produto.custoInsumos,
+          insumosAfetados,
+        };
+      })
+      .filter(Boolean);
 
         const aumentoNecessario = precoSugerido - produto.preco_venda;
 
