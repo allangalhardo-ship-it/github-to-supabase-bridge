@@ -20,6 +20,7 @@ import FichaTecnicaDialog from '@/components/produtos/FichaTecnicaDialog';
 import ImportProdutosDialog from '@/components/import/ImportProdutosDialog';
 import ImportFichaTecnicaDialog from '@/components/import/ImportFichaTecnicaDialog';
 import CategorySelect from '@/components/produtos/CategorySelect';
+import ContextualTip from '@/components/onboarding/ContextualTip';
 
 interface Produto {
   id: string;
