@@ -61,13 +61,14 @@ export function CardapioConfig() {
     try {
       const { data, error } = await supabase
         .from("empresas")
-        .select("id, nome, slug, cardapio_ativo, cardapio_descricao, horario_funcionamento, whatsapp_dono, logo_url, banner_url")
+        .select("id, nome, slug, cardapio_ativo, cardapio_descricao, horario_funcionamento, whatsapp_dono, logo_url, banner_url, cardapio_config")
         .eq("id", empresaId)
         .single();
 
       if (error) throw error;
 
-      setEmpresa(data);
+      const config = (data.cardapio_config as any) ?? {};
+      setEmpresa({ ...data, cardapio_config: config });
       setFormData({
         cardapio_ativo: data.cardapio_ativo || false,
         cardapio_descricao: data.cardapio_descricao || "",
@@ -77,6 +78,26 @@ export function CardapioConfig() {
         logo_url: data.logo_url || null,
         banner_url: data.banner_url || null,
       });
+      setCategoriasConfig({
+        ordem: config.categorias_ordem || [],
+        ocultas: config.categorias_ocultas || [],
+      });
+
+      // Buscar categorias dos produtos
+      const { data: prods } = await supabase
+        .from("produtos")
+        .select("categoria")
+        .eq("empresa_id", empresaId)
+        .eq("ativo", true);
+      
+      if (prods) {
+        const cats = [...new Set(prods.map(p => p.categoria || "Outros"))].sort();
+        setCategoriasDisponiveis(cats);
+        // Se não tem ordem salva, usar a natural
+        if (!config.categorias_ordem?.length) {
+          setCategoriasConfig(prev => ({ ...prev, ordem: cats }));
+        }
+      }
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
       toast.error("Erro ao carregar configurações do cardápio");
