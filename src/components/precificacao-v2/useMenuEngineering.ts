@@ -152,13 +152,20 @@ export function useMenuEngineering() {
       // Buscar preços por canal deste produto
       const precosCanaisProduto = precosCanaisTodos?.[produto.id] || {};
 
-      const precoVenda = produto.preco_venda || 0;
-      const cmv = precoVenda > 0 ? (custoInsumos / precoVenda) * 100 : 100;
+      // Usar preço efetivo de venda (receita/quantidade) quando há vendas,
+      // senão usar preco_venda do cadastro. Isso garante consistência entre
+      // receitaTotal e o preço usado nos cálculos de margem/CMV.
+      const precoVendaCadastro = produto.preco_venda || 0;
+      const precoEfetivo = (quantidadeVendida > 0 && receitaTotal > 0)
+        ? receitaTotal / quantidadeVendida
+        : precoVendaCadastro;
+
+      const cmv = precoEfetivo > 0 ? (custoInsumos / precoEfetivo) * 100 : 100;
       
       // Margem de contribuição (sem custos fixos)
-      const impostoValor = precoVenda * (config.imposto_medio_sobre_vendas / 100);
-      const lucroUnitario = precoVenda - custoInsumos - impostoValor;
-      const margemContribuicao = precoVenda > 0 ? (lucroUnitario / precoVenda) * 100 : 0;
+      const impostoValor = precoEfetivo * (config.imposto_medio_sobre_vendas / 100);
+      const lucroUnitario = precoEfetivo - custoInsumos - impostoValor;
+      const margemContribuicao = precoEfetivo > 0 ? (lucroUnitario / precoEfetivo) * 100 : 0;
 
       // Calcular preço sugerido
       const margem = config.margem_desejada_padrao / 100;
