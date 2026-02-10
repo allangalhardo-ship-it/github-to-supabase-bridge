@@ -396,41 +396,21 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
           </div>
         </div>
 
-        {/* Botões aplicar */}
-        <div className="flex flex-col gap-2">
-          {/* Aplicar todos os canais de uma vez */}
+        {/* Aplicar canal individual (inline) */}
+        {canalParaAplicar && (
           <Button
-            size="lg"
+            size="sm"
+            variant="outline"
             className="w-full gap-2"
             onClick={() => {
-              resultadosSimulacaoCMV.forEach(canal => {
-                if (canal.precoFinal > 0) {
-                  handleAplicar(canal.precoFinal, canal.id);
-                }
-              });
+              const canal = resultadosSimulacaoCMV.find(c => c.id === canalParaAplicar);
+              if (canal?.precoFinal > 0) handleAplicar(canal.precoFinal, canal.id);
             }}
-            disabled={isAplicando || resultadosSimulacaoCMV.every(c => c.precoFinal <= 0)}
+            disabled={isAplicando}
           >
-            <Zap className="h-4 w-4" />
-            Aplicar preços em todos os canais
+            Aplicar só em {resultadosSimulacaoCMV.find(c => c.id === canalParaAplicar)?.nome}
           </Button>
-
-          {/* Aplicar canal individual (quando focado) */}
-          {canalParaAplicar && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full gap-2"
-              onClick={() => {
-                const canal = resultadosSimulacaoCMV.find(c => c.id === canalParaAplicar);
-                if (canal?.precoFinal > 0) handleAplicar(canal.precoFinal, canal.id);
-              }}
-              disabled={isAplicando}
-            >
-              Aplicar só em {resultadosSimulacaoCMV.find(c => c.id === canalParaAplicar)?.nome}
-            </Button>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Métricas do produto - mais compacto */}
