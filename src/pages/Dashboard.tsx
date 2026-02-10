@@ -354,6 +354,20 @@ const Dashboard = () => {
     }).length;
   }, [produtosAnalise, config]);
 
+  // Produtos com margem negativa (prejuízo por unidade vendida)
+  const produtosMargemNegativa = useMemo(() => {
+    if (!produtosAnalise) return 0;
+    return produtosAnalise.filter(p => {
+      const custoInsumos = p.fichas_tecnicas?.reduce((sum: number, ft: any) => {
+        return sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0));
+      }, 0) || 0;
+      if (custoInsumos <= 0 || p.preco_venda <= 0) return false;
+      const impostoVal = p.preco_venda * ((config?.imposto_medio_sobre_vendas || 0) / 100);
+      const lucro = p.preco_venda - custoInsumos - impostoVal;
+      return lucro < 0;
+    }).length;
+  }, [produtosAnalise, config]);
+
   const renderDelta = (delta: number | null, invertColors = false) => {
     if (delta === null) return null;
     const isPositive = invertColors ? delta < 0 : delta > 0;
