@@ -263,6 +263,33 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, 
     navigate('/dashboard');
   };
 
+  // Carregar dados de exemplo
+  const loadDemoData = async () => {
+    if (!usuario?.id || !usuario?.empresa_id) return;
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.functions.invoke('populate-demo-data', {
+        body: { empresa_id: usuario.empresa_id, focus_current_month: true },
+      });
+      if (error) throw error;
+      toast({ title: '🎉 Dados carregados!', description: 'Explore o sistema com dados de exemplo.' });
+      queryClient.invalidateQueries();
+      await supabase.from('onboarding_progress').upsert({
+        user_id: usuario.id,
+        empresa_id: usuario.empresa_id,
+        current_step: 6,
+        completed: true,
+      }, { onConflict: 'user_id' });
+      onComplete();
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Error loading demo data:', error);
+      toast({ title: 'Erro', description: 'Não foi possível carregar os dados.', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleNext = () => {
     if (currentStep === 2) {
       createInsumo();
