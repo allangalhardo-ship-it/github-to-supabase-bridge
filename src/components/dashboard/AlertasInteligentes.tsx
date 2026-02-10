@@ -18,6 +18,7 @@ interface AlertasInteligentesProps {
   cmvAtual: number;
   cmvAlvo: number;
   produtosDefasados: number;
+  produtosMargemNegativa?: number;
 }
 
 const AlertasInteligentes: React.FC<AlertasInteligentesProps> = ({
