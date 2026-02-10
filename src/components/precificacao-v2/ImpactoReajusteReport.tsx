@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/button';
 import { TrendingUp, Check, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { ProdutoAnalise, formatCurrency } from './types';
+import { ProdutoAnalise, ConfiguracoesPrecificacao, formatCurrency } from './types';
 import { cn } from '@/lib/utils';
 import { subDays } from 'date-fns';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 
 interface ImpactoReajusteReportProps {
   produtos: ProdutoAnalise[];
+  config?: ConfiguracoesPrecificacao;
   onAplicarPreco?: (produtoId: string, novoPreco: number, precoAnterior: number) => void;
   onAplicarPrecoCanal?: (produtoId: string, canal: string, novoPreco: number, precoAnterior: number) => void;
   isAplicando?: boolean;
@@ -20,6 +21,7 @@ interface ImpactoReajusteReportProps {
 
 const ImpactoReajusteReport: React.FC<ImpactoReajusteReportProps> = ({ 
   produtos, 
+  config,
   onAplicarPreco,
   onAplicarPrecoCanal,
   isAplicando 
