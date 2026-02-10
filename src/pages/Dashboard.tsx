@@ -637,8 +637,10 @@ const Dashboard = () => {
             {isLoading ? (
               <Skeleton className="h-8 w-24" />
             ) : (
-              <div className="text-2xl sm:text-2xl font-bold">{formatCurrency(receitaBruta)}</div>
-              {renderDelta(deltaReceita)}
+              <>
+                <div className="text-2xl sm:text-2xl font-bold">{formatCurrency(receitaBruta)}</div>
+                {renderDelta(deltaReceita)}
+              </>
             )}
           </CardContent>
         </StaggeredCard>
