@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Trash2, FileText, Search, Calculator, ExternalLink } from 'lucide-react';
+import { Trash2, FileText, Search, Calculator, ExternalLink, Lightbulb, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import BuscarInsumoDialog from './BuscarInsumoDialog';
 import { InsumoIcon } from '@/lib/insumoIconUtils';
@@ -70,6 +70,16 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
   const [showDiscardAlert, setShowDiscardAlert] = useState(false);
   const [showDuplicateAlert, setShowDuplicateAlert] = useState(false);
   const [pendingDuplicateInsumo, setPendingDuplicateInsumo] = useState<InsumoSelecionado | null>(null);
+
+  // Tutorial: show only on first open ever
+  const [showTutorial, setShowTutorial] = useState(() => {
+    return localStorage.getItem('ficha-tecnica-tutorial-seen') !== 'true';
+  });
+
+  const dismissTutorial = () => {
+    localStorage.setItem('ficha-tecnica-tutorial-seen', 'true');
+    setShowTutorial(false);
+  };
 
   // Sync with defaultOpen prop
   useEffect(() => {
@@ -299,6 +309,26 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
 
+            {/* Tutorial para primeira vez */}
+            {showTutorial && open && (
+              <div className="flex items-start gap-2.5 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                <Lightbulb className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">Como funciona a ficha técnica?</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Adicione cada ingrediente e a quantidade usada para fazer <strong>1 unidade</strong> deste produto. 
+                    O sistema calcula o custo automaticamente!
+                  </p>
+                </div>
+                <button
+                  onClick={dismissTutorial}
+                  className="shrink-0 p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground"
+                  aria-label="Fechar dica"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
             {/* Adicionar novo insumo */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">Adicionar Ingrediente</Label>
