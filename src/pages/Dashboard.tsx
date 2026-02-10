@@ -34,7 +34,7 @@ import {
 import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysInMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCurrencyBRL } from '@/lib/format';
-
+import WelcomeChecklist from '@/components/dashboard/WelcomeChecklist';
 type PeriodoType = 'hoje' | 'semana' | 'mes' | 'ultimos30' | 'personalizado';
 
 const Dashboard = () => {
@@ -457,6 +457,9 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {/* Welcome Checklist for new users */}
+      <WelcomeChecklist />
+      
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
