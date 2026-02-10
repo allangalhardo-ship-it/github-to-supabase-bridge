@@ -308,7 +308,7 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
 const AppLayout = () => {
   const [open, setOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [vendaRapidaOpen, setVendaRapidaOpen] = useState(false);
+  
   const { user } = useAuth();
   
   // Track user session
