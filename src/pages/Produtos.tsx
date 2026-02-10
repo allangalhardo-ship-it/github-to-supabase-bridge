@@ -20,6 +20,7 @@ import FichaTecnicaDialog from '@/components/produtos/FichaTecnicaDialog';
 import ImportProdutosDialog from '@/components/import/ImportProdutosDialog';
 import ImportFichaTecnicaDialog from '@/components/import/ImportFichaTecnicaDialog';
 import CategorySelect from '@/components/produtos/CategorySelect';
+import ContextualTip from '@/components/onboarding/ContextualTip';
 
 interface Produto {
   id: string;
@@ -309,6 +310,11 @@ const Produtos = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      <ContextualTip
+        tipKey="produtos-intro"
+        title="🍰 Monte seus produtos e descubra o custo real!"
+        description="Crie o produto que você vende, depois clique em 'Ficha Técnica' para vincular os ingredientes. O sistema calcula o custo automaticamente!"
+      />
       <div className="flex flex-col gap-3 sm:gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Produtos</h1>

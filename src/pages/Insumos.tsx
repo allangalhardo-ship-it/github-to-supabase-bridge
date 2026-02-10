@@ -22,6 +22,7 @@ import ListaCompras from '@/components/insumos/ListaCompras';
 import ImportInsumosDialog from '@/components/import/ImportInsumosDialog';
 import HistoricoPrecos from '@/components/insumos/HistoricoPrecos';
 import { ImportarBasePadraoDialog } from '@/components/insumos/ImportarBasePadraoDialog';
+import ContextualTip from '@/components/onboarding/ContextualTip';
 const unidadesMedida = [
   { value: 'un', label: 'Unidade (un)' },
   { value: 'kg', label: 'Quilograma (kg)' },
@@ -344,6 +345,11 @@ const Insumos = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      <ContextualTip
+        tipKey="insumos-intro"
+        title="🧑‍🍳 Comece cadastrando seus ingredientes!"
+        description="Ingredientes são tudo que você usa nas receitas: farinha, açúcar, ovos... Cadastre pelo menos 2 para montar seu primeiro produto depois. Você pode importar uma base pronta clicando em 'Base Padrão'."
+      />
       <div className="flex flex-col gap-3 sm:gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Insumos</h1>

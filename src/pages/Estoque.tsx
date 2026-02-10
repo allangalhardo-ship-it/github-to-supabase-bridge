@@ -21,6 +21,7 @@ import { format, startOfMonth, endOfMonth, subMonths, differenceInDays, isBefore
 import { ptBR } from 'date-fns/locale';
 import { inserirMovimentoEstoque, calcularEstoqueDeMovimentos } from '@/lib/estoqueUtils';
 import { formatCurrencySmartBRL } from '@/lib/format';
+import ContextualTip from '@/components/onboarding/ContextualTip';
 const Estoque = () => {
   const { usuario } = useAuth();
   const { toast } = useToast();
@@ -258,6 +259,11 @@ const Estoque = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      <ContextualTip
+        tipKey="estoque-intro"
+        title="📦 Informe o que você tem em estoque agora!"
+        description="Use 'Implantação de Saldo' para registrar a quantidade e o custo dos ingredientes que você já tem. Isso ajuda a calcular o custo real dos seus produtos."
+      />
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Estoque</h1>
         <p className="text-sm sm:text-base text-muted-foreground">Acompanhe o estoque de insumos e produtos acabados</p>
