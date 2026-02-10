@@ -41,6 +41,7 @@ import {
   BarChart2,
   Sliders,
   LifeBuoy,
+  QrCode,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Crown, Sparkles } from 'lucide-react';
@@ -94,6 +95,7 @@ const navCategories = [
     items: [
       { to: '/clientes', icon: Users, label: 'Clientes' },
       { to: '/custos-fixos', icon: Calculator, label: 'Custos Fixos' },
+      { to: '/cardapio-digital', icon: QrCode, label: 'Cardápio Digital' },
       { to: '/configuracoes', icon: SlidersHorizontal, label: 'Configurações' },
       { to: '/meus-dados', icon: Users, label: 'Meus Dados' },
     ],

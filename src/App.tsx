@@ -51,6 +51,7 @@ const VerificarEmail = lazy(() => import("@/pages/VerificarEmail"));
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const ImportarBackup = lazy(() => import("@/pages/ImportarBackup"));
 const Cardapio = lazy(() => import("@/pages/Cardapio"));
+const CardapioDigital = lazy(() => import("@/pages/CardapioDigital"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -145,6 +146,7 @@ const AppRoutes = () => {
           <Route path="custos-fixos" element={<CustosFixos />} />
           <Route path="caixa" element={<Caixa />} />
           <Route path="compras" element={<Compras />} />
+          <Route path="cardapio-digital" element={<CardapioDigital />} />
           <Route path="configuracoes" element={<Configuracoes />} />
           <Route path="xml-import" element={<XmlImport />} />
           <Route path="receitas" element={<Receitas />} />

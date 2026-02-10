@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Settings, Save, Loader2 } from 'lucide-react';
 import CanaisVendaConfig from '@/components/configuracoes/CanaisVendaConfig';
-import { CardapioConfig } from '@/components/configuracoes/CardapioConfig';
+
 
 const Configuracoes = () => {
   const { usuario } = useAuth();
@@ -178,8 +178,6 @@ const Configuracoes = () => {
       </form>
 
       <CanaisVendaConfig />
-
-      <CardapioConfig />
 
       <Card>
         <CardHeader>
