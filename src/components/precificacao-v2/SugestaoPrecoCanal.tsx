@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Store, Smartphone, ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Store, Smartphone, ArrowRight, Check } from 'lucide-react';
 import { ProdutoAnalise, ConfiguracoesPrecificacao, formatCurrency, formatPercent } from './types';
 import { cn } from '@/lib/utils';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
@@ -9,10 +10,13 @@ import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 interface SugestaoPrecosCanalProps {
   produtos: ProdutoAnalise[];
   config?: ConfiguracoesPrecificacao;
+  onAplicarPrecoCanal?: (produtoId: string, canal: string, novoPreco: number, precoAnterior: number) => void;
+  isAplicando?: boolean;
 }
 
-const SugestaoPrecoCanal: React.FC<SugestaoPrecosCanalProps> = ({ produtos, config }) => {
+const SugestaoPrecoCanal: React.FC<SugestaoPrecosCanalProps> = ({ produtos, config, onAplicarPrecoCanal, isAplicando }) => {
   const { canaisConfigurados } = usePrecosCanais();
+  const [aplicados, setAplicados] = useState<Set<string>>(new Set());
 
   const sugestoes = useMemo(() => {
     if (!canaisConfigurados || canaisConfigurados.length <= 1 || !config || produtos.length === 0) return [];
@@ -24,19 +28,15 @@ const SugestaoPrecoCanal: React.FC<SugestaoPrecosCanalProps> = ({ produtos, conf
       .map(produto => {
         const canaisComSugestao = canaisConfigurados.map(canal => {
           const taxa = canal.taxa / 100;
-          // Fórmula baseada em CMV alvo (mesma do simulador do drawer)
-          // preço = custo / (cmvAlvo * fatorReceitaLiquida)
           const fatorReceita = 1 - taxa;
           const precoIdeal = fatorReceita > 0 && cmvAlvo > 0
             ? produto.custoInsumos / (cmvAlvo * fatorReceita)
             : produto.custoInsumos * 3;
 
-          // Preço atual neste canal
           const precoAtual = produto.precosCanais?.[canal.id] ?? produto.preco_venda;
           const diferenca = precoIdeal - precoAtual;
           const diferencaPercent = precoAtual > 0 ? (diferenca / precoAtual) * 100 : 0;
 
-          // CMV atual no canal
           const receitaLiquida = precoAtual * fatorReceita;
           const cmvAtual = receitaLiquida > 0 ? (produto.custoInsumos / receitaLiquida) * 100 : 100;
 
@@ -65,7 +65,7 @@ const SugestaoPrecoCanal: React.FC<SugestaoPrecosCanalProps> = ({ produtos, conf
         };
       })
       .filter(Boolean)
-      .slice(0, 5); // top 5 produtos que mais precisam ajuste
+      .slice(0, 5);
   }, [produtos, canaisConfigurados, config]);
 
   if (sugestoes.length === 0) return null;
@@ -91,47 +91,67 @@ const SugestaoPrecoCanal: React.FC<SugestaoPrecosCanalProps> = ({ produtos, conf
                 Custo: {formatCurrency(sug.custoInsumos)}
               </p>
               <div className="grid gap-1.5">
-                {sug.canais.map(canal => (
-                  <div
-                    key={canal.canalId}
-                    className={cn(
-                      "flex items-center justify-between px-2.5 py-1.5 rounded-md border text-xs",
-                      canal.precisaAjuste && canal.diferenca > 0
-                        ? "bg-amber-500/5 border-amber-500/20"
-                        : canal.precisaAjuste && canal.diferenca < 0
-                        ? "bg-emerald-500/5 border-emerald-500/20"
-                        : "bg-muted/30"
-                    )}
-                  >
-                    <div className="flex items-center gap-1.5">
-                      {canal.isBalcao ? <Store className="h-3 w-3" /> : <Smartphone className="h-3 w-3" />}
-                      <span className="font-medium">{canal.canalNome}</span>
-                      {canal.taxa > 0 && (
-                        <span className="text-muted-foreground">({canal.taxa}%)</span>
+                {sug.canais.map(canal => {
+                  const key = `${sug.produtoId}-${canal.canalId}`;
+                  const jaAplicou = aplicados.has(key);
+
+                  return (
+                    <div
+                      key={canal.canalId}
+                      className={cn(
+                        "flex items-center justify-between px-2.5 py-1.5 rounded-md border text-xs",
+                        canal.precisaAjuste && canal.diferenca > 0
+                          ? "bg-amber-500/5 border-amber-500/20"
+                          : canal.precisaAjuste && canal.diferenca < 0
+                          ? "bg-emerald-500/5 border-emerald-500/20"
+                          : "bg-muted/30"
                       )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">{formatCurrency(canal.precoAtual)}</span>
-                      {canal.precisaAjuste && (
-                        <>
-                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                          <span className="font-bold">{formatCurrency(canal.precoIdeal)}</span>
-                          <Badge
-                            variant={canal.diferenca > 0 ? 'destructive' : 'default'}
-                            className="text-[9px] px-1 h-4"
-                          >
-                            {canal.diferenca > 0 ? '+' : ''}{canal.diferencaPercent.toFixed(0)}%
+                    >
+                      <div className="flex items-center gap-1.5">
+                        {canal.isBalcao ? <Store className="h-3 w-3" /> : <Smartphone className="h-3 w-3" />}
+                        <span className="font-medium">{canal.canalNome}</span>
+                        {canal.taxa > 0 && (
+                          <span className="text-muted-foreground">({canal.taxa}%)</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">{formatCurrency(canal.precoAtual)}</span>
+                        {canal.precisaAjuste && (
+                          <>
+                            <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                            <span className="font-bold">{formatCurrency(canal.precoIdeal)}</span>
+                            <Badge
+                              variant={canal.diferenca > 0 ? 'destructive' : 'default'}
+                              className="text-[9px] px-1 h-4"
+                            >
+                              {canal.diferenca > 0 ? '+' : ''}{canal.diferencaPercent.toFixed(0)}%
+                            </Badge>
+                            {onAplicarPrecoCanal && (
+                              <Button
+                                size="sm"
+                                variant={jaAplicou ? "ghost" : "secondary"}
+                                className="h-5 text-[9px] px-1.5 ml-0.5"
+                                disabled={jaAplicou || isAplicando}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onAplicarPrecoCanal(sug.produtoId, canal.canalId, canal.precoIdeal, canal.precoAtual);
+                                  setAplicados(prev => new Set(prev).add(key));
+                                }}
+                              >
+                                {jaAplicou ? <Check className="h-3 w-3" /> : 'Aplicar'}
+                              </Button>
+                            )}
+                          </>
+                        )}
+                        {!canal.precisaAjuste && (
+                          <Badge variant="outline" className="text-[9px] px-1 h-4 text-emerald-600 border-emerald-500/30">
+                            OK
                           </Badge>
-                        </>
-                      )}
-                      {!canal.precisaAjuste && (
-                        <Badge variant="outline" className="text-[9px] px-1 h-4 text-emerald-600 border-emerald-500/30">
-                          OK
-                        </Badge>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           );
