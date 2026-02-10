@@ -128,8 +128,24 @@ const Dashboard = () => {
       return data;
     },
     enabled: !!usuario?.empresa_id,
-    staleTime: 2 * 60 * 1000, // 2 minutos - dados do dashboard podem ser ligeiramente atrasados
-    gcTime: 10 * 60 * 1000, // 10 minutos em cache
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+
+  // Fetch vendas do período anterior para comparativo
+  const { data: vendasAnterior } = useQuery({
+    queryKey: ['vendas-anterior', usuario?.empresa_id, inicioAnterior, fimAnterior],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_dashboard_vendas', {
+        p_empresa_id: usuario?.empresa_id,
+        p_data_inicio: inicioAnterior,
+        p_data_fim: fimAnterior,
+      });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!usuario?.empresa_id,
+    staleTime: 5 * 60 * 1000,
   });
 
   // Fetch custos fixos
