@@ -45,6 +45,11 @@ export function CardapioConfig() {
     logo_url: null as string | null,
     banner_url: null as string | null,
   });
+  const [categoriasConfig, setCategoriasConfig] = useState<{
+    ordem: string[];
+    ocultas: string[];
+  }>({ ordem: [], ocultas: [] });
+  const [categoriasDisponiveis, setCategoriasDisponiveis] = useState<string[]>([]);
 
   useEffect(() => {
     if (empresaId) {
