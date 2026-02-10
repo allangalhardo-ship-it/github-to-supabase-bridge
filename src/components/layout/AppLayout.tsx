@@ -13,8 +13,6 @@ import NotificationSettings from '@/components/layout/NotificationSettings';
 import { UpdateIndicator } from '@/components/pwa/UpdateNotification';
 import { useAlertNotifications } from '@/hooks/useAlertNotifications';
 import { useSessionTracker } from '@/hooks/useSessionTracker';
-import BottomNav from '@/components/layout/BottomNav';
-import VendaRapidaSheet from '@/components/vendas/VendaRapidaSheet';
 import {
   Store,
   UtensilsCrossed,
