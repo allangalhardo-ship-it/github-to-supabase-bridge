@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, ArrowUp, ArrowDown, Warehouse, Package, AlertTriangle, Search, Filter, X, Factory, Clock } from 'lucide-react';
+import { Plus, ArrowUp, ArrowDown, Warehouse, Package, AlertTriangle, Search, Filter, X, Factory, Clock, PackageOpen } from 'lucide-react';
+import ImplantacaoSaldoDialog from '@/components/estoque/ImplantacaoSaldoDialog';
 import { InsumoIcon } from '@/lib/insumoIconUtils';
 import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { format, startOfMonth, endOfMonth, subMonths, differenceInDays, isBefore } from 'date-fns';
@@ -39,7 +40,7 @@ const Estoque = () => {
   const [filtroPeriodo, setFiltroPeriodo] = useState<string>('mes');
   const [buscaInsumo, setBuscaInsumo] = useState('');
   const [buscaProduto, setBuscaProduto] = useState('');
-
+  const [implantacaoOpen, setImplantacaoOpen] = useState(false);
   // Fetch insumos para o select e lista de saldo
   const { data: insumos, isLoading: loadingInsumos } = useQuery({
     queryKey: ['insumos', usuario?.empresa_id],
@@ -303,7 +304,19 @@ const Estoque = () => {
           <Card>
             <CardHeader className="pb-3">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <CardTitle>Estoque de Insumos</CardTitle>
+                <div className="flex items-center gap-2">
+                  <CardTitle>Estoque de Insumos</CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-xs"
+                    onClick={() => setImplantacaoOpen(true)}
+                  >
+                    <PackageOpen className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Implantação de Saldo</span>
+                    <span className="sm:hidden">Implantar</span>
+                  </Button>
+                </div>
                 <div className="relative w-full sm:w-64">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -649,6 +662,11 @@ const Estoque = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <ImplantacaoSaldoDialog
+        open={implantacaoOpen}
+        onOpenChange={setImplantacaoOpen}
+      />
     </div>
   );
 };
