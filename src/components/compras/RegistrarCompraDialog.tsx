@@ -271,7 +271,7 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+        <ResponsiveDialogBody className="space-y-4">
           {/* Insumo Selection */}
           <div className="space-y-2">
             <Label className="text-sm">Insumo *</Label>
