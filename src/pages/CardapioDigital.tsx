@@ -1,4 +1,5 @@
 import { CardapioConfig } from "@/components/configuracoes/CardapioConfig";
+import { GestaoOpcionais } from "@/components/cardapio/GestaoOpcionais";
 
 const CardapioDigital = () => {
   return (
@@ -9,6 +10,7 @@ const CardapioDigital = () => {
       </div>
 
       <CardapioConfig />
+      <GestaoOpcionais />
     </div>
   );
 };
