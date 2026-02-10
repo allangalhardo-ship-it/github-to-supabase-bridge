@@ -206,14 +206,23 @@ const ImpactoReajusteReport: React.FC<ImpactoReajusteReportProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 text-sm shrink-0">
-                  <span className="text-muted-foreground">{formatCurrency(imp.precoAtual)}</span>
-                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="font-bold text-foreground">{formatCurrency(imp.precoSugerido)}</span>
-                  <Badge variant="secondary" className="text-[10px]">
-                    +{formatCurrency(imp.aumento)}
+                {/* Só mostra preço base se NÃO tem múltiplos canais */}
+                {!temCanais && (
+                  <div className="flex items-center gap-2 text-sm shrink-0">
+                    <span className="text-muted-foreground">{formatCurrency(imp.precoAtual)}</span>
+                    <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="font-bold text-foreground">{formatCurrency(imp.precoSugerido)}</span>
+                    <Badge variant="secondary" className="text-[10px]">
+                      +{formatCurrency(imp.aumento)}
+                    </Badge>
+                  </div>
+                )}
+                {/* Se tem canais, mostra só o impacto no custo */}
+                {temCanais && (
+                  <Badge variant="secondary" className="text-xs shrink-0">
+                    Custo subiu ~{formatCurrency(imp.aumento)}
                   </Badge>
-                </div>
+                )}
 
                 <div className="flex items-center gap-1.5 shrink-0">
                   {/* Se não tem múltiplos canais, botão simples */}
