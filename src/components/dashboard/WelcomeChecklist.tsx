@@ -148,7 +148,7 @@ const WelcomeChecklist = () => {
             Configure seu negócio
           </h2>
           <span className="text-xs text-muted-foreground ml-auto mr-2">
-            {completedCount}/{steps.length}
+            {completedRequired}/{requiredSteps.length}
           </span>
           {expanded ? (
             <ChevronUp className="h-4 w-4 text-muted-foreground" />
@@ -165,13 +165,13 @@ const WelcomeChecklist = () => {
           />
         </div>
 
-        {!expanded && nextStepIndex >= 0 && (
+        {!expanded && effectiveNextIndex >= 0 && (
           <div className="mt-3 flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Próximo: <span className="font-medium text-foreground">{steps[nextStepIndex].label}</span>
+              Próximo: <span className="font-medium text-foreground">{steps[effectiveNextIndex].label}</span>
             </p>
             <Button size="sm" asChild className="shrink-0 gap-1">
-              <Link to={steps[nextStepIndex].to}>
+              <Link to={steps[effectiveNextIndex].to}>
                 Ir <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </Button>
@@ -182,7 +182,9 @@ const WelcomeChecklist = () => {
         {expanded && (
           <div className="space-y-2.5 mt-4">
             {steps.map((step, i) => {
-              const isNextStep = i === nextStepIndex;
+              const isNextStep = i === effectiveNextIndex;
+              const prevRequiredDone = steps.slice(0, i).filter(s => !s.optional).every(s => s.done);
+              const showAsAvailable = step.optional && !step.done && prevRequiredDone;
 
               return (
                 <div
@@ -193,10 +195,11 @@ const WelcomeChecklist = () => {
                       ? 'bg-primary/10 opacity-70'
                       : isNextStep
                         ? 'bg-card border-2 border-primary/30 shadow-sm'
-                        : 'bg-card border border-border opacity-60'
+                        : showAsAvailable
+                          ? 'bg-card border border-dashed border-primary/20'
+                          : 'bg-card border border-border opacity-60'
                   )}
                 >
-                  {/* Step number/check */}
                   <div
                     className={cn(
                       'h-9 w-9 rounded-full flex items-center justify-center shrink-0 text-sm font-bold',
@@ -210,32 +213,37 @@ const WelcomeChecklist = () => {
                     {step.done ? (
                       <Check className="h-4 w-4" />
                     ) : (
-                      <span>{i + 1}</span>
+                      <step.icon className="h-4 w-4" />
                     )}
                   </div>
 
-                  {/* Text */}
                   <div className="flex-1 min-w-0">
-                    <p
-                      className={cn(
-                        'text-sm font-semibold',
-                        step.done ? 'line-through text-muted-foreground' : 'text-foreground'
+                    <div className="flex items-center gap-1.5">
+                      <p
+                        className={cn(
+                          'text-sm font-semibold',
+                          step.done ? 'line-through text-muted-foreground' : 'text-foreground'
+                        )}
+                      >
+                        {step.label}
+                      </p>
+                      {step.optional && !step.done && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">
+                          opcional
+                        </Badge>
                       )}
-                    >
-                      {step.label}
-                    </p>
-                    {!step.done && isNextStep && (
+                    </div>
+                    {!step.done && (isNextStep || showAsAvailable) && (
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {step.description}
                       </p>
                     )}
                   </div>
 
-                  {/* Action */}
-                  {!step.done && isNextStep && (
-                    <Button size="sm" asChild className="shrink-0 gap-1">
+                  {!step.done && (isNextStep || showAsAvailable) && (
+                    <Button size="sm" variant={step.optional ? 'outline' : 'default'} asChild className="shrink-0 gap-1">
                       <Link to={step.to}>
-                        Ir
+                        {step.optional ? 'Ver' : 'Ir'}
                         <ArrowRight className="h-3.5 w-3.5" />
                       </Link>
                     </Button>
