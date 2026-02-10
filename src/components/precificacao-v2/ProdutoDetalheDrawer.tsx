@@ -501,14 +501,17 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-md max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="p-6 pb-0">
           <DialogTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5" />
             Simulador de Preço
           </DialogTitle>
         </DialogHeader>
-        {conteudoDrawer}
+        <div className="overflow-y-auto flex-1">
+          {conteudoDrawer}
+        </div>
+        {rodapeFixo}
       </DialogContent>
     </Dialog>
   );
