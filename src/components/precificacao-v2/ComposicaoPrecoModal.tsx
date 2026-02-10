@@ -206,7 +206,7 @@ const ComposicaoPrecoModal: React.FC<ComposicaoPrecoModalProps> = ({
                   <Banknote className="h-4 w-4 text-muted-foreground" />
                   <span>Preço de Venda</span>
                 </div>
-                <span>{formatCurrency(preco_venda)}</span>
+                <span>{formatCurrency(canal.precoCanal)}</span>
               </div>
               
               {/* CMV */}
