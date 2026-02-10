@@ -269,8 +269,8 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
                 </div>
                 {/* Linha 1: Preço */}
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-muted-foreground">Preço</span>
-                  <span className="text-sm font-bold">{formatCurrency(canal.preco)}</span>
+                  <span className="text-xs text-muted-foreground font-medium">Preço</span>
+                  <span className="text-base font-extrabold text-foreground">{formatCurrency(canal.preco)}</span>
                 </div>
                 {/* Linha 2: Margem + Lucro */}
                 <div className="flex items-center justify-between">
