@@ -70,6 +70,32 @@ const Dashboard = () => {
 
   const { inicio, fim } = getDateRange();
 
+  // Período anterior para comparativo
+  const getPreviousDateRange = () => {
+    const hoje = new Date();
+    switch (periodo) {
+      case 'hoje':
+        return { inicio: format(subDays(hoje, 1), 'yyyy-MM-dd'), fim: format(subDays(hoje, 1), 'yyyy-MM-dd') };
+      case 'semana': {
+        const inicioSemanaPassada = subDays(startOfWeek(hoje, { locale: ptBR }), 7);
+        return { inicio: format(inicioSemanaPassada, 'yyyy-MM-dd'), fim: format(subDays(startOfWeek(hoje, { locale: ptBR }), 1), 'yyyy-MM-dd') };
+      }
+      case 'mes':
+        return { inicio: format(startOfMonth(subMonths(hoje, 1)), 'yyyy-MM-dd'), fim: format(endOfMonth(subMonths(hoje, 1)), 'yyyy-MM-dd') };
+      case 'ultimos30':
+        return { inicio: format(subDays(hoje, 60), 'yyyy-MM-dd'), fim: format(subDays(hoje, 31), 'yyyy-MM-dd') };
+      case 'personalizado':
+        if (customDateFrom && customDateTo) {
+          const duracao = differenceInDays(customDateTo, customDateFrom);
+          return { inicio: format(subDays(customDateFrom, duracao + 1), 'yyyy-MM-dd'), fim: format(subDays(customDateFrom, 1), 'yyyy-MM-dd') };
+        }
+        return { inicio: format(startOfMonth(subMonths(hoje, 1)), 'yyyy-MM-dd'), fim: format(endOfMonth(subMonths(hoje, 1)), 'yyyy-MM-dd') };
+      default:
+        return { inicio: format(startOfMonth(subMonths(hoje, 1)), 'yyyy-MM-dd'), fim: format(endOfMonth(subMonths(hoje, 1)), 'yyyy-MM-dd') };
+    }
+  };
+  const { inicio: inicioAnterior, fim: fimAnterior } = getPreviousDateRange();
+
   // Fetch nome da empresa
   const { data: empresa } = useQuery({
     queryKey: ['empresa-nome', usuario?.empresa_id],
