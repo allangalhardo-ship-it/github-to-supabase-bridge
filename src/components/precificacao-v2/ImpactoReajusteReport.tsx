@@ -59,15 +59,16 @@ const ImpactoReajusteReport: React.FC<ImpactoReajusteReportProps> = ({
   const impactos = useMemo(() => {
     if (!historicoInsumos || !fichas || produtos.length === 0) return [];
 
-    // Pegar a variação mais recente por insumo (só realistas: 5-50%)
+    // Pegar a variação mais recente por insumo (só de alta: 5-50%)
+    // Só mostramos altas — se um insumo caiu de preço, não precisa reajustar pra cima
     const variacoesPorInsumo: Record<string, { nome: string; variacao: number }> = {};
 
     historicoInsumos.forEach(h => {
-      const ok = h.variacao_percentual && 
-        Math.abs(h.variacao_percentual) > 5 && 
-        Math.abs(h.variacao_percentual) <= 50;
+      const isAlta = h.variacao_percentual && 
+        h.variacao_percentual > 5 && 
+        h.variacao_percentual <= 50;
 
-      if (!variacoesPorInsumo[h.insumo_id] && ok) {
+      if (!variacoesPorInsumo[h.insumo_id] && isAlta) {
         variacoesPorInsumo[h.insumo_id] = {
           nome: (h.insumos as any)?.nome || 'Insumo',
           variacao: h.variacao_percentual!,
@@ -89,36 +90,42 @@ const ImpactoReajusteReport: React.FC<ImpactoReajusteReportProps> = ({
           const info = variacoesPorInsumo[ficha.insumo_id];
           if (!info) return;
 
-          // custo_unitario ATUAL do insumo (já com o reajuste incorporado)
+          // custo_unitario ATUAL do insumo (já incorpora o reajuste)
           const custoUnitAtual = (ficha.insumos as any)?.custo_unitario ?? 0;
-          // Custo deste insumo no produto = custoUnit × quantidade
           const custoInsumoNoProduto = custoUnitAtual * ficha.quantidade;
 
-          // O insumo subiu X%. O custo ANTES do reajuste era:
+          // Impacto = quanto esse insumo SUBIU no custo do produto
           // custoAntes = custoAtual / (1 + var/100)
-          // Impacto = custoAtual - custoAntes = custoAtual × [var / (100 + var)]
-          const varDecimal = info.variacao; // ex: 10 para +10%
-          const impacto = custoInsumoNoProduto * (varDecimal / (100 + varDecimal));
+          // impacto = custoAtual - custoAntes
+          const varFraction = info.variacao / 100;
+          const impacto = custoInsumoNoProduto * (varFraction / (1 + varFraction));
 
-          if (Math.abs(impacto) > 0.01) {
+          if (impacto > 0.01) {
             impactoCustoTotal += impacto;
             insumosAfetados.push({ nome: info.nome, variacao: info.variacao });
           }
         });
 
-        if (insumosAfetados.length === 0 || impactoCustoTotal < 0.10) return null;
+        if (insumosAfetados.length === 0 || impactoCustoTotal < 0.05) return null;
 
-        // Preço sugerido: manter a mesma margem %
-        const margemPct = produto.preco_venda > 0
-          ? (produto.preco_venda - produto.custoInsumos) / produto.preco_venda
+        // LÓGICA DO PREÇO SUGERIDO:
+        // O custo dos insumos JÁ subiu, mas o preço de venda NÃO foi atualizado.
+        // O custo ANTES do reajuste era: custoAnterior = custoAtual - impacto
+        // A margem que o usuário TINHA era: margem = (preco - custoAnterior) / preco
+        // Para MANTER essa margem com o custo novo:
+        // precoNovo = custoAtual / (1 - margemAnterior)
+        const custoAnterior = produto.custoInsumos - impactoCustoTotal;
+        const margemAnterior = produto.preco_venda > 0
+          ? (produto.preco_venda - custoAnterior) / produto.preco_venda
           : 0;
 
-        // Novo custo (antes era custoInsumos - impacto, agora é custoInsumos)
-        // O custoInsumos JÁ inclui o reajuste. O preço de venda NÃO foi ajustado.
-        // Para manter a margem: precoNovo = custoInsumos / (1 - margemPct)
-        const precoSugerido = margemPct > 0 && margemPct < 1
-          ? produto.custoInsumos / (1 - margemPct)
-          : produto.preco_venda + impactoCustoTotal;
+        let precoSugerido: number;
+        if (margemAnterior > 0 && margemAnterior < 1) {
+          precoSugerido = produto.custoInsumos / (1 - margemAnterior);
+        } else {
+          // Fallback: simplesmente repassa o aumento de custo
+          precoSugerido = produto.preco_venda + impactoCustoTotal;
+        }
 
         const aumento = precoSugerido - produto.preco_venda;
         if (aumento < 0.10) return null;
@@ -128,8 +135,8 @@ const ImpactoReajusteReport: React.FC<ImpactoReajusteReportProps> = ({
           produtoNome: produto.nome,
           precoAtual: produto.preco_venda,
           precoSugerido: Math.ceil(precoSugerido * 100) / 100,
-          aumento,
-          insumosAfetados: insumosAfetados.sort((a, b) => Math.abs(b.variacao) - Math.abs(a.variacao)),
+          aumento: Math.ceil(aumento * 100) / 100,
+          insumosAfetados: insumosAfetados.sort((a, b) => b.variacao - a.variacao),
         };
       })
       .filter(Boolean)
