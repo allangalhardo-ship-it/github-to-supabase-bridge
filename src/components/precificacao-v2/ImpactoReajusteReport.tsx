@@ -69,10 +69,10 @@ const ImpactoReajusteReport: React.FC<ImpactoReajusteReportProps> = ({ produtos 
     }> = {};
 
     historicoInsumos.forEach(h => {
-      // Filtrar variações realistas (5% a 200%) — ignorar conversões de unidade
+      // Filtrar variações realistas (5% a 50%) — ignorar conversões de unidade e artefatos
       const variacaoRealista = h.variacao_percentual && 
         Math.abs(h.variacao_percentual) > 5 && 
-        Math.abs(h.variacao_percentual) < 200;
+        Math.abs(h.variacao_percentual) <= 50;
 
       if (!variacoesPorInsumo[h.insumo_id] && variacaoRealista) {
         variacoesPorInsumo[h.insumo_id] = {
