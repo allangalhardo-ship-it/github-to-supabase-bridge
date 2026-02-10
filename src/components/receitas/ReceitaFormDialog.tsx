@@ -379,10 +379,9 @@ export function ReceitaFormDialog({
               Para editar os ingredientes, clique no ícone de frasco na tabela.
             </div>
           )}
-        </form>
+        </ResponsiveDialogBody>
 
-        {/* Footer fixo */}
-        <div className="shrink-0 border-t p-4 sm:p-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+        <ResponsiveDialogFooter className="gap-2">
           <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} className="w-full sm:w-auto">
             Cancelar
           </Button>
@@ -393,8 +392,8 @@ export function ReceitaFormDialog({
           >
             {editingReceita ? 'Salvar' : 'Criar'}
           </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

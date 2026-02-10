@@ -182,9 +182,9 @@ const DuplicarProdutoDialog: React.FC<DuplicarProdutoDialogProps> = ({
           <p className="text-sm text-muted-foreground">
             Após criar, a ficha técnica será aberta para você fazer os ajustes necessários.
           </p>
-        </div>
+        </ResponsiveDialogBody>
 
-        <DialogFooter className="gap-2 sm:gap-2">
+        <ResponsiveDialogFooter className="gap-2 sm:gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={duplicating}>
             Cancelar
           </Button>
@@ -201,9 +201,9 @@ const DuplicarProdutoDialog: React.FC<DuplicarProdutoDialogProps> = ({
               </>
             )}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 };
 

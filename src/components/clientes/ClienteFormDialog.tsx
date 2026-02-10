@@ -286,7 +286,8 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, onSubmit, isLoa
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+        </ResponsiveDialogBody>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

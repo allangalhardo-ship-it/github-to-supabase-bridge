@@ -465,10 +465,9 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
               )}
             </>
           )}
-        </form>
+        </ResponsiveDialogBody>
 
-        {/* Footer fixo */}
-        <div className="shrink-0 border-t p-4 sm:p-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+        <ResponsiveDialogFooter className="gap-2">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
             Cancelar
           </Button>
@@ -480,9 +479,9 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
             {registrarCompraMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Registrar Compra
           </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 };
 
