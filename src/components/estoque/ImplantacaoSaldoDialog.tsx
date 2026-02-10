@@ -323,6 +323,7 @@ const ImplantacaoSaldoDialog: React.FC<ImplantacaoSaldoDialogProps> = ({
             const qtdConvertida = getQuantidadeConvertida(insumo.id);
             const fator = getFatorConversao(insumo.id);
             const qtdOriginal = parseFloat(saldo.quantidade.replace(',', '.')) || 0;
+            const custoNum = parseFloat(saldo.custo.replace(',', '.')) || 0;
 
             return (
               <div
