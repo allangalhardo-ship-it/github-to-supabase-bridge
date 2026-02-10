@@ -9,8 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Copy, ExternalLink, Share2 } from "lucide-react";
+import { Copy, ExternalLink, Share2, GripVertical, Eye, EyeOff, ArrowUp, ArrowDown } from "lucide-react";
 import { ImageUploadField } from "./ImageUploadField";
+import { cn } from "@/lib/utils";
 
 interface EmpresaCardapio {
   id: string;
