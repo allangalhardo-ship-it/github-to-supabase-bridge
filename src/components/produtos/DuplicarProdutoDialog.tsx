@@ -152,7 +152,7 @@ const DuplicarProdutoDialog: React.FC<DuplicarProdutoDialogProps> = ({
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
 
-        <div className="space-y-4 py-4">
+        <ResponsiveDialogBody>
           <div className="space-y-2">
             <Label htmlFor="novo-nome">Nome do novo produto</Label>
             <Input
