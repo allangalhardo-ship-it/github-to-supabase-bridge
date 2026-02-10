@@ -233,7 +233,7 @@ export const PontoEquilibrioCard: React.FC<PontoEquilibrioCardProps> = ({
         </div>
 
         {/* Dica contextual */}
-        {custoFixoMensal > 0 && margemContribuicaoPercent > 0 && (
+        {custoFixoMensal > 0 && margemContribuicaoPercent > 0 && !usandoEstimativa && (
           <div className={`p-3 rounded-lg text-sm ${atingiuEquilibrio ? 'bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400' : 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400'}`}>
             {atingiuEquilibrio ? (
               <p>
@@ -244,6 +244,15 @@ export const PontoEquilibrioCard: React.FC<PontoEquilibrioCardProps> = ({
                 💡 Com sua margem média de {margemContribuicaoPercent.toFixed(0)}%, você precisa vender mais {formatCurrencyBRL(Math.abs(diferencaEquilibrio))} para começar a lucrar.
               </p>
             )}
+          </div>
+        )}
+
+        {/* Mensagem de projeção */}
+        {usandoEstimativa && pontoEquilibrio > 0 && (
+          <div className="p-3 rounded-lg bg-primary/5 text-sm text-primary dark:text-primary">
+            <p>
+              📊 Projeção baseada na margem média dos seus produtos ({margemContribuicaoPercent.toFixed(0)}%). Registre suas <strong>vendas</strong> para ter o cálculo real.
+            </p>
           </div>
         )}
 
