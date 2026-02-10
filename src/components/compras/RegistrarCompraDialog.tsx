@@ -259,17 +259,17 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
   const formatCurrency = formatCurrencySmartBRL;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col p-0">
-        <DialogHeader className="p-4 sm:p-6 pb-2 sm:pb-4 border-b shrink-0">
-          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent className="sm:max-w-lg">
+        <ResponsiveDialogHeader className="border-b pb-2 sm:pb-4">
+          <ResponsiveDialogTitle className="flex items-center gap-2 text-base sm:text-lg">
             <Package className="h-5 w-5 text-primary shrink-0" />
             Registrar Compra
-          </DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm">
+          </ResponsiveDialogTitle>
+          <ResponsiveDialogDescription className="text-xs sm:text-sm">
             Registre uma compra com conversão automática de unidades
-          </DialogDescription>
-        </DialogHeader>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
           {/* Insumo Selection */}
