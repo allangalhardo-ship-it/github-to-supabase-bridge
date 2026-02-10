@@ -258,7 +258,11 @@ const Precificacao = () => {
           <SugestaoPrecoCanal produtos={produtosAnalisados} config={config} />
 
           {/* Relatório de impacto de reajustes */}
-          <ImpactoReajusteReport produtos={produtosAnalisados} />
+          <ImpactoReajusteReport 
+            produtos={produtosAnalisados} 
+            onAplicarPreco={handleAplicarPreco}
+            isAplicando={updatePrecoMutation.isPending}
+          />
 
 
           {/* Lista de Produtos */}
