@@ -227,6 +227,13 @@ const ImplantacaoSaldoDialog: React.FC<ImplantacaoSaldoDialogProps> = ({
           }
         }
 
+        // Calculate converted unit cost (cost per production unit)
+        const custoUnitarioConvertido = item.usandoConversao && item.fator > 0
+          ? item.custo / item.fator
+          : item.custo;
+        // Total cost = cost per purchase unit * quantity in purchase units
+        const custoTotal = item.custo > 0 ? item.custo * item.qtdOriginal : null;
+
         // Create stock movement
         await inserirMovimentoEstoque({
           empresa_id: usuario.empresa_id,
@@ -235,17 +242,17 @@ const ImplantacaoSaldoDialog: React.FC<ImplantacaoSaldoDialogProps> = ({
           quantidade: item.qtdConvertida,
           origem: 'implantacao',
           observacao: 'Implantação de saldo inicial',
-          custo_total: item.custo > 0 ? item.custo * item.qtdConvertida : null,
+          custo_total: custoTotal,
           quantidade_original: item.usandoConversao ? item.qtdOriginal : null,
           unidade_compra: item.unidadeNome,
           fator_conversao: item.usandoConversao ? item.fator : null,
         });
 
-        // Update unit cost if provided
+        // Update unit cost converted to production unit
         if (item.custo > 0) {
           await supabase
             .from('insumos')
-            .update({ custo_unitario: item.custo })
+            .update({ custo_unitario: custoUnitarioConvertido })
             .eq('id', item.insumoId);
         }
       }
