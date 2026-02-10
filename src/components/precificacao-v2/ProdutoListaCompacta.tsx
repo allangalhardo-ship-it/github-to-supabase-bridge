@@ -121,8 +121,16 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
               </>
             ) : (
               <>
-                📦 Todos os Produtos
+            📦 Todos os Produtos
                 <Badge variant="secondary">{produtosFiltrados.length}</Badge>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-xs text-muted-foreground cursor-help ml-1">ⓘ</span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs max-w-[220px]">
+                    As margens exibidas já são líquidas de impostos ({((config?.imposto_medio_sobre_vendas || 0)).toFixed(1)}%) e taxas do canal.
+                  </TooltipContent>
+                </Tooltip>
               </>
             )}
           </CardTitle>

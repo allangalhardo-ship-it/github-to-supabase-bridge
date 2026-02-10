@@ -57,6 +57,16 @@ const AlertasInteligentes: React.FC<AlertasInteligentesProps> = ({
     acao?: { label: string; rota: string };
   }> = [];
 
+  if (produtosMargemNegativa > 0) {
+    alertas.push({
+      tipo: 'critico',
+      icone: <AlertTriangle className="h-4 w-4" />,
+      titulo: `${produtosMargemNegativa} produto(s) com margem negativa`,
+      descricao: 'Esses produtos dão prejuízo a cada venda. Ajuste os preços urgentemente.',
+      acao: { label: 'Corrigir preços', rota: '/precificacao' },
+    });
+  }
+
   if (cmvAtual > 0 && cmvAtual > cmvAlvo + 5) {
     alertas.push({
       tipo: 'critico',
