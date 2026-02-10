@@ -251,8 +251,6 @@ const Precificacao = () => {
             />
           </div>
 
-          {/* Simulador "E se?" */}
-          <SimuladorVisual produtos={produtosAnalisados} config={config} />
 
           {/* Sugestão de preço por canal */}
           <SugestaoPrecoCanal 
