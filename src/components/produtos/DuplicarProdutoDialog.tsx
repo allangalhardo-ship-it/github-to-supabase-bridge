@@ -6,13 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from '@/components/ui/dialog';
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+  ResponsiveDialogBody,
+  ResponsiveDialogFooter,
+} from '@/components/ui/responsive-dialog';
 import { Copy, Loader2 } from 'lucide-react';
 
 interface FichaTecnicaItem {
@@ -139,19 +140,19 @@ const DuplicarProdutoDialog: React.FC<DuplicarProdutoDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent className="sm:max-w-md">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle className="flex items-center gap-2">
             <Copy className="h-5 w-5" />
             Duplicar Produto
-          </DialogTitle>
-          <DialogDescription>
+          </ResponsiveDialogTitle>
+          <ResponsiveDialogDescription>
             Uma cópia de "{produto.nome}" será criada com todos os ingredientes da ficha técnica.
-          </DialogDescription>
-        </DialogHeader>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
 
-        <div className="space-y-4 py-4">
+        <ResponsiveDialogBody>
           <div className="space-y-2">
             <Label htmlFor="novo-nome">Nome do novo produto</Label>
             <Input
@@ -181,9 +182,9 @@ const DuplicarProdutoDialog: React.FC<DuplicarProdutoDialogProps> = ({
           <p className="text-sm text-muted-foreground">
             Após criar, a ficha técnica será aberta para você fazer os ajustes necessários.
           </p>
-        </div>
+        </ResponsiveDialogBody>
 
-        <DialogFooter className="gap-2 sm:gap-2">
+        <ResponsiveDialogFooter className="gap-2 sm:gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={duplicating}>
             Cancelar
           </Button>
@@ -200,9 +201,9 @@ const DuplicarProdutoDialog: React.FC<DuplicarProdutoDialogProps> = ({
               </>
             )}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 };
 
