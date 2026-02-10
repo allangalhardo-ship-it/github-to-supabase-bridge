@@ -454,11 +454,34 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
     </div>
   );
 
+  const rodapeFixo = (
+    <div className="border-t bg-background p-3 flex gap-2">
+      <Button
+        size="lg"
+        className="flex-1 gap-2"
+        onClick={() => {
+          resultadosSimulacaoCMV.forEach(canal => {
+            if (canal.precoFinal > 0) {
+              handleAplicar(canal.precoFinal, canal.id);
+            }
+          });
+        }}
+        disabled={isAplicando || resultadosSimulacaoCMV.every(c => c.precoFinal <= 0)}
+      >
+        <Zap className="h-4 w-4" />
+        Aplicar Todos
+      </Button>
+      <Button size="lg" variant="outline" onClick={onClose}>
+        <X className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+
   if (isMobile) {
     return (
       <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DrawerContent className="max-h-[92vh]">
-          <DrawerHeader className="flex items-center justify-between border-b pb-3">
+        <DrawerContent className="max-h-[92vh] flex flex-col">
+          <DrawerHeader className="flex items-center justify-between border-b pb-3 shrink-0">
             <DrawerTitle className="flex items-center gap-2">
               <Calculator className="h-5 w-5" />
               Simulador de Preço
@@ -467,9 +490,10 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
               <X className="h-4 w-4" />
             </Button>
           </DrawerHeader>
-          <div className="overflow-y-auto">
+          <div className="overflow-y-auto flex-1">
             {conteudoDrawer}
           </div>
+          {rodapeFixo}
         </DrawerContent>
       </Drawer>
     );
