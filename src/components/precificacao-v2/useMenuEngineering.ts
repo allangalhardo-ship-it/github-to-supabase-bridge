@@ -203,11 +203,18 @@ export function useMenuEngineering() {
       };
     });
 
-    // Calcular medianas
+    // Calcular medianas — usar apenas produtos COM vendas para não distorcer
+    const produtosComVendas = produtosComMetricas.filter(p => p.quantidadeVendida > 0);
+    const margensComVendas = produtosComVendas.map(p => p.margemContribuicao).sort((a, b) => a - b);
+    const qtdsComVendas = produtosComVendas.map(p => p.quantidadeVendida).sort((a, b) => a - b);
+    
     const sortedMargens = [...todasMargens].sort((a, b) => a - b);
-    const sortedQtds = [...todasQuantidades].sort((a, b) => a - b);
+    // Mediana de margem usa todos (para classificar margem alta/baixa)
     const medianaMargens = sortedMargens[Math.floor(sortedMargens.length / 2)] || config.margem_desejada_padrao;
-    const medianaQtds = sortedQtds[Math.floor(sortedQtds.length / 2)] || 0;
+    // Mediana de quantidade usa apenas quem vendeu (produtos sem venda ficam automaticamente como baixa popularidade)
+    const medianaQtds = qtdsComVendas.length > 0
+      ? qtdsComVendas[Math.floor(qtdsComVendas.length / 2)]
+      : 1; // Se ninguém vendeu, qualquer valor > 0 seria alta popularidade
 
     // Classificar em quadrantes
     return produtosComMetricas.map(produto => {
