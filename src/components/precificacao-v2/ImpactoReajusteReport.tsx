@@ -61,6 +61,8 @@ const ImpactoReajusteReport: React.FC<ImpactoReajusteReportProps> = ({
     enabled: !!usuario?.empresa_id,
   });
 
+  const cmvAlvo = config?.cmv_alvo || 35;
+
   const impactos = useMemo(() => {
     if (!historicoInsumos || !fichas || produtos.length === 0) return [];
 
