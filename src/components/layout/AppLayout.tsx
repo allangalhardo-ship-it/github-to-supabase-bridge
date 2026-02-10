@@ -385,18 +385,6 @@ const AppLayout = () => {
         </main>
       </div>
 
-      {/* Bottom Navigation - mobile only */}
-      <BottomNav
-        onOpenMenu={() => setOpen(true)}
-        onOpenVendaRapida={() => setVendaRapidaOpen(true)}
-      />
-
-      {/* Venda Rápida Sheet */}
-      <VendaRapidaSheet
-        open={vendaRapidaOpen}
-        onOpenChange={setVendaRapidaOpen}
-      />
-
       {/* Offline Indicator */}
       <OfflineIndicator />
     </div>
