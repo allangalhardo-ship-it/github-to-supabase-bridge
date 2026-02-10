@@ -284,7 +284,7 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
                                 <TooltipContent side="top" className="text-xs">
                                   <p className="font-medium">{canal.nome}</p>
                                   <p>Preço: {formatCurrency(precoCanal)} {temPrecoCustom ? '✓' : '(base)'}</p>
-                                  <p>Margem: {formatPercent(margem)}</p>
+                                  <p>Margem: {formatPercent(margem)} <span className="text-muted-foreground">(líq. impostos)</span></p>
                                   {canal.taxa > 0 && <p className="text-muted-foreground">Taxa: {canal.taxa}%</p>}
                                 </TooltipContent>
                               </Tooltip>
