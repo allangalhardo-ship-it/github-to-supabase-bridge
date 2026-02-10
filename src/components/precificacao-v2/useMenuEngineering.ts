@@ -267,14 +267,17 @@ export function useMenuEngineering() {
       };
     }
 
+    // Média ponderada por quantidade vendida (produtos sem venda usam peso 1)
     const margemMedia = produtosAnalisados.reduce((acc, p) => acc + p.margemContribuicao, 0) / produtosAnalisados.length;
     const cmvMedio = produtosAnalisados.reduce((acc, p) => acc + p.cmv, 0) / produtosAnalisados.length;
     const produtosCriticos = produtosAnalisados.filter(p => p.saudeMargem === 'critico').length;
     
     // Receita potencial: diferença se todos estivessem no preço sugerido
+    // Só considerar produtos que realmente vendem
     const receitaPotencial = produtosAnalisados.reduce((acc, p) => {
+      if (p.quantidadeVendida === 0) return acc; // Sem vendas = sem receita potencial real
       const diferencaPreco = p.precoSugerido - p.preco_venda;
-      const ganhoMensal = diferencaPreco * (p.quantidadeVendida || 1);
+      const ganhoMensal = diferencaPreco * p.quantidadeVendida;
       return acc + (ganhoMensal > 0 ? ganhoMensal : 0);
     }, 0);
 
