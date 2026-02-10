@@ -377,15 +377,27 @@ const AppLayout = () => {
         <main 
           className="flex-1 overflow-y-auto overflow-x-hidden bg-surface-alt overscroll-contain min-w-0 w-full max-w-full"
           style={{ 
-            paddingBottom: 'env(safe-area-inset-bottom)',
+            paddingBottom: 'max(env(safe-area-inset-bottom), 0px)',
             WebkitOverflowScrolling: 'touch'
           }}
         >
-          <div className="w-full min-w-0 p-4 md:p-6 max-w-7xl mx-auto box-border">
+          <div className="w-full min-w-0 p-4 md:p-6 pb-24 lg:pb-6 max-w-7xl mx-auto box-border">
             <Outlet />
           </div>
         </main>
       </div>
+
+      {/* Bottom Navigation - mobile only */}
+      <BottomNav
+        onOpenMenu={() => setOpen(true)}
+        onOpenVendaRapida={() => setVendaRapidaOpen(true)}
+      />
+
+      {/* Venda Rápida Sheet */}
+      <VendaRapidaSheet
+        open={vendaRapidaOpen}
+        onOpenChange={setVendaRapidaOpen}
+      />
 
       {/* Offline Indicator */}
       <OfflineIndicator />
