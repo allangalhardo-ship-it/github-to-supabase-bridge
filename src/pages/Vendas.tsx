@@ -323,6 +323,11 @@ const Vendas = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      <ContextualTip
+        tipKey="vendas-intro"
+        title="💰 Registre suas vendas e veja o lucro!"
+        description="Cada venda registrada alimenta seus relatórios de faturamento, margem e lucro. Quanto mais dados, mais preciso fica o seu painel!"
+      />
       <div className="flex flex-col gap-3 sm:gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Vendas</h1>
