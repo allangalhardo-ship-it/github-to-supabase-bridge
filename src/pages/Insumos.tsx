@@ -345,6 +345,11 @@ const Insumos = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      <ContextualTip
+        tipKey="insumos-intro"
+        title="🧑‍🍳 Comece cadastrando seus ingredientes!"
+        description="Ingredientes são tudo que você usa nas receitas: farinha, açúcar, ovos... Cadastre pelo menos 2 para montar seu primeiro produto depois. Você pode importar uma base pronta clicando em 'Base Padrão'."
+      />
       <div className="flex flex-col gap-3 sm:gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Insumos</h1>
