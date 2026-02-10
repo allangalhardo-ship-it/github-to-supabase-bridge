@@ -9,6 +9,8 @@ import {
   Empresa,
   CarrinhoItem,
   DadosCliente,
+  OpcionalSelecionado,
+  GrupoOpcional,
   CardapioHeader,
   CategoryTabs,
   ProductCard,
@@ -19,11 +21,17 @@ import {
 } from "@/components/cardapio";
 
 // Simulated badges - in production, these would come from the database
-function getBadgeForProduct(produto: Produto, index: number): 'mais_vendido' | 'favorito' | 'novidade' | null {
+function getBadgeForProduct(_produto: Produto, index: number): 'mais_vendido' | 'favorito' | 'novidade' | null {
   if (index === 0) return 'mais_vendido';
   if (index === 1) return 'favorito';
   if (index === 2) return 'novidade';
   return null;
+}
+
+/** Generate a unique key for a cart item based on product + selected options */
+function gerarCarrinhoKey(produtoId: string, opcionais: OpcionalSelecionado[]): string {
+  const opIds = opcionais.map(o => o.item_id).sort().join(',');
+  return `${produtoId}__${opIds}`;
 }
 
 export default function Cardapio() {
@@ -66,7 +74,6 @@ export default function Cardapio() {
         return;
       }
 
-      // Parse cardapio_config safely
       const config = empresaData.cardapio_config as Empresa['cardapio_config'] ?? {};
       setEmpresa({ ...empresaData, cardapio_config: config });
 
@@ -80,10 +87,42 @@ export default function Cardapio() {
 
       if (produtosError) throw produtosError;
 
-      setProdutos(produtosData || []);
+      // Load opcionais for all products
+      const { data: gruposData } = await supabase
+        .from("grupos_opcionais")
+        .select("id, produto_id, nome, min_selecao, max_selecao, ordem")
+        .eq("empresa_id", empresaData.id)
+        .order("ordem");
+
+      const grupoIds = (gruposData || []).map(g => g.id);
       
-      if (produtosData && produtosData.length > 0) {
-        const primeiraCategoria = produtosData[0].categoria || "Outros";
+      let itensData: any[] = [];
+      if (grupoIds.length > 0) {
+        const { data } = await supabase
+          .from("itens_opcionais")
+          .select("id, grupo_id, nome, preco_adicional, ordem, ativo")
+          .in("grupo_id", grupoIds)
+          .eq("ativo", true)
+          .order("ordem");
+        itensData = data || [];
+      }
+
+      // Map opcionais to products
+      const produtosComOpcionais: Produto[] = (produtosData || []).map(p => {
+        const grupos = (gruposData || [])
+          .filter(g => g.produto_id === p.id)
+          .map(g => ({
+            ...g,
+            itens: itensData.filter(i => i.grupo_id === g.id),
+          })) as GrupoOpcional[];
+        
+        return { ...p, grupos_opcionais: grupos };
+      });
+
+      setProdutos(produtosComOpcionais);
+      
+      if (produtosComOpcionais.length > 0) {
+        const primeiraCategoria = produtosComOpcionais[0].categoria || "Outros";
         setCategoriaAtiva(primeiraCategoria);
       }
     } catch (error) {
@@ -111,17 +150,14 @@ export default function Cardapio() {
     const config = empresa?.cardapio_config;
     const categoriasOcultas = config?.categorias_ocultas || [];
 
-    // Agrupar
     const agrupado = produtosFiltrados.reduce((acc, produto) => {
       const categoria = produto.categoria || "Outros";
-      // Ocultar categorias configuradas
       if (categoriasOcultas.includes(categoria)) return acc;
       if (!acc[categoria]) acc[categoria] = [];
       acc[categoria].push(produto);
       return acc;
     }, {} as Record<string, Produto[]>);
 
-    // Ordenar categorias
     const ordem = config?.categorias_ordem || [];
     const todasCategorias = Object.keys(agrupado);
     
@@ -133,25 +169,22 @@ export default function Cardapio() {
     return { produtosPorCategoria: agrupado, categorias: categoriasOrdenadas };
   }, [produtosFiltrados, empresa?.cardapio_config]);
 
-  // Set primeira categoria quando muda
   useEffect(() => {
     if (categorias.length > 0 && !categorias.includes(categoriaAtiva)) {
       setCategoriaAtiva(categorias[0]);
     }
   }, [categorias, categoriaAtiva]);
 
-  // Scroll para categoria ao clicar na tab
   const handleCategoriaChange = useCallback((categoria: string) => {
     setCategoriaAtiva(categoria);
     const section = sectionRefs.current[categoria];
     if (section) {
-      const offset = 140; // altura da barra de categorias + search
+      const offset = 140;
       const top = section.getBoundingClientRect().top + window.scrollY - offset;
       window.scrollTo({ top, behavior: "smooth" });
     }
   }, []);
 
-  // Detectar categoria visível ao scrollar
   useEffect(() => {
     const handleScroll = () => {
       for (const categoria of categorias) {
@@ -170,54 +203,55 @@ export default function Cardapio() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [categorias]);
 
-  // Funções do carrinho
-  const adicionarAoCarrinho = (produto: Produto, quantidade: number = 1, observacao: string = "") => {
+  // Cart functions
+  const adicionarAoCarrinho = (produto: Produto, quantidade: number = 1, observacao: string = "", opcionais: OpcionalSelecionado[] = []) => {
+    const key = gerarCarrinhoKey(produto.id, opcionais);
     setCarrinho((prev) => {
-      const existente = prev.find((item) => item.produto.id === produto.id);
+      const existente = prev.find((item) => item.carrinhoKey === key);
       if (existente) {
         return prev.map((item) =>
-          item.produto.id === produto.id
+          item.carrinhoKey === key
             ? { ...item, quantidade: item.quantidade + quantidade, observacao: observacao || item.observacao }
             : item
         );
       }
-      return [...prev, { produto, quantidade, observacao }];
+      return [...prev, { produto, quantidade, observacao, opcionais, carrinhoKey: key }];
     });
     toast.success(`${produto.nome} adicionado!`, { duration: 1500 });
   };
 
-  const adicionarUm = (produtoId: string) => {
+  const adicionarUm = (carrinhoKey: string) => {
     setCarrinho((prev) =>
       prev.map((item) =>
-        item.produto.id === produtoId
+        item.carrinhoKey === carrinhoKey
           ? { ...item, quantidade: item.quantidade + 1 }
           : item
       )
     );
   };
 
-  const removerUm = (produtoId: string) => {
+  const removerUm = (carrinhoKey: string) => {
     setCarrinho((prev) => {
-      const existente = prev.find((item) => item.produto.id === produtoId);
+      const existente = prev.find((item) => item.carrinhoKey === carrinhoKey);
       if (existente && existente.quantidade > 1) {
         return prev.map((item) =>
-          item.produto.id === produtoId
+          item.carrinhoKey === carrinhoKey
             ? { ...item, quantidade: item.quantidade - 1 }
             : item
         );
       }
-      return prev.filter((item) => item.produto.id !== produtoId);
+      return prev.filter((item) => item.carrinhoKey !== carrinhoKey);
     });
   };
 
-  const removerItem = (produtoId: string) => {
-    setCarrinho((prev) => prev.filter((item) => item.produto.id !== produtoId));
+  const removerItem = (carrinhoKey: string) => {
+    setCarrinho((prev) => prev.filter((item) => item.carrinhoKey !== carrinhoKey));
   };
 
-  const totalCarrinho = carrinho.reduce(
-    (total, item) => total + item.produto.preco_venda * item.quantidade,
-    0
-  );
+  const totalCarrinho = carrinho.reduce((total, item) => {
+    const totalOpcionais = item.opcionais.reduce((sum, op) => sum + op.preco_adicional, 0);
+    return total + (item.produto.preco_venda + totalOpcionais) * item.quantidade;
+  }, 0);
 
   const quantidadeTotal = carrinho.reduce((total, item) => total + item.quantidade, 0);
 
@@ -241,6 +275,11 @@ export default function Cardapio() {
         quantidade: item.quantidade,
         preco_unitario: item.produto.preco_venda,
         observacao: item.observacao,
+        opcionais: item.opcionais.map(op => ({
+          nome: op.item_nome,
+          grupo: op.grupo_nome,
+          preco: op.preco_adicional,
+        })),
       }));
 
       const { error: pedidoError } = await supabase.from("pedidos").insert({
@@ -255,6 +294,7 @@ export default function Cardapio() {
 
       if (pedidoError) throw pedidoError;
 
+      // Build WhatsApp message
       let mensagem = `🛒 *NOVO PEDIDO*\n\n`;
       mensagem += `👤 *Cliente:* ${dadosCliente.nome}\n`;
       mensagem += `📱 *WhatsApp:* ${dadosCliente.whatsapp}\n`;
@@ -264,7 +304,17 @@ export default function Cardapio() {
       mensagem += `\n📋 *ITENS:*\n`;
 
       carrinho.forEach((item) => {
-        mensagem += `\n• ${item.quantidade}x ${item.produto.nome} - ${formatCurrencyBRL(item.produto.preco_venda * item.quantidade)}`;
+        const totalOpcionais = item.opcionais.reduce((sum, op) => sum + op.preco_adicional, 0);
+        const precoItem = (item.produto.preco_venda + totalOpcionais) * item.quantidade;
+        mensagem += `\n• ${item.quantidade}x ${item.produto.nome} - ${formatCurrencyBRL(precoItem)}`;
+        
+        if (item.opcionais.length > 0) {
+          item.opcionais.forEach(op => {
+            mensagem += `\n  ✓ ${op.item_nome}`;
+            if (op.preco_adicional > 0) mensagem += ` (+${formatCurrencyBRL(op.preco_adicional)})`;
+          });
+        }
+        
         if (item.observacao) {
           mensagem += `\n  _Obs: ${item.observacao}_`;
         }
@@ -329,17 +379,14 @@ export default function Cardapio() {
         backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e5e0d8' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
       }}
     >
-      {/* Header com banner */}
       <CardapioHeader empresa={empresa} />
 
-      {/* Busca de produtos */}
       <SearchBar 
         value={busca} 
         onChange={setBusca} 
         totalResultados={busca ? produtosFiltrados.length : undefined} 
       />
 
-      {/* Navegação por categorias */}
       {!busca && (
         <CategoryTabs
           categorias={categorias}
@@ -348,7 +395,6 @@ export default function Cardapio() {
         />
       )}
 
-      {/* Produtos */}
       <main className="max-w-4xl mx-auto px-4 md:px-6 py-8 pb-36">
         {categorias.map((categoria, catIndex) => (
           <section
@@ -360,7 +406,6 @@ export default function Cardapio() {
                 : 'bg-gradient-to-br from-rose-50/50 to-orange-50/50'
             }`}
           >
-            {/* Título da categoria com estilo decorativo */}
             <div className="text-center mb-8">
               <h2 
                 className="text-2xl md:text-3xl font-bold text-gray-800 inline-block"
@@ -385,7 +430,7 @@ export default function Cardapio() {
                     key={produto.id}
                     produto={produto}
                     itemCarrinho={itemCarrinho}
-                    onAddToCart={(p) => adicionarAoCarrinho(p, 1, "")}
+                    onAddToCart={(p) => adicionarAoCarrinho(p, 1, "", [])}
                     onOpenDetails={setProdutoDetalhe}
                     badge={badge}
                     index={index}
@@ -406,7 +451,6 @@ export default function Cardapio() {
         )}
       </main>
 
-      {/* Modal de detalhes do produto */}
       <ProductDetailModal
         produto={produtoDetalhe}
         open={!!produtoDetalhe}
@@ -414,16 +458,15 @@ export default function Cardapio() {
         onAddToCart={adicionarAoCarrinho}
         quantidadeInicial={itemCarrinhoDetalhe?.quantidade || 1}
         observacaoInicial={itemCarrinhoDetalhe?.observacao || ""}
+        opcionaisIniciais={itemCarrinhoDetalhe?.opcionais || []}
       />
 
-      {/* Botão flutuante do carrinho */}
       <FloatingCartButton
         quantidade={quantidadeTotal}
         total={totalCarrinho}
         onClick={() => setCarrinhoAberto(true)}
       />
 
-      {/* Drawer do carrinho */}
       <CartDrawer
         open={carrinhoAberto}
         onOpenChange={setCarrinhoAberto}
