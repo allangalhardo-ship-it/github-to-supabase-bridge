@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -15,11 +15,11 @@ import {
   ProductDetailModal,
   CartDrawer,
   FloatingCartButton,
+  SearchBar,
 } from "@/components/cardapio";
 
 // Simulated badges - in production, these would come from the database
 function getBadgeForProduct(produto: Produto, index: number): 'mais_vendido' | 'favorito' | 'novidade' | null {
-  // For demo: assign badges based on position
   if (index === 0) return 'mais_vendido';
   if (index === 1) return 'favorito';
   if (index === 2) return 'novidade';
@@ -36,6 +36,7 @@ export default function Cardapio() {
   const [carrinhoAberto, setCarrinhoAberto] = useState(false);
   const [produtoDetalhe, setProdutoDetalhe] = useState<Produto | null>(null);
   const [categoriaAtiva, setCategoriaAtiva] = useState<string>("");
+  const [busca, setBusca] = useState("");
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
   
   const [dadosCliente, setDadosCliente] = useState<DadosCliente>({
@@ -55,7 +56,7 @@ export default function Cardapio() {
     try {
       const { data: empresaData, error: empresaError } = await supabase
         .from("empresas")
-        .select("id, nome, cardapio_descricao, horario_funcionamento, whatsapp_dono, logo_url, banner_url")
+        .select("id, nome, cardapio_descricao, horario_funcionamento, whatsapp_dono, logo_url, banner_url, cardapio_config")
         .eq("slug", slug)
         .eq("cardapio_ativo", true)
         .single();
@@ -65,7 +66,9 @@ export default function Cardapio() {
         return;
       }
 
-      setEmpresa(empresaData);
+      // Parse cardapio_config safely
+      const config = empresaData.cardapio_config as Empresa['cardapio_config'] ?? {};
+      setEmpresa({ ...empresaData, cardapio_config: config });
 
       const { data: produtosData, error: produtosError } = await supabase
         .from("produtos")
@@ -79,7 +82,6 @@ export default function Cardapio() {
 
       setProdutos(produtosData || []);
       
-      // Define categoria inicial
       if (produtosData && produtosData.length > 0) {
         const primeiraCategoria = produtosData[0].categoria || "Outros";
         setCategoriaAtiva(primeiraCategoria);
@@ -92,24 +94,58 @@ export default function Cardapio() {
     }
   };
 
-  // Agrupar produtos por categoria
-  const produtosPorCategoria = produtos.reduce((acc, produto) => {
-    const categoria = produto.categoria || "Outros";
-    if (!acc[categoria]) {
-      acc[categoria] = [];
-    }
-    acc[categoria].push(produto);
-    return acc;
-  }, {} as Record<string, Produto[]>);
+  // Filtrar produtos pela busca
+  const produtosFiltrados = useMemo(() => {
+    if (!busca.trim()) return produtos;
+    const termo = busca.toLowerCase().trim();
+    return produtos.filter(
+      (p) =>
+        p.nome.toLowerCase().includes(termo) ||
+        (p.categoria && p.categoria.toLowerCase().includes(termo)) ||
+        (p.observacoes_ficha && p.observacoes_ficha.toLowerCase().includes(termo))
+    );
+  }, [produtos, busca]);
 
-  const categorias = Object.keys(produtosPorCategoria);
+  // Agrupar e ordenar categorias com config
+  const { produtosPorCategoria, categorias } = useMemo(() => {
+    const config = empresa?.cardapio_config;
+    const categoriasOcultas = config?.categorias_ocultas || [];
+
+    // Agrupar
+    const agrupado = produtosFiltrados.reduce((acc, produto) => {
+      const categoria = produto.categoria || "Outros";
+      // Ocultar categorias configuradas
+      if (categoriasOcultas.includes(categoria)) return acc;
+      if (!acc[categoria]) acc[categoria] = [];
+      acc[categoria].push(produto);
+      return acc;
+    }, {} as Record<string, Produto[]>);
+
+    // Ordenar categorias
+    const ordem = config?.categorias_ordem || [];
+    const todasCategorias = Object.keys(agrupado);
+    
+    const categoriasOrdenadas = [
+      ...ordem.filter((c) => todasCategorias.includes(c)),
+      ...todasCategorias.filter((c) => !ordem.includes(c)).sort(),
+    ];
+
+    return { produtosPorCategoria: agrupado, categorias: categoriasOrdenadas };
+  }, [produtosFiltrados, empresa?.cardapio_config]);
+
+  // Set primeira categoria quando muda
+  useEffect(() => {
+    if (categorias.length > 0 && !categorias.includes(categoriaAtiva)) {
+      setCategoriaAtiva(categorias[0]);
+    }
+  }, [categorias, categoriaAtiva]);
 
   // Scroll para categoria ao clicar na tab
   const handleCategoriaChange = useCallback((categoria: string) => {
     setCategoriaAtiva(categoria);
     const section = sectionRefs.current[categoria];
     if (section) {
-      const offset = 80; // altura da barra de categorias
+      const offset = 140; // altura da barra de categorias + search
       const top = section.getBoundingClientRect().top + window.scrollY - offset;
       window.scrollTo({ top, behavior: "smooth" });
     }
@@ -118,13 +154,11 @@ export default function Cardapio() {
   // Detectar categoria visível ao scrollar
   useEffect(() => {
     const handleScroll = () => {
-      const scrollPosition = window.scrollY + 100;
-      
       for (const categoria of categorias) {
         const section = sectionRefs.current[categoria];
         if (section) {
           const { top, bottom } = section.getBoundingClientRect();
-          if (top <= 100 && bottom > 100) {
+          if (top <= 160 && bottom > 160) {
             setCategoriaAtiva(categoria);
             break;
           }
@@ -221,7 +255,6 @@ export default function Cardapio() {
 
       if (pedidoError) throw pedidoError;
 
-      // Montar mensagem WhatsApp
       let mensagem = `🛒 *NOVO PEDIDO*\n\n`;
       mensagem += `👤 *Cliente:* ${dadosCliente.nome}\n`;
       mensagem += `📱 *WhatsApp:* ${dadosCliente.whatsapp}\n`;
@@ -261,7 +294,6 @@ export default function Cardapio() {
     }
   };
 
-  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-[#faf9f7] flex items-center justify-center">
@@ -273,7 +305,6 @@ export default function Cardapio() {
     );
   }
 
-  // Not found state
   if (!empresa) {
     return (
       <div className="min-h-screen bg-[#faf9f7] flex flex-col items-center justify-center p-4">
@@ -286,7 +317,6 @@ export default function Cardapio() {
     );
   }
 
-  // Pegar item do carrinho para o modal
   const itemCarrinhoDetalhe = produtoDetalhe 
     ? carrinho.find((item) => item.produto.id === produtoDetalhe.id) 
     : undefined;
@@ -302,12 +332,21 @@ export default function Cardapio() {
       {/* Header com banner */}
       <CardapioHeader empresa={empresa} />
 
-      {/* Navegação por categorias */}
-      <CategoryTabs
-        categorias={categorias}
-        categoriaAtiva={categoriaAtiva}
-        onCategoriaChange={handleCategoriaChange}
+      {/* Busca de produtos */}
+      <SearchBar 
+        value={busca} 
+        onChange={setBusca} 
+        totalResultados={busca ? produtosFiltrados.length : undefined} 
       />
+
+      {/* Navegação por categorias */}
+      {!busca && (
+        <CategoryTabs
+          categorias={categorias}
+          categoriaAtiva={categoriaAtiva}
+          onCategoriaChange={handleCategoriaChange}
+        />
+      )}
 
       {/* Produtos */}
       <main className="max-w-4xl mx-auto px-4 md:px-6 py-8 pb-36">
@@ -315,7 +354,7 @@ export default function Cardapio() {
           <section
             key={categoria}
             ref={(el) => { sectionRefs.current[categoria] = el; }}
-            className={`mb-12 scroll-mt-24 py-8 px-4 md:px-6 rounded-3xl ${
+            className={`mb-12 scroll-mt-36 py-8 px-4 md:px-6 rounded-3xl ${
               catIndex % 2 === 0 
                 ? 'bg-white/60 backdrop-blur-sm' 
                 : 'bg-gradient-to-br from-rose-50/50 to-orange-50/50'
@@ -329,7 +368,6 @@ export default function Cardapio() {
               >
                 {categoria}
               </h2>
-              {/* Linha decorativa */}
               <div className="flex items-center justify-center gap-2 mt-2">
                 <div className="h-[1px] w-12 bg-gradient-to-r from-transparent to-rose-300" />
                 <div className="w-2 h-2 rounded-full bg-rose-400" />
@@ -340,7 +378,6 @@ export default function Cardapio() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
               {produtosPorCategoria[categoria].map((produto, index) => {
                 const itemCarrinho = carrinho.find((i) => i.produto.id === produto.id);
-                // Only show badges for first category products for demo
                 const badge = catIndex === 0 ? getBadgeForProduct(produto, index) : null;
                 
                 return (
@@ -359,10 +396,12 @@ export default function Cardapio() {
           </section>
         ))}
 
-        {produtos.length === 0 && (
+        {produtosFiltrados.length === 0 && (
           <div className="text-center py-16">
             <Store className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg">Nenhum produto disponível no momento.</p>
+            <p className="text-gray-500 text-lg">
+              {busca ? `Nenhum produto encontrado para "${busca}"` : "Nenhum produto disponível no momento."}
+            </p>
           </div>
         )}
       </main>
