@@ -447,7 +447,8 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
           id: c.id,
           nome: c.nome,
           taxa: c.taxa,
-          isBalcao: c.destaque
+          isBalcao: c.destaque,
+          precoCanal: getPrecoCanal(c.id),
         }))}
         impostoPercentual={config?.imposto_medio_sobre_vendas || 0}
       />
