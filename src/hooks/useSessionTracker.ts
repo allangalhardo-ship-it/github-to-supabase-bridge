@@ -36,7 +36,7 @@ export const useSessionTracker = () => {
     }
   }, [session?.access_token]);
 
-  // Start session on mount
+  // Start session on mount (only depends on access_token, NOT location)
   useEffect(() => {
     if (!session?.access_token) return;
 
@@ -45,7 +45,7 @@ export const useSessionTracker = () => {
         const { data } = await supabase.functions.invoke('track-session', {
           body: {
             action: 'start_session',
-            page_path: location.pathname,
+            page_path: lastPathRef.current || location.pathname,
             session_token: getSessionToken(),
           },
         });
@@ -67,7 +67,6 @@ export const useSessionTracker = () => {
 
     // End session on tab close
     const handleBeforeUnload = () => {
-      // Use sendBeacon for reliable delivery on page close
       const sessionToken = getSessionToken();
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/track-session`;
       
@@ -85,7 +84,8 @@ export const useSessionTracker = () => {
       }
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [session?.access_token, location.pathname, trackAction]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.access_token]);
 
   // Track page views
   useEffect(() => {

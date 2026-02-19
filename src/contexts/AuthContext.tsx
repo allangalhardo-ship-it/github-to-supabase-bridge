@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -46,7 +46,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUsuario = async (userId: string) => {
+  // Track current user ID to avoid redundant fetches on TOKEN_REFRESHED
+  const currentUserIdRef = useRef<string | null>(null);
+  const isFetchingRef = useRef(false);
+
+  const fetchUsuario = useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from('usuarios')
       .select('*')
@@ -58,53 +62,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
     return data;
-  };
+  }, []);
 
-  useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+  const handleAuthUser = useCallback(async (newSession: Session | null, isInitial = false) => {
+    const newUserId = newSession?.user?.id ?? null;
+    const previousUserId = currentUserIdRef.current;
 
-        if (session?.user) {
-          // Use setTimeout to avoid potential race conditions
-          setTimeout(async () => {
-            let usuario = await fetchUsuario(session.user.id);
+    // Always update session (token may have changed)
+    setSession(newSession);
 
-            // If the user exists in auth but doesn't have an app profile yet,
-            // bootstrap it on the backend and retry.
-            if (!usuario) {
-              const { error: bootstrapError } = await supabase.functions.invoke('bootstrap-account', {
-                body: {},
-              });
+    // If the user ID hasn't changed, skip the expensive work
+    // (this prevents re-renders on TOKEN_REFRESHED events)
+    if (newUserId === previousUserId && !isInitial) {
+      return;
+    }
 
-              if (bootstrapError) {
-                console.error('Error bootstrapping account:', bootstrapError);
-              } else {
-                usuario = await fetchUsuario(session.user.id);
-              }
-            }
+    currentUserIdRef.current = newUserId;
+    setUser(newSession?.user ?? null);
 
-            setUsuario(usuario);
-            setLoading(false);
-          }, 0);
-        } else {
-          setUsuario(null);
-          setLoading(false);
-        }
-      }
-    );
+    if (newSession?.user && !isFetchingRef.current) {
+      isFetchingRef.current = true;
+      try {
+        let fetchedUsuario = await fetchUsuario(newSession.user.id);
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-
-      if (session?.user) {
-        let usuario = await fetchUsuario(session.user.id);
-
-        if (!usuario) {
+        if (!fetchedUsuario) {
           const { error: bootstrapError } = await supabase.functions.invoke('bootstrap-account', {
             body: {},
           });
@@ -112,18 +93,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (bootstrapError) {
             console.error('Error bootstrapping account:', bootstrapError);
           } else {
-            usuario = await fetchUsuario(session.user.id);
+            fetchedUsuario = await fetchUsuario(newSession.user.id);
           }
         }
 
-        setUsuario(usuario);
+        setUsuario(fetchedUsuario);
+      } finally {
+        isFetchingRef.current = false;
       }
+    } else if (!newSession?.user) {
+      setUsuario(null);
+    }
 
-      setLoading(false);
+    setLoading(false);
+  }, [fetchUsuario]);
+
+  useEffect(() => {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        handleAuthUser(session);
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      await handleAuthUser(session, true);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [handleAuthUser]);
 
   const signUp = async (email: string, password: string, nome: string, nomeEmpresa: string, extra?: ExtraSignUpData) => {
     try {
