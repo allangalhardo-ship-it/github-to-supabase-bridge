@@ -73,7 +73,10 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     checkAdminStatus();
   }, [user?.id]);
 
-  const checkSubscription = useCallback(async () => {
+  // Use a ref to track the last checked token to avoid duplicate calls
+  const lastCheckedTokenRef = React.useRef<string | null>(null);
+
+  const checkSubscription = useCallback(async (force = false) => {
     // If user isn't available yet, we can't determine access.
     if (!user) {
       setSubscription({
@@ -89,10 +92,14 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
 
     // Session can lag behind user during auth state changes.
-    // In that case, keep loading so the paywall doesn't incorrectly redirect.
     if (!session?.access_token) {
       setSubscription((prev) => ({ ...prev, status: 'loading' }));
       setLoading(true);
+      return;
+    }
+
+    // Skip if we already checked with this token (prevents duplicate calls on token refresh)
+    if (!force && lastCheckedTokenRef.current === session.access_token) {
       return;
     }
 
@@ -117,7 +124,6 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
       }
 
-      // If we can't read created_at for some reason, default to allowing the trial.
       return {
         subscribed: false,
         status: 'trialing',
@@ -131,6 +137,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setLoading(true);
 
     try {
+      lastCheckedTokenRef.current = session.access_token;
       const { data, error } = await supabase.functions.invoke('check-subscription');
 
       if (error) {
@@ -203,12 +210,12 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, session?.access_token]);
 
-  // Auto-refresh subscription status every 5 minutes (not 60 seconds)
+  // Auto-refresh subscription status every 5 minutes
   useEffect(() => {
     if (!user || !session?.access_token) return;
 
     const interval = setInterval(() => {
-      checkSubscription();
+      checkSubscription(true); // force bypass token cache
     }, 300000); // 5 minutes
 
     return () => clearInterval(interval);
