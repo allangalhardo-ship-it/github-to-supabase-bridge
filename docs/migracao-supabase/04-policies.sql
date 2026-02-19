@@ -18,8 +18,7 @@ CREATE POLICY "Admins can view all empresas" ON public.empresas
 CREATE POLICY "Admins can delete empresas" ON public.empresas
     FOR DELETE USING (has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Service role can manage empresas" ON public.empresas
-    FOR ALL USING (true);
+-- Service role bypasses RLS, no permissive policy needed
 
 -- =====================================================
 -- USUÁRIOS
@@ -284,14 +283,14 @@ CREATE POLICY "Users can delete empresa import_templates" ON public.import_templ
 -- User Sessions
 CREATE POLICY "Admins can view all sessions" ON public.user_sessions
     FOR SELECT USING (has_role(auth.uid(), 'admin'));
-CREATE POLICY "Service role only user_sessions" ON public.user_sessions
-    FOR ALL USING (true);
+CREATE POLICY "Users can manage own sessions" ON public.user_sessions
+    FOR ALL USING (user_id = auth.uid());
 
 -- Access Logs
 CREATE POLICY "Admins can read access_logs" ON public.access_logs
     FOR SELECT USING (has_role(auth.uid(), 'admin'));
-CREATE POLICY "Service role manages access_logs" ON public.access_logs
-    FOR ALL USING (true);
+CREATE POLICY "Users can insert own access_logs" ON public.access_logs
+    FOR INSERT WITH CHECK (user_id = auth.uid());
 
 -- Onboarding Progress
 CREATE POLICY "Users can view own onboarding" ON public.onboarding_progress
