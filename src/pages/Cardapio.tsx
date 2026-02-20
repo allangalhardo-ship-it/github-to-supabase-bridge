@@ -103,11 +103,11 @@ export default function Cardapio() {
   const totalCarrinho = carrinho.reduce((t, i) => t + (i.produto.preco_venda + i.opcionais.reduce((s, o) => s + o.preco_adicional, 0)) * i.quantidade, 0);
   const quantidadeTotal = carrinho.reduce((t, i) => t + i.quantidade, 0);
 
-  if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="animate-spin rounded-full h-10 w-10 border-4 border-emerald-500 border-t-transparent" /></div>;
-  if (!empresa) return <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4"><Store className="h-16 w-16 text-gray-300 mb-4" /><h1 className="text-xl font-bold text-gray-700">Cardápio não encontrado</h1></div>;
+  if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center" style={{ overflow: 'auto' }}><div className="animate-spin rounded-full h-10 w-10 border-4 border-red-500 border-t-transparent" /></div>;
+  if (!empresa) return <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4" style={{ overflow: 'auto' }}><Store className="h-16 w-16 text-gray-300 mb-4" /><h1 className="text-xl font-bold text-gray-700">Cardápio não encontrado</h1><p className="text-gray-400 mt-2 text-sm">Verifique o link e tente novamente</p></div>;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50" style={{ overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
       <CardapioHeader empresa={empresa} />
       <SearchBar value={busca} onChange={setBusca} totalResultados={busca ? produtosFiltrados.length : undefined} />
       {!busca && <CategoryTabs categorias={categorias} categoriaAtiva={categoriaAtiva} onCategoriaChange={handleCategoriaChange} />}
