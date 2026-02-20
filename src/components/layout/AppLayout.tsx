@@ -42,6 +42,7 @@ import {
   Sliders,
   LifeBuoy,
   QrCode,
+  ClipboardList,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Crown, Sparkles } from 'lucide-react';
@@ -78,6 +79,7 @@ const navCategories = [
       { to: '/producao', icon: Factory, label: 'Produção' },
       { to: '/compras', icon: FileSpreadsheet, label: 'Compras' },
       { to: '/movimentacoes', icon: ShoppingCart, label: 'Vendas' },
+      { to: '/pedidos', icon: ClipboardList, label: 'Pedidos' },
     ],
   },
   {
