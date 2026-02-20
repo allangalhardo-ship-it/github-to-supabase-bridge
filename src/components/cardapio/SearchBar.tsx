@@ -1,4 +1,5 @@
 import { Search, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface SearchBarProps {
   value: string;
@@ -8,30 +9,42 @@ interface SearchBarProps {
 
 export function SearchBar({ value, onChange, totalResultados }: SearchBarProps) {
   return (
-    <div className="max-w-2xl mx-auto px-4 mt-4">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+    <div className="max-w-2xl mx-auto px-4 mt-5">
+      <div className="relative group">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-red-500 transition-colors" />
         <input
           type="text"
           placeholder="Buscar no cardápio..."
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full pl-10 pr-10 py-3 bg-white rounded-xl border border-gray-200 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all"
+          className="w-full pl-11 pr-10 py-3 bg-gray-50 rounded-2xl border border-gray-100 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-300 focus:bg-white transition-all"
         />
-        {value && (
-          <button
-            onClick={() => onChange("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
+        <AnimatePresence>
+          {value && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.5 }}
+              onClick={() => onChange("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-300 transition-colors"
+            >
+              <X className="h-3 w-3" />
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
-      {totalResultados !== undefined && (
-        <p className="text-xs text-gray-400 mt-1 px-1">
-          {totalResultados} {totalResultados === 1 ? "resultado" : "resultados"}
-        </p>
-      )}
+      <AnimatePresence>
+        {totalResultados !== undefined && (
+          <motion.p
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="text-xs text-gray-400 mt-2 px-2 font-medium"
+          >
+            {totalResultados} {totalResultados === 1 ? "resultado" : "resultados"}
+          </motion.p>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
