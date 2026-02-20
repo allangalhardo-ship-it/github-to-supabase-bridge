@@ -90,6 +90,44 @@ export type Database = {
           },
         ]
       }
+      bairros_entrega: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          empresa_id: string
+          id: string
+          nome: string
+          ordem: number
+          taxa_entrega: number
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          empresa_id: string
+          id?: string
+          nome: string
+          ordem?: number
+          taxa_entrega?: number
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nome?: string
+          ordem?: number
+          taxa_entrega?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bairros_entrega_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       caixa_movimentos: {
         Row: {
           categoria: string
@@ -375,13 +413,17 @@ export type Database = {
           cardapio_ativo: boolean
           cardapio_config: Json | null
           cardapio_descricao: string | null
+          chave_pix: string | null
           created_at: string
+          entrega_ativa: boolean
           horario_funcionamento: string | null
           id: string
           logo_url: string | null
           nome: string
+          pedido_minimo: number
           segmento: string | null
           slug: string | null
+          tempo_estimado_entrega: string | null
           whatsapp_dono: string | null
         }
         Insert: {
@@ -389,13 +431,17 @@ export type Database = {
           cardapio_ativo?: boolean
           cardapio_config?: Json | null
           cardapio_descricao?: string | null
+          chave_pix?: string | null
           created_at?: string
+          entrega_ativa?: boolean
           horario_funcionamento?: string | null
           id?: string
           logo_url?: string | null
           nome: string
+          pedido_minimo?: number
           segmento?: string | null
           slug?: string | null
+          tempo_estimado_entrega?: string | null
           whatsapp_dono?: string | null
         }
         Update: {
@@ -403,13 +449,17 @@ export type Database = {
           cardapio_ativo?: boolean
           cardapio_config?: Json | null
           cardapio_descricao?: string | null
+          chave_pix?: string | null
           created_at?: string
+          entrega_ativa?: boolean
           horario_funcionamento?: string | null
           id?: string
           logo_url?: string | null
           nome?: string
+          pedido_minimo?: number
           segmento?: string | null
           slug?: string | null
+          tempo_estimado_entrega?: string | null
           whatsapp_dono?: string | null
         }
         Relationships: []
@@ -835,6 +885,7 @@ export type Database = {
       }
       pedidos: {
         Row: {
+          bairro_entrega: string | null
           cancelado_em: string | null
           cliente_id: string | null
           cliente_nome: string | null
@@ -855,13 +906,17 @@ export type Database = {
           origem: string
           preparando_em: string | null
           pronto_em: string | null
+          saiu_entrega_em: string | null
           status: string
+          subtotal: number
+          taxa_entrega: number
           tipo_entrega: string
           troco_para: number | null
           updated_at: string
           valor_total: number
         }
         Insert: {
+          bairro_entrega?: string | null
           cancelado_em?: string | null
           cliente_id?: string | null
           cliente_nome?: string | null
@@ -882,13 +937,17 @@ export type Database = {
           origem?: string
           preparando_em?: string | null
           pronto_em?: string | null
+          saiu_entrega_em?: string | null
           status?: string
+          subtotal?: number
+          taxa_entrega?: number
           tipo_entrega?: string
           troco_para?: number | null
           updated_at?: string
           valor_total?: number
         }
         Update: {
+          bairro_entrega?: string | null
           cancelado_em?: string | null
           cliente_id?: string | null
           cliente_nome?: string | null
@@ -909,7 +968,10 @@ export type Database = {
           origem?: string
           preparando_em?: string | null
           pronto_em?: string | null
+          saiu_entrega_em?: string | null
           status?: string
+          subtotal?: number
+          taxa_entrega?: number
           tipo_entrega?: string
           troco_para?: number | null
           updated_at?: string
@@ -1084,6 +1146,8 @@ export type Database = {
           ativo: boolean
           categoria: string | null
           created_at: string
+          descricao_cardapio: string | null
+          destaque: boolean
           empresa_id: string
           estoque_acabado: number
           id: string
@@ -1098,6 +1162,8 @@ export type Database = {
           ativo?: boolean
           categoria?: string | null
           created_at?: string
+          descricao_cardapio?: string | null
+          destaque?: boolean
           empresa_id: string
           estoque_acabado?: number
           id?: string
@@ -1112,6 +1178,8 @@ export type Database = {
           ativo?: boolean
           categoria?: string | null
           created_at?: string
+          descricao_cardapio?: string | null
+          destaque?: boolean
           empresa_id?: string
           estoque_acabado?: number
           id?: string
