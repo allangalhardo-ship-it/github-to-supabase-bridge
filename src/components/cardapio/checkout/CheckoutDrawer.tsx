@@ -4,6 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrencyBRL } from "@/lib/format";
+import { motion, AnimatePresence } from "framer-motion";
 import { CarrinhoItem, Empresa } from "../types";
 import { CheckoutStep, DadosEntrega, DadosPagamento, PedidoCriado, FORMAS_PAGAMENTO_LABELS } from "./types";
 import { StepIndicator } from "./StepIndicator";
@@ -149,55 +150,66 @@ export function CheckoutDrawer({
           )}
         </SheetHeader>
 
-        {step === 'carrinho' && (
-          <CartStep
-            carrinho={carrinho}
-            onAddItem={onAddItem}
-            onRemoveItem={onRemoveItem}
-            onDeleteItem={onDeleteItem}
-            onNext={() => setStep('entrega')}
-          />
-        )}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }}
+            className="flex flex-col flex-1 overflow-hidden"
+          >
+            {step === 'carrinho' && (
+              <CartStep
+                carrinho={carrinho}
+                onAddItem={onAddItem}
+                onRemoveItem={onRemoveItem}
+                onDeleteItem={onDeleteItem}
+                onNext={() => setStep('entrega')}
+              />
+            )}
 
-        {step === 'entrega' && (
-          <DeliveryStep
-            dados={entrega}
-            onChange={setEntrega}
-            onNext={() => setStep('pagamento')}
-            onBack={() => setStep('carrinho')}
-          />
-        )}
+            {step === 'entrega' && (
+              <DeliveryStep
+                dados={entrega}
+                onChange={setEntrega}
+                onNext={() => setStep('pagamento')}
+                onBack={() => setStep('carrinho')}
+              />
+            )}
 
-        {step === 'pagamento' && (
-          <PaymentStep
-            dados={pagamento}
-            total={totalCarrinho}
-            onChange={setPagamento}
-            onNext={() => setStep('confirmacao')}
-            onBack={() => setStep('entrega')}
-          />
-        )}
+            {step === 'pagamento' && (
+              <PaymentStep
+                dados={pagamento}
+                total={totalCarrinho}
+                onChange={setPagamento}
+                onNext={() => setStep('confirmacao')}
+                onBack={() => setStep('entrega')}
+              />
+            )}
 
-        {step === 'confirmacao' && (
-          <ConfirmationStep
-            carrinho={carrinho}
-            entrega={entrega}
-            pagamento={pagamento}
-            observacoes={observacoes}
-            onObservacoesChange={setObservacoes}
-            onConfirm={handleConfirm}
-            onBack={() => setStep('pagamento')}
-            enviando={enviando}
-          />
-        )}
+            {step === 'confirmacao' && (
+              <ConfirmationStep
+                carrinho={carrinho}
+                entrega={entrega}
+                pagamento={pagamento}
+                observacoes={observacoes}
+                onObservacoesChange={setObservacoes}
+                onConfirm={handleConfirm}
+                onBack={() => setStep('pagamento')}
+                enviando={enviando}
+              />
+            )}
 
-        {step === 'sucesso' && pedidoCriado && (
-          <OrderSuccessStep
-            pedido={pedidoCriado}
-            onClose={handleClose}
-            trackingUrl={trackingUrl}
-          />
-        )}
+            {step === 'sucesso' && pedidoCriado && (
+              <OrderSuccessStep
+                pedido={pedidoCriado}
+                onClose={handleClose}
+                trackingUrl={trackingUrl}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </SheetContent>
     </Sheet>
   );
