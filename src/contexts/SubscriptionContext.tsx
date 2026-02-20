@@ -76,7 +76,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   // Use a ref to track the last checked token to avoid duplicate calls
   const lastCheckedTokenRef = React.useRef<string | null>(null);
 
-  const checkSubscription = useCallback(async (force = false) => {
+  const checkSubscription = useCallback(async (force = false, silent = false) => {
     // If user isn't available yet, we can't determine access.
     if (!user) {
       setSubscription({
@@ -134,7 +134,10 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       };
     };
 
-    setLoading(true);
+    // Only show loading on initial check, not background refreshes
+    if (!silent) {
+      setLoading(true);
+    }
 
     try {
       lastCheckedTokenRef.current = session.access_token;
@@ -215,7 +218,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (!user || !session?.access_token) return;
 
     const interval = setInterval(() => {
-      checkSubscription(true); // force bypass token cache
+      checkSubscription(true, true); // force bypass token cache, silent (no loading spinner)
     }, 300000); // 5 minutes
 
     return () => clearInterval(interval);
