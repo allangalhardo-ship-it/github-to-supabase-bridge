@@ -50,10 +50,6 @@ const FAQ = lazy(() => import("@/pages/FAQ"));
 const VerificarEmail = lazy(() => import("@/pages/VerificarEmail"));
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const ImportarBackup = lazy(() => import("@/pages/ImportarBackup"));
-const Cardapio = lazy(() => import("@/pages/Cardapio"));
-const CardapioDigital = lazy(() => import("@/pages/CardapioDigital"));
-const AcompanharPedido = lazy(() => import("@/pages/AcompanharPedido"));
-const Pedidos = lazy(() => import("@/pages/Pedidos"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -112,9 +108,7 @@ const AppRoutes = () => {
         {/* Landing page pública */}
         <Route path="/home" element={<LandingPage />} />
         
-        {/* Cardápio público - não requer login */}
-        <Route path="/cardapio/:slug" element={<Cardapio />} />
-        <Route path="/pedido/:pedidoId" element={<AcompanharPedido />} />
+        {/* Cardápio público e pedidos - será reimplementado */}
         
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/cadastro" element={<PublicRoute><Cadastro /></PublicRoute>} />
@@ -149,8 +143,6 @@ const AppRoutes = () => {
           <Route path="custos-fixos" element={<CustosFixos />} />
           <Route path="caixa" element={<Caixa />} />
           <Route path="compras" element={<Compras />} />
-          <Route path="cardapio-digital" element={<CardapioDigital />} />
-          <Route path="pedidos" element={<Pedidos />} />
           <Route path="configuracoes" element={<Configuracoes />} />
           <Route path="xml-import" element={<XmlImport />} />
           <Route path="receitas" element={<Receitas />} />
