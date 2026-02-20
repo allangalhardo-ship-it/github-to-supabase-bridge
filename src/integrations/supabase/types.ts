@@ -835,47 +835,83 @@ export type Database = {
       }
       pedidos: {
         Row: {
+          cancelado_em: string | null
           cliente_id: string | null
+          cliente_nome: string | null
+          cliente_whatsapp: string | null
+          confirmado_em: string | null
           created_at: string
           data_entrega: string | null
           empresa_id: string
           endereco_entrega: string | null
+          entregue_em: string | null
+          forma_pagamento: string
           hora_entrega: string | null
           id: string
           itens: Json
+          motivo_cancelamento: string | null
+          numero_pedido: number
           observacoes: string | null
           origem: string
+          preparando_em: string | null
+          pronto_em: string | null
           status: string
+          tipo_entrega: string
+          troco_para: number | null
           updated_at: string
           valor_total: number
         }
         Insert: {
+          cancelado_em?: string | null
           cliente_id?: string | null
+          cliente_nome?: string | null
+          cliente_whatsapp?: string | null
+          confirmado_em?: string | null
           created_at?: string
           data_entrega?: string | null
           empresa_id: string
           endereco_entrega?: string | null
+          entregue_em?: string | null
+          forma_pagamento?: string
           hora_entrega?: string | null
           id?: string
           itens?: Json
+          motivo_cancelamento?: string | null
+          numero_pedido?: number
           observacoes?: string | null
           origem?: string
+          preparando_em?: string | null
+          pronto_em?: string | null
           status?: string
+          tipo_entrega?: string
+          troco_para?: number | null
           updated_at?: string
           valor_total?: number
         }
         Update: {
+          cancelado_em?: string | null
           cliente_id?: string | null
+          cliente_nome?: string | null
+          cliente_whatsapp?: string | null
+          confirmado_em?: string | null
           created_at?: string
           data_entrega?: string | null
           empresa_id?: string
           endereco_entrega?: string | null
+          entregue_em?: string | null
+          forma_pagamento?: string
           hora_entrega?: string | null
           id?: string
           itens?: Json
+          motivo_cancelamento?: string | null
+          numero_pedido?: number
           observacoes?: string | null
           origem?: string
+          preparando_em?: string | null
+          pronto_em?: string | null
           status?: string
+          tipo_entrega?: string
+          troco_para?: number | null
           updated_at?: string
           valor_total?: number
         }

@@ -52,6 +52,7 @@ const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const ImportarBackup = lazy(() => import("@/pages/ImportarBackup"));
 const Cardapio = lazy(() => import("@/pages/Cardapio"));
 const CardapioDigital = lazy(() => import("@/pages/CardapioDigital"));
+const AcompanharPedido = lazy(() => import("@/pages/AcompanharPedido"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -112,6 +113,7 @@ const AppRoutes = () => {
         
         {/* Cardápio público - não requer login */}
         <Route path="/cardapio/:slug" element={<Cardapio />} />
+        <Route path="/pedido/:pedidoId" element={<AcompanharPedido />} />
         
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/cadastro" element={<PublicRoute><Cadastro /></PublicRoute>} />
