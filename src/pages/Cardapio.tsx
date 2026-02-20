@@ -8,17 +8,16 @@ import {
   Produto,
   Empresa,
   CarrinhoItem,
-  DadosCliente,
   OpcionalSelecionado,
   GrupoOpcional,
   CardapioHeader,
   CategoryTabs,
   ProductCard,
   ProductDetailModal,
-  CartDrawer,
   FloatingCartButton,
   SearchBar,
 } from "@/components/cardapio";
+import { CheckoutDrawer } from "@/components/cardapio/checkout";
 
 // Simulated badges - in production, these would come from the database
 function getBadgeForProduct(_produto: Produto, index: number): 'mais_vendido' | 'favorito' | 'novidade' | null {
@@ -40,19 +39,11 @@ export default function Cardapio() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [carrinho, setCarrinho] = useState<CarrinhoItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [enviando, setEnviando] = useState(false);
   const [carrinhoAberto, setCarrinhoAberto] = useState(false);
   const [produtoDetalhe, setProdutoDetalhe] = useState<Produto | null>(null);
   const [categoriaAtiva, setCategoriaAtiva] = useState<string>("");
   const [busca, setBusca] = useState("");
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
-  
-  const [dadosCliente, setDadosCliente] = useState<DadosCliente>({
-    nome: "",
-    whatsapp: "",
-    endereco: "",
-    observacoes: "",
-  });
 
   useEffect(() => {
     if (slug) {
@@ -255,93 +246,8 @@ export default function Cardapio() {
 
   const quantidadeTotal = carrinho.reduce((total, item) => total + item.quantidade, 0);
 
-  const enviarPedido = async () => {
-    if (!dadosCliente.nome || !dadosCliente.whatsapp) {
-      toast.error("Preencha seu nome e WhatsApp");
-      return;
-    }
-
-    if (carrinho.length === 0) {
-      toast.error("Adicione itens ao carrinho");
-      return;
-    }
-
-    setEnviando(true);
-
-    try {
-      const itensJson = carrinho.map((item) => ({
-        produto_id: item.produto.id,
-        nome: item.produto.nome,
-        quantidade: item.quantidade,
-        preco_unitario: item.produto.preco_venda,
-        observacao: item.observacao,
-        opcionais: item.opcionais.map(op => ({
-          nome: op.item_nome,
-          grupo: op.grupo_nome,
-          preco: op.preco_adicional,
-        })),
-      }));
-
-      const { error: pedidoError } = await supabase.from("pedidos").insert({
-        empresa_id: empresa!.id,
-        itens: itensJson,
-        valor_total: totalCarrinho,
-        origem: "cardapio",
-        status: "pendente",
-        observacoes: `Cliente: ${dadosCliente.nome}\nWhatsApp: ${dadosCliente.whatsapp}\nEndereço: ${dadosCliente.endereco}\n\n${dadosCliente.observacoes}`,
-        endereco_entrega: dadosCliente.endereco,
-      });
-
-      if (pedidoError) throw pedidoError;
-
-      // Build WhatsApp message
-      let mensagem = `🛒 *NOVO PEDIDO*\n\n`;
-      mensagem += `👤 *Cliente:* ${dadosCliente.nome}\n`;
-      mensagem += `📱 *WhatsApp:* ${dadosCliente.whatsapp}\n`;
-      if (dadosCliente.endereco) {
-        mensagem += `📍 *Endereço:* ${dadosCliente.endereco}\n`;
-      }
-      mensagem += `\n📋 *ITENS:*\n`;
-
-      carrinho.forEach((item) => {
-        const totalOpcionais = item.opcionais.reduce((sum, op) => sum + op.preco_adicional, 0);
-        const precoItem = (item.produto.preco_venda + totalOpcionais) * item.quantidade;
-        mensagem += `\n• ${item.quantidade}x ${item.produto.nome} - ${formatCurrencyBRL(precoItem)}`;
-        
-        if (item.opcionais.length > 0) {
-          item.opcionais.forEach(op => {
-            mensagem += `\n  ✓ ${op.item_nome}`;
-            if (op.preco_adicional > 0) mensagem += ` (+${formatCurrencyBRL(op.preco_adicional)})`;
-          });
-        }
-        
-        if (item.observacao) {
-          mensagem += `\n  _Obs: ${item.observacao}_`;
-        }
-      });
-
-      mensagem += `\n\n💰 *TOTAL: ${formatCurrencyBRL(totalCarrinho)}*`;
-
-      if (dadosCliente.observacoes) {
-        mensagem += `\n\n📝 *Observações:* ${dadosCliente.observacoes}`;
-      }
-
-      if (empresa?.whatsapp_dono) {
-        const numeroLimpo = empresa.whatsapp_dono.replace(/\D/g, "");
-        const urlWhatsApp = `https://wa.me/55${numeroLimpo}?text=${encodeURIComponent(mensagem)}`;
-        window.open(urlWhatsApp, "_blank");
-      }
-
-      toast.success("Pedido enviado com sucesso!");
-      setCarrinho([]);
-      setDadosCliente({ nome: "", whatsapp: "", endereco: "", observacoes: "" });
-      setCarrinhoAberto(false);
-    } catch (error) {
-      console.error("Erro ao enviar pedido:", error);
-      toast.error("Erro ao enviar pedido");
-    } finally {
-      setEnviando(false);
-    }
+  const handlePedidoEnviado = () => {
+    setCarrinho([]);
   };
 
   if (loading) {
@@ -467,18 +373,18 @@ export default function Cardapio() {
         onClick={() => setCarrinhoAberto(true)}
       />
 
-      <CartDrawer
-        open={carrinhoAberto}
-        onOpenChange={setCarrinhoAberto}
-        carrinho={carrinho}
-        dadosCliente={dadosCliente}
-        onDadosClienteChange={setDadosCliente}
-        onAddItem={adicionarUm}
-        onRemoveItem={removerUm}
-        onDeleteItem={removerItem}
-        onEnviarPedido={enviarPedido}
-        enviando={enviando}
-      />
+      {empresa && (
+        <CheckoutDrawer
+          open={carrinhoAberto}
+          onOpenChange={setCarrinhoAberto}
+          carrinho={carrinho}
+          empresa={empresa}
+          onAddItem={adicionarUm}
+          onRemoveItem={removerUm}
+          onDeleteItem={removerItem}
+          onPedidoEnviado={handlePedidoEnviado}
+        />
+      )}
     </div>
   );
 }
