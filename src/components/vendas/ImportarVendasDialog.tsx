@@ -522,7 +522,9 @@ const ImportarVendasDialog: React.FC = () => {
     },
     onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ['vendas'] });
+      queryClient.invalidateQueries({ queryKey: ['caixa-movimentos'] });
       toast({ title: `${count} vendas importadas com sucesso!` });
+      setOpen(false);
       setOpen(false);
       resetState();
     },
