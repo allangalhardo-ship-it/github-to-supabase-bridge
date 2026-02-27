@@ -453,6 +453,9 @@ const ImportarVendasDialog: React.FC = () => {
         const selectedItems = result.itens.filter(i => i.selected && i.produto_id);
         if (selectedItems.length === 0) continue;
 
+        // Calculate comissão do canal
+        const comissao = getComissao(result);
+        
         // Calculate valor_liquido for this order
         const valorLiquido = result.subtotal - result.incentivos_loja;
 
@@ -473,6 +476,7 @@ const ImportarVendasDialog: React.FC = () => {
           taxa_servico: result.taxa_servico,
           incentivo_plataforma: result.incentivos_plataforma,
           incentivo_loja: result.incentivos_loja,
+          comissao_plataforma: comissao,
           valor_liquido: valorLiquido > 0 ? valorLiquido : result.total_geral,
           plataforma: result.plataforma || null,
         }));
@@ -519,6 +523,19 @@ const ImportarVendasDialog: React.FC = () => {
             categoria: 'Descontos/Promoções',
             descricao: `${plat}${result.numero_pedido ? ` #${result.numero_pedido}` : ''} - Incentivo da loja`,
             valor: result.incentivos_loja,
+            data_movimento: result.data,
+            origem: 'importacao_foto',
+          });
+        }
+
+        // Exit: comissão do canal
+        if (comissao > 0) {
+          caixaMovimentos.push({
+            empresa_id: usuario.empresa_id,
+            tipo: 'saida',
+            categoria: 'Comissão App',
+            descricao: `${plat}${result.numero_pedido ? ` #${result.numero_pedido}` : ''} - Comissão do canal`,
+            valor: comissao,
             data_movimento: result.data,
             origem: 'importacao_foto',
           });
