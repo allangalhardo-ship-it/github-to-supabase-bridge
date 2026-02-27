@@ -874,7 +874,21 @@ const ImportarVendasDialog: React.FC = () => {
                         <div>
                           <p className="text-sm font-medium">
                             {currentResult.itens.length} itens • 
-                            <span className="text-muted-foreground ml-1">{currentResult.itens.filter(i => i.selected && i.produto_id).length} vinculados</span>
+                            <span className="text-muted-foreground ml-1">
+                              {currentResult.itens.filter(i => i.selected && i.produto_id).length} vinculados
+                              {(() => {
+                                const saved = currentResult.itens.filter(i => i.matchType === 'saved').length;
+                                const auto = currentResult.itens.filter(i => i.matchType === 'auto').length;
+                                const manual = currentResult.itens.filter(i => i.matchType === 'manual').length;
+                                const none = currentResult.itens.filter(i => !i.produto_id || i.matchType === 'none').length;
+                                const parts = [];
+                                if (saved > 0) parts.push(`${saved} 🔗`);
+                                if (auto > 0) parts.push(`${auto} ✨`);
+                                if (manual > 0) parts.push(`${manual} ✋`);
+                                if (none > 0) parts.push(`${none} sem vínculo`);
+                                return parts.length > 0 ? ` (${parts.join(', ')})` : '';
+                              })()}
+                            </span>
                           </p>
                         </div>
                       </div>
