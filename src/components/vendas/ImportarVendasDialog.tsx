@@ -52,6 +52,8 @@ interface PhotoImportData {
   incentivos_loja: number;
   total_geral: number;
   itens: ParsedItem[];
+  isDuplicate?: boolean;
+  duplicateReason?: string;
 }
 
 interface ColumnMapping {
