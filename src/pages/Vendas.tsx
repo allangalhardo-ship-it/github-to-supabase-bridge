@@ -142,7 +142,11 @@ const Vendas = () => {
     const totalValor = vendasFiltradas.reduce((acc, v) => acc + Number(v.valor_total), 0);
     const totalQuantidade = vendasFiltradas.reduce((acc, v) => acc + Number(v.quantidade), 0);
     const totalVendas = vendasFiltradas.length;
-    return { totalValor, totalQuantidade, totalVendas };
+    const totalTaxaServico = vendasFiltradas.reduce((acc, v) => acc + Number(v.taxa_servico || 0), 0);
+    const totalIncentivoLoja = vendasFiltradas.reduce((acc, v) => acc + Number(v.incentivo_loja || 0), 0);
+    const totalIncentivoPlataforma = vendasFiltradas.reduce((acc, v) => acc + Number(v.incentivo_plataforma || 0), 0);
+    const totalLiquido = vendasFiltradas.reduce((acc, v) => acc + Number(v.valor_liquido || v.valor_total || 0), 0);
+    return { totalValor, totalQuantidade, totalVendas, totalTaxaServico, totalIncentivoLoja, totalIncentivoPlataforma, totalLiquido };
   }, [vendasFiltradas]);
 
   // Extrair canais únicos para o filtro
