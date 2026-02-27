@@ -717,6 +717,18 @@ const Vendas = () => {
                   ),
                 },
                 {
+                  key: 'liquido',
+                  header: 'Líquido',
+                  align: 'right',
+                  mobilePriority: 7,
+                  hideOnMobile: true,
+                  render: (venda) => {
+                    const liquido = Number(venda.valor_liquido || 0);
+                    if (liquido <= 0 || liquido === Number(venda.valor_total)) return <span className="text-xs text-muted-foreground">-</span>;
+                    return <span className="font-medium whitespace-nowrap text-xs text-green-600">{formatCurrency(liquido)}</span>;
+                  },
+                },
+                {
                   key: 'canal',
                   header: 'Canal',
                   mobilePriority: 5,
