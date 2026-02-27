@@ -1087,14 +1087,12 @@ const ImportarVendasDialog: React.FC = () => {
                                       {formatCurrency(item.valor_total)}
                                     </span>
                                   </div>
-                                  <Select value={item.produto_id || "__none__"} onValueChange={(v) => handleLinkProduct(currentResultIndex, idx, v)} disabled={!item.selected}>
-                                    <SelectTrigger className="w-full h-8 text-xs">
-                                      <SelectValue placeholder="Vincular ao produto..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="__none__">Não vincular</SelectItem>
-                                      {produtos?.map(p => (<SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>))}
-                                    </SelectContent>
+                                  <ProductSearchSelect
+                                    produtos={produtos || []}
+                                    value={item.produto_id || ''}
+                                    onChange={(v) => handleLinkProduct(currentResultIndex, idx, v)}
+                                    disabled={!item.selected}
+                                  />
                                   </Select>
                                 </div>
                               </div>
