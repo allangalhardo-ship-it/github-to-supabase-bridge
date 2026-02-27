@@ -600,8 +600,10 @@ const ImportarVendasDialog: React.FC = () => {
 
   // Current photo result for display
   const currentResult = allPhotoResults[currentResultIndex];
-  const totalPhotoItemsToImport = allPhotoResults.reduce((sum, r) => sum + r.itens.filter(i => i.selected && i.produto_id).length, 0);
-  const totalPhotoValue = allPhotoResults.reduce((sum, r) => sum + r.itens.filter(i => i.selected && i.produto_id).reduce((s, i) => s + i.valor_total, 0), 0);
+  const nonDuplicateResults = allPhotoResults.filter(r => !r.isDuplicate);
+  const duplicateCount = allPhotoResults.filter(r => r.isDuplicate).length;
+  const totalPhotoItemsToImport = nonDuplicateResults.reduce((sum, r) => sum + r.itens.filter(i => i.selected && i.produto_id).length, 0);
+  const totalPhotoValue = nonDuplicateResults.reduce((sum, r) => sum + r.itens.filter(i => i.selected && i.produto_id).reduce((s, i) => s + i.valor_total, 0), 0);
 
   // Financial breakdown component
   const FinancialBreakdown = ({ data }: { data: PhotoImportData }) => {
