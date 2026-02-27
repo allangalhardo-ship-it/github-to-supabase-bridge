@@ -816,13 +816,25 @@ const ImportarVendasDialog: React.FC = () => {
                       </div>
                     )}
 
+                    {/* Duplicate warning */}
+                    {currentResult.isDuplicate && (
+                      <div className="flex items-center gap-2 p-3 border border-destructive/50 bg-destructive/10 rounded-lg">
+                        <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-destructive">Possível duplicata</p>
+                          <p className="text-xs text-muted-foreground">{currentResult.duplicateReason}</p>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Header info */}
-                    <div className="flex flex-col gap-2 p-2 sm:p-3 bg-muted/50 rounded-lg">
+                    <div className={`flex flex-col gap-2 p-2 sm:p-3 rounded-lg ${currentResult.isDuplicate ? 'bg-destructive/5 border border-destructive/20' : 'bg-muted/50'}`}>
                       <div className="flex items-center justify-between flex-wrap gap-2">
                         <div className="flex items-center gap-1.5">
                           <Badge variant="outline" className="text-xs">{currentResult.tipo === 'comanda' ? 'Comanda' : 'Relatório'}</Badge>
                           {currentResult.plataforma && <Badge variant="secondary" className="text-xs">{currentResult.plataforma}</Badge>}
                           {currentResult.numero_pedido && <Badge className="text-xs">{currentResult.numero_pedido}</Badge>}
+                          {currentResult.isDuplicate && <Badge variant="destructive" className="text-xs">⚠️ Duplicata</Badge>}
                         </div>
                         <p className="text-xs text-muted-foreground">
                           {currentResult.data}{currentResult.cliente && ` • ${currentResult.cliente}`}
