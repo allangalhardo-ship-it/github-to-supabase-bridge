@@ -1108,14 +1108,15 @@ const ImportarVendasDialog: React.FC = () => {
                         <span className="font-medium">Total: </span>
                         <span className="text-base sm:text-lg font-bold text-primary">{formatCurrency(totalPhotoValue)}</span>
                         <span className="text-muted-foreground text-xs ml-1">
-                          ({totalPhotoItemsToImport} vendas de {nonDuplicateResults.length} pedido(s))
+                          ({totalPhotoItemsLinked} de {totalPhotoItemsTotal} itens vinculados — {nonDuplicateResults.length} pedido(s))
+                          {totalPhotoItemsUnlinked > 0 && <span className="text-destructive"> • {totalPhotoItemsUnlinked} item(ns) sem vínculo</span>}
                           {photoDuplicateCount > 0 && <span className="text-destructive"> • {photoDuplicateCount} duplicata(s) ignorada(s)</span>}
                         </span>
                       </div>
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={() => { setPhotoStep('upload'); setAllPhotoResults([]); setMultiImages([]); }}>Voltar</Button>
-                        <Button size="sm" className="flex-1 sm:flex-none" onClick={() => importPhotoItemsMutation.mutate()} disabled={importPhotoItemsMutation.isPending || totalPhotoItemsToImport === 0}>
-                          {importPhotoItemsMutation.isPending ? 'Importando...' : `Importar ${totalPhotoItemsToImport} vendas`}
+                        <Button size="sm" className="flex-1 sm:flex-none" onClick={() => importPhotoItemsMutation.mutate()} disabled={importPhotoItemsMutation.isPending || totalPhotoItemsLinked === 0 || totalPhotoItemsUnlinked > 0}>
+                          {importPhotoItemsMutation.isPending ? 'Importando...' : totalPhotoItemsUnlinked > 0 ? `Vincule ${totalPhotoItemsUnlinked} item(ns)` : `Importar ${totalPhotoItemsLinked} vendas`}
                         </Button>
                       </div>
                     </div>
