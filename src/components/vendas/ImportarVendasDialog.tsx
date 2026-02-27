@@ -906,7 +906,10 @@ const ImportarVendasDialog: React.FC = () => {
                       <div className="text-sm">
                         <span className="font-medium">Total: </span>
                         <span className="text-base sm:text-lg font-bold text-primary">{formatCurrency(totalPhotoValue)}</span>
-                        <span className="text-muted-foreground text-xs ml-1">({totalPhotoItemsToImport} vendas de {allPhotoResults.length} pedido(s))</span>
+                        <span className="text-muted-foreground text-xs ml-1">
+                          ({totalPhotoItemsToImport} vendas de {nonDuplicateResults.length} pedido(s))
+                          {photoDuplicateCount > 0 && <span className="text-destructive"> • {photoDuplicateCount} duplicata(s) ignorada(s)</span>}
+                        </span>
                       </div>
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={() => { setPhotoStep('upload'); setAllPhotoResults([]); setMultiImages([]); }}>Voltar</Button>
