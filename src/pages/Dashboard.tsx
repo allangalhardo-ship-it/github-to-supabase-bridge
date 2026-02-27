@@ -139,7 +139,7 @@ const Dashboard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('vendas')
-        .select('taxa_servico, incentivo_loja, incentivo_plataforma, valor_liquido, plataforma, subtotal, valor_total')
+        .select('taxa_servico, incentivo_loja, incentivo_plataforma, comissao_plataforma, valor_liquido, plataforma, subtotal, valor_total, canal')
         .gte('data_venda', inicio)
         .lte('data_venda', fim);
       if (error) throw error;
