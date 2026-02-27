@@ -139,7 +139,7 @@ const Dashboard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('vendas')
-        .select('taxa_servico, incentivo_loja, incentivo_plataforma, valor_liquido, plataforma, subtotal, valor_total')
+        .select('taxa_servico, incentivo_loja, incentivo_plataforma, comissao_plataforma, valor_liquido, plataforma, subtotal, valor_total, canal')
         .gte('data_venda', inicio)
         .lte('data_venda', fim);
       if (error) throw error;
@@ -470,22 +470,46 @@ const Dashboard = () => {
   // Buscar canais configurados com taxas agregadas
   const { canaisConfigurados } = usePrecosCanais();
 
-  // Taxa total aplicada por canal (usando nova estrutura de canais)
-  const taxaAppTotal = vendas?.reduce((total, venda) => {
-    if (!venda.canal) return total;
-    const canalVenda = venda.canal.toLowerCase();
-    
-    // Buscar canal correspondente na nova estrutura
-    const canalConfig = canaisConfigurados?.find(c => 
-      c.nome.toLowerCase() === canalVenda ||
-      c.id === venda.canal
-    );
-    
-    if (canalConfig && canalConfig.taxa > 0) {
-      return total + (Number(venda.valor_total) * canalConfig.taxa / 100);
+  // Taxa total: usar dados reais (comissao_plataforma + taxa_servico + incentivo_loja) quando disponíveis,
+  // senão fallback para estimativa por canal configurado
+  const { taxaAppTotal, taxasReaisTotal } = useMemo(() => {
+    // Somar taxas reais das vendas que têm dados financeiros importados
+    let reaisTotal = 0;
+    let estimadaTotal = 0;
+    const vendasComDadosReais = new Set<string>();
+
+    // Primeiro: coletar dados reais do vendasFinanceiro
+    if (vendasFinanceiro) {
+      vendasFinanceiro.forEach((vf) => {
+        const comissao = Number(vf.comissao_plataforma || 0);
+        const taxaServ = Number(vf.taxa_servico || 0);
+        const incLoja = Number(vf.incentivo_loja || 0);
+        const totalDeducoes = comissao + taxaServ + incLoja;
+        if (totalDeducoes > 0) {
+          reaisTotal += totalDeducoes;
+        }
+      });
     }
-    return total;
-  }, 0) || 0;
+
+    // Se temos dados reais, usar eles; senão fallback para estimativa
+    if (reaisTotal > 0) {
+      return { taxaAppTotal: reaisTotal, taxasReaisTotal: reaisTotal };
+    }
+
+    // Fallback: estimar usando canais configurados
+    vendas?.forEach((venda) => {
+      if (!venda.canal) return;
+      const canalVenda = venda.canal.toLowerCase();
+      const canalConfig = canaisConfigurados?.find(c => 
+        c.nome.toLowerCase() === canalVenda || c.id === venda.canal
+      );
+      if (canalConfig && canalConfig.taxa > 0) {
+        estimadaTotal += (Number(venda.valor_total) * canalConfig.taxa / 100);
+      }
+    });
+
+    return { taxaAppTotal: estimadaTotal, taxasReaisTotal: 0 };
+  }, [vendas, vendasFinanceiro, canaisConfigurados]);
   
   const lucroEstimado = margemContribuicao - custoFixoTotal - impostos - taxaAppTotal;
 
