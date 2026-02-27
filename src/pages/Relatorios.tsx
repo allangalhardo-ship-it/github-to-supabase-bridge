@@ -6,7 +6,8 @@ import {
   MargensRelatorio,
   FluxoCaixa,
   PosicaoEstoque,
-  PerdasDesperdicio
+  PerdasDesperdicio,
+  AnalisePlataformas
 } from '@/components/relatorios';
 import { 
   FileText, 
@@ -14,10 +15,11 @@ import {
   ShoppingCart, 
   Package, 
   Wallet, 
-  AlertTriangle
+  AlertTriangle,
+  Store
 } from 'lucide-react';
 
-type ReportView = 'hub' | 'dre' | 'vendas' | 'margens' | 'estoque' | 'fluxo' | 'perdas';
+type ReportView = 'hub' | 'dre' | 'vendas' | 'margens' | 'estoque' | 'fluxo' | 'perdas' | 'plataformas';
 
 const Relatorios = () => {
   const [currentView, setCurrentView] = useState<ReportView>('hub');
