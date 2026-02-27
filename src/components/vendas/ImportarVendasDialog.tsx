@@ -736,17 +736,30 @@ const ImportarVendasDialog: React.FC = () => {
               <span>{formatCurrency(data.taxa_servico)}</span>
             </div>
           )}
-          {comissao > 0 && (
+          {canalMatch && comissao > 0 && (
             <div className="flex justify-between text-destructive">
               <span className="flex items-center gap-1">
                 <TrendingDown className="h-3 w-3" />
-                Comissão {canalMatch?.nome || data.plataforma} ({canalMatch?.taxaTotal?.toFixed(1)}%)
+                Comissão {canalMatch.nome} ({canalMatch.taxaTotal?.toFixed(1)}%)
                 <Tooltip>
                   <TooltipTrigger><Info className="h-3 w-3" /></TooltipTrigger>
                   <TooltipContent><p>Taxa configurada do canal.<br/>Não aparece no print mas é cobrada.</p></TooltipContent>
                 </Tooltip>
               </span>
               <span className="font-medium">-{formatCurrency(comissao)}</span>
+            </div>
+          )}
+          {canalMatch && comissao === 0 && (
+            <div className="flex justify-between text-amber-600">
+              <span className="flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                Comissão {canalMatch.nome} (0%)
+                <Tooltip>
+                  <TooltipTrigger><Info className="h-3 w-3" /></TooltipTrigger>
+                  <TooltipContent><p>Canal encontrado mas sem taxas configuradas.<br/>Configure em Configurações → Canais de Venda.</p></TooltipContent>
+                </Tooltip>
+              </span>
+              <span>R$ 0,00</span>
             </div>
           )}
           {!canalMatch && (data.plataforma || canalOverride) && (
@@ -756,7 +769,7 @@ const ImportarVendasDialog: React.FC = () => {
                 Comissão não calculada
                 <Tooltip>
                   <TooltipTrigger><Info className="h-3 w-3" /></TooltipTrigger>
-                  <TooltipContent><p>Canal "{canalOverride || data.plataforma}" não encontrado nas configurações.<br/>Configure em Configurações → Canais de Venda.</p></TooltipContent>
+                  <TooltipContent><p>Canal "{canalOverride || data.plataforma}" não encontrado.<br/>Configure em Configurações → Canais de Venda.</p></TooltipContent>
                 </Tooltip>
               </span>
               <span>—</span>
