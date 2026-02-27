@@ -692,6 +692,8 @@ const ImportarVendasDialog: React.FC = () => {
 
   // Financial breakdown component
   const FinancialBreakdown = ({ data }: { data: PhotoImportData }) => {
+    const comissao = getComissao(data);
+    const canalMatch = findCanalByPlataforma(canalOverride || data.plataforma || '');
     const valorLiquido = data.subtotal - data.incentivos_loja;
     return (
       <div className="bg-muted/50 rounded-lg p-3 space-y-2 text-sm">
@@ -715,6 +717,32 @@ const ImportarVendasDialog: React.FC = () => {
             <div className="flex justify-between text-muted-foreground">
               <span>Taxa de serviço</span>
               <span>{formatCurrency(data.taxa_servico)}</span>
+            </div>
+          )}
+          {comissao > 0 && (
+            <div className="flex justify-between text-destructive">
+              <span className="flex items-center gap-1">
+                <TrendingDown className="h-3 w-3" />
+                Comissão {canalMatch?.nome || data.plataforma} ({canalMatch?.taxaTotal?.toFixed(1)}%)
+                <Tooltip>
+                  <TooltipTrigger><Info className="h-3 w-3" /></TooltipTrigger>
+                  <TooltipContent><p>Taxa configurada do canal.<br/>Não aparece no print mas é cobrada.</p></TooltipContent>
+                </Tooltip>
+              </span>
+              <span className="font-medium">-{formatCurrency(comissao)}</span>
+            </div>
+          )}
+          {!canalMatch && (data.plataforma || canalOverride) && (
+            <div className="flex justify-between text-amber-600">
+              <span className="flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                Comissão não calculada
+                <Tooltip>
+                  <TooltipTrigger><Info className="h-3 w-3" /></TooltipTrigger>
+                  <TooltipContent><p>Canal "{canalOverride || data.plataforma}" não encontrado nas configurações.<br/>Configure em Configurações → Canais de Venda.</p></TooltipContent>
+                </Tooltip>
+              </span>
+              <span>—</span>
             </div>
           )}
           {data.incentivos_plataforma > 0 && (
