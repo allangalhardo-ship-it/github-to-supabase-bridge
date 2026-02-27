@@ -767,6 +767,12 @@ const Vendas = () => {
               renderMobileHighlight={(venda) => (
                 <div className="text-right whitespace-nowrap shrink-0">
                   <p className="font-bold text-foreground text-sm">{formatCurrency(Number(venda.valor_total))}</p>
+                  {Number(venda.valor_liquido || 0) > 0 && Number(venda.valor_liquido) !== Number(venda.valor_total) && (
+                    <p className="text-[10px] text-green-600">Líq: {formatCurrency(Number(venda.valor_liquido))}</p>
+                  )}
+                  {Number(venda.taxa_servico || 0) > 0 && (
+                    <p className="text-[10px] text-destructive">Taxa: {formatCurrency(Number(venda.taxa_servico))}</p>
+                  )}
                   <p className="text-[10px] text-muted-foreground">Qtd: {Number(venda.quantidade)}</p>
                 </div>
               )}
