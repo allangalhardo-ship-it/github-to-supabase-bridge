@@ -37,6 +37,7 @@ interface ParsedItem {
   valor_total: number;
   produto_id?: string;
   selected: boolean;
+  matchType?: 'saved' | 'auto' | 'manual' | 'none';
 }
 
 interface PhotoImportData {
