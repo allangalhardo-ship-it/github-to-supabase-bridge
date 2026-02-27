@@ -379,7 +379,7 @@ const ImportarVendasDialog: React.FC = () => {
       ri === resultIdx ? {
         ...result,
         itens: result.itens.map((item, ii) => 
-          ii === itemIdx ? { ...item, produto_id: produtoId === '__none__' ? undefined : produtoId } : item
+          ii === itemIdx ? { ...item, produto_id: produtoId === '__none__' ? undefined : produtoId, matchType: produtoId === '__none__' ? 'none' as const : 'manual' as const } : item
         )
       } : result
     ));
