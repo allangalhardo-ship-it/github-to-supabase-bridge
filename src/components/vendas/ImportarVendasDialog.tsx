@@ -37,6 +37,7 @@ interface ParsedItem {
   valor_total: number;
   produto_id?: string;
   selected: boolean;
+  matchType?: 'saved' | 'auto' | 'manual' | 'none';
 }
 
 interface PhotoImportData {
@@ -179,14 +180,14 @@ const ImportarVendasDialog: React.FC = () => {
     return matchingWords / Math.max(words1.filter(w => w.length >= 3).length, 1);
   };
 
-  const findBestMatchingProduct = (itemName: string, plataforma?: string): string | undefined => {
+  const findBestMatchingProduct = (itemName: string, plataforma?: string): { id: string; matchType: 'saved' | 'auto' } | undefined => {
     // First check saved mappings
     if (mapeamentos && mapeamentos.length > 0) {
       const saved = mapeamentos.find((m: any) => 
         m.nome_externo?.toLowerCase().trim() === itemName.toLowerCase().trim() &&
         (!plataforma || !m.plataforma || m.plataforma === plataforma)
       );
-      if (saved) return (saved as any).produto_id;
+      if (saved) return { id: (saved as any).produto_id, matchType: 'saved' };
     }
     
     // Then try similarity matching
@@ -198,7 +199,8 @@ const ImportarVendasDialog: React.FC = () => {
         bestMatch = { id: produto.id, score };
       }
     }
-    return bestMatch?.id;
+    if (bestMatch) return { id: bestMatch.id, matchType: 'auto' };
+    return undefined;
   };
 
   // Multi-image handling
@@ -300,14 +302,18 @@ const ImportarVendasDialog: React.FC = () => {
 
         if (data.success && data.data?.itens?.length > 0) {
           const plataforma = data.data.plataforma || '';
-          const itens: ParsedItem[] = data.data.itens.map((item: any) => ({
-            produto: item.produto || '',
-            quantidade: item.quantidade || 1,
-            valor_unitario: item.valor_unitario || 0,
-            valor_total: item.valor_total || 0,
-            produto_id: findBestMatchingProduct(item.produto || '', plataforma),
-            selected: true,
-          }));
+          const itens: ParsedItem[] = data.data.itens.map((item: any) => {
+            const match = findBestMatchingProduct(item.produto || '', plataforma);
+            return {
+              produto: item.produto || '',
+              quantidade: item.quantidade || 1,
+              valor_unitario: item.valor_unitario || 0,
+              valor_total: item.valor_total || 0,
+              produto_id: match?.id,
+              selected: true,
+              matchType: match ? match.matchType : 'none' as const,
+            };
+          });
 
           const result: PhotoImportData = {
             tipo: data.data.tipo || 'comanda',
@@ -373,7 +379,7 @@ const ImportarVendasDialog: React.FC = () => {
       ri === resultIdx ? {
         ...result,
         itens: result.itens.map((item, ii) => 
-          ii === itemIdx ? { ...item, produto_id: produtoId === '__none__' ? undefined : produtoId } : item
+          ii === itemIdx ? { ...item, produto_id: produtoId === '__none__' ? undefined : produtoId, matchType: produtoId === '__none__' ? 'none' as const : 'manual' as const } : item
         )
       } : result
     ));
@@ -868,7 +874,21 @@ const ImportarVendasDialog: React.FC = () => {
                         <div>
                           <p className="text-sm font-medium">
                             {currentResult.itens.length} itens • 
-                            <span className="text-muted-foreground ml-1">{currentResult.itens.filter(i => i.selected && i.produto_id).length} vinculados</span>
+                            <span className="text-muted-foreground ml-1">
+                              {currentResult.itens.filter(i => i.selected && i.produto_id).length} vinculados
+                              {(() => {
+                                const saved = currentResult.itens.filter(i => i.matchType === 'saved').length;
+                                const auto = currentResult.itens.filter(i => i.matchType === 'auto').length;
+                                const manual = currentResult.itens.filter(i => i.matchType === 'manual').length;
+                                const none = currentResult.itens.filter(i => !i.produto_id || i.matchType === 'none').length;
+                                const parts = [];
+                                if (saved > 0) parts.push(`${saved} 🔗`);
+                                if (auto > 0) parts.push(`${auto} ✨`);
+                                if (manual > 0) parts.push(`${manual} ✋`);
+                                if (none > 0) parts.push(`${none} sem vínculo`);
+                                return parts.length > 0 ? ` (${parts.join(', ')})` : '';
+                              })()}
+                            </span>
                           </p>
                         </div>
                       </div>
@@ -880,7 +900,24 @@ const ImportarVendasDialog: React.FC = () => {
                                 <Checkbox checked={item.selected} onCheckedChange={() => handleToggleItem(currentResultIndex, idx)} className="mt-0.5" />
                                 <div className="flex-1 min-w-0 space-y-1.5">
                                   <div className="flex items-center justify-between gap-2">
-                                    <span className="font-medium text-sm truncate">{item.produto}</span>
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                      <span className="font-medium text-sm truncate">{item.produto}</span>
+                                      {item.matchType === 'saved' && (
+                                        <span className="shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-primary/15 text-primary border border-primary/20" title="Vinculado por mapeamento salvo anteriormente">
+                                          🔗 Salvo
+                                        </span>
+                                      )}
+                                      {item.matchType === 'auto' && (
+                                        <span className="shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-accent text-accent-foreground border" title="Vinculado automaticamente por similaridade de nome">
+                                          ✨ Auto
+                                        </span>
+                                      )}
+                                      {item.matchType === 'manual' && (
+                                        <span className="shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-secondary text-secondary-foreground border" title="Vinculado manualmente por você">
+                                          ✋ Manual
+                                        </span>
+                                      )}
+                                    </div>
                                     <span className="text-sm font-medium shrink-0">
                                       {item.quantidade > 1 && <span className="text-muted-foreground mr-1">{item.quantidade}×</span>}
                                       {formatCurrency(item.valor_total)}
