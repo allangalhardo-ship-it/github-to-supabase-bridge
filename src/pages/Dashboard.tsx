@@ -132,6 +132,22 @@ const Dashboard = () => {
     gcTime: 10 * 60 * 1000,
   });
 
+  // Fetch vendas com dados financeiros de plataformas
+  const { data: vendasFinanceiro } = useQuery({
+    queryKey: ['vendas-financeiro-dashboard', usuario?.empresa_id, inicio, fim],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('vendas')
+        .select('taxa_servico, incentivo_loja, incentivo_plataforma, valor_liquido, plataforma, subtotal, valor_total')
+        .gte('data_venda', inicio)
+        .lte('data_venda', fim);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!usuario?.empresa_id,
+    staleTime: 2 * 60 * 1000,
+  });
+
   // Fetch vendas do período anterior para comparativo
   const { data: vendasAnterior } = useQuery({
     queryKey: ['vendas-anterior', usuario?.empresa_id, inicioAnterior, fimAnterior],
