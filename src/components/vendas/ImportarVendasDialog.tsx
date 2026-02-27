@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -81,6 +83,57 @@ const KNOWN_MAPPINGS: Record<string, Partial<ColumnMapping>> = {
 };
 
 const STATUS_CONCLUIDO = ['concluído', 'concluido', 'completed', 'entregue', 'finalizado', 'delivered'];
+
+// Searchable product select component
+const ProductSearchSelect = ({ produtos, value, onChange, disabled }: {
+  produtos: { id: string; nome: string }[];
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+}) => {
+  const [open, setOpen] = useState(false);
+  const selectedProduct = produtos.find(p => p.id === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full h-8 text-xs justify-between font-normal"
+          disabled={disabled}
+        >
+          <span className="truncate">
+            {selectedProduct ? selectedProduct.nome : 'Não vincular'}
+          </span>
+          <X
+            className={`ml-1 h-3 w-3 shrink-0 opacity-50 ${!selectedProduct ? 'hidden' : ''}`}
+            onClick={(e) => { e.stopPropagation(); onChange('__none__'); }}
+          />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[300px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Buscar produto..." className="h-8 text-xs" />
+          <CommandList>
+            <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
+            <CommandGroup>
+              <CommandItem value="__none__" onSelect={() => { onChange('__none__'); setOpen(false); }}>
+                Não vincular
+              </CommandItem>
+              {produtos.map(p => (
+                <CommandItem key={p.id} value={p.nome} onSelect={() => { onChange(p.id); setOpen(false); }}>
+                  <span className={value === p.id ? 'font-semibold' : ''}>{p.nome}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+};
 
 const ImportarVendasDialog: React.FC = () => {
   const { usuario } = useAuth();
@@ -1085,15 +1138,12 @@ const ImportarVendasDialog: React.FC = () => {
                                       {formatCurrency(item.valor_total)}
                                     </span>
                                   </div>
-                                  <Select value={item.produto_id || "__none__"} onValueChange={(v) => handleLinkProduct(currentResultIndex, idx, v)} disabled={!item.selected}>
-                                    <SelectTrigger className="w-full h-8 text-xs">
-                                      <SelectValue placeholder="Vincular ao produto..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="__none__">Não vincular</SelectItem>
-                                      {produtos?.map(p => (<SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>))}
-                                    </SelectContent>
-                                  </Select>
+                                  <ProductSearchSelect
+                                    produtos={produtos || []}
+                                    value={item.produto_id || ''}
+                                    onChange={(v) => handleLinkProduct(currentResultIndex, idx, v)}
+                                    disabled={!item.selected}
+                                  />
                                 </div>
                               </div>
                             </div>
