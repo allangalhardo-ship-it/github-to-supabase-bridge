@@ -142,7 +142,11 @@ const Vendas = () => {
     const totalValor = vendasFiltradas.reduce((acc, v) => acc + Number(v.valor_total), 0);
     const totalQuantidade = vendasFiltradas.reduce((acc, v) => acc + Number(v.quantidade), 0);
     const totalVendas = vendasFiltradas.length;
-    return { totalValor, totalQuantidade, totalVendas };
+    const totalTaxaServico = vendasFiltradas.reduce((acc, v) => acc + Number(v.taxa_servico || 0), 0);
+    const totalIncentivoLoja = vendasFiltradas.reduce((acc, v) => acc + Number(v.incentivo_loja || 0), 0);
+    const totalIncentivoPlataforma = vendasFiltradas.reduce((acc, v) => acc + Number(v.incentivo_plataforma || 0), 0);
+    const totalLiquido = vendasFiltradas.reduce((acc, v) => acc + Number(v.valor_liquido || v.valor_total || 0), 0);
+    return { totalValor, totalQuantidade, totalVendas, totalTaxaServico, totalIncentivoLoja, totalIncentivoPlataforma, totalLiquido };
   }, [vendasFiltradas]);
 
   // Extrair canais únicos para o filtro
@@ -713,6 +717,18 @@ const Vendas = () => {
                   ),
                 },
                 {
+                  key: 'liquido',
+                  header: 'Líquido',
+                  align: 'right',
+                  mobilePriority: 7,
+                  hideOnMobile: true,
+                  render: (venda) => {
+                    const liquido = Number(venda.valor_liquido || 0);
+                    if (liquido <= 0 || liquido === Number(venda.valor_total)) return <span className="text-xs text-muted-foreground">-</span>;
+                    return <span className="font-medium whitespace-nowrap text-xs text-green-600">{formatCurrency(liquido)}</span>;
+                  },
+                },
+                {
                   key: 'canal',
                   header: 'Canal',
                   mobilePriority: 5,
@@ -763,6 +779,12 @@ const Vendas = () => {
               renderMobileHighlight={(venda) => (
                 <div className="text-right whitespace-nowrap shrink-0">
                   <p className="font-bold text-foreground text-sm">{formatCurrency(Number(venda.valor_total))}</p>
+                  {Number(venda.valor_liquido || 0) > 0 && Number(venda.valor_liquido) !== Number(venda.valor_total) && (
+                    <p className="text-[10px] text-green-600">Líq: {formatCurrency(Number(venda.valor_liquido))}</p>
+                  )}
+                  {Number(venda.taxa_servico || 0) > 0 && (
+                    <p className="text-[10px] text-destructive">Taxa: {formatCurrency(Number(venda.taxa_servico))}</p>
+                  )}
                   <p className="text-[10px] text-muted-foreground">Qtd: {Number(venda.quantidade)}</p>
                 </div>
               )}

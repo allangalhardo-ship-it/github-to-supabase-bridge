@@ -30,6 +30,7 @@ import {
   ChevronDown,
   Lightbulb,
   CalendarIcon,
+  Store,
 } from 'lucide-react';
 import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysInMonth, endOfMonth, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -130,6 +131,22 @@ const Dashboard = () => {
     enabled: !!usuario?.empresa_id,
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
+  });
+
+  // Fetch vendas com dados financeiros de plataformas
+  const { data: vendasFinanceiro } = useQuery({
+    queryKey: ['vendas-financeiro-dashboard', usuario?.empresa_id, inicio, fim],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('vendas')
+        .select('taxa_servico, incentivo_loja, incentivo_plataforma, valor_liquido, plataforma, subtotal, valor_total')
+        .gte('data_venda', inicio)
+        .lte('data_venda', fim);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!usuario?.empresa_id,
+    staleTime: 2 * 60 * 1000,
   });
 
   // Fetch vendas do período anterior para comparativo
@@ -827,6 +844,52 @@ const Dashboard = () => {
         isLoading={isLoading}
         margemEstimada={margemContribuicaoEstimada}
       />
+
+      {/* Card de Taxas & Descontos das Plataformas (dados reais importados) */}
+      {vendasFinanceiro && vendasFinanceiro.length > 0 && (() => {
+        const totalTaxaServico = vendasFinanceiro.reduce((s, v) => s + Number(v.taxa_servico || 0), 0);
+        const totalIncentivoLoja = vendasFinanceiro.reduce((s, v) => s + Number(v.incentivo_loja || 0), 0);
+        const totalIncentivoPlataforma = vendasFinanceiro.reduce((s, v) => s + Number(v.incentivo_plataforma || 0), 0);
+        const custoReal = totalTaxaServico + totalIncentivoLoja;
+        
+        if (custoReal <= 0) return null;
+        
+        return (
+          <Card className="border-amber-200 dark:border-amber-800">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                <Store className="h-4 w-4 text-amber-600" />
+                Taxas & Descontos do Período
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Taxa de Serviço</p>
+                  <p className="text-sm sm:text-lg font-bold text-destructive">{formatCurrency(totalTaxaServico)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Incentivo Loja</p>
+                  <p className="text-sm sm:text-lg font-bold text-destructive">{formatCurrency(totalIncentivoLoja)}</p>
+                  <p className="text-[9px] text-muted-foreground">Sai do seu bolso</p>
+                </div>
+                <div>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Incentivo Plataforma</p>
+                  <p className="text-sm sm:text-lg font-bold text-green-600">{formatCurrency(totalIncentivoPlataforma)}</p>
+                  <p className="text-[9px] text-muted-foreground">Não sai do seu bolso</p>
+                </div>
+                <div>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Custo Total Plataformas</p>
+                  <p className="text-sm sm:text-lg font-bold text-destructive">{formatCurrency(custoReal)}</p>
+                  <p className="text-[9px] text-muted-foreground">
+                    {receitaBruta > 0 ? `${((custoReal / receitaBruta) * 100).toFixed(1)}% da receita` : ''}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Business Coach - Resumo Inteligente */}
       <BusinessCoach

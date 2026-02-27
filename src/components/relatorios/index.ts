@@ -5,3 +5,4 @@ export { MargensRelatorio } from './MargensRelatorio';
 export { FluxoCaixa } from './FluxoCaixa';
 export { PosicaoEstoque } from './PosicaoEstoque';
 export { PerdasDesperdicio } from './PerdasDesperdicio';
+export { AnalisePlataformas } from './AnalisePlataformas';

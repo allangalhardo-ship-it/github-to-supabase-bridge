@@ -6,7 +6,8 @@ import {
   MargensRelatorio,
   FluxoCaixa,
   PosicaoEstoque,
-  PerdasDesperdicio
+  PerdasDesperdicio,
+  AnalisePlataformas
 } from '@/components/relatorios';
 import { 
   FileText, 
@@ -14,10 +15,11 @@ import {
   ShoppingCart, 
   Package, 
   Wallet, 
-  AlertTriangle
+  AlertTriangle,
+  Store
 } from 'lucide-react';
 
-type ReportView = 'hub' | 'dre' | 'vendas' | 'margens' | 'estoque' | 'fluxo' | 'perdas';
+type ReportView = 'hub' | 'dre' | 'vendas' | 'margens' | 'estoque' | 'fluxo' | 'perdas' | 'plataformas';
 
 const Relatorios = () => {
   const [currentView, setCurrentView] = useState<ReportView>('hub');
@@ -45,6 +47,10 @@ const Relatorios = () => {
 
   if (currentView === 'perdas') {
     return <PerdasDesperdicio onBack={() => setCurrentView('hub')} />;
+  }
+
+  if (currentView === 'plataformas') {
+    return <AnalisePlataformas onBack={() => setCurrentView('hub')} />;
   }
 
   // Hub da Central de Relatórios
@@ -108,6 +114,13 @@ const Relatorios = () => {
             icon={TrendingUp}
             category="vendas"
             onClick={() => setCurrentView('margens')}
+          />
+          <ReportCard
+            title="Análise por Plataforma"
+            description="Quanto cada plataforma (iFood, Rappi, etc.) custa pro seu negócio: taxas, incentivos e valor líquido"
+            icon={Store}
+            category="vendas"
+            onClick={() => setCurrentView('plataformas')}
           />
         </div>
       </section>

@@ -453,6 +453,54 @@ const ImportarVendasDialog: React.FC = () => {
         const { error } = await supabase.from('vendas').insert(vendas);
         if (error) throw error;
 
+        // Generate caixa movements for taxes and incentives
+        const caixaMovimentos: any[] = [];
+        const plat = canalOverride || result.plataforma || 'Venda Direta';
+        
+        // Entry: valor líquido received
+        const vliq = valorLiquido > 0 ? valorLiquido : result.total_geral;
+        if (vliq > 0) {
+          caixaMovimentos.push({
+            empresa_id: usuario.empresa_id,
+            tipo: 'entrada',
+            categoria: 'Venda',
+            descricao: `${plat}${result.numero_pedido ? ` #${result.numero_pedido}` : ''} - Valor líquido`,
+            valor: vliq,
+            data_movimento: result.data,
+            origem: 'importacao_foto',
+          });
+        }
+        
+        // Exit: taxa de serviço
+        if (result.taxa_servico > 0) {
+          caixaMovimentos.push({
+            empresa_id: usuario.empresa_id,
+            tipo: 'saida',
+            categoria: 'Taxas Plataforma',
+            descricao: `${plat}${result.numero_pedido ? ` #${result.numero_pedido}` : ''} - Taxa de serviço`,
+            valor: result.taxa_servico,
+            data_movimento: result.data,
+            origem: 'importacao_foto',
+          });
+        }
+        
+        // Exit: incentivo da loja
+        if (result.incentivos_loja > 0) {
+          caixaMovimentos.push({
+            empresa_id: usuario.empresa_id,
+            tipo: 'saida',
+            categoria: 'Descontos/Promoções',
+            descricao: `${plat}${result.numero_pedido ? ` #${result.numero_pedido}` : ''} - Incentivo da loja`,
+            valor: result.incentivos_loja,
+            data_movimento: result.data,
+            origem: 'importacao_foto',
+          });
+        }
+        
+        if (caixaMovimentos.length > 0) {
+          await supabase.from('caixa_movimentos').insert(caixaMovimentos);
+        }
+
         totalImported += selectedItems.length;
 
         // Collect mappings to save
@@ -474,7 +522,9 @@ const ImportarVendasDialog: React.FC = () => {
     },
     onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ['vendas'] });
+      queryClient.invalidateQueries({ queryKey: ['caixa-movimentos'] });
       toast({ title: `${count} vendas importadas com sucesso!` });
+      setOpen(false);
       setOpen(false);
       resetState();
     },
