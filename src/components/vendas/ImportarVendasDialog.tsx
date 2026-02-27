@@ -134,14 +134,41 @@ const ImportarVendasDialog: React.FC = () => {
   const { data: canaisConfigurados } = useQuery({
     queryKey: ['canais-configurados', usuario?.empresa_id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('canais_venda').select('*').eq('ativo', true).order('tipo').order('nome');
-      if (error) throw error;
-      return data || [];
+      const { data: canaisData, error: canaisError } = await supabase.from('canais_venda').select('*').eq('ativo', true).order('tipo').order('nome');
+      if (canaisError) throw canaisError;
+      
+      const { data: taxasData, error: taxasError } = await supabase.from('taxas_canais').select('*');
+      if (taxasError) throw taxasError;
+
+      return (canaisData || []).map(canal => {
+        const taxas = (taxasData || []).filter(t => t.canal_id === canal.id);
+        const taxaTotal = taxas.reduce((sum, t) => sum + Number(t.percentual), 0);
+        return { ...canal, taxaTotal };
+      });
     },
     enabled: !!usuario?.empresa_id && open,
   });
 
   const canaisDelivery = canaisConfigurados?.filter(c => c.tipo === 'app_delivery') || [];
+
+  // Fuzzy match: find configured canal by platform name
+  const findCanalByPlataforma = (plataforma: string) => {
+    if (!plataforma || !canaisConfigurados) return null;
+    const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    const p = norm(plataforma);
+    return canaisConfigurados.find(c => {
+      const n = norm(c.nome);
+      return n === p || n.includes(p) || p.includes(n);
+    }) || null;
+  };
+
+  // Get comissão for a result
+  const getComissao = (data: PhotoImportData) => {
+    const plat = canalOverride || data.plataforma || '';
+    const canal = findCanalByPlataforma(plat);
+    if (!canal || canal.taxaTotal <= 0) return 0;
+    return data.subtotal * (canal.taxaTotal / 100);
+  };
 
   const resetState = () => {
     setStep('upload');
