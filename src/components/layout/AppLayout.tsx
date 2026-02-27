@@ -114,6 +114,9 @@ const helpItems = {
   ],
 };
 
+// Items that require admin access
+const adminOnlyPaths = ['/cardapio-digital', '/pedidos'];
+
 const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAdmin: boolean }) => {
   const { usuario, signOut } = useAuth();
   const { subscription } = useSubscription();
@@ -125,14 +128,21 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
     navigate('/login');
   };
 
-  // Add admin item to the last category if user is admin
-  const allCategories = isAdmin 
-    ? navCategories.map((cat, idx) => 
-        idx === navCategories.length - 1 
-          ? { ...cat, items: [...cat.items, { to: '/admin', icon: Shield, label: 'Admin' }] }
-          : cat
-      )
-    : navCategories;
+  // Filter categories: add admin page + hide admin-only items for non-admins
+  const allCategories = navCategories
+    .map((cat, idx) => {
+      let items = cat.items;
+      // Hide admin-only paths for non-admin users
+      if (!isAdmin) {
+        items = items.filter(item => !adminOnlyPaths.includes(item.to));
+      }
+      // Add admin page to last category for admins
+      if (isAdmin && idx === navCategories.length - 1) {
+        items = [...items, { to: '/admin', icon: Shield, label: 'Admin' }];
+      }
+      return { ...cat, items };
+    })
+    .filter(cat => cat.items.length > 0);
 
   // Check if a category contains the active route
   const isCategoryActive = (items: typeof navCategories[0]['items']) => 
