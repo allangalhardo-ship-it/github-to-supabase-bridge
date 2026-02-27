@@ -357,7 +357,7 @@ const ImportarVendasDialog: React.FC = () => {
         if (selectedItems.length === 0) continue;
 
         // Calculate valor_liquido for this order
-        const valorLiquido = result.subtotal - result.incentivos_loja - result.comissao_plataforma;
+        const valorLiquido = result.subtotal - result.incentivos_loja;
 
         const vendas = selectedItems.map(item => ({
           empresa_id: usuario.empresa_id,
