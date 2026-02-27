@@ -132,7 +132,7 @@ const ImportarVendasDialog: React.FC = () => {
   });
 
   const { data: canaisConfigurados } = useQuery({
-    queryKey: ['canais-configurados', usuario?.empresa_id],
+    queryKey: ['canais-configurados-v2', usuario?.empresa_id],
     queryFn: async () => {
       const { data: canaisData, error: canaisError } = await supabase.from('canais_venda').select('*').eq('ativo', true).order('tipo').order('nome');
       if (canaisError) throw canaisError;
@@ -154,20 +154,37 @@ const ImportarVendasDialog: React.FC = () => {
   // Fuzzy match: find configured canal by platform name
   const findCanalByPlataforma = (plataforma: string) => {
     if (!plataforma || !canaisConfigurados) return null;
-    const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+
+    const norm = (s: string) =>
+      s
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
     const p = norm(plataforma);
-    return canaisConfigurados.find(c => {
+    const matches = canaisConfigurados.filter(c => {
       const n = norm(c.nome);
       return n === p || n.includes(p) || p.includes(n);
-    }) || null;
+    });
+
+    if (matches.length === 0) return null;
+
+    // Prefer the match with highest configured rate
+    return matches.sort((a, b) => Number(b.taxaTotal || 0) - Number(a.taxaTotal || 0))[0];
   };
 
   // Get comissão for a result
   const getComissao = (data: PhotoImportData) => {
     const plat = canalOverride || data.plataforma || '';
     const canal = findCanalByPlataforma(plat);
-    if (!canal || canal.taxaTotal <= 0) return 0;
-    return data.subtotal * (canal.taxaTotal / 100);
+    const subtotal = Number(data.subtotal || 0);
+    const taxaTotal = Number(canal?.taxaTotal || 0);
+
+    if (!Number.isFinite(subtotal) || !Number.isFinite(taxaTotal) || taxaTotal <= 0) return 0;
+    return subtotal * (taxaTotal / 100);
   };
 
   const resetState = () => {
