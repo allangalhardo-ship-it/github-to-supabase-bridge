@@ -472,9 +472,13 @@ const ImportarVendasDialog: React.FC = () => {
 
         // Calculate comissão do canal
         const comissao = getComissao(result);
-        
-        // Calculate valor_liquido for this order
-        const valorLiquido = result.subtotal - result.incentivos_loja;
+
+        // Valor líquido real: subtotal - taxa de serviço - incentivo da loja - comissão app
+        const valorLiquidoReal =
+          Number(result.subtotal || 0) -
+          Number(result.taxa_servico || 0) -
+          Number(result.incentivos_loja || 0) -
+          Number(comissao || 0);
 
         const vendas = selectedItems.map(item => ({
           empresa_id: usuario.empresa_id,
@@ -494,7 +498,7 @@ const ImportarVendasDialog: React.FC = () => {
           incentivo_plataforma: result.incentivos_plataforma,
           incentivo_loja: result.incentivos_loja,
           comissao_plataforma: comissao,
-          valor_liquido: valorLiquido > 0 ? valorLiquido : result.total_geral,
+          valor_liquido: valorLiquidoReal,
           plataforma: result.plataforma || null,
         }));
 
@@ -504,9 +508,9 @@ const ImportarVendasDialog: React.FC = () => {
         // Generate caixa movements for taxes and incentives
         const caixaMovimentos: any[] = [];
         const plat = canalOverride || result.plataforma || 'Venda Direta';
-        
-        // Entry: valor líquido received
-        const vliq = valorLiquido > 0 ? valorLiquido : result.total_geral;
+
+        // Entry: valor líquido real recebido
+        const vliq = valorLiquidoReal;
         if (vliq > 0) {
           caixaMovimentos.push({
             empresa_id: usuario.empresa_id,
@@ -728,7 +732,11 @@ const ImportarVendasDialog: React.FC = () => {
   const FinancialBreakdown = ({ data }: { data: PhotoImportData }) => {
     const comissao = getComissao(data);
     const canalMatch = findCanalByPlataforma(canalOverride || data.plataforma || '');
-    const valorLiquido = data.subtotal - data.incentivos_loja;
+    const valorLiquidoReal =
+      Number(data.subtotal || 0) -
+      Number(data.taxa_servico || 0) -
+      Number(data.incentivos_loja || 0) -
+      Number(comissao || 0);
     return (
       <div className="bg-muted/50 rounded-lg p-3 space-y-2 text-sm">
         <div className="flex items-center gap-2 font-medium">
@@ -750,7 +758,7 @@ const ImportarVendasDialog: React.FC = () => {
           {data.taxa_servico > 0 && (
             <div className="flex justify-between text-muted-foreground">
               <span>Taxa de serviço</span>
-              <span>{formatCurrency(data.taxa_servico)}</span>
+              <span>-{formatCurrency(data.taxa_servico)}</span>
             </div>
           )}
           {canalMatch && comissao > 0 && (
@@ -823,7 +831,7 @@ const ImportarVendasDialog: React.FC = () => {
           </div>
           <div className="border-t pt-1 flex justify-between font-bold text-primary">
             <span>💰 Valor Líquido (seu)</span>
-            <span>{formatCurrency(valorLiquido > 0 ? valorLiquido : data.total_geral)}</span>
+            <span>{formatCurrency(valorLiquidoReal)}</span>
           </div>
         </div>
       </div>
