@@ -159,13 +159,24 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
       }
     });
 
-    // Taxas de Apps (baseado no canal de cada venda)
+    // Taxas de Apps: usar dados reais quando disponíveis, senão estimar pelo canal
     let taxasApps = 0;
     vendas.forEach((venda) => {
-      const canal = canais?.find((c) => c.nome.toLowerCase() === venda.canal?.toLowerCase());
-      if (canal && canal.taxas_canais && canal.taxas_canais.length > 0) {
-        const taxaTotal = canal.taxas_canais.reduce((acc, t) => acc + t.percentual, 0);
-        taxasApps += (venda.valor_total * taxaTotal) / 100;
+      const comissaoReal = Number(venda.comissao_plataforma || 0);
+      const taxaServReal = Number(venda.taxa_servico || 0);
+      const incLojaReal = Number(venda.incentivo_loja || 0);
+      const totalReal = comissaoReal + taxaServReal + incLojaReal;
+
+      if (totalReal > 0) {
+        // Usar dados reais importados
+        taxasApps += totalReal;
+      } else {
+        // Fallback: estimar pelo canal configurado
+        const canal = canais?.find((c) => c.nome.toLowerCase() === venda.canal?.toLowerCase());
+        if (canal && canal.taxas_canais && canal.taxas_canais.length > 0) {
+          const taxaTotal = canal.taxas_canais.reduce((acc, t) => acc + t.percentual, 0);
+          taxasApps += (venda.valor_total * taxaTotal) / 100;
+        }
       }
     });
 
