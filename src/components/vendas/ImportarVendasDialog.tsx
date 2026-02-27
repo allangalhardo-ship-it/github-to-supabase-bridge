@@ -1093,7 +1093,6 @@ const ImportarVendasDialog: React.FC = () => {
                                     onChange={(v) => handleLinkProduct(currentResultIndex, idx, v)}
                                     disabled={!item.selected}
                                   />
-                                  </Select>
                                 </div>
                               </div>
                             </div>
