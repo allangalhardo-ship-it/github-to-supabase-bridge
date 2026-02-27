@@ -52,7 +52,6 @@ const Relatorios = () => {
   if (currentView === 'plataformas') {
     return <AnalisePlataformas onBack={() => setCurrentView('hub')} />;
   }
-  }
 
   // Hub da Central de Relatórios
   return (
