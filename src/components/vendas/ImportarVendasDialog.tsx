@@ -134,14 +134,41 @@ const ImportarVendasDialog: React.FC = () => {
   const { data: canaisConfigurados } = useQuery({
     queryKey: ['canais-configurados', usuario?.empresa_id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('canais_venda').select('*').eq('ativo', true).order('tipo').order('nome');
-      if (error) throw error;
-      return data || [];
+      const { data: canaisData, error: canaisError } = await supabase.from('canais_venda').select('*').eq('ativo', true).order('tipo').order('nome');
+      if (canaisError) throw canaisError;
+      
+      const { data: taxasData, error: taxasError } = await supabase.from('taxas_canais').select('*');
+      if (taxasError) throw taxasError;
+
+      return (canaisData || []).map(canal => {
+        const taxas = (taxasData || []).filter(t => t.canal_id === canal.id);
+        const taxaTotal = taxas.reduce((sum, t) => sum + Number(t.percentual), 0);
+        return { ...canal, taxaTotal };
+      });
     },
     enabled: !!usuario?.empresa_id && open,
   });
 
   const canaisDelivery = canaisConfigurados?.filter(c => c.tipo === 'app_delivery') || [];
+
+  // Fuzzy match: find configured canal by platform name
+  const findCanalByPlataforma = (plataforma: string) => {
+    if (!plataforma || !canaisConfigurados) return null;
+    const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    const p = norm(plataforma);
+    return canaisConfigurados.find(c => {
+      const n = norm(c.nome);
+      return n === p || n.includes(p) || p.includes(n);
+    }) || null;
+  };
+
+  // Get comissão for a result
+  const getComissao = (data: PhotoImportData) => {
+    const plat = canalOverride || data.plataforma || '';
+    const canal = findCanalByPlataforma(plat);
+    if (!canal || canal.taxaTotal <= 0) return 0;
+    return data.subtotal * (canal.taxaTotal / 100);
+  };
 
   const resetState = () => {
     setStep('upload');
@@ -426,6 +453,9 @@ const ImportarVendasDialog: React.FC = () => {
         const selectedItems = result.itens.filter(i => i.selected && i.produto_id);
         if (selectedItems.length === 0) continue;
 
+        // Calculate comissão do canal
+        const comissao = getComissao(result);
+        
         // Calculate valor_liquido for this order
         const valorLiquido = result.subtotal - result.incentivos_loja;
 
@@ -446,6 +476,7 @@ const ImportarVendasDialog: React.FC = () => {
           taxa_servico: result.taxa_servico,
           incentivo_plataforma: result.incentivos_plataforma,
           incentivo_loja: result.incentivos_loja,
+          comissao_plataforma: comissao,
           valor_liquido: valorLiquido > 0 ? valorLiquido : result.total_geral,
           plataforma: result.plataforma || null,
         }));
@@ -492,6 +523,19 @@ const ImportarVendasDialog: React.FC = () => {
             categoria: 'Descontos/Promoções',
             descricao: `${plat}${result.numero_pedido ? ` #${result.numero_pedido}` : ''} - Incentivo da loja`,
             valor: result.incentivos_loja,
+            data_movimento: result.data,
+            origem: 'importacao_foto',
+          });
+        }
+
+        // Exit: comissão do canal
+        if (comissao > 0) {
+          caixaMovimentos.push({
+            empresa_id: usuario.empresa_id,
+            tipo: 'saida',
+            categoria: 'Comissão App',
+            descricao: `${plat}${result.numero_pedido ? ` #${result.numero_pedido}` : ''} - Comissão do canal`,
+            valor: comissao,
             data_movimento: result.data,
             origem: 'importacao_foto',
           });
@@ -665,6 +709,8 @@ const ImportarVendasDialog: React.FC = () => {
 
   // Financial breakdown component
   const FinancialBreakdown = ({ data }: { data: PhotoImportData }) => {
+    const comissao = getComissao(data);
+    const canalMatch = findCanalByPlataforma(canalOverride || data.plataforma || '');
     const valorLiquido = data.subtotal - data.incentivos_loja;
     return (
       <div className="bg-muted/50 rounded-lg p-3 space-y-2 text-sm">
@@ -688,6 +734,32 @@ const ImportarVendasDialog: React.FC = () => {
             <div className="flex justify-between text-muted-foreground">
               <span>Taxa de serviço</span>
               <span>{formatCurrency(data.taxa_servico)}</span>
+            </div>
+          )}
+          {comissao > 0 && (
+            <div className="flex justify-between text-destructive">
+              <span className="flex items-center gap-1">
+                <TrendingDown className="h-3 w-3" />
+                Comissão {canalMatch?.nome || data.plataforma} ({canalMatch?.taxaTotal?.toFixed(1)}%)
+                <Tooltip>
+                  <TooltipTrigger><Info className="h-3 w-3" /></TooltipTrigger>
+                  <TooltipContent><p>Taxa configurada do canal.<br/>Não aparece no print mas é cobrada.</p></TooltipContent>
+                </Tooltip>
+              </span>
+              <span className="font-medium">-{formatCurrency(comissao)}</span>
+            </div>
+          )}
+          {!canalMatch && (data.plataforma || canalOverride) && (
+            <div className="flex justify-between text-amber-600">
+              <span className="flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                Comissão não calculada
+                <Tooltip>
+                  <TooltipTrigger><Info className="h-3 w-3" /></TooltipTrigger>
+                  <TooltipContent><p>Canal "{canalOverride || data.plataforma}" não encontrado nas configurações.<br/>Configure em Configurações → Canais de Venda.</p></TooltipContent>
+                </Tooltip>
+              </span>
+              <span>—</span>
             </div>
           )}
           {data.incentivos_plataforma > 0 && (
