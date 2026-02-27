@@ -114,6 +114,9 @@ const helpItems = {
   ],
 };
 
+// Items that require admin access
+const adminOnlyPaths = ['/cardapio-digital', '/pedidos'];
+
 const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAdmin: boolean }) => {
   const { usuario, signOut } = useAuth();
   const { subscription } = useSubscription();
