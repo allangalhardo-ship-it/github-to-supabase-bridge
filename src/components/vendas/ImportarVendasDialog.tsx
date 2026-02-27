@@ -180,14 +180,14 @@ const ImportarVendasDialog: React.FC = () => {
     return matchingWords / Math.max(words1.filter(w => w.length >= 3).length, 1);
   };
 
-  const findBestMatchingProduct = (itemName: string, plataforma?: string): string | undefined => {
+  const findBestMatchingProduct = (itemName: string, plataforma?: string): { id: string; matchType: 'saved' | 'auto' } | undefined => {
     // First check saved mappings
     if (mapeamentos && mapeamentos.length > 0) {
       const saved = mapeamentos.find((m: any) => 
         m.nome_externo?.toLowerCase().trim() === itemName.toLowerCase().trim() &&
         (!plataforma || !m.plataforma || m.plataforma === plataforma)
       );
-      if (saved) return (saved as any).produto_id;
+      if (saved) return { id: (saved as any).produto_id, matchType: 'saved' };
     }
     
     // Then try similarity matching
@@ -199,7 +199,8 @@ const ImportarVendasDialog: React.FC = () => {
         bestMatch = { id: produto.id, score };
       }
     }
-    return bestMatch?.id;
+    if (bestMatch) return { id: bestMatch.id, matchType: 'auto' };
+    return undefined;
   };
 
   // Multi-image handling
