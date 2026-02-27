@@ -302,14 +302,18 @@ const ImportarVendasDialog: React.FC = () => {
 
         if (data.success && data.data?.itens?.length > 0) {
           const plataforma = data.data.plataforma || '';
-          const itens: ParsedItem[] = data.data.itens.map((item: any) => ({
-            produto: item.produto || '',
-            quantidade: item.quantidade || 1,
-            valor_unitario: item.valor_unitario || 0,
-            valor_total: item.valor_total || 0,
-            produto_id: findBestMatchingProduct(item.produto || '', plataforma),
-            selected: true,
-          }));
+          const itens: ParsedItem[] = data.data.itens.map((item: any) => {
+            const match = findBestMatchingProduct(item.produto || '', plataforma);
+            return {
+              produto: item.produto || '',
+              quantidade: item.quantidade || 1,
+              valor_unitario: item.valor_unitario || 0,
+              valor_total: item.valor_total || 0,
+              produto_id: match?.id,
+              selected: true,
+              matchType: match ? match.matchType : 'none' as const,
+            };
+          });
 
           const result: PhotoImportData = {
             tipo: data.data.tipo || 'comanda',
