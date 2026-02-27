@@ -226,6 +226,59 @@ const ImportarVendasDialog: React.FC = () => {
     setMultiImages(prev => prev.filter((_, i) => i !== index));
   };
 
+  const checkPhotoDuplicates = async (results: PhotoImportData[]): Promise<PhotoImportData[]> => {
+    if (!usuario?.empresa_id || results.length === 0) return results;
+
+    try {
+      // Fetch existing sales for comparison
+      const { data: existingVendas } = await supabase
+        .from('vendas')
+        .select('numero_pedido_externo, plataforma, data_venda, subtotal, valor_total')
+        .eq('empresa_id', usuario.empresa_id);
+
+      if (!existingVendas || existingVendas.length === 0) return results;
+
+      return results.map(result => {
+        // 1. Check by numero_pedido_externo + plataforma (most reliable)
+        if (result.numero_pedido) {
+          const byPedido = existingVendas.find(v =>
+            v.numero_pedido_externo &&
+            v.numero_pedido_externo === result.numero_pedido &&
+            (v.plataforma || '').toLowerCase() === (result.plataforma || '').toLowerCase()
+          );
+          if (byPedido) {
+            return { ...result, isDuplicate: true, duplicateReason: `Pedido ${result.numero_pedido} já importado` };
+          }
+        }
+
+        // 2. Check by data + subtotal + plataforma (fallback for orders without number)
+        const byValor = existingVendas.find(v =>
+          v.data_venda === result.data &&
+          Math.abs(Number(v.subtotal || v.valor_total) - result.subtotal) < 0.01 &&
+          (v.plataforma || '').toLowerCase() === (result.plataforma || '').toLowerCase()
+        );
+        if (byValor) {
+          return { ...result, isDuplicate: true, duplicateReason: `Venda com mesmo valor (${formatCurrency(result.subtotal)}) já existe em ${result.data}` };
+        }
+
+        // 3. Check within current batch for duplicates (same image uploaded twice)
+        const duplicatesInBatch = results.filter(r =>
+          r !== result &&
+          r.numero_pedido && result.numero_pedido &&
+          r.numero_pedido === result.numero_pedido &&
+          r.plataforma === result.plataforma
+        );
+        if (duplicatesInBatch.length > 0) {
+          return { ...result, isDuplicate: true, duplicateReason: 'Print duplicado nesta importação' };
+        }
+
+        return result;
+      });
+    } catch {
+      return results;
+    }
+  };
+
   const processAllImages = async () => {
     if (multiImages.length === 0) return;
     setIsProcessingAI(true);
@@ -286,15 +339,22 @@ const ImportarVendasDialog: React.FC = () => {
       setMultiImages([...updated]);
     }
 
-    setAllPhotoResults(results);
+    // Check for duplicates against DB and within batch
+    const checkedResults = await checkPhotoDuplicates(results);
+    const dupeCount = checkedResults.filter(r => r.isDuplicate).length;
+
+    setAllPhotoResults(checkedResults);
     setIsProcessingAI(false);
 
-    if (results.length > 0) {
+    if (checkedResults.length > 0) {
       setPhotoStep('items');
       setCurrentResultIndex(0);
+      const desc = dupeCount > 0
+        ? `${checkedResults.reduce((sum, r) => sum + r.itens.length, 0)} itens encontrados. ⚠️ ${dupeCount} possível(is) duplicata(s).`
+        : `${checkedResults.reduce((sum, r) => sum + r.itens.length, 0)} itens encontrados no total.`;
       toast({ 
-        title: `${results.length} pedido(s) processado(s)!`,
-        description: `${results.reduce((sum, r) => sum + r.itens.length, 0)} itens encontrados no total.`
+        title: `${checkedResults.length} pedido(s) processado(s)!`,
+        description: desc,
       });
     } else {
       toast({ title: 'Nenhum pedido extraído', description: 'Tente com imagens mais claras.', variant: 'destructive' });
