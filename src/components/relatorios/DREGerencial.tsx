@@ -46,7 +46,7 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('vendas')
-        .select('id, valor_total, quantidade, produto_id, canal')
+        .select('id, valor_total, quantidade, produto_id, canal, comissao_plataforma, taxa_servico, incentivo_loja, subtotal')
         .eq('empresa_id', usuario?.empresa_id)
         .gte('data_venda', dataInicio)
         .lte('data_venda', dataFim);
