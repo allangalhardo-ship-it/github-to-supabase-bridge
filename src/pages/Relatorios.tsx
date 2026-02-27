@@ -49,6 +49,11 @@ const Relatorios = () => {
     return <PerdasDesperdicio onBack={() => setCurrentView('hub')} />;
   }
 
+  if (currentView === 'plataformas') {
+    return <AnalisePlataformas onBack={() => setCurrentView('hub')} />;
+  }
+  }
+
   // Hub da Central de Relatórios
   return (
     <div className="space-y-6">
