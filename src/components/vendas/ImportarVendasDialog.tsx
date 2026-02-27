@@ -562,15 +562,15 @@ const ImportarVendasDialog: React.FC = () => {
         const caixaMovimentos: any[] = [];
         const plat = canalOverride || result.plataforma || 'Venda Direta';
 
-        // Entry: valor líquido real recebido
-        const vliq = valorLiquidoReal;
-        if (vliq > 0) {
+        // Entry: subtotal bruto (antes das deduções)
+        const subtotalBruto = Number(result.subtotal || 0);
+        if (subtotalBruto > 0) {
           caixaMovimentos.push({
             empresa_id: usuario.empresa_id,
             tipo: 'entrada',
             categoria: 'Venda',
-            descricao: `${plat}${result.numero_pedido ? ` #${result.numero_pedido}` : ''} - Valor líquido`,
-            valor: vliq,
+            descricao: `${plat}${result.numero_pedido ? ` #${result.numero_pedido}` : ''} - Subtotal`,
+            valor: subtotalBruto,
             data_movimento: result.data,
             origem: 'importacao_foto',
           });
