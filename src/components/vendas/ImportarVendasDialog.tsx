@@ -611,7 +611,7 @@ const ImportarVendasDialog: React.FC = () => {
       <DialogTrigger asChild>
         <Button variant="outline"><Upload className="mr-2 h-4 w-4" />Importar</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] flex flex-col overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
