@@ -1141,6 +1141,48 @@ export type Database = {
           },
         ]
       }
+      produto_nome_externo: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          nome_externo: string
+          plataforma: string | null
+          produto_id: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id?: string
+          nome_externo: string
+          plataforma?: string | null
+          produto_id: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nome_externo?: string
+          plataforma?: string | null
+          produto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produto_nome_externo_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produto_nome_externo_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       produtos: {
         Row: {
           ativo: boolean
@@ -1451,43 +1493,70 @@ export type Database = {
         Row: {
           canal: string | null
           cliente_id: string | null
+          comissao_plataforma: number | null
           created_at: string
           data_venda: string
           descricao_produto: string | null
           empresa_id: string
           id: string
+          incentivo_loja: number | null
+          incentivo_plataforma: number | null
+          numero_pedido_externo: string | null
           origem: string
+          plataforma: string | null
           produto_id: string | null
           quantidade: number
+          subtotal: number | null
+          taxa_entrega: number | null
+          taxa_servico: number | null
           tipo_venda: string
+          valor_liquido: number | null
           valor_total: number
         }
         Insert: {
           canal?: string | null
           cliente_id?: string | null
+          comissao_plataforma?: number | null
           created_at?: string
           data_venda?: string
           descricao_produto?: string | null
           empresa_id: string
           id?: string
+          incentivo_loja?: number | null
+          incentivo_plataforma?: number | null
+          numero_pedido_externo?: string | null
           origem?: string
+          plataforma?: string | null
           produto_id?: string | null
           quantidade?: number
+          subtotal?: number | null
+          taxa_entrega?: number | null
+          taxa_servico?: number | null
           tipo_venda?: string
+          valor_liquido?: number | null
           valor_total?: number
         }
         Update: {
           canal?: string | null
           cliente_id?: string | null
+          comissao_plataforma?: number | null
           created_at?: string
           data_venda?: string
           descricao_produto?: string | null
           empresa_id?: string
           id?: string
+          incentivo_loja?: number | null
+          incentivo_plataforma?: number | null
+          numero_pedido_externo?: string | null
           origem?: string
+          plataforma?: string | null
           produto_id?: string | null
           quantidade?: number
+          subtotal?: number | null
+          taxa_entrega?: number | null
+          taxa_servico?: number | null
           tipo_venda?: string
+          valor_liquido?: number | null
           valor_total?: number
         }
         Relationships: [
