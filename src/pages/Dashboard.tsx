@@ -30,6 +30,7 @@ import {
   ChevronDown,
   Lightbulb,
   CalendarIcon,
+  Store,
 } from 'lucide-react';
 import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysInMonth, endOfMonth, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
