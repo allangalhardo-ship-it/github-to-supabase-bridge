@@ -415,6 +415,8 @@ const ImportarVendasDialog: React.FC = () => {
       const newMappings: { nome_externo: string; produto_id: string; plataforma: string }[] = [];
 
       for (const result of allPhotoResults) {
+        // Skip duplicates
+        if (result.isDuplicate) continue;
         const selectedItems = result.itens.filter(i => i.selected && i.produto_id);
         if (selectedItems.length === 0) continue;
 
