@@ -52,6 +52,8 @@ interface PhotoImportData {
   incentivos_loja: number;
   total_geral: number;
   itens: ParsedItem[];
+  isDuplicate?: boolean;
+  duplicateReason?: string;
 }
 
 interface ColumnMapping {
@@ -224,6 +226,59 @@ const ImportarVendasDialog: React.FC = () => {
     setMultiImages(prev => prev.filter((_, i) => i !== index));
   };
 
+  const checkPhotoDuplicates = async (results: PhotoImportData[]): Promise<PhotoImportData[]> => {
+    if (!usuario?.empresa_id || results.length === 0) return results;
+
+    try {
+      // Fetch existing sales for comparison
+      const { data: existingVendas } = await supabase
+        .from('vendas')
+        .select('numero_pedido_externo, plataforma, data_venda, subtotal, valor_total')
+        .eq('empresa_id', usuario.empresa_id);
+
+      if (!existingVendas || existingVendas.length === 0) return results;
+
+      return results.map(result => {
+        // 1. Check by numero_pedido_externo + plataforma (most reliable)
+        if (result.numero_pedido) {
+          const byPedido = existingVendas.find(v =>
+            v.numero_pedido_externo &&
+            v.numero_pedido_externo === result.numero_pedido &&
+            (v.plataforma || '').toLowerCase() === (result.plataforma || '').toLowerCase()
+          );
+          if (byPedido) {
+            return { ...result, isDuplicate: true, duplicateReason: `Pedido ${result.numero_pedido} já importado` };
+          }
+        }
+
+        // 2. Check by data + subtotal + plataforma (fallback for orders without number)
+        const byValor = existingVendas.find(v =>
+          v.data_venda === result.data &&
+          Math.abs(Number(v.subtotal || v.valor_total) - result.subtotal) < 0.01 &&
+          (v.plataforma || '').toLowerCase() === (result.plataforma || '').toLowerCase()
+        );
+        if (byValor) {
+          return { ...result, isDuplicate: true, duplicateReason: `Venda com mesmo valor (${formatCurrency(result.subtotal)}) já existe em ${result.data}` };
+        }
+
+        // 3. Check within current batch for duplicates (same image uploaded twice)
+        const duplicatesInBatch = results.filter(r =>
+          r !== result &&
+          r.numero_pedido && result.numero_pedido &&
+          r.numero_pedido === result.numero_pedido &&
+          r.plataforma === result.plataforma
+        );
+        if (duplicatesInBatch.length > 0) {
+          return { ...result, isDuplicate: true, duplicateReason: 'Print duplicado nesta importação' };
+        }
+
+        return result;
+      });
+    } catch {
+      return results;
+    }
+  };
+
   const processAllImages = async () => {
     if (multiImages.length === 0) return;
     setIsProcessingAI(true);
@@ -284,15 +339,22 @@ const ImportarVendasDialog: React.FC = () => {
       setMultiImages([...updated]);
     }
 
-    setAllPhotoResults(results);
+    // Check for duplicates against DB and within batch
+    const checkedResults = await checkPhotoDuplicates(results);
+    const dupeCount = checkedResults.filter(r => r.isDuplicate).length;
+
+    setAllPhotoResults(checkedResults);
     setIsProcessingAI(false);
 
-    if (results.length > 0) {
+    if (checkedResults.length > 0) {
       setPhotoStep('items');
       setCurrentResultIndex(0);
+      const desc = dupeCount > 0
+        ? `${checkedResults.reduce((sum, r) => sum + r.itens.length, 0)} itens encontrados. ⚠️ ${dupeCount} possível(is) duplicata(s).`
+        : `${checkedResults.reduce((sum, r) => sum + r.itens.length, 0)} itens encontrados no total.`;
       toast({ 
-        title: `${results.length} pedido(s) processado(s)!`,
-        description: `${results.reduce((sum, r) => sum + r.itens.length, 0)} itens encontrados no total.`
+        title: `${checkedResults.length} pedido(s) processado(s)!`,
+        description: desc,
       });
     } else {
       toast({ title: 'Nenhum pedido extraído', description: 'Tente com imagens mais claras.', variant: 'destructive' });
@@ -353,6 +415,8 @@ const ImportarVendasDialog: React.FC = () => {
       const newMappings: { nome_externo: string; produto_id: string; plataforma: string }[] = [];
 
       for (const result of allPhotoResults) {
+        // Skip duplicates
+        if (result.isDuplicate) continue;
         const selectedItems = result.itens.filter(i => i.selected && i.produto_id);
         if (selectedItems.length === 0) continue;
 
@@ -538,8 +602,10 @@ const ImportarVendasDialog: React.FC = () => {
 
   // Current photo result for display
   const currentResult = allPhotoResults[currentResultIndex];
-  const totalPhotoItemsToImport = allPhotoResults.reduce((sum, r) => sum + r.itens.filter(i => i.selected && i.produto_id).length, 0);
-  const totalPhotoValue = allPhotoResults.reduce((sum, r) => sum + r.itens.filter(i => i.selected && i.produto_id).reduce((s, i) => s + i.valor_total, 0), 0);
+  const nonDuplicateResults = allPhotoResults.filter(r => !r.isDuplicate);
+  const photoDuplicateCount = allPhotoResults.filter(r => r.isDuplicate).length;
+  const totalPhotoItemsToImport = nonDuplicateResults.reduce((sum, r) => sum + r.itens.filter(i => i.selected && i.produto_id).length, 0);
+  const totalPhotoValue = nonDuplicateResults.reduce((sum, r) => sum + r.itens.filter(i => i.selected && i.produto_id).reduce((s, i) => s + i.valor_total, 0), 0);
 
   // Financial breakdown component
   const FinancialBreakdown = ({ data }: { data: PhotoImportData }) => {
@@ -754,13 +820,25 @@ const ImportarVendasDialog: React.FC = () => {
                       </div>
                     )}
 
+                    {/* Duplicate warning */}
+                    {currentResult.isDuplicate && (
+                      <div className="flex items-center gap-2 p-3 border border-destructive/50 bg-destructive/10 rounded-lg">
+                        <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-destructive">Possível duplicata</p>
+                          <p className="text-xs text-muted-foreground">{currentResult.duplicateReason}</p>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Header info */}
-                    <div className="flex flex-col gap-2 p-2 sm:p-3 bg-muted/50 rounded-lg">
+                    <div className={`flex flex-col gap-2 p-2 sm:p-3 rounded-lg ${currentResult.isDuplicate ? 'bg-destructive/5 border border-destructive/20' : 'bg-muted/50'}`}>
                       <div className="flex items-center justify-between flex-wrap gap-2">
                         <div className="flex items-center gap-1.5">
                           <Badge variant="outline" className="text-xs">{currentResult.tipo === 'comanda' ? 'Comanda' : 'Relatório'}</Badge>
                           {currentResult.plataforma && <Badge variant="secondary" className="text-xs">{currentResult.plataforma}</Badge>}
                           {currentResult.numero_pedido && <Badge className="text-xs">{currentResult.numero_pedido}</Badge>}
+                          {currentResult.isDuplicate && <Badge variant="destructive" className="text-xs">⚠️ Duplicata</Badge>}
                         </div>
                         <p className="text-xs text-muted-foreground">
                           {currentResult.data}{currentResult.cliente && ` • ${currentResult.cliente}`}
@@ -830,7 +908,10 @@ const ImportarVendasDialog: React.FC = () => {
                       <div className="text-sm">
                         <span className="font-medium">Total: </span>
                         <span className="text-base sm:text-lg font-bold text-primary">{formatCurrency(totalPhotoValue)}</span>
-                        <span className="text-muted-foreground text-xs ml-1">({totalPhotoItemsToImport} vendas de {allPhotoResults.length} pedido(s))</span>
+                        <span className="text-muted-foreground text-xs ml-1">
+                          ({totalPhotoItemsToImport} vendas de {nonDuplicateResults.length} pedido(s))
+                          {photoDuplicateCount > 0 && <span className="text-destructive"> • {photoDuplicateCount} duplicata(s) ignorada(s)</span>}
+                        </span>
                       </div>
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={() => { setPhotoStep('upload'); setAllPhotoResults([]); setMultiImages([]); }}>Voltar</Button>
