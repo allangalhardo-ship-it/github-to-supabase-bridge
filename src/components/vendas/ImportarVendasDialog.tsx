@@ -886,7 +886,24 @@ const ImportarVendasDialog: React.FC = () => {
                                 <Checkbox checked={item.selected} onCheckedChange={() => handleToggleItem(currentResultIndex, idx)} className="mt-0.5" />
                                 <div className="flex-1 min-w-0 space-y-1.5">
                                   <div className="flex items-center justify-between gap-2">
-                                    <span className="font-medium text-sm truncate">{item.produto}</span>
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                      <span className="font-medium text-sm truncate">{item.produto}</span>
+                                      {item.matchType === 'saved' && (
+                                        <span className="shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-primary/15 text-primary border border-primary/20" title="Vinculado por mapeamento salvo anteriormente">
+                                          🔗 Salvo
+                                        </span>
+                                      )}
+                                      {item.matchType === 'auto' && (
+                                        <span className="shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-accent text-accent-foreground border" title="Vinculado automaticamente por similaridade de nome">
+                                          ✨ Auto
+                                        </span>
+                                      )}
+                                      {item.matchType === 'manual' && (
+                                        <span className="shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-secondary text-secondary-foreground border" title="Vinculado manualmente por você">
+                                          ✋ Manual
+                                        </span>
+                                      )}
+                                    </div>
                                     <span className="text-sm font-medium shrink-0">
                                       {item.quantidade > 1 && <span className="text-muted-foreground mr-1">{item.quantidade}×</span>}
                                       {formatCurrency(item.valor_total)}
