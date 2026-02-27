@@ -116,6 +116,13 @@ const Relatorios = () => {
             category="vendas"
             onClick={() => setCurrentView('margens')}
           />
+          <ReportCard
+            title="Análise por Plataforma"
+            description="Quanto cada plataforma (iFood, Rappi, etc.) custa pro seu negócio: taxas, incentivos e valor líquido"
+            icon={Store}
+            category="vendas"
+            onClick={() => setCurrentView('plataformas')}
+          />
         </div>
       </section>
 
