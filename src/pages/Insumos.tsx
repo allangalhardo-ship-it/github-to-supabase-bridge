@@ -526,8 +526,20 @@ const Insumos = () => {
               const filteredInsumos = insumos.filter(i => 
                 i.nome.toLowerCase().includes(searchTerm.toLowerCase())
               );
+              const pagination = usePagination(filteredInsumos, { pageSize: 25 });
               return filteredInsumos.length > 0 ? (
-                renderTable(filteredInsumos)
+                <>
+                  {renderTable(pagination.paginatedData)}
+                  <PaginationControls
+                    currentPage={pagination.currentPage}
+                    totalPages={pagination.totalPages}
+                    startIndex={pagination.startIndex}
+                    endIndex={pagination.endIndex}
+                    totalItems={pagination.totalItems}
+                    onPrevPage={pagination.prevPage}
+                    onNextPage={pagination.nextPage}
+                  />
+                </>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <p>Nenhum insumo encontrado para "{searchTerm}"</p>
