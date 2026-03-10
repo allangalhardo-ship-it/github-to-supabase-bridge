@@ -403,13 +403,10 @@ const Caixa = () => {
 
                 {/* Valor */}
                 <div className="space-y-2">
-                  <Label>Valor (R$)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
+                  <Label>Valor</Label>
+                  <CurrencyInput
                     value={valor}
-                    onChange={(e) => setValor(e.target.value)}
+                    onChange={setValor}
                     placeholder="0,00"
                   />
                 </div>
