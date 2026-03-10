@@ -310,6 +310,8 @@ const Produtos = () => {
     });
   }, [produtos, searchTerm, categoriaFiltro]);
 
+  const pagination = usePagination(produtosFiltrados, { pageSize: 18 });
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <ContextualTip
