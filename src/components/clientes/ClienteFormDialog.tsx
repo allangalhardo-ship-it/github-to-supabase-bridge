@@ -206,6 +206,30 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, onSubmit, isLoa
             </TabsContent>
 
             <TabsContent value="endereco" className="space-y-4 mt-4">
+              {/* CEP com busca */}
+              <div className="space-y-2">
+                <Label htmlFor="endereco_cep">CEP</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="endereco_cep"
+                    value={formData.endereco_cep}
+                    onChange={(e) => setFormData({ ...formData, endereco_cep: formatCEP(e.target.value) })}
+                    placeholder="00000-000"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={buscarCep}
+                    disabled={buscandoCep}
+                    title="Buscar endereço pelo CEP"
+                  >
+                    {buscandoCep ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2 space-y-2">
                   <Label htmlFor="endereco_rua">Rua</Label>
