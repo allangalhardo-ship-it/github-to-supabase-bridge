@@ -12,8 +12,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { User, MapPin, FileText } from 'lucide-react';
+import { User, MapPin, FileText, Search, Loader2 } from 'lucide-react';
 import { Cliente, ClienteFormData } from '@/hooks/useClientes';
+import { useToast } from '@/hooks/use-toast';
 
 interface Props {
   open: boolean;
