@@ -195,6 +195,14 @@ const Insumos = () => {
 
   const formatCurrency = formatCurrencySmartBRL;
 
+  const filteredInsumos = useMemo(() => {
+    if (!insumos) return [];
+    return insumos.filter(i => i.nome.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [insumos, searchTerm]);
+
+  const pagination = usePagination(filteredInsumos, { pageSize: 25 });
+
+
   const insumoColumns: Column<Insumo>[] = useMemo(() => [
     {
       key: 'nome',
