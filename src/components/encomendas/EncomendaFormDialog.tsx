@@ -64,11 +64,13 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
   const { usuario } = useAuth();
   const { canaisAtivos } = useCanaisVenda();
 
+  const queryClient = useQueryClient();
+
   // Cliente
   const [clienteId, setClienteId] = useState<string | null>(null);
   const [clienteNome, setClienteNome] = useState('');
   const [clienteWhatsapp, setClienteWhatsapp] = useState('');
-  const [novoCliente, setNovoCliente] = useState(false);
+  const [clienteFormOpen, setClienteFormOpen] = useState(false);
   const [enderecoCadastro, setEnderecoCadastro] = useState('');
   const [usarEnderecoAlternativo, setUsarEnderecoAlternativo] = useState(false);
   const [enderecoAlternativo, setEnderecoAlternativo] = useState('');
