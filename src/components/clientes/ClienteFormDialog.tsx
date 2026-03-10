@@ -272,7 +272,7 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, onSubmit, isLoa
                 </div>
               </div>
 
-              <div className="grid grid-cols-5 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2 space-y-2">
                   <Label htmlFor="endereco_cidade">Cidade</Label>
                   <Input
@@ -297,15 +297,6 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, onSubmit, isLoa
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-                <div className="col-span-2 space-y-2">
-                  <Label htmlFor="endereco_cep">CEP</Label>
-                  <Input
-                    id="endereco_cep"
-                    value={formData.endereco_cep}
-                    onChange={(e) => setFormData({ ...formData, endereco_cep: formatCEP(e.target.value) })}
-                    placeholder="00000-000"
-                  />
                 </div>
               </div>
             </TabsContent>
