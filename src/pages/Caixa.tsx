@@ -131,16 +131,15 @@ const Caixa = () => {
     enabled: !!usuario?.empresa_id,
   });
 
-  // Buscar TODOS os movimentos manuais (para saldo total)
-  const { data: todosMovimentosManuais } = useQuery({
-    queryKey: ['caixa-movimentos-total', usuario?.empresa_id],
+  // Buscar saldo total via RPC (calculado no backend)
+  const { data: saldoData } = useQuery({
+    queryKey: ['caixa-saldo-total', usuario?.empresa_id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('caixa_movimentos')
-        .select('tipo, valor');
-
+      const { data, error } = await supabase.rpc('get_saldo_caixa', {
+        p_empresa_id: usuario!.empresa_id,
+      });
       if (error) throw error;
-      return data as { tipo: string; valor: number }[];
+      return data?.[0] as { total_entradas: number; total_saidas: number; saldo: number } | undefined;
     },
     enabled: !!usuario?.empresa_id,
   });
