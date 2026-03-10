@@ -464,6 +464,123 @@ export type Database = {
         }
         Relationships: []
       }
+      encomenda_itens: {
+        Row: {
+          created_at: string
+          encomenda_id: string
+          id: string
+          observacoes: string | null
+          preco_unitario: number
+          produto_id: string | null
+          produto_nome: string
+          quantidade: number
+        }
+        Insert: {
+          created_at?: string
+          encomenda_id: string
+          id?: string
+          observacoes?: string | null
+          preco_unitario?: number
+          produto_id?: string | null
+          produto_nome: string
+          quantidade?: number
+        }
+        Update: {
+          created_at?: string
+          encomenda_id?: string
+          id?: string
+          observacoes?: string | null
+          preco_unitario?: number
+          produto_id?: string | null
+          produto_nome?: string
+          quantidade?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encomenda_itens_encomenda_id_fkey"
+            columns: ["encomenda_id"]
+            isOneToOne: false
+            referencedRelation: "encomendas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "encomenda_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      encomendas: {
+        Row: {
+          cliente_id: string | null
+          cliente_nome: string
+          cliente_whatsapp: string | null
+          created_at: string
+          data_entrega: string
+          empresa_id: string
+          forma_pagamento: string | null
+          hora_entrega: string | null
+          id: string
+          local_entrega: string | null
+          observacoes: string | null
+          status: string
+          updated_at: string
+          valor_sinal: number
+          valor_total: number
+        }
+        Insert: {
+          cliente_id?: string | null
+          cliente_nome: string
+          cliente_whatsapp?: string | null
+          created_at?: string
+          data_entrega: string
+          empresa_id: string
+          forma_pagamento?: string | null
+          hora_entrega?: string | null
+          id?: string
+          local_entrega?: string | null
+          observacoes?: string | null
+          status?: string
+          updated_at?: string
+          valor_sinal?: number
+          valor_total?: number
+        }
+        Update: {
+          cliente_id?: string | null
+          cliente_nome?: string
+          cliente_whatsapp?: string | null
+          created_at?: string
+          data_entrega?: string
+          empresa_id?: string
+          forma_pagamento?: string | null
+          hora_entrega?: string | null
+          id?: string
+          local_entrega?: string | null
+          observacoes?: string | null
+          status?: string
+          updated_at?: string
+          valor_sinal?: number
+          valor_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encomendas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "encomendas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       estoque_movimentos: {
         Row: {
           created_at: string

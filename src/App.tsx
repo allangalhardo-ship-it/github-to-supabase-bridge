@@ -54,6 +54,7 @@ const Cardapio = lazy(() => import("@/pages/Cardapio"));
 const CardapioDigital = lazy(() => import("@/pages/CardapioDigital"));
 const AcompanharPedido = lazy(() => import("@/pages/AcompanharPedido"));
 const PedidosPage = lazy(() => import("@/pages/Pedidos"));
+const Encomendas = lazy(() => import("@/pages/Encomendas"));
 // Loading fallback component
 const PageLoader = () => (
   <div className="fixed inset-0 flex items-center justify-center bg-background">
@@ -150,6 +151,7 @@ const AppRoutes = () => {
           <Route path="compras" element={<Compras />} />
           <Route path="cardapio-digital" element={<CardapioDigital />} />
           <Route path="pedidos" element={<PedidosPage />} />
+          <Route path="encomendas" element={<Encomendas />} />
           <Route path="configuracoes" element={<Configuracoes />} />
           <Route path="receitas" element={<Receitas />} />
           <Route path="precificacao" element={<Precificacao />} />

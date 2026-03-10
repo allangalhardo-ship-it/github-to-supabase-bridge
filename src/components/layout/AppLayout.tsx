@@ -43,6 +43,7 @@ import {
   LifeBuoy,
   QrCode,
   ClipboardList,
+  CalendarDays,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Crown, Sparkles } from 'lucide-react';
@@ -80,6 +81,7 @@ const navCategories = [
       { to: '/compras', icon: FileSpreadsheet, label: 'Compras' },
       { to: '/movimentacoes', icon: ShoppingCart, label: 'Vendas' },
       { to: '/pedidos', icon: ClipboardList, label: 'Pedidos' },
+      { to: '/encomendas', icon: CalendarDays, label: 'Encomendas' },
     ],
   },
   {
