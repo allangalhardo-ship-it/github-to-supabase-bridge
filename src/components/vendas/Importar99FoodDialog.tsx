@@ -436,7 +436,7 @@ const Importar99FoodTab: React.FC<Props> = ({ onImportComplete }) => {
 
   // Preview step
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
       {/* Financial summary */}
       <div className="bg-muted/50 rounded-lg p-4 space-y-2">
         <div className="flex items-center gap-2 font-medium">
