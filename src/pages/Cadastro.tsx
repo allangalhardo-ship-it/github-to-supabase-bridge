@@ -212,9 +212,9 @@ const Cadastro = () => {
     } else {
       toast({
         title: 'Cadastro realizado!',
-        description: 'Verifique seu email para ativar a conta.',
+        description: 'Bem-vindo ao GastroGestor!',
       });
-      navigate(`/verificar-email?email=${encodeURIComponent(email)}`);
+      navigate('/dashboard');
     }
 
     setLoading(false);
