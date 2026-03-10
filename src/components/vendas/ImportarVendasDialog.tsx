@@ -152,7 +152,7 @@ const ImportarVendasDialog: React.FC = () => {
   const [duplicateCount, setDuplicateCount] = useState(0);
   const [checkingDuplicates, setCheckingDuplicates] = useState(false);
   
-  const [importMethod, setImportMethod] = useState<'csv' | 'foto'>('csv');
+  const [importMethod, setImportMethod] = useState<'csv' | 'foto' | '99food'>('csv');
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const multiImageInputRef = useRef<HTMLInputElement>(null);
