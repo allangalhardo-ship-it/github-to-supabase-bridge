@@ -246,7 +246,7 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
                     </div>
                     <div>
                       <Label className="text-[10px]">Preço un.</Label>
-                      <CurrencyInput value={item.preco_unitario} onChange={v => atualizarItem(idx, 'preco_unitario', v)} className="h-8 text-sm" />
+                      <CurrencyInput value={String(item.preco_unitario)} onChange={v => atualizarItem(idx, 'preco_unitario', parseFloat(v) || 0)} className="h-8 text-sm" />
                     </div>
                   </div>
                   <Input placeholder="Obs. do item (ex: sabor, cor)" value={item.observacoes} onChange={e => atualizarItem(idx, 'observacoes', e.target.value)} className="h-8 text-sm" />
