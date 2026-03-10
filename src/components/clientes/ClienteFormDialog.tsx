@@ -31,6 +31,8 @@ const ESTADOS_BR = [
 ];
 
 export function ClienteFormDialog({ open, onOpenChange, cliente, onSubmit, isLoading }: Props) {
+  const { toast } = useToast();
+  const [buscandoCep, setBuscandoCep] = useState(false);
   const [formData, setFormData] = useState<ClienteFormData>({
     nome: '',
     whatsapp: '',
@@ -87,6 +89,36 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, onSubmit, isLoa
     e.preventDefault();
     onSubmit(formData);
     onOpenChange(false);
+  };
+
+  const buscarCep = async () => {
+    const cepLimpo = (formData.endereco_cep || '').replace(/\D/g, '');
+    if (cepLimpo.length !== 8) {
+      toast({ title: 'CEP inválido', description: 'Digite um CEP com 8 dígitos.', variant: 'destructive' });
+      return;
+    }
+    setBuscandoCep(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+      const data = await res.json();
+      if (data.erro) {
+        toast({ title: 'CEP não encontrado', variant: 'destructive' });
+        return;
+      }
+      setFormData(prev => ({
+        ...prev,
+        endereco_rua: data.logradouro || prev.endereco_rua,
+        endereco_bairro: data.bairro || prev.endereco_bairro,
+        endereco_cidade: data.localidade || prev.endereco_cidade,
+        endereco_estado: data.uf || prev.endereco_estado,
+        endereco_complemento: data.complemento || prev.endereco_complemento,
+      }));
+      toast({ title: 'Endereço preenchido!' });
+    } catch {
+      toast({ title: 'Erro ao buscar CEP', variant: 'destructive' });
+    } finally {
+      setBuscandoCep(false);
+    }
   };
 
   const formatWhatsApp = (value: string) => {
