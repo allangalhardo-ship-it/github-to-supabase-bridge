@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCanaisVenda } from '@/hooks/useCanaisVenda';
+import { useClientes, ClienteFormData as ClienteForm } from '@/hooks/useClientes';
 import { EncomendaFormData } from '@/hooks/useEncomendas';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -23,6 +24,7 @@ import { Switch } from '@/components/ui/switch';
 import { CalendarIcon, Plus, Trash2, UserPlus, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrencyBRL } from '@/lib/format';
+import { ClienteFormDialog as ClienteFormDialogComponent } from '@/components/clientes/ClienteFormDialog';
 
 interface Props {
   open: boolean;
@@ -62,11 +64,13 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
   const { usuario } = useAuth();
   const { canaisAtivos } = useCanaisVenda();
 
+  const queryClient = useQueryClient();
+
   // Cliente
   const [clienteId, setClienteId] = useState<string | null>(null);
   const [clienteNome, setClienteNome] = useState('');
   const [clienteWhatsapp, setClienteWhatsapp] = useState('');
-  const [novoCliente, setNovoCliente] = useState(false);
+  const [clienteFormOpen, setClienteFormOpen] = useState(false);
   const [enderecoCadastro, setEnderecoCadastro] = useState('');
   const [usarEnderecoAlternativo, setUsarEnderecoAlternativo] = useState(false);
   const [enderecoAlternativo, setEnderecoAlternativo] = useState('');
@@ -161,9 +165,30 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
       setClienteNome(cliente.nome);
       setClienteWhatsapp(cliente.whatsapp || '');
       setEnderecoCadastro(formatarEndereco(cliente));
-      setNovoCliente(false);
       setUsarEnderecoAlternativo(false);
     }
+  };
+
+  const handleNovoClienteSalvo = async (data: ClienteForm) => {
+    if (!usuario?.empresa_id) return;
+    const { data: novoCliente, error } = await supabase
+      .from('clientes')
+      .insert({ empresa_id: usuario.empresa_id, ...data })
+      .select('id, nome, whatsapp, endereco_rua, endereco_numero, endereco_complemento, endereco_bairro, endereco_cidade')
+      .single();
+
+    if (!error && novoCliente) {
+      // Refresh clientes list
+      queryClient.invalidateQueries({ queryKey: ['clientes-encomenda'] });
+      queryClient.invalidateQueries({ queryKey: ['clientes'] });
+      const c = novoCliente as ClienteDB;
+      setClienteId(c.id);
+      setClienteNome(c.nome);
+      setClienteWhatsapp(c.whatsapp || '');
+      setEnderecoCadastro(formatarEndereco(c));
+      setUsarEnderecoAlternativo(false);
+    }
+    setClienteFormOpen(false);
   };
 
   const selecionarProduto = (index: number, produtoId: string) => {
@@ -212,7 +237,7 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
 
   const resetForm = () => {
     setClienteId(null); setClienteNome(''); setClienteWhatsapp('');
-    setNovoCliente(false); setEnderecoCadastro(''); setUsarEnderecoAlternativo(false);
+    setEnderecoCadastro(''); setUsarEnderecoAlternativo(false);
     setEnderecoAlternativo(''); setDataEntrega(dataPadrao || new Date());
     setHoraEntrega(''); setObservacoes(''); setValorSinal(0);
     setFormaPagamento('dinheiro'); setCanalSelecionado('');
@@ -248,6 +273,7 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
   const canalNome = canaisAtivos?.find(c => c.id === canalSelecionado)?.nome;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] p-0 flex flex-col overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
@@ -265,51 +291,37 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
                   variant="ghost"
                   size="sm"
                   className="h-7 text-xs gap-1"
-                  onClick={() => {
-                    setNovoCliente(!novoCliente);
-                    if (!novoCliente) {
-                      setClienteId(null); setClienteNome(''); setClienteWhatsapp(''); setEnderecoCadastro('');
-                    }
-                  }}
+                  onClick={() => setClienteFormOpen(true)}
                 >
                   <UserPlus className="h-3 w-3" />
-                  {novoCliente ? 'Buscar cadastrado' : 'Novo cliente'}
+                  Novo cliente
                 </Button>
               </div>
 
-              {!novoCliente ? (
-                <>
-                  <SearchableSelect
-                    options={clienteOptions}
-                    value={clienteId || ''}
-                    onValueChange={selecionarCliente}
-                    placeholder="🔍 Buscar cliente pelo nome..."
-                    searchPlaceholder="Digite o nome do cliente..."
-                    emptyMessage="Nenhum cliente encontrado."
-                    className="h-10"
-                  />
-                  {clienteId && (
-                    <div className="bg-muted/50 rounded-lg p-3 space-y-1.5 text-sm">
-                      <p className="font-medium">{clienteNome}</p>
-                      {clienteWhatsapp && <p className="text-xs text-muted-foreground">📱 {clienteWhatsapp}</p>}
-                      {enderecoCadastro && (
-                        <div className="flex items-start gap-1.5">
-                          <MapPin className="h-3 w-3 mt-0.5 text-muted-foreground flex-shrink-0" />
-                          <p className="text-xs text-muted-foreground">{enderecoCadastro}</p>
-                        </div>
-                      )}
+              <SearchableSelect
+                options={clienteOptions}
+                value={clienteId || ''}
+                onValueChange={selecionarCliente}
+                placeholder="🔍 Buscar cliente pelo nome..."
+                searchPlaceholder="Digite o nome do cliente..."
+                emptyMessage="Nenhum cliente encontrado."
+                className="h-10"
+              />
+              {clienteId && (
+                <div className="bg-muted/50 rounded-lg p-3 space-y-1.5 text-sm">
+                  <p className="font-medium">{clienteNome}</p>
+                  {clienteWhatsapp && <p className="text-xs text-muted-foreground">📱 {clienteWhatsapp}</p>}
+                  {enderecoCadastro && (
+                    <div className="flex items-start gap-1.5">
+                      <MapPin className="h-3 w-3 mt-0.5 text-muted-foreground flex-shrink-0" />
+                      <p className="text-xs text-muted-foreground">{enderecoCadastro}</p>
                     </div>
                   )}
-                </>
-              ) : (
-                <div className="space-y-2">
-                  <Input placeholder="Nome do cliente *" value={clienteNome} onChange={e => setClienteNome(e.target.value)} className="h-9 text-sm" />
-                  <Input placeholder="WhatsApp" value={clienteWhatsapp} onChange={e => setClienteWhatsapp(e.target.value)} className="h-9 text-sm" />
                 </div>
               )}
 
               {/* Endereço alternativo */}
-              {(clienteId || novoCliente) && (
+              {clienteId && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label className="text-xs text-muted-foreground">Endereço de entrega alternativo?</Label>
@@ -318,17 +330,11 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
                       onCheckedChange={setUsarEnderecoAlternativo}
                     />
                   </div>
-                  {(usarEnderecoAlternativo || novoCliente) && (
+                  {usarEnderecoAlternativo && (
                     <Input
-                      placeholder="Endereço de entrega"
-                      value={novoCliente && !usarEnderecoAlternativo ? enderecoCadastro : enderecoAlternativo}
-                      onChange={e => {
-                        if (novoCliente && !usarEnderecoAlternativo) {
-                          setEnderecoCadastro(e.target.value);
-                        } else {
-                          setEnderecoAlternativo(e.target.value);
-                        }
-                      }}
+                      placeholder="Endereço de entrega alternativo"
+                      value={enderecoAlternativo}
+                      onChange={e => setEnderecoAlternativo(e.target.value)}
                       className="h-9 text-sm"
                     />
                   )}
@@ -484,5 +490,12 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
         </div>
       </DialogContent>
     </Dialog>
+
+    <ClienteFormDialogComponent
+      open={clienteFormOpen}
+      onOpenChange={setClienteFormOpen}
+      onSubmit={handleNovoClienteSalvo}
+    />
+    </>
   );
 }
