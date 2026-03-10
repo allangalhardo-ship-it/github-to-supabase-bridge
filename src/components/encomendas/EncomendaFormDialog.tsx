@@ -490,5 +490,12 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
         </div>
       </DialogContent>
     </Dialog>
+
+    <ClienteFormDialogComponent
+      open={clienteFormOpen}
+      onOpenChange={setClienteFormOpen}
+      onSubmit={handleNovoClienteSalvo}
+    />
+    </>
   );
 }
