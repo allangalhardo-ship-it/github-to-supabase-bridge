@@ -18,7 +18,7 @@ export const useSessionTracker = () => {
   const location = useLocation();
   const sessionIdRef = useRef<string | null>(null);
   const lastPathRef = useRef<string>('');
-  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const trackAction = useCallback(async (action: string, pagePath?: string) => {
     if (!session?.access_token) return;
