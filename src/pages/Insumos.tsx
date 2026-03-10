@@ -530,12 +530,7 @@ const Insumos = () => {
                 )}
               </div>
             </div>
-            {(() => {
-              const filteredInsumos = insumos.filter(i => 
-                i.nome.toLowerCase().includes(searchTerm.toLowerCase())
-              );
-              const pagination = usePagination(filteredInsumos, { pageSize: 25 });
-              return filteredInsumos.length > 0 ? (
+            {filteredInsumos.length > 0 ? (
                 <>
                   {renderTable(pagination.paginatedData)}
                   <PaginationControls
@@ -555,8 +550,7 @@ const Insumos = () => {
                     Limpar busca
                   </Button>
                 </div>
-              );
-            })()}
+              )}
           </TabsContent>
 
           <TabsContent value="lista-compras">
