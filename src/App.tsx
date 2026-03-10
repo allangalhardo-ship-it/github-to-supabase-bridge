@@ -54,6 +54,7 @@ const Cardapio = lazy(() => import("@/pages/Cardapio"));
 const CardapioDigital = lazy(() => import("@/pages/CardapioDigital"));
 const AcompanharPedido = lazy(() => import("@/pages/AcompanharPedido"));
 const PedidosPage = lazy(() => import("@/pages/Pedidos"));
+const Encomendas = lazy(() => import("@/pages/Encomendas"));
 // Loading fallback component
 const PageLoader = () => (
   <div className="fixed inset-0 flex items-center justify-center bg-background">
