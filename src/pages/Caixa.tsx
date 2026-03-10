@@ -317,6 +317,9 @@ const Caixa = () => {
 
   const formatCurrency = formatCurrencyBRL;
 
+  const movimentosPagination = usePagination(movimentosFiltrados, { pageSize: 30 });
+
+
   const handleMesAnterior = () => {
     setMesAtual(subMonths(mesAtual, 1));
   };
