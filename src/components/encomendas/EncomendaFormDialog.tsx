@@ -25,7 +25,6 @@ import { CalendarIcon, Plus, Trash2, UserPlus, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrencyBRL } from '@/lib/format';
 import { ClienteFormDialog as ClienteFormDialogComponent } from '@/components/clientes/ClienteFormDialog';
-import { formatCurrencyBRL } from '@/lib/format';
 
 interface Props {
   open: boolean;
