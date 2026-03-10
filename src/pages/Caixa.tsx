@@ -161,20 +161,6 @@ const Caixa = () => {
     enabled: !!usuario?.empresa_id,
   });
 
-  // Buscar TODAS as vendas (para saldo total)
-  const { data: todasVendas } = useQuery({
-    queryKey: ['caixa-vendas-total', usuario?.empresa_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('vendas')
-        .select('valor_total');
-
-      if (error) throw error;
-      return data as { valor_total: number }[];
-    },
-    enabled: !!usuario?.empresa_id,
-  });
-
   // Buscar notas do mês
   const { data: notas, isLoading: loadingNotas } = useQuery({
     queryKey: ['caixa-notas', usuario?.empresa_id, dataInicio, dataFim],
