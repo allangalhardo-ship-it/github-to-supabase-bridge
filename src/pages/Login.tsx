@@ -145,9 +145,8 @@ const Login = () => {
                   </DialogContent>
                 </Dialog>
               </div>
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

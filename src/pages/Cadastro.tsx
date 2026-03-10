@@ -307,9 +307,8 @@ const Cadastro = () => {
 
             <div className="space-y-2">
               <Label htmlFor="password">Senha *</Label>
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
