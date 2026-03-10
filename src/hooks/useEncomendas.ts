@@ -152,8 +152,16 @@ export function useEncomendas(mesAtual: Date) {
     },
     onSuccess: (_, { status }) => {
       queryClient.invalidateQueries({ queryKey: ['encomendas'] });
-      queryClient.invalidateQueries({ queryKey: ['vendas'] });
-      queryClient.invalidateQueries({ queryKey: ['caixa'] });
+      if (status === 'entregue') {
+        // Invalidar todas as queries que dependem de vendas e caixa
+        queryClient.invalidateQueries({ queryKey: ['vendas'] });
+        queryClient.invalidateQueries({ queryKey: ['vendas-dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['vendas-financeiro-dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['vendas-anterior'] });
+        queryClient.invalidateQueries({ queryKey: ['top-produtos'] });
+        queryClient.invalidateQueries({ queryKey: ['caixa'] });
+        queryClient.invalidateQueries({ queryKey: ['caixa-movimentos'] });
+      }
       const msgs: Record<string, string> = {
         em_producao: 'Encomenda em produção!',
         pronta: 'Encomenda pronta!',
