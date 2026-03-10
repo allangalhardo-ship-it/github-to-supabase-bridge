@@ -21,6 +21,8 @@ import ImportProdutosDialog from '@/components/import/ImportProdutosDialog';
 import ImportFichaTecnicaDialog from '@/components/import/ImportFichaTecnicaDialog';
 import CategorySelect from '@/components/produtos/CategorySelect';
 import ContextualTip from '@/components/onboarding/ContextualTip';
+import { usePagination } from '@/hooks/usePagination';
+import { PaginationControls } from '@/components/ui/pagination-controls';
 
 interface Produto {
   id: string;
