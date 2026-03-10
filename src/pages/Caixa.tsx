@@ -335,29 +335,8 @@ const Caixa = () => {
 
   const saldoMes = totalEntradasMes - totalSaidasMes;
 
-  // Saldo total (todas as movimentações de todos os tempos)
-  const saldoTotal = useMemo(() => {
-    let entradas = 0;
-    let saidas = 0;
-
-    // Movimentos manuais
-    todosMovimentosManuais?.forEach(m => {
-      if (m.tipo === 'entrada') entradas += m.valor;
-      else saidas += m.valor;
-    });
-
-    // Vendas
-    todasVendas?.forEach(v => {
-      entradas += v.valor_total;
-    });
-
-    // Notas
-    todasNotas?.forEach(n => {
-      if (n.valor_total) saidas += n.valor_total;
-    });
-
-    return entradas - saidas;
-  }, [todosMovimentosManuais, todasVendas, todasNotas]);
+  // Saldo total via RPC
+  const saldoTotal = saldoData?.saldo ?? 0;
 
   const formatCurrency = formatCurrencyBRL;
 
