@@ -12,8 +12,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { User, MapPin, FileText } from 'lucide-react';
+import { User, MapPin, FileText, Search, Loader2 } from 'lucide-react';
 import { Cliente, ClienteFormData } from '@/hooks/useClientes';
+import { useToast } from '@/hooks/use-toast';
 
 interface Props {
   open: boolean;
@@ -30,6 +31,8 @@ const ESTADOS_BR = [
 ];
 
 export function ClienteFormDialog({ open, onOpenChange, cliente, onSubmit, isLoading }: Props) {
+  const { toast } = useToast();
+  const [buscandoCep, setBuscandoCep] = useState(false);
   const [formData, setFormData] = useState<ClienteFormData>({
     nome: '',
     whatsapp: '',
@@ -86,6 +89,36 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, onSubmit, isLoa
     e.preventDefault();
     onSubmit(formData);
     onOpenChange(false);
+  };
+
+  const buscarCep = async () => {
+    const cepLimpo = (formData.endereco_cep || '').replace(/\D/g, '');
+    if (cepLimpo.length !== 8) {
+      toast({ title: 'CEP inválido', description: 'Digite um CEP com 8 dígitos.', variant: 'destructive' });
+      return;
+    }
+    setBuscandoCep(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+      const data = await res.json();
+      if (data.erro) {
+        toast({ title: 'CEP não encontrado', variant: 'destructive' });
+        return;
+      }
+      setFormData(prev => ({
+        ...prev,
+        endereco_rua: data.logradouro || prev.endereco_rua,
+        endereco_bairro: data.bairro || prev.endereco_bairro,
+        endereco_cidade: data.localidade || prev.endereco_cidade,
+        endereco_estado: data.uf || prev.endereco_estado,
+        endereco_complemento: data.complemento || prev.endereco_complemento,
+      }));
+      toast({ title: 'Endereço preenchido!' });
+    } catch {
+      toast({ title: 'Erro ao buscar CEP', variant: 'destructive' });
+    } finally {
+      setBuscandoCep(false);
+    }
   };
 
   const formatWhatsApp = (value: string) => {
@@ -173,6 +206,30 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, onSubmit, isLoa
             </TabsContent>
 
             <TabsContent value="endereco" className="space-y-4 mt-4">
+              {/* CEP com busca */}
+              <div className="space-y-2">
+                <Label htmlFor="endereco_cep">CEP</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="endereco_cep"
+                    value={formData.endereco_cep}
+                    onChange={(e) => setFormData({ ...formData, endereco_cep: formatCEP(e.target.value) })}
+                    placeholder="00000-000"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={buscarCep}
+                    disabled={buscandoCep}
+                    title="Buscar endereço pelo CEP"
+                  >
+                    {buscandoCep ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2 space-y-2">
                   <Label htmlFor="endereco_rua">Rua</Label>
@@ -215,7 +272,7 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, onSubmit, isLoa
                 </div>
               </div>
 
-              <div className="grid grid-cols-5 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2 space-y-2">
                   <Label htmlFor="endereco_cidade">Cidade</Label>
                   <Input
@@ -240,15 +297,6 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, onSubmit, isLoa
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-                <div className="col-span-2 space-y-2">
-                  <Label htmlFor="endereco_cep">CEP</Label>
-                  <Input
-                    id="endereco_cep"
-                    value={formData.endereco_cep}
-                    onChange={(e) => setFormData({ ...formData, endereco_cep: formatCEP(e.target.value) })}
-                    placeholder="00000-000"
-                  />
                 </div>
               </div>
             </TabsContent>
