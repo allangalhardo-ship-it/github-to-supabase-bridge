@@ -278,7 +278,7 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Valor do Sinal</Label>
-                  <CurrencyInput value={valorSinal} onChange={setValorSinal} className="h-9 text-sm" />
+                  <CurrencyInput value={String(valorSinal)} onChange={v => setValorSinal(parseFloat(v) || 0)} className="h-9 text-sm" />
                 </div>
               </div>
             </div>

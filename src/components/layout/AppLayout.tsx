@@ -81,6 +81,7 @@ const navCategories = [
       { to: '/compras', icon: FileSpreadsheet, label: 'Compras' },
       { to: '/movimentacoes', icon: ShoppingCart, label: 'Vendas' },
       { to: '/pedidos', icon: ClipboardList, label: 'Pedidos' },
+      { to: '/encomendas', icon: CalendarDays, label: 'Encomendas' },
     ],
   },
   {

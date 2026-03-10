@@ -151,6 +151,7 @@ const AppRoutes = () => {
           <Route path="compras" element={<Compras />} />
           <Route path="cardapio-digital" element={<CardapioDigital />} />
           <Route path="pedidos" element={<PedidosPage />} />
+          <Route path="encomendas" element={<Encomendas />} />
           <Route path="configuracoes" element={<Configuracoes />} />
           <Route path="receitas" element={<Receitas />} />
           <Route path="precificacao" element={<Precificacao />} />
