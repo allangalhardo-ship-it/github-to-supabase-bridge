@@ -347,20 +347,12 @@ const CustosFixos = () => {
               
               {isEditingFaturamento ? (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">R$</span>
-                    <Input
-                      id="faturamento"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={faturamentoInput}
-                      onChange={(e) => setFaturamentoInput(e.target.value)}
-                      placeholder="0,00"
-                      className="max-w-[200px]"
-                      autoFocus
-                    />
-                  </div>
+                  <CurrencyInput
+                    id="faturamento"
+                    value={faturamentoInput}
+                    onChange={setFaturamentoInput}
+                    placeholder="0,00"
+                  />
                   <div className="flex gap-2">
                     <Button 
                       size="sm" 

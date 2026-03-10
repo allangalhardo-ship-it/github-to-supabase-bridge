@@ -446,14 +446,11 @@ const Insumos = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="custo_unitario">Custo Unitário</Label>
-                    <Input
+                    <CurrencyInput
                       id="custo_unitario"
-                      type="number"
-                      step="any"
-                      min="0"
                       value={formData.custo_unitario}
-                      onChange={(e) => setFormData({ ...formData, custo_unitario: e.target.value })}
-                      placeholder="0.00"
+                      onChange={(v) => setFormData({ ...formData, custo_unitario: v })}
+                      placeholder="0,00"
                     />
                   </div>
                   <div className="space-y-2">
