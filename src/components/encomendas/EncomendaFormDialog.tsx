@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCanaisVenda } from '@/hooks/useCanaisVenda';
+import { useClientes, ClienteFormData as ClienteForm } from '@/hooks/useClientes';
 import { EncomendaFormData } from '@/hooks/useEncomendas';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
