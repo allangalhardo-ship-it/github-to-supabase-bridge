@@ -45,6 +45,8 @@ import { format, startOfMonth, endOfMonth, subMonths, parseISO, addMonths } from
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
+import { usePagination } from '@/hooks/usePagination';
+import { PaginationControls } from '@/components/ui/pagination-controls';
 import ContextualTip from '@/components/onboarding/ContextualTip';
 
 interface CaixaMovimento {
