@@ -178,19 +178,8 @@ const Caixa = () => {
     enabled: !!usuario?.empresa_id,
   });
 
-  // Buscar TODAS as notas (para saldo total)
-  const { data: todasNotas } = useQuery({
-    queryKey: ['caixa-notas-total', usuario?.empresa_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('xml_notas')
-        .select('valor_total');
 
-      if (error) throw error;
-      return data as { valor_total: number | null }[];
-    },
-    enabled: !!usuario?.empresa_id,
-  });
+
 
   // Criar movimento manual
   const createMutation = useMutation({
