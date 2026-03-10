@@ -1,13 +1,9 @@
-import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { usePrecosCanais } from '@/hooks/usePrecosCanais';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import React, { useState } from 'react';
+import { useDashboardData } from '@/hooks/useDashboardData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnimatedCardContainer, StaggeredCard } from '@/components/ui/animated-card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DashboardInsights } from '@/components/dashboard/DashboardInsights';
 import { SmartInsights } from '@/components/dashboard/SmartInsights';
@@ -18,372 +14,25 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  Percent,
-  Package,
-  AlertTriangle,
-  Receipt,
-  HelpCircle,
-  ChevronDown,
-  Lightbulb,
-  CalendarIcon,
-  Store,
+import {
+  TrendingUp, TrendingDown, DollarSign, Percent,
+  Package, AlertTriangle, Receipt, HelpCircle,
+  ChevronDown, Lightbulb, CalendarIcon, Store,
 } from 'lucide-react';
-import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysInMonth, endOfMonth, subMonths } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCurrencyBRL } from '@/lib/format';
 import WelcomeChecklist from '@/components/dashboard/WelcomeChecklist';
 import AlertasInteligentes from '@/components/dashboard/AlertasInteligentes';
 import MargemEvolutionChart from '@/components/dashboard/MargemEvolutionChart';
 import { AlertaVencimento } from '@/components/producao/AlertaVencimento';
+
 type PeriodoType = 'hoje' | 'semana' | 'mes' | 'ultimos30' | 'personalizado';
 
 const Dashboard = () => {
-  const { usuario } = useAuth();
-  const [periodo, setPeriodo] = useState<PeriodoType>('mes');
+  const d = useDashboardData();
   const [showSmartInsights, setShowSmartInsights] = useState(true);
-  const [customDateFrom, setCustomDateFrom] = useState<Date | undefined>(undefined);
-  const [customDateTo, setCustomDateTo] = useState<Date | undefined>(undefined);
-
-  const getDateRange = () => {
-    const hoje = new Date();
-    switch (periodo) {
-      case 'hoje':
-        return { inicio: format(hoje, 'yyyy-MM-dd'), fim: format(hoje, 'yyyy-MM-dd') };
-      case 'semana':
-        return { inicio: format(startOfWeek(hoje, { locale: ptBR }), 'yyyy-MM-dd'), fim: format(hoje, 'yyyy-MM-dd') };
-      case 'mes':
-        return { inicio: format(startOfMonth(hoje), 'yyyy-MM-dd'), fim: format(hoje, 'yyyy-MM-dd') };
-      case 'ultimos30':
-        return { inicio: format(subDays(hoje, 30), 'yyyy-MM-dd'), fim: format(hoje, 'yyyy-MM-dd') };
-      case 'personalizado':
-        return {
-          inicio: customDateFrom ? format(customDateFrom, 'yyyy-MM-dd') : format(startOfMonth(hoje), 'yyyy-MM-dd'),
-          fim: customDateTo ? format(customDateTo, 'yyyy-MM-dd') : format(hoje, 'yyyy-MM-dd'),
-        };
-      default:
-        return { inicio: format(startOfMonth(hoje), 'yyyy-MM-dd'), fim: format(hoje, 'yyyy-MM-dd') };
-    }
-  };
-
-  const { inicio, fim } = getDateRange();
-
-  // Período anterior para comparativo
-  const getPreviousDateRange = () => {
-    const hoje = new Date();
-    switch (periodo) {
-      case 'hoje':
-        return { inicio: format(subDays(hoje, 1), 'yyyy-MM-dd'), fim: format(subDays(hoje, 1), 'yyyy-MM-dd') };
-      case 'semana': {
-        const inicioSemanaPassada = subDays(startOfWeek(hoje, { locale: ptBR }), 7);
-        return { inicio: format(inicioSemanaPassada, 'yyyy-MM-dd'), fim: format(subDays(startOfWeek(hoje, { locale: ptBR }), 1), 'yyyy-MM-dd') };
-      }
-      case 'mes':
-        return { inicio: format(startOfMonth(subMonths(hoje, 1)), 'yyyy-MM-dd'), fim: format(endOfMonth(subMonths(hoje, 1)), 'yyyy-MM-dd') };
-      case 'ultimos30':
-        return { inicio: format(subDays(hoje, 60), 'yyyy-MM-dd'), fim: format(subDays(hoje, 31), 'yyyy-MM-dd') };
-      case 'personalizado':
-        if (customDateFrom && customDateTo) {
-          const duracao = differenceInDays(customDateTo, customDateFrom);
-          return { inicio: format(subDays(customDateFrom, duracao + 1), 'yyyy-MM-dd'), fim: format(subDays(customDateFrom, 1), 'yyyy-MM-dd') };
-        }
-        return { inicio: format(startOfMonth(subMonths(hoje, 1)), 'yyyy-MM-dd'), fim: format(endOfMonth(subMonths(hoje, 1)), 'yyyy-MM-dd') };
-      default:
-        return { inicio: format(startOfMonth(subMonths(hoje, 1)), 'yyyy-MM-dd'), fim: format(endOfMonth(subMonths(hoje, 1)), 'yyyy-MM-dd') };
-    }
-  };
-  const { inicio: inicioAnterior, fim: fimAnterior } = getPreviousDateRange();
-
-  // Fetch nome da empresa
-  const { data: empresa } = useQuery({
-    queryKey: ['empresa-nome', usuario?.empresa_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('empresas')
-        .select('nome')
-        .eq('id', usuario?.empresa_id)
-        .maybeSingle();
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!usuario?.empresa_id,
-    staleTime: 30 * 60 * 1000, // 30 minutos - nome da empresa raramente muda
-  });
-
-  // Fetch vendas do período usando função otimizada
-  const { data: vendas, isLoading: loadingVendas } = useQuery({
-    queryKey: ['vendas-dashboard', usuario?.empresa_id, inicio, fim],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .rpc('get_dashboard_vendas', {
-          p_empresa_id: usuario?.empresa_id,
-          p_data_inicio: inicio,
-          p_data_fim: fim,
-        });
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!usuario?.empresa_id,
-    staleTime: 2 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-  });
-
-  // Fetch vendas com dados financeiros de plataformas
-  const { data: vendasFinanceiro } = useQuery({
-    queryKey: ['vendas-financeiro-dashboard', usuario?.empresa_id, inicio, fim],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('vendas')
-        .select('taxa_servico, incentivo_loja, incentivo_plataforma, comissao_plataforma, valor_liquido, plataforma, subtotal, valor_total, canal')
-        .gte('data_venda', inicio)
-        .lte('data_venda', fim);
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!usuario?.empresa_id,
-    staleTime: 2 * 60 * 1000,
-  });
-
-  // Fetch vendas do período anterior para comparativo
-  const { data: vendasAnterior } = useQuery({
-    queryKey: ['vendas-anterior', usuario?.empresa_id, inicioAnterior, fimAnterior],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_dashboard_vendas', {
-        p_empresa_id: usuario?.empresa_id,
-        p_data_inicio: inicioAnterior,
-        p_data_fim: fimAnterior,
-      });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!usuario?.empresa_id,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // Fetch custos fixos
-  const { data: custosFixos, isLoading: loadingCustos } = useQuery({
-    queryKey: ['custos-fixos-dashboard', usuario?.empresa_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('custos_fixos')
-        .select('*');
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!usuario?.empresa_id,
-  });
-
-  // Fetch configurações
-  const { data: config } = useQuery({
-    queryKey: ['config-dashboard', usuario?.empresa_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('configuracoes')
-        .select('*')
-        .maybeSingle();
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!usuario?.empresa_id,
-  });
-
-  // Fetch insumos com estoque baixo usando função otimizada
-  const { data: insumosAlerta } = useQuery({
-    queryKey: ['insumos-alerta', usuario?.empresa_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .rpc('get_insumos_estoque_baixo', {
-          p_empresa_id: usuario?.empresa_id,
-        });
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!usuario?.empresa_id,
-    staleTime: 5 * 60 * 1000, // 5 minutos
-    gcTime: 15 * 60 * 1000,
-  });
-
-  // Fetch top produtos usando função otimizada
-  const { data: topProdutos, isLoading: loadingTop } = useQuery({
-    queryKey: ['top-produtos', usuario?.empresa_id, inicio, fim],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .rpc('get_top_produtos', {
-          p_empresa_id: usuario?.empresa_id,
-          p_data_inicio: inicio,
-          p_data_fim: fim,
-          p_limit: 5,
-        });
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!usuario?.empresa_id,
-    staleTime: 2 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-  });
-
-  // Fetch todos os produtos com fichas técnicas para análise de margem
-  const { data: produtosAnalise } = useQuery({
-    queryKey: ['produtos-analise', usuario?.empresa_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('produtos')
-        .select(`
-          id,
-          nome,
-          preco_venda,
-          categoria,
-          fichas_tecnicas (
-            quantidade,
-            insumo_id,
-            insumos (
-              id,
-              nome,
-              custo_unitario
-            )
-          )
-        `)
-        .eq('ativo', true);
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!usuario?.empresa_id,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // Fetch histórico de preços de insumos (últimos 30 dias)
-  const { data: historicoPrecos } = useQuery({
-    queryKey: ['historico-precos-dashboard', usuario?.empresa_id],
-    queryFn: async () => {
-      const trintaDiasAtras = new Date();
-      trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 30);
-      
-      const { data, error } = await supabase
-        .from('historico_precos')
-        .select(`
-          insumo_id,
-          preco_anterior,
-          preco_novo,
-          variacao_percentual,
-          created_at,
-          insumos (
-            nome
-          )
-        `)
-        .gte('created_at', trintaDiasAtras.toISOString())
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!usuario?.empresa_id,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // Cálculos
-  const receitaBruta = vendas?.reduce((sum, v) => sum + Number(v.valor_total), 0) || 0;
-  const totalVendas = vendas?.length || 0;
-  const ticketMedio = totalVendas > 0 ? receitaBruta / totalVendas : 0;
-  
-  // Ticket médio por canal
-  const ticketPorCanal = React.useMemo(() => {
-    if (!vendas || vendas.length === 0) return [];
-    
-    const porCanal: Record<string, { total: number; quantidade: number }> = {};
-    
-    vendas.forEach((venda) => {
-      const canal = venda.canal || 'Direto';
-      if (!porCanal[canal]) {
-        porCanal[canal] = { total: 0, quantidade: 0 };
-      }
-      porCanal[canal].total += Number(venda.valor_total);
-      porCanal[canal].quantidade += 1;
-    });
-    
-    return Object.entries(porCanal)
-      .map(([canal, dados]) => ({
-        canal: canal.charAt(0).toUpperCase() + canal.slice(1),
-        ticketMedio: dados.quantidade > 0 ? dados.total / dados.quantidade : 0,
-        quantidade: dados.quantidade,
-      }))
-      .sort((a, b) => b.quantidade - a.quantidade);
-  }, [vendas]);
-  
-  // Cálculo do CMV: custo dos insumos proporcional ao valor vendido
-  // Agora usando dados pré-calculados da função get_dashboard_vendas
-  const cmvTotal = vendas?.reduce((sum, venda) => {
-    if (!venda.custo_insumos) return sum;
-    
-    // Custo de insumos para produzir 1 unidade do produto
-    const custoUnitarioProduto = Number(venda.custo_insumos) || 0;
-    
-    // Calculamos quantas unidades reais foram vendidas baseado no valor
-    const precoVendaProduto = Number(venda.produto_preco_venda) || 0;
-    const valorTotal = Number(venda.valor_total) || 0;
-    
-    let unidadesReais: number;
-    if (precoVendaProduto > 0) {
-      unidadesReais = valorTotal / precoVendaProduto;
-    } else {
-      unidadesReais = Number(venda.quantidade);
-    }
-    
-    return sum + (custoUnitarioProduto * unidadesReais);
-  }, 0) || 0;
-
-  const cmvPercent = receitaBruta > 0 ? (cmvTotal / receitaBruta) * 100 : 0;
-  const margemContribuicao = receitaBruta - cmvTotal;
-
-  // Comparativo com período anterior
-  const receitaBrutaAnterior = vendasAnterior?.reduce((sum, v) => sum + Number(v.valor_total), 0) || 0;
-  const cmvTotalAnterior = vendasAnterior?.reduce((sum, venda) => {
-    if (!venda.custo_insumos) return sum;
-    const custoUnit = Number(venda.custo_insumos) || 0;
-    const precoVenda = Number(venda.produto_preco_venda) || 0;
-    const valorTotal = Number(venda.valor_total) || 0;
-    const unidades = precoVenda > 0 ? valorTotal / precoVenda : Number(venda.quantidade);
-    return sum + (custoUnit * unidades);
-  }, 0) || 0;
-  const margemAnterior = receitaBrutaAnterior - cmvTotalAnterior;
-  const deltaReceita = receitaBrutaAnterior > 0 ? ((receitaBruta - receitaBrutaAnterior) / receitaBrutaAnterior) * 100 : null;
-  const deltaLucroBruto = margemAnterior > 0 ? ((margemContribuicao - margemAnterior) / margemAnterior) * 100 : null;
-
-  // Produtos com preço defasado
-  const produtosDefasados = useMemo(() => {
-    if (!produtosAnalise) return 0;
-    return produtosAnalise.filter(p => {
-      const custoInsumos = p.fichas_tecnicas?.reduce((sum: number, ft: any) => {
-        return sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0));
-      }, 0) || 0;
-      if (custoInsumos <= 0 || p.preco_venda <= 0) return false;
-      const margem = ((p.preco_venda - custoInsumos) / p.preco_venda) * 100;
-      return margem < (config?.margem_desejada_padrao || 30) * 0.7;
-    }).length;
-  }, [produtosAnalise, config]);
-
-  // Contagem de produtos com margem negativa para alertas
-  const qtdProdutosMargemNegativa = useMemo(() => {
-    if (!produtosAnalise) return 0;
-    return produtosAnalise.filter(p => {
-      const custoInsumos = p.fichas_tecnicas?.reduce((sum: number, ft: any) => {
-        return sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0));
-      }, 0) || 0;
-      if (custoInsumos <= 0 || p.preco_venda <= 0) return false;
-      const impostoVal = p.preco_venda * ((config?.imposto_medio_sobre_vendas || 0) / 100);
-      const lucro = p.preco_venda - custoInsumos - impostoVal;
-      return lucro < 0;
-    }).length;
-  }, [produtosAnalise, config]);
+  const formatCurrency = formatCurrencyBRL;
 
   const renderDelta = (delta: number | null, invertColors = false) => {
     if (delta === null) return null;
@@ -395,229 +44,29 @@ const Dashboard = () => {
     );
   };
 
-  // Quando não há vendas, estimar margem de contribuição a partir dos produtos cadastrados
-  const margemContribuicaoEstimada = useMemo(() => {
-    if (receitaBruta > 0 || !produtosAnalise || produtosAnalise.length === 0) return null;
-
-    let totalPreco = 0;
-    let totalCusto = 0;
-    let produtosComFicha = 0;
-
-    produtosAnalise.forEach((produto) => {
-      if (!produto.preco_venda || produto.preco_venda <= 0) return;
-      const custoInsumos = produto.fichas_tecnicas?.reduce((sum: number, ft: any) => {
-        return sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0));
-      }, 0) || 0;
-
-      if (custoInsumos > 0) {
-        totalPreco += produto.preco_venda;
-        totalCusto += custoInsumos;
-        produtosComFicha++;
-      }
-    });
-
-    if (produtosComFicha === 0 || totalPreco === 0) return null;
-
-    // Margem de contribuição média estimada (preço - custo) / preço
-    const margemPercent = ((totalPreco - totalCusto) / totalPreco) * 100;
-    // Simular receitaBruta = 1 e margemContribuicao proporcional para o card calcular
-    return {
-      receitaSimulada: totalPreco,
-      margemSimulada: totalPreco - totalCusto,
-      margemPercent,
-    };
-  }, [receitaBruta, produtosAnalise]);
-  
-  const custoFixoMensal = custosFixos?.reduce((sum, c) => sum + Number(c.valor_mensal), 0) || 0;
-  const faturamentoMensal = config?.faturamento_mensal || 0;
-  const percentualCustoFixo = faturamentoMensal > 0 ? (custoFixoMensal / faturamentoMensal) * 100 : 0;
-
-  // Calcular custo fixo para o período
-  // REGRA: Custo fixo é FIXO - se não cobrir, está no prejuízo
-  const calcularCustoFixoPeriodo = () => {
-    if (custoFixoMensal <= 0) {
-      return 0;
-    }
-    
-    const hoje = new Date();
-    const diasNoMes = getDaysInMonth(hoje);
-    const custoDiario = custoFixoMensal / diasNoMes;
-    
-    switch (periodo) {
-      case 'hoje':
-        // Para "hoje", mostra o custo fixo proporcional ao dia
-        return custoDiario;
-      case 'semana': {
-        // Para "semana", mostra proporcional aos dias da semana
-        const inicioSemana = startOfWeek(hoje, { locale: ptBR });
-        const diasNaSemana = differenceInDays(hoje, inicioSemana) + 1;
-        return custoDiario * diasNaSemana;
-      }
-      case 'mes':
-      case 'ultimos30':
-        // Para "este mês" ou "últimos 30 dias", usa o custo fixo MENSAL INTEIRO
-        // Porque é o compromisso real que será pago
-        return custoFixoMensal;
-      default:
-        return custoFixoMensal;
-    }
-  };
-  
-  const custoFixoTotal = calcularCustoFixoPeriodo();
-  const impostoPercent = config?.imposto_medio_sobre_vendas ?? 10;
-  const impostos = receitaBruta * (impostoPercent / 100);
-  
-  // Buscar canais configurados com taxas agregadas
-  const { canaisConfigurados } = usePrecosCanais();
-
-  // Taxa total: usar dados reais (comissao_plataforma + taxa_servico + incentivo_loja) quando disponíveis,
-  // senão fallback para estimativa por canal configurado
-  const { taxaAppTotal, taxasReaisTotal } = useMemo(() => {
-    // Somar taxas reais das vendas que têm dados financeiros importados
-    let reaisTotal = 0;
-    let estimadaTotal = 0;
-    const vendasComDadosReais = new Set<string>();
-
-    // Primeiro: coletar dados reais do vendasFinanceiro
-    if (vendasFinanceiro) {
-      vendasFinanceiro.forEach((vf) => {
-        const comissao = Number(vf.comissao_plataforma || 0);
-        const taxaServ = Number(vf.taxa_servico || 0);
-        const incLoja = Number(vf.incentivo_loja || 0);
-        const totalDeducoes = comissao + taxaServ + incLoja;
-        if (totalDeducoes > 0) {
-          reaisTotal += totalDeducoes;
-        }
-      });
-    }
-
-    // Se temos dados reais, usar eles; senão fallback para estimativa
-    if (reaisTotal > 0) {
-      return { taxaAppTotal: reaisTotal, taxasReaisTotal: reaisTotal };
-    }
-
-    // Fallback: estimar usando canais configurados
-    vendas?.forEach((venda) => {
-      if (!venda.canal) return;
-      const canalVenda = venda.canal.toLowerCase();
-      const canalConfig = canaisConfigurados?.find(c => 
-        c.nome.toLowerCase() === canalVenda || c.id === venda.canal
-      );
-      if (canalConfig && canalConfig.taxa > 0) {
-        estimadaTotal += (Number(venda.valor_total) * canalConfig.taxa / 100);
-      }
-    });
-
-    return { taxaAppTotal: estimadaTotal, taxasReaisTotal: 0 };
-  }, [vendas, vendasFinanceiro, canaisConfigurados]);
-  
-  const lucroEstimado = margemContribuicao - custoFixoTotal - impostos - taxaAppTotal;
-
-  const formatCurrency = formatCurrencyBRL;
-
-  // Calcular produtos com margem negativa
-  const produtosMargemNegativa = useMemo(() => {
-    if (!produtosAnalise) return [];
-
-    return produtosAnalise
-      .map((produto) => {
-        const custoInsumos = produto.fichas_tecnicas?.reduce((sum: number, ft: any) => {
-          return sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0));
-        }, 0) || 0;
-
-        const lucro = produto.preco_venda - custoInsumos;
-        const margem = produto.preco_venda > 0 ? (lucro / produto.preco_venda) * 100 : 0;
-
-        return {
-          id: produto.id,
-          nome: produto.nome,
-          preco_venda: produto.preco_venda,
-          custo_insumos: custoInsumos,
-          margem,
-          lucro,
-        };
-      })
-      .filter((p) => p.lucro < 0 && p.custo_insumos > 0);
-  }, [produtosAnalise]);
-
-  // Calcular impacto dos canais de venda (taxas)
-  const impactoApps = useMemo(() => {
-    if (!vendas || !canaisConfigurados) return [];
-
-    const porCanal: Record<string, { taxaTotal: number; vendas: number }> = {};
-
-    vendas.forEach((venda) => {
-      if (!venda.canal) return;
-      const canalVenda = venda.canal.toLowerCase();
-      
-      // Buscar canal correspondente na nova estrutura
-      const canalConfig = canaisConfigurados.find(c => 
-        c.nome.toLowerCase() === canalVenda ||
-        c.id === venda.canal
-      );
-
-      if (canalConfig && canalConfig.taxa > 0) {
-        const nomeCanal = canalConfig.nome;
-        if (!porCanal[nomeCanal]) {
-          porCanal[nomeCanal] = { taxaTotal: 0, vendas: 0 };
-        }
-        porCanal[nomeCanal].taxaTotal += (Number(venda.valor_total) * canalConfig.taxa / 100);
-        porCanal[nomeCanal].vendas += 1;
-      }
-    });
-
-    return Object.entries(porCanal).map(([nome, dados]) => ({
-      nome,
-      taxaTotal: dados.taxaTotal,
-      percentualLucro: lucroEstimado > 0 ? (dados.taxaTotal / lucroEstimado) * 100 : 0,
-      vendas: dados.vendas,
-    }));
-  }, [vendas, canaisConfigurados, lucroEstimado]);
-
-  // Melhor produto do mês
-  const melhorProduto = useMemo(() => {
-    if (!topProdutos || topProdutos.length === 0) return null;
-
-    const melhor = topProdutos[0];
-    const lucro = Number(melhor.lucro || 0);
-    const receita = Number(melhor.receita || 0);
-    
-    return {
-      nome: melhor.nome,
-      lucroTotal: lucro,
-      quantidade: Number(melhor.quantidade || 0),
-      margem: receita > 0 ? (lucro / receita) * 100 : 0,
-    };
-  }, [topProdutos]);
-
-  const isLoading = loadingVendas || loadingCustos;
-
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Welcome Checklist for new users */}
       <WelcomeChecklist />
-      
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-            {empresa?.nome ? `Olá, ${empresa.nome}!` : 'Meu Negócio'}
+            {d.empresa?.nome ? `Olá, ${d.empresa.nome}!` : 'Meu Negócio'}
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground">
             Veja como está o seu negócio {
-              periodo === 'hoje' ? 'hoje' 
-              : periodo === 'semana' ? 'esta semana' 
-              : periodo === 'mes' ? 'este mês' 
-              : periodo === 'personalizado' && customDateFrom && customDateTo
-                ? `de ${format(customDateFrom, 'dd/MM/yyyy')} a ${format(customDateTo, 'dd/MM/yyyy')}`
+              d.periodo === 'hoje' ? 'hoje'
+              : d.periodo === 'semana' ? 'esta semana'
+              : d.periodo === 'mes' ? 'este mês'
+              : d.periodo === 'personalizado' && d.customDateFrom && d.customDateTo
+                ? `de ${format(d.customDateFrom, 'dd/MM/yyyy')} a ${format(d.customDateTo, 'dd/MM/yyyy')}`
                 : 'nos últimos 30 dias'
             }
           </p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          <Select value={periodo} onValueChange={(v) => setPeriodo(v as PeriodoType)}>
-            <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10">
-              <SelectValue placeholder="Selecione o período" />
-            </SelectTrigger>
+          <Select value={d.periodo} onValueChange={(v) => d.setPeriodo(v as PeriodoType)}>
+            <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10"><SelectValue placeholder="Selecione o período" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="hoje">Hoje</SelectItem>
               <SelectItem value="semana">Esta semana</SelectItem>
@@ -626,52 +75,30 @@ const Dashboard = () => {
               <SelectItem value="personalizado">Personalizado</SelectItem>
             </SelectContent>
           </Select>
-          
-          {periodo === 'personalizado' && (
+
+          {d.periodo === 'personalizado' && (
             <div className="flex items-center gap-2">
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className={cn(
-                    "h-9 sm:h-10 justify-start text-left font-normal min-w-[130px]",
-                    !customDateFrom && "text-muted-foreground"
-                  )}>
+                  <Button variant="outline" size="sm" className={cn("h-9 sm:h-10 justify-start text-left font-normal min-w-[130px]", !d.customDateFrom && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {customDateFrom ? format(customDateFrom, 'dd/MM/yyyy') : 'Início'}
+                    {d.customDateFrom ? format(d.customDateFrom, 'dd/MM/yyyy') : 'Início'}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={customDateFrom}
-                    onSelect={setCustomDateFrom}
-                    disabled={(date) => date > new Date() || (customDateTo ? date > customDateTo : false)}
-                    initialFocus
-                    locale={ptBR}
-                    className={cn("p-3 pointer-events-auto")}
-                  />
+                  <Calendar mode="single" selected={d.customDateFrom} onSelect={d.setCustomDateFrom} disabled={(date) => date > new Date() || (d.customDateTo ? date > d.customDateTo : false)} initialFocus locale={ptBR} className={cn("p-3 pointer-events-auto")} />
                 </PopoverContent>
               </Popover>
               <span className="text-muted-foreground text-sm">a</span>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className={cn(
-                    "h-9 sm:h-10 justify-start text-left font-normal min-w-[130px]",
-                    !customDateTo && "text-muted-foreground"
-                  )}>
+                  <Button variant="outline" size="sm" className={cn("h-9 sm:h-10 justify-start text-left font-normal min-w-[130px]", !d.customDateTo && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {customDateTo ? format(customDateTo, 'dd/MM/yyyy') : 'Fim'}
+                    {d.customDateTo ? format(d.customDateTo, 'dd/MM/yyyy') : 'Fim'}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={customDateTo}
-                    onSelect={setCustomDateTo}
-                    disabled={(date) => date > new Date() || (customDateFrom ? date < customDateFrom : false)}
-                    initialFocus
-                    locale={ptBR}
-                    className={cn("p-3 pointer-events-auto")}
-                  />
+                  <Calendar mode="single" selected={d.customDateTo} onSelect={d.setCustomDateTo} disabled={(date) => date > new Date() || (d.customDateFrom ? date < d.customDateFrom : false)} initialFocus locale={ptBR} className={cn("p-3 pointer-events-auto")} />
                 </PopoverContent>
               </Popover>
             </div>
@@ -679,56 +106,39 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* KPIs - empilhados verticalmente no mobile */}
+      {/* KPIs */}
       <AnimatedCardContainer className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5" staggerDelay={0.08}>
         <StaggeredCard className="p-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
             <CardTitle className="text-sm sm:text-base font-medium">Receita Bruta</CardTitle>
-            <div className="h-10 w-10 sm:h-8 sm:w-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <DollarSign className="h-5 w-5 sm:h-4 sm:w-4 text-primary" />
-            </div>
+            <div className="h-10 w-10 sm:h-8 sm:w-8 rounded-full bg-primary/10 flex items-center justify-center"><DollarSign className="h-5 w-5 sm:h-4 sm:w-4 text-primary" /></div>
           </CardHeader>
           <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
-            {isLoading ? (
-              <Skeleton className="h-8 w-24" />
-            ) : (
-              <>
-                <div className="text-2xl sm:text-2xl font-bold">{formatCurrency(receitaBruta)}</div>
-                {renderDelta(deltaReceita)}
-              </>
-            )}
+            {d.isLoading ? <Skeleton className="h-8 w-24" /> : (<><div className="text-2xl font-bold">{formatCurrency(d.receitaBruta)}</div>{renderDelta(d.deltaReceita)}</>)}
           </CardContent>
         </StaggeredCard>
 
         <StaggeredCard className="p-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
             <CardTitle className="text-sm sm:text-base font-medium">Ticket Médio</CardTitle>
-            <div className="h-10 w-10 sm:h-8 sm:w-8 rounded-full bg-purple-500/10 flex items-center justify-center">
-              <Receipt className="h-5 w-5 sm:h-4 sm:w-4 text-purple-600" />
-            </div>
+            <div className="h-10 w-10 sm:h-8 sm:w-8 rounded-full bg-purple-500/10 flex items-center justify-center"><Receipt className="h-5 w-5 sm:h-4 sm:w-4 text-purple-600" /></div>
           </CardHeader>
           <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
-            {isLoading ? (
-              <Skeleton className="h-8 w-24" />
-            ) : (
+            {d.isLoading ? <Skeleton className="h-8 w-24" /> : (
               <>
-                <div className="text-2xl sm:text-2xl font-bold">{formatCurrency(ticketMedio)}</div>
-                <p className="text-xs text-muted-foreground mt-1 mb-2">
-                  {totalVendas} {totalVendas === 1 ? 'venda' : 'vendas'} no período
-                </p>
-                {ticketPorCanal.length > 0 && (
+                <div className="text-2xl font-bold">{formatCurrency(d.ticketMedio)}</div>
+                <p className="text-xs text-muted-foreground mt-1 mb-2">{d.totalVendas} {d.totalVendas === 1 ? 'venda' : 'vendas'} no período</p>
+                {d.ticketPorCanal.length > 0 && (
                   <div className="pt-2 border-t overflow-hidden">
-                    <table className="w-full text-xs table-fixed">
-                      <tbody>
-                        {ticketPorCanal.map((item) => (
-                          <tr key={item.canal}>
-                            <td className="text-muted-foreground py-0.5 truncate max-w-[60px] overflow-hidden">{item.canal}</td>
-                            <td className="text-right font-medium py-0.5 whitespace-nowrap">{formatCurrency(item.ticketMedio)}</td>
-                            <td className="text-right text-muted-foreground py-0.5 w-8 whitespace-nowrap">({item.quantidade})</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    <table className="w-full text-xs table-fixed"><tbody>
+                      {d.ticketPorCanal.map((item) => (
+                        <tr key={item.canal}>
+                          <td className="text-muted-foreground py-0.5 truncate max-w-[60px] overflow-hidden">{item.canal}</td>
+                          <td className="text-right font-medium py-0.5 whitespace-nowrap">{formatCurrency(item.ticketMedio)}</td>
+                          <td className="text-right text-muted-foreground py-0.5 w-8 whitespace-nowrap">({item.quantidade})</td>
+                        </tr>
+                      ))}
+                    </tbody></table>
                   </div>
                 )}
               </>
@@ -739,20 +149,11 @@ const Dashboard = () => {
         <StaggeredCard className="p-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
             <CardTitle className="text-sm sm:text-base font-medium">CMV</CardTitle>
-            <div className="h-10 w-10 sm:h-8 sm:w-8 rounded-full bg-amber-500/10 flex items-center justify-center">
-              <Percent className="h-5 w-5 sm:h-4 sm:w-4 text-amber-600" />
-            </div>
+            <div className="h-10 w-10 sm:h-8 sm:w-8 rounded-full bg-amber-500/10 flex items-center justify-center"><Percent className="h-5 w-5 sm:h-4 sm:w-4 text-amber-600" /></div>
           </CardHeader>
           <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
-            {isLoading ? (
-              <Skeleton className="h-8 w-24" />
-            ) : (
-              <>
-                <div className="text-2xl sm:text-2xl font-bold">{cmvPercent.toFixed(1)}%</div>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                  {formatCurrency(cmvTotal)} em insumos
-                </p>
-              </>
+            {d.isLoading ? <Skeleton className="h-8 w-24" /> : (
+              <><div className="text-2xl font-bold">{d.cmvPercent.toFixed(1)}%</div><p className="text-xs sm:text-sm text-muted-foreground mt-1">{formatCurrency(d.cmvTotal)} em insumos</p></>
             )}
           </CardContent>
         </StaggeredCard>
@@ -760,20 +161,14 @@ const Dashboard = () => {
         <StaggeredCard className="p-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
             <CardTitle className="text-sm sm:text-base font-medium">Lucro Bruto</CardTitle>
-            <div className="h-10 w-10 sm:h-8 sm:w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
-              <TrendingUp className="h-5 w-5 sm:h-4 sm:w-4 text-blue-600" />
-            </div>
+            <div className="h-10 w-10 sm:h-8 sm:w-8 rounded-full bg-blue-500/10 flex items-center justify-center"><TrendingUp className="h-5 w-5 sm:h-4 sm:w-4 text-blue-600" /></div>
           </CardHeader>
           <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
-            {isLoading ? (
-              <Skeleton className="h-8 w-24" />
-            ) : (
+            {d.isLoading ? <Skeleton className="h-8 w-24" /> : (
               <>
-                <div className="text-2xl sm:text-2xl font-bold">{formatCurrency(margemContribuicao)}</div>
-                {renderDelta(deltaLucroBruto)}
-                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                  Receita - CMV ({receitaBruta > 0 ? ((margemContribuicao / receitaBruta) * 100).toFixed(1) : 0}%)
-                </p>
+                <div className="text-2xl font-bold">{formatCurrency(d.margemContribuicao)}</div>
+                {renderDelta(d.deltaLucroBruto)}
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">Receita - CMV ({d.receitaBruta > 0 ? ((d.margemContribuicao / d.receitaBruta) * 100).toFixed(1) : 0}%)</p>
               </>
             )}
           </CardContent>
@@ -784,74 +179,42 @@ const Dashboard = () => {
             <Tooltip>
               <TooltipTrigger asChild>
                 <CardTitle className="text-sm sm:text-base font-medium cursor-help flex items-center gap-1">
-                  Lucro Estimado
-                  <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                  Lucro Estimado<HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
                 </CardTitle>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="max-w-xs p-3">
                 <div className="space-y-2 text-xs">
                   <p className="font-medium">Cálculo do Lucro Estimado:</p>
                   <div className="space-y-1 font-mono text-[11px]">
-                    <div className="flex justify-between">
-                      <span>Receita Bruta</span>
-                      <span className="text-green-600">+{formatCurrency(receitaBruta)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>CMV (insumos)</span>
-                      <span className="text-red-500">-{formatCurrency(cmvTotal)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Custos fixos {periodo === 'mes' || periodo === 'ultimos30' ? '(mensal)' : '(proporcional)'}</span>
-                      <span className="text-red-500">-{formatCurrency(custoFixoTotal)}</span>
-                    </div>
-                    {impostos > 0 && (
-                      <div className="flex justify-between">
-                        <span>Impostos ({impostoPercent}%)</span>
-                        <span className="text-red-500">-{formatCurrency(impostos)}</span>
-                      </div>
-                    )}
-                    {taxaAppTotal > 0 && (
-                      <div className="flex justify-between">
-                        <span>Taxas apps</span>
-                        <span className="text-red-500">-{formatCurrency(taxaAppTotal)}</span>
-                      </div>
-                    )}
+                    <div className="flex justify-between"><span>Receita Bruta</span><span className="text-green-600">+{formatCurrency(d.receitaBruta)}</span></div>
+                    <div className="flex justify-between"><span>CMV (insumos)</span><span className="text-red-500">-{formatCurrency(d.cmvTotal)}</span></div>
+                    <div className="flex justify-between"><span>Custos fixos {d.periodo === 'mes' || d.periodo === 'ultimos30' ? '(mensal)' : '(proporcional)'}</span><span className="text-red-500">-{formatCurrency(d.custoFixoTotal)}</span></div>
+                    {d.impostos > 0 && <div className="flex justify-between"><span>Impostos ({d.impostoPercent}%)</span><span className="text-red-500">-{formatCurrency(d.impostos)}</span></div>}
+                    {d.taxaAppTotal > 0 && <div className="flex justify-between"><span>Taxas apps</span><span className="text-red-500">-{formatCurrency(d.taxaAppTotal)}</span></div>}
                     <div className="border-t pt-1 flex justify-between font-bold">
                       <span>Lucro Estimado</span>
-                      <span className={lucroEstimado >= 0 ? 'text-green-600' : 'text-red-500'}>
-                        {formatCurrency(lucroEstimado)}
-                      </span>
+                      <span className={d.lucroEstimado >= 0 ? 'text-green-600' : 'text-red-500'}>{formatCurrency(d.lucroEstimado)}</span>
                     </div>
                   </div>
                   <p className="text-muted-foreground text-[10px] pt-1">
-                    {periodo === 'mes' || periodo === 'ultimos30' 
-                      ? 'Custo fixo mensal inteiro é deduzido, pois é o compromisso real a pagar.'
-                      : 'Custo fixo proporcional ao período selecionado.'}
+                    {d.periodo === 'mes' || d.periodo === 'ultimos30' ? 'Custo fixo mensal inteiro é deduzido, pois é o compromisso real a pagar.' : 'Custo fixo proporcional ao período selecionado.'}
                   </p>
                 </div>
               </TooltipContent>
             </Tooltip>
-            <div className={`h-10 w-10 sm:h-8 sm:w-8 rounded-full flex items-center justify-center ${lucroEstimado >= 0 ? 'bg-green-500/10' : 'bg-destructive/10'}`}>
-              {lucroEstimado >= 0 ? (
-                <TrendingUp className="h-5 w-5 sm:h-4 sm:w-4 text-green-600" />
-              ) : (
-                <TrendingDown className="h-5 w-5 sm:h-4 sm:w-4 text-destructive" />
-              )}
+            <div className={`h-10 w-10 sm:h-8 sm:w-8 rounded-full flex items-center justify-center ${d.lucroEstimado >= 0 ? 'bg-green-500/10' : 'bg-destructive/10'}`}>
+              {d.lucroEstimado >= 0 ? <TrendingUp className="h-5 w-5 sm:h-4 sm:w-4 text-green-600" /> : <TrendingDown className="h-5 w-5 sm:h-4 sm:w-4 text-destructive" />}
             </div>
           </CardHeader>
           <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
-            {isLoading ? (
-              <Skeleton className="h-8 w-24" />
-            ) : (
+            {d.isLoading ? <Skeleton className="h-8 w-24" /> : (
               <>
-                <div className={`text-2xl sm:text-2xl font-bold ${lucroEstimado >= 0 ? 'text-green-600' : 'text-destructive'}`}>
-                  {formatCurrency(lucroEstimado)}
-                </div>
+                <div className={`text-2xl font-bold ${d.lucroEstimado >= 0 ? 'text-green-600' : 'text-destructive'}`}>{formatCurrency(d.lucroEstimado)}</div>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                  {lucroEstimado < 0 && margemContribuicao < custoFixoMensal ? (
-                    <span className="text-destructive">Falta {formatCurrency(custoFixoMensal - margemContribuicao)} de lucro bruto p/ cobrir CF</span>
+                  {d.lucroEstimado < 0 && d.margemContribuicao < d.custoFixoMensal ? (
+                    <span className="text-destructive">Falta {formatCurrency(d.custoFixoMensal - d.margemContribuicao)} de lucro bruto p/ cobrir CF</span>
                   ) : (
-                    <>CF ({formatCurrency(custoFixoTotal)}){impostos > 0 ? ` + imp. (${formatCurrency(impostos)})` : ''}{taxaAppTotal > 0 ? ` + taxas (${formatCurrency(taxaAppTotal)})` : ''}</>
+                    <>CF ({formatCurrency(d.custoFixoTotal)}){d.impostos > 0 ? ` + imp. (${formatCurrency(d.impostos)})` : ''}{d.taxaAppTotal > 0 ? ` + taxas (${formatCurrency(d.taxaAppTotal)})` : ''}</>
                   )}
                 </p>
               </>
@@ -860,216 +223,101 @@ const Dashboard = () => {
         </StaggeredCard>
       </AnimatedCardContainer>
 
-      {/* Ponto de Equilíbrio - Destaque principal */}
-      <PontoEquilibrioCard
-        receitaBruta={receitaBruta}
-        margemContribuicao={margemContribuicao}
-        custoFixoMensal={custoFixoMensal}
-        isLoading={isLoading}
-        margemEstimada={margemContribuicaoEstimada}
-      />
+      <PontoEquilibrioCard receitaBruta={d.receitaBruta} margemContribuicao={d.margemContribuicao} custoFixoMensal={d.custoFixoMensal} isLoading={d.isLoading} margemEstimada={d.margemContribuicaoEstimada} />
 
-      {/* Card de Taxas & Descontos das Plataformas (dados reais importados) */}
-      {vendasFinanceiro && vendasFinanceiro.length > 0 && (() => {
-        const totalTaxaServico = vendasFinanceiro.reduce((s, v) => s + Number(v.taxa_servico || 0), 0);
-        const totalIncentivoLoja = vendasFinanceiro.reduce((s, v) => s + Number(v.incentivo_loja || 0), 0);
-        const totalIncentivoPlataforma = vendasFinanceiro.reduce((s, v) => s + Number(v.incentivo_plataforma || 0), 0);
+      {/* Platform taxes card */}
+      {d.vendasFinanceiro && d.vendasFinanceiro.length > 0 && (() => {
+        const totalTaxaServico = d.vendasFinanceiro.reduce((s, v) => s + Number(v.taxa_servico || 0), 0);
+        const totalIncentivoLoja = d.vendasFinanceiro.reduce((s, v) => s + Number(v.incentivo_loja || 0), 0);
+        const totalIncentivoPlataforma = d.vendasFinanceiro.reduce((s, v) => s + Number(v.incentivo_plataforma || 0), 0);
         const custoReal = totalTaxaServico + totalIncentivoLoja;
-        
         if (custoReal <= 0) return null;
-        
         return (
           <Card className="border-amber-200 dark:border-amber-800">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-                <Store className="h-4 w-4 text-amber-600" />
-                Taxas & Descontos do Período
-              </CardTitle>
-            </CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm sm:text-base flex items-center gap-2"><Store className="h-4 w-4 text-amber-600" />Taxas & Descontos do Período</CardTitle></CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">Taxa de Serviço</p>
-                  <p className="text-sm sm:text-lg font-bold text-destructive">{formatCurrency(totalTaxaServico)}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">Incentivo Loja</p>
-                  <p className="text-sm sm:text-lg font-bold text-destructive">{formatCurrency(totalIncentivoLoja)}</p>
-                  <p className="text-[9px] text-muted-foreground">Sai do seu bolso</p>
-                </div>
-                <div>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">Incentivo Plataforma</p>
-                  <p className="text-sm sm:text-lg font-bold text-green-600">{formatCurrency(totalIncentivoPlataforma)}</p>
-                  <p className="text-[9px] text-muted-foreground">Não sai do seu bolso</p>
-                </div>
-                <div>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">Custo Total Plataformas</p>
-                  <p className="text-sm sm:text-lg font-bold text-destructive">{formatCurrency(custoReal)}</p>
-                  <p className="text-[9px] text-muted-foreground">
-                    {receitaBruta > 0 ? `${((custoReal / receitaBruta) * 100).toFixed(1)}% da receita` : ''}
-                  </p>
-                </div>
+                <div><p className="text-[10px] sm:text-xs text-muted-foreground">Taxa de Serviço</p><p className="text-sm sm:text-lg font-bold text-destructive">{formatCurrency(totalTaxaServico)}</p></div>
+                <div><p className="text-[10px] sm:text-xs text-muted-foreground">Incentivo Loja</p><p className="text-sm sm:text-lg font-bold text-destructive">{formatCurrency(totalIncentivoLoja)}</p><p className="text-[9px] text-muted-foreground">Sai do seu bolso</p></div>
+                <div><p className="text-[10px] sm:text-xs text-muted-foreground">Incentivo Plataforma</p><p className="text-sm sm:text-lg font-bold text-green-600">{formatCurrency(totalIncentivoPlataforma)}</p><p className="text-[9px] text-muted-foreground">Não sai do seu bolso</p></div>
+                <div><p className="text-[10px] sm:text-xs text-muted-foreground">Custo Total Plataformas</p><p className="text-sm sm:text-lg font-bold text-destructive">{formatCurrency(custoReal)}</p><p className="text-[9px] text-muted-foreground">{d.receitaBruta > 0 ? `${((custoReal / d.receitaBruta) * 100).toFixed(1)}% da receita` : ''}</p></div>
               </div>
             </CardContent>
           </Card>
         );
       })()}
 
-      {/* Business Coach - Resumo Inteligente */}
-      <BusinessCoach
-        vendas={vendas as any}
-        produtos={produtosAnalise as any}
-        canaisConfigurados={canaisConfigurados as any}
-        config={config}
-        custosFixos={custosFixos as any}
-        historicoPrecos={historicoPrecos as any}
-        periodo={periodo}
-        formatCurrency={formatCurrency}
-      />
+      <BusinessCoach vendas={d.vendas as any} produtos={d.produtosAnalise as any} canaisConfigurados={d.canaisConfigurados as any} config={d.config} custosFixos={d.custosFixos as any} historicoPrecos={d.historicoPrecos as any} periodo={d.periodo} formatCurrency={formatCurrency} />
 
-      {/* Insights Acionáveis */}
-      <DashboardInsights
-        produtosMargemNegativa={produtosMargemNegativa}
-        impactoApps={impactoApps}
-        melhorProduto={melhorProduto}
-        lucroTotal={lucroEstimado}
-        formatCurrency={formatCurrency}
-      />
+      <DashboardInsights produtosMargemNegativa={d.produtosMargemNegativa} impactoApps={d.impactoApps} melhorProduto={d.melhorProduto} lucroTotal={d.lucroEstimado} formatCurrency={formatCurrency} />
 
-      {/* Smart Insights - Fase 1, 2 e 3 */}
       <Collapsible open={showSmartInsights} onOpenChange={setShowSmartInsights}>
         <div className="flex items-center justify-between">
           <CollapsibleTrigger asChild>
-            <Button 
-              variant="ghost" 
-              className="flex items-center gap-2 px-0 hover:bg-transparent text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Lightbulb className="h-4 w-4" />
-              <span className="text-sm font-medium">Smart Insights</span>
+            <Button variant="ghost" className="flex items-center gap-2 px-0 hover:bg-transparent text-muted-foreground hover:text-foreground transition-colors">
+              <Lightbulb className="h-4 w-4" /><span className="text-sm font-medium">Smart Insights</span>
               <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${showSmartInsights ? 'rotate-180' : ''}`} />
             </Button>
           </CollapsibleTrigger>
-          {!showSmartInsights && (
-            <span className="text-xs text-muted-foreground">
-              Clique para expandir análises detalhadas
-            </span>
-          )}
+          {!showSmartInsights && <span className="text-xs text-muted-foreground">Clique para expandir análises detalhadas</span>}
         </div>
         <CollapsibleContent className="animate-accordion-down">
           <div className="pt-3">
-            <SmartInsights
-              vendas={vendas as any}
-              produtos={produtosAnalise as any}
-              canaisConfigurados={canaisConfigurados as any}
-              config={config}
-              custosFixos={custosFixos as any}
-              periodo={periodo}
-              formatCurrency={formatCurrency}
-            />
+            <SmartInsights vendas={d.vendas as any} produtos={d.produtosAnalise as any} canaisConfigurados={d.canaisConfigurados as any} config={d.config} custosFixos={d.custosFixos as any} periodo={d.periodo} formatCurrency={formatCurrency} />
           </div>
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Alertas Inteligentes */}
-      <AlertasInteligentes
-        historicoPrecos={historicoPrecos}
-        cmvAtual={cmvPercent}
-        cmvAlvo={config?.cmv_alvo || 35}
-        produtosDefasados={produtosDefasados}
-        produtosMargemNegativa={qtdProdutosMargemNegativa}
-      />
+      <AlertasInteligentes historicoPrecos={d.historicoPrecos} cmvAtual={d.cmvPercent} cmvAlvo={d.config?.cmv_alvo || 35} produtosDefasados={d.produtosDefasados} produtosMargemNegativa={d.qtdProdutosMargemNegativa} />
 
-      {/* Evolução da Margem */}
       <MargemEvolutionChart />
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 animate-fade-in">
-        {/* Top 5 Produtos */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Top 5 Produtos por Lucro
-            </CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle className="flex items-center gap-2"><Package className="h-5 w-5" />Top 5 Produtos por Lucro</CardTitle></CardHeader>
           <CardContent>
-            {loadingTop ? (
+            {d.loadingTop ? (
+              <div className="space-y-3">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
+            ) : d.topProdutos && d.topProdutos.length > 0 ? (
               <div className="space-y-3">
-                {[...Array(5)].map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
-              </div>
-            ) : topProdutos && topProdutos.length > 0 ? (
-              <div className="space-y-3">
-                {topProdutos.map((produto, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg gap-2 overflow-hidden"
-                  >
+                {d.topProdutos.map((produto, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg gap-2 overflow-hidden">
                     <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 overflow-hidden">
-                      <span className="text-sm sm:text-lg font-bold text-muted-foreground shrink-0">
-                        #{index + 1}
-                      </span>
+                      <span className="text-sm sm:text-lg font-bold text-muted-foreground shrink-0">#{index + 1}</span>
                       <div className="min-w-0 flex-1 overflow-hidden">
                         <p className="font-medium truncate text-sm sm:text-base">{produto.nome}</p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {produto.quantidade}x vendidos
-                        </p>
+                        <p className="text-xs text-muted-foreground truncate">{produto.quantidade}x vendidos</p>
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="font-bold text-green-600 text-sm sm:text-base whitespace-nowrap">
-                        {formatCurrency(produto.lucro)}
-                      </p>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
-                        {formatCurrency(produto.receita)} receita
-                      </p>
+                      <p className="font-bold text-green-600 text-sm sm:text-base whitespace-nowrap">{formatCurrency(produto.lucro)}</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">{formatCurrency(produto.receita)} receita</p>
                     </div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className="text-center text-muted-foreground py-8">
-                Nenhuma venda no período
-              </p>
-            )}
+            ) : <p className="text-center text-muted-foreground py-8">Nenhuma venda no período</p>}
           </CardContent>
         </Card>
 
-        {/* Alertas de Estoque */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
-              Alertas de Estoque
-            </CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-500" />Alertas de Estoque</CardTitle></CardHeader>
           <CardContent>
-            {insumosAlerta && insumosAlerta.length > 0 ? (
+            {d.insumosAlerta && d.insumosAlerta.length > 0 ? (
               <div className="space-y-3">
-                {insumosAlerta.slice(0, 5).map((insumo, index) => (
-                  <div
-                    key={insumo.id}
-                    className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg gap-2 overflow-hidden"
-                  >
+                {d.insumosAlerta.slice(0, 5).map((insumo) => (
+                  <div key={insumo.id} className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg gap-2 overflow-hidden">
                     <div className="min-w-0 flex-1 overflow-hidden">
                       <p className="font-medium truncate text-sm">{insumo.nome}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        Mín: {insumo.estoque_minimo} {insumo.unidade_medida}
-                      </p>
+                      <p className="text-xs text-muted-foreground truncate">Mín: {insumo.estoque_minimo} {insumo.unidade_medida}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="font-bold text-amber-600 text-sm whitespace-nowrap">
-                        {Number(insumo.estoque_atual).toFixed(1)} {insumo.unidade_medida}
-                      </p>
+                      <p className="font-bold text-amber-600 text-sm whitespace-nowrap">{Number(insumo.estoque_atual).toFixed(1)} {insumo.unidade_medida}</p>
                     </div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className="text-center text-muted-foreground py-8">
-                Todos os insumos com estoque adequado 👍
-              </p>
-            )}
+            ) : <p className="text-center text-muted-foreground py-8">Todos os insumos com estoque adequado 👍</p>}
           </CardContent>
         </Card>
       </div>
