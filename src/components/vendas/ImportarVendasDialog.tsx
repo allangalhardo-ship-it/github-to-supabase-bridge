@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
+import Importar99FoodTab from './Importar99FoodDialog';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
