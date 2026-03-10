@@ -43,6 +43,7 @@ import {
   LifeBuoy,
   QrCode,
   ClipboardList,
+  CalendarDays,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Crown, Sparkles } from 'lucide-react';
