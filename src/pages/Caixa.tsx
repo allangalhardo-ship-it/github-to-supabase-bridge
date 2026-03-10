@@ -552,52 +552,63 @@ const Caixa = () => {
             {isLoading ? (
               <Skeleton className="h-64" />
             ) : movimentosFiltrados.length > 0 ? (
-              <MobileDataView
-                data={movimentosFiltrados}
-                keyExtractor={(m) => m.id}
-                columns={[
-                  { key: 'data', header: 'Data', mobilePriority: 3, render: (m) => (
-                    <span className="whitespace-nowrap text-xs text-muted-foreground">{format(parseISO(m.data), 'dd/MM')}</span>
-                  )},
-                  { key: 'tipo', header: 'Tipo', mobilePriority: 2, hideOnMobile: true, render: (m) => m.tipo === 'entrada' ? (
-                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100 text-[10px] px-1.5 py-0"><ArrowUpCircle className="h-3 w-3 mr-1" />Entrada</Badge>
-                  ) : (
-                    <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-100 text-[10px] px-1.5 py-0"><ArrowDownCircle className="h-3 w-3 mr-1" />Saída</Badge>
-                  )},
-                  { key: 'categoria', header: 'Categoria', mobilePriority: 4, hideOnMobile: true, render: (m) => <span className="text-xs truncate block max-w-[80px]">{m.categoria}</span> },
-                  { key: 'descricao', header: 'Descrição', mobilePriority: 1, render: (m) => <span className="truncate block max-w-[120px] sm:max-w-none">{m.descricao}</span> },
-                  { key: 'origem', header: 'Origem', mobilePriority: 5, hideOnMobile: true, render: (m) => {
-                    if (m.origem === 'venda') return <Badge variant="outline" className="gap-1 text-[10px] px-1.5 py-0"><ShoppingCart className="h-3 w-3" />Venda</Badge>;
-                    if (m.origem === 'nota') return <Badge variant="outline" className="gap-1 text-[10px] px-1.5 py-0"><Receipt className="h-3 w-3" />NF-e</Badge>;
-                    return <Badge variant="secondary" className="gap-1 text-[10px] px-1.5 py-0">Manual</Badge>;
-                  }},
-                  { key: 'valor', header: 'Valor', align: 'right', mobilePriority: 6, render: (m) => (
-                    <span className={`font-medium whitespace-nowrap text-sm ${m.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
+              <>
+                <MobileDataView
+                  data={movimentosPagination.paginatedData}
+                  keyExtractor={(m) => m.id}
+                  columns={[
+                    { key: 'data', header: 'Data', mobilePriority: 3, render: (m) => (
+                      <span className="whitespace-nowrap text-xs text-muted-foreground">{format(parseISO(m.data), 'dd/MM')}</span>
+                    )},
+                    { key: 'tipo', header: 'Tipo', mobilePriority: 2, hideOnMobile: true, render: (m) => m.tipo === 'entrada' ? (
+                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 text-[10px] px-1.5 py-0"><ArrowUpCircle className="h-3 w-3 mr-1" />Entrada</Badge>
+                    ) : (
+                      <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-100 text-[10px] px-1.5 py-0"><ArrowDownCircle className="h-3 w-3 mr-1" />Saída</Badge>
+                    )},
+                    { key: 'categoria', header: 'Categoria', mobilePriority: 4, hideOnMobile: true, render: (m) => <span className="text-xs truncate block max-w-[80px]">{m.categoria}</span> },
+                    { key: 'descricao', header: 'Descrição', mobilePriority: 1, render: (m) => <span className="truncate block max-w-[120px] sm:max-w-none">{m.descricao}</span> },
+                    { key: 'origem', header: 'Origem', mobilePriority: 5, hideOnMobile: true, render: (m) => {
+                      if (m.origem === 'venda') return <Badge variant="outline" className="gap-1 text-[10px] px-1.5 py-0"><ShoppingCart className="h-3 w-3" />Venda</Badge>;
+                      if (m.origem === 'nota') return <Badge variant="outline" className="gap-1 text-[10px] px-1.5 py-0"><Receipt className="h-3 w-3" />NF-e</Badge>;
+                      return <Badge variant="secondary" className="gap-1 text-[10px] px-1.5 py-0">Manual</Badge>;
+                    }},
+                    { key: 'valor', header: 'Valor', align: 'right', mobilePriority: 6, render: (m) => (
+                      <span className={`font-medium whitespace-nowrap text-sm ${m.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
+                        {m.tipo === 'entrada' ? '+' : '-'} {formatCurrency(m.valor)}
+                      </span>
+                    )},
+                  ]}
+                  renderMobileHeader={(m) => <span className="truncate block max-w-[180px]">{m.descricao}</span>}
+                  renderMobileSubtitle={(m) => (
+                    <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                      <Badge 
+                        variant={m.tipo === 'entrada' ? 'default' : 'destructive'}
+                        className="text-[10px] px-1.5 py-0 shrink-0"
+                      >
+                        {m.tipo === 'entrada' ? '↑' : '↓'}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground truncate max-w-[80px]">
+                        {m.categoria}
+                      </span>
+                    </div>
+                  )}
+                  renderMobileHighlight={(m) => (
+                    <span className={`font-bold whitespace-nowrap ${m.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
                       {m.tipo === 'entrada' ? '+' : '-'} {formatCurrency(m.valor)}
                     </span>
-                  )},
-                ]}
-                renderMobileHeader={(m) => <span className="truncate block max-w-[180px]">{m.descricao}</span>}
-                renderMobileSubtitle={(m) => (
-                  <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-                    <Badge 
-                      variant={m.tipo === 'entrada' ? 'default' : 'destructive'}
-                      className="text-[10px] px-1.5 py-0 shrink-0"
-                    >
-                      {m.tipo === 'entrada' ? '↑' : '↓'}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground truncate max-w-[80px]">
-                      {m.categoria}
-                    </span>
-                  </div>
-                )}
-                renderMobileHighlight={(m) => (
-                  <span className={`font-bold whitespace-nowrap ${m.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
-                    {m.tipo === 'entrada' ? '+' : '-'} {formatCurrency(m.valor)}
-                  </span>
-                )}
-                emptyMessage="Não há movimentações neste período."
-              />
+                  )}
+                  emptyMessage="Não há movimentações neste período."
+                />
+                <PaginationControls
+                  currentPage={movimentosPagination.currentPage}
+                  totalPages={movimentosPagination.totalPages}
+                  startIndex={movimentosPagination.startIndex}
+                  endIndex={movimentosPagination.endIndex}
+                  totalItems={movimentosPagination.totalItems}
+                  onPrevPage={movimentosPagination.prevPage}
+                  onNextPage={movimentosPagination.nextPage}
+                />
+              </>
             ) : (
               <div className="text-center py-12">
                 <Wallet className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
