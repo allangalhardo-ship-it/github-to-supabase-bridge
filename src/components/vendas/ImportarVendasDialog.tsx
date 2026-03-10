@@ -909,10 +909,11 @@ const ImportarVendasDialog: React.FC = () => {
 
         {step === 'upload' && (
           <div className="space-y-4 py-4">
-            <Tabs value={importMethod} onValueChange={(v) => setImportMethod(v as 'csv' | 'foto')} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="csv" className="flex items-center gap-2"><FileSpreadsheet className="h-4 w-4" />CSV/Excel</TabsTrigger>
-                <TabsTrigger value="foto" className="flex items-center gap-2"><Camera className="h-4 w-4" />Foto</TabsTrigger>
+            <Tabs value={importMethod} onValueChange={(v) => setImportMethod(v as 'csv' | 'foto' | '99food')} className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="csv" className="flex items-center gap-1 text-xs sm:text-sm"><FileSpreadsheet className="h-4 w-4" />CSV/Excel</TabsTrigger>
+                <TabsTrigger value="foto" className="flex items-center gap-1 text-xs sm:text-sm"><Camera className="h-4 w-4" />Foto</TabsTrigger>
+                <TabsTrigger value="99food" className="flex items-center gap-1 text-xs sm:text-sm"><FileSpreadsheet className="h-4 w-4" />99Food</TabsTrigger>
               </TabsList>
 
               <TabsContent value="csv" className="mt-4 space-y-4">
