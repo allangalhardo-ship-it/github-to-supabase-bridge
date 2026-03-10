@@ -21,6 +21,8 @@ import ImportProdutosDialog from '@/components/import/ImportProdutosDialog';
 import ImportFichaTecnicaDialog from '@/components/import/ImportFichaTecnicaDialog';
 import CategorySelect from '@/components/produtos/CategorySelect';
 import ContextualTip from '@/components/onboarding/ContextualTip';
+import { usePagination } from '@/hooks/usePagination';
+import { PaginationControls } from '@/components/ui/pagination-controls';
 
 interface Produto {
   id: string;
@@ -308,6 +310,8 @@ const Produtos = () => {
     });
   }, [produtos, searchTerm, categoriaFiltro]);
 
+  const pagination = usePagination(produtosFiltrados, { pageSize: 18 });
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <ContextualTip
@@ -494,20 +498,31 @@ const Produtos = () => {
           ))}
         </div>
       ) : produtosFiltrados && produtosFiltrados.length > 0 ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {produtosFiltrados.map((produto) => (
-            <ProductCard
-              key={produto.id}
-              produto={produto}
-              config={config}
-              onEdit={() => handleEdit(produto)}
-              onDelete={() => handleDeleteClick(produto.id)}
-              onApplyPrice={handleApplyPrice}
-              isApplyingPrice={applyPriceMutation.isPending}
-              onDuplicateSuccess={handleDuplicateSuccess}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {pagination.paginatedData.map((produto) => (
+              <ProductCard
+                key={produto.id}
+                produto={produto}
+                config={config}
+                onEdit={() => handleEdit(produto)}
+                onDelete={() => handleDeleteClick(produto.id)}
+                onApplyPrice={handleApplyPrice}
+                isApplyingPrice={applyPriceMutation.isPending}
+                onDuplicateSuccess={handleDuplicateSuccess}
+              />
+            ))}
+          </div>
+          <PaginationControls
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            startIndex={pagination.startIndex}
+            endIndex={pagination.endIndex}
+            totalItems={pagination.totalItems}
+            onPrevPage={pagination.prevPage}
+            onNextPage={pagination.nextPage}
+          />
+        </>
       ) : (
         <Card className="p-12 text-center">
           <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

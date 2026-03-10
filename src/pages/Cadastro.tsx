@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { PasswordInput } from '@/components/ui/password-input';
 import logoImage from '@/assets/logo.png';
 
 const SEGMENTOS = [
@@ -306,9 +307,8 @@ const Cadastro = () => {
 
             <div className="space-y-2">
               <Label htmlFor="password">Senha *</Label>
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

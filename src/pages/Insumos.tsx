@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { invalidateEmpresaCachesAndRefetch } from '@/lib/queryConfig';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -23,6 +24,8 @@ import ImportInsumosDialog from '@/components/import/ImportInsumosDialog';
 import HistoricoPrecos from '@/components/insumos/HistoricoPrecos';
 import { ImportarBasePadraoDialog } from '@/components/insumos/ImportarBasePadraoDialog';
 import ContextualTip from '@/components/onboarding/ContextualTip';
+import { usePagination } from '@/hooks/usePagination';
+import { PaginationControls } from '@/components/ui/pagination-controls';
 const unidadesMedida = [
   { value: 'un', label: 'Unidade (un)' },
   { value: 'kg', label: 'Quilograma (kg)' },
@@ -191,6 +194,14 @@ const Insumos = () => {
   };
 
   const formatCurrency = formatCurrencySmartBRL;
+
+  const filteredInsumos = useMemo(() => {
+    if (!insumos) return [];
+    return insumos.filter(i => i.nome.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [insumos, searchTerm]);
+
+  const pagination = usePagination(filteredInsumos, { pageSize: 25 });
+
 
   const insumoColumns: Column<Insumo>[] = useMemo(() => [
     {
@@ -445,14 +456,11 @@ const Insumos = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="custo_unitario">Custo Unitário</Label>
-                    <Input
+                    <CurrencyInput
                       id="custo_unitario"
-                      type="number"
-                      step="any"
-                      min="0"
                       value={formData.custo_unitario}
-                      onChange={(e) => setFormData({ ...formData, custo_unitario: e.target.value })}
-                      placeholder="0.00"
+                      onChange={(v) => setFormData({ ...formData, custo_unitario: v })}
+                      placeholder="0,00"
                     />
                   </div>
                   <div className="space-y-2">
@@ -522,12 +530,19 @@ const Insumos = () => {
                 )}
               </div>
             </div>
-            {(() => {
-              const filteredInsumos = insumos.filter(i => 
-                i.nome.toLowerCase().includes(searchTerm.toLowerCase())
-              );
-              return filteredInsumos.length > 0 ? (
-                renderTable(filteredInsumos)
+            {filteredInsumos.length > 0 ? (
+                <>
+                  {renderTable(pagination.paginatedData)}
+                  <PaginationControls
+                    currentPage={pagination.currentPage}
+                    totalPages={pagination.totalPages}
+                    startIndex={pagination.startIndex}
+                    endIndex={pagination.endIndex}
+                    totalItems={pagination.totalItems}
+                    onPrevPage={pagination.prevPage}
+                    onNextPage={pagination.nextPage}
+                  />
+                </>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <p>Nenhum insumo encontrado para "{searchTerm}"</p>
@@ -535,8 +550,7 @@ const Insumos = () => {
                     Limpar busca
                   </Button>
                 </div>
-              );
-            })()}
+              )}
           </TabsContent>
 
           <TabsContent value="lista-compras">

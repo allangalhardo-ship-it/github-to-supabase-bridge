@@ -1715,6 +1715,14 @@ export type Database = {
           unidade_medida: string
         }[]
       }
+      get_saldo_caixa: {
+        Args: { p_empresa_id: string }
+        Returns: {
+          saldo: number
+          total_entradas: number
+          total_saidas: number
+        }[]
+      }
       get_top_produtos: {
         Args: {
           p_data_fim: string

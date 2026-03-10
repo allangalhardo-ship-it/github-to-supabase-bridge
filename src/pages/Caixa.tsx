@@ -6,6 +6,7 @@ import { invalidateEmpresaCachesAndRefetch } from '@/lib/queryConfig';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -44,6 +45,8 @@ import { format, startOfMonth, endOfMonth, subMonths, parseISO, addMonths } from
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
+import { usePagination } from '@/hooks/usePagination';
+import { PaginationControls } from '@/components/ui/pagination-controls';
 import ContextualTip from '@/components/onboarding/ContextualTip';
 
 interface CaixaMovimento {
@@ -130,16 +133,15 @@ const Caixa = () => {
     enabled: !!usuario?.empresa_id,
   });
 
-  // Buscar TODOS os movimentos manuais (para saldo total)
-  const { data: todosMovimentosManuais } = useQuery({
-    queryKey: ['caixa-movimentos-total', usuario?.empresa_id],
+  // Buscar saldo total via RPC (calculado no backend)
+  const { data: saldoData } = useQuery({
+    queryKey: ['caixa-saldo-total', usuario?.empresa_id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('caixa_movimentos')
-        .select('tipo, valor');
-
+      const { data, error } = await supabase.rpc('get_saldo_caixa', {
+        p_empresa_id: usuario!.empresa_id,
+      });
       if (error) throw error;
-      return data as { tipo: string; valor: number }[];
+      return data?.[0] as { total_entradas: number; total_saidas: number; saldo: number } | undefined;
     },
     enabled: !!usuario?.empresa_id,
   });
@@ -161,20 +163,6 @@ const Caixa = () => {
     enabled: !!usuario?.empresa_id,
   });
 
-  // Buscar TODAS as vendas (para saldo total)
-  const { data: todasVendas } = useQuery({
-    queryKey: ['caixa-vendas-total', usuario?.empresa_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('vendas')
-        .select('valor_total');
-
-      if (error) throw error;
-      return data as { valor_total: number }[];
-    },
-    enabled: !!usuario?.empresa_id,
-  });
-
   // Buscar notas do mês
   const { data: notas, isLoading: loadingNotas } = useQuery({
     queryKey: ['caixa-notas', usuario?.empresa_id, dataInicio, dataFim],
@@ -192,19 +180,8 @@ const Caixa = () => {
     enabled: !!usuario?.empresa_id,
   });
 
-  // Buscar TODAS as notas (para saldo total)
-  const { data: todasNotas } = useQuery({
-    queryKey: ['caixa-notas-total', usuario?.empresa_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('xml_notas')
-        .select('valor_total');
 
-      if (error) throw error;
-      return data as { valor_total: number | null }[];
-    },
-    enabled: !!usuario?.empresa_id,
-  });
+
 
   // Criar movimento manual
   const createMutation = useMutation({
@@ -335,31 +312,13 @@ const Caixa = () => {
 
   const saldoMes = totalEntradasMes - totalSaidasMes;
 
-  // Saldo total (todas as movimentações de todos os tempos)
-  const saldoTotal = useMemo(() => {
-    let entradas = 0;
-    let saidas = 0;
-
-    // Movimentos manuais
-    todosMovimentosManuais?.forEach(m => {
-      if (m.tipo === 'entrada') entradas += m.valor;
-      else saidas += m.valor;
-    });
-
-    // Vendas
-    todasVendas?.forEach(v => {
-      entradas += v.valor_total;
-    });
-
-    // Notas
-    todasNotas?.forEach(n => {
-      if (n.valor_total) saidas += n.valor_total;
-    });
-
-    return entradas - saidas;
-  }, [todosMovimentosManuais, todasVendas, todasNotas]);
+  // Saldo total via RPC
+  const saldoTotal = saldoData?.saldo ?? 0;
 
   const formatCurrency = formatCurrencyBRL;
+
+  const movimentosPagination = usePagination(movimentosFiltrados, { pageSize: 30 });
+
 
   const handleMesAnterior = () => {
     setMesAtual(subMonths(mesAtual, 1));
@@ -449,13 +408,10 @@ const Caixa = () => {
 
                 {/* Valor */}
                 <div className="space-y-2">
-                  <Label>Valor (R$)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
+                  <Label>Valor</Label>
+                  <CurrencyInput
                     value={valor}
-                    onChange={(e) => setValor(e.target.value)}
+                    onChange={setValor}
                     placeholder="0,00"
                   />
                 </div>
@@ -596,52 +552,63 @@ const Caixa = () => {
             {isLoading ? (
               <Skeleton className="h-64" />
             ) : movimentosFiltrados.length > 0 ? (
-              <MobileDataView
-                data={movimentosFiltrados}
-                keyExtractor={(m) => m.id}
-                columns={[
-                  { key: 'data', header: 'Data', mobilePriority: 3, render: (m) => (
-                    <span className="whitespace-nowrap text-xs text-muted-foreground">{format(parseISO(m.data), 'dd/MM')}</span>
-                  )},
-                  { key: 'tipo', header: 'Tipo', mobilePriority: 2, hideOnMobile: true, render: (m) => m.tipo === 'entrada' ? (
-                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100 text-[10px] px-1.5 py-0"><ArrowUpCircle className="h-3 w-3 mr-1" />Entrada</Badge>
-                  ) : (
-                    <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-100 text-[10px] px-1.5 py-0"><ArrowDownCircle className="h-3 w-3 mr-1" />Saída</Badge>
-                  )},
-                  { key: 'categoria', header: 'Categoria', mobilePriority: 4, hideOnMobile: true, render: (m) => <span className="text-xs truncate block max-w-[80px]">{m.categoria}</span> },
-                  { key: 'descricao', header: 'Descrição', mobilePriority: 1, render: (m) => <span className="truncate block max-w-[120px] sm:max-w-none">{m.descricao}</span> },
-                  { key: 'origem', header: 'Origem', mobilePriority: 5, hideOnMobile: true, render: (m) => {
-                    if (m.origem === 'venda') return <Badge variant="outline" className="gap-1 text-[10px] px-1.5 py-0"><ShoppingCart className="h-3 w-3" />Venda</Badge>;
-                    if (m.origem === 'nota') return <Badge variant="outline" className="gap-1 text-[10px] px-1.5 py-0"><Receipt className="h-3 w-3" />NF-e</Badge>;
-                    return <Badge variant="secondary" className="gap-1 text-[10px] px-1.5 py-0">Manual</Badge>;
-                  }},
-                  { key: 'valor', header: 'Valor', align: 'right', mobilePriority: 6, render: (m) => (
-                    <span className={`font-medium whitespace-nowrap text-sm ${m.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
+              <>
+                <MobileDataView
+                  data={movimentosPagination.paginatedData}
+                  keyExtractor={(m) => m.id}
+                  columns={[
+                    { key: 'data', header: 'Data', mobilePriority: 3, render: (m) => (
+                      <span className="whitespace-nowrap text-xs text-muted-foreground">{format(parseISO(m.data), 'dd/MM')}</span>
+                    )},
+                    { key: 'tipo', header: 'Tipo', mobilePriority: 2, hideOnMobile: true, render: (m) => m.tipo === 'entrada' ? (
+                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 text-[10px] px-1.5 py-0"><ArrowUpCircle className="h-3 w-3 mr-1" />Entrada</Badge>
+                    ) : (
+                      <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-100 text-[10px] px-1.5 py-0"><ArrowDownCircle className="h-3 w-3 mr-1" />Saída</Badge>
+                    )},
+                    { key: 'categoria', header: 'Categoria', mobilePriority: 4, hideOnMobile: true, render: (m) => <span className="text-xs truncate block max-w-[80px]">{m.categoria}</span> },
+                    { key: 'descricao', header: 'Descrição', mobilePriority: 1, render: (m) => <span className="truncate block max-w-[120px] sm:max-w-none">{m.descricao}</span> },
+                    { key: 'origem', header: 'Origem', mobilePriority: 5, hideOnMobile: true, render: (m) => {
+                      if (m.origem === 'venda') return <Badge variant="outline" className="gap-1 text-[10px] px-1.5 py-0"><ShoppingCart className="h-3 w-3" />Venda</Badge>;
+                      if (m.origem === 'nota') return <Badge variant="outline" className="gap-1 text-[10px] px-1.5 py-0"><Receipt className="h-3 w-3" />NF-e</Badge>;
+                      return <Badge variant="secondary" className="gap-1 text-[10px] px-1.5 py-0">Manual</Badge>;
+                    }},
+                    { key: 'valor', header: 'Valor', align: 'right', mobilePriority: 6, render: (m) => (
+                      <span className={`font-medium whitespace-nowrap text-sm ${m.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
+                        {m.tipo === 'entrada' ? '+' : '-'} {formatCurrency(m.valor)}
+                      </span>
+                    )},
+                  ]}
+                  renderMobileHeader={(m) => <span className="truncate block max-w-[180px]">{m.descricao}</span>}
+                  renderMobileSubtitle={(m) => (
+                    <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                      <Badge 
+                        variant={m.tipo === 'entrada' ? 'default' : 'destructive'}
+                        className="text-[10px] px-1.5 py-0 shrink-0"
+                      >
+                        {m.tipo === 'entrada' ? '↑' : '↓'}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground truncate max-w-[80px]">
+                        {m.categoria}
+                      </span>
+                    </div>
+                  )}
+                  renderMobileHighlight={(m) => (
+                    <span className={`font-bold whitespace-nowrap ${m.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
                       {m.tipo === 'entrada' ? '+' : '-'} {formatCurrency(m.valor)}
                     </span>
-                  )},
-                ]}
-                renderMobileHeader={(m) => <span className="truncate block max-w-[180px]">{m.descricao}</span>}
-                renderMobileSubtitle={(m) => (
-                  <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-                    <Badge 
-                      variant={m.tipo === 'entrada' ? 'default' : 'destructive'}
-                      className="text-[10px] px-1.5 py-0 shrink-0"
-                    >
-                      {m.tipo === 'entrada' ? '↑' : '↓'}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground truncate max-w-[80px]">
-                      {m.categoria}
-                    </span>
-                  </div>
-                )}
-                renderMobileHighlight={(m) => (
-                  <span className={`font-bold whitespace-nowrap ${m.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
-                    {m.tipo === 'entrada' ? '+' : '-'} {formatCurrency(m.valor)}
-                  </span>
-                )}
-                emptyMessage="Não há movimentações neste período."
-              />
+                  )}
+                  emptyMessage="Não há movimentações neste período."
+                />
+                <PaginationControls
+                  currentPage={movimentosPagination.currentPage}
+                  totalPages={movimentosPagination.totalPages}
+                  startIndex={movimentosPagination.startIndex}
+                  endIndex={movimentosPagination.endIndex}
+                  totalItems={movimentosPagination.totalItems}
+                  onPrevPage={movimentosPagination.prevPage}
+                  onNextPage={movimentosPagination.nextPage}
+                />
+              </>
             ) : (
               <div className="text-center py-12">
                 <Wallet className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
