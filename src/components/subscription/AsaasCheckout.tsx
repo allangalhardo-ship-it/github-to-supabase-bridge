@@ -42,7 +42,7 @@ export const AsaasCheckout: React.FC<AsaasCheckoutProps> = ({
   const [copied, setCopied] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'BOLETO' | 'CREDIT_CARD'>('PIX');
   const [checkingPayment, setCheckingPayment] = useState(false);
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const formatCpfCnpj = (value: string) => {
     const numbers = value.replace(/\D/g, '');
