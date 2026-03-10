@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
+import Importar99FoodTab from './Importar99FoodDialog';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -151,7 +152,7 @@ const ImportarVendasDialog: React.FC = () => {
   const [duplicateCount, setDuplicateCount] = useState(0);
   const [checkingDuplicates, setCheckingDuplicates] = useState(false);
   
-  const [importMethod, setImportMethod] = useState<'csv' | 'foto'>('csv');
+  const [importMethod, setImportMethod] = useState<'csv' | 'foto' | '99food'>('csv');
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const multiImageInputRef = useRef<HTMLInputElement>(null);
@@ -908,10 +909,11 @@ const ImportarVendasDialog: React.FC = () => {
 
         {step === 'upload' && (
           <div className="space-y-4 py-4">
-            <Tabs value={importMethod} onValueChange={(v) => setImportMethod(v as 'csv' | 'foto')} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="csv" className="flex items-center gap-2"><FileSpreadsheet className="h-4 w-4" />CSV/Excel</TabsTrigger>
-                <TabsTrigger value="foto" className="flex items-center gap-2"><Camera className="h-4 w-4" />Foto</TabsTrigger>
+            <Tabs value={importMethod} onValueChange={(v) => setImportMethod(v as 'csv' | 'foto' | '99food')} className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="csv" className="flex items-center gap-1 text-xs sm:text-sm"><FileSpreadsheet className="h-4 w-4" />CSV/Excel</TabsTrigger>
+                <TabsTrigger value="foto" className="flex items-center gap-1 text-xs sm:text-sm"><Camera className="h-4 w-4" />Foto</TabsTrigger>
+                <TabsTrigger value="99food" className="flex items-center gap-1 text-xs sm:text-sm"><FileSpreadsheet className="h-4 w-4" />99Food</TabsTrigger>
               </TabsList>
 
               <TabsContent value="csv" className="mt-4 space-y-4">
@@ -1172,6 +1174,10 @@ const ImportarVendasDialog: React.FC = () => {
                     </div>
                   </div>
                 )}
+              </TabsContent>
+
+              <TabsContent value="99food" className="mt-4">
+                <Importar99FoodTab onImportComplete={() => { setOpen(false); resetState(); }} />
               </TabsContent>
             </Tabs>
           </div>
