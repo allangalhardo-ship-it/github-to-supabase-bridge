@@ -1175,6 +1175,10 @@ const ImportarVendasDialog: React.FC = () => {
                   </div>
                 )}
               </TabsContent>
+
+              <TabsContent value="99food" className="mt-4">
+                <Importar99FoodTab onImportComplete={() => { setOpen(false); resetState(); }} />
+              </TabsContent>
             </Tabs>
           </div>
         )}
