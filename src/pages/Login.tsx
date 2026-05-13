@@ -79,7 +79,7 @@ const Login = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <img src={logoImage} alt="GastroGestor" className="h-20 w-20 object-contain" />
+            <img src={logoImage} alt="GastroGestor" className="h-40 w-40 object-contain drop-shadow-lg" />
           </div>
           <CardTitle className="text-2xl">
             GastroGestor <span className="text-xs font-normal text-muted-foreground align-middle">(beta)</span>
