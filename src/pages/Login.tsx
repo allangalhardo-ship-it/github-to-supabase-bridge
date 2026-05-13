@@ -81,10 +81,14 @@ const Login = () => {
           <div className="flex justify-center mb-4">
             <img src={logoImage} alt="GastroGestor" className="h-40 w-40 object-contain drop-shadow-lg" />
           </div>
-          <CardTitle className="text-2xl">
-            GastroGestor <span className="text-xs font-normal text-muted-foreground align-middle">(beta)</span>
+          <CardTitle className="font-heading text-4xl font-extrabold tracking-tight text-primary-dark">
+            Gastro<span className="text-cta">Gestor</span>
+            <span className="ml-2 align-middle text-xs font-normal text-muted-foreground">(beta)</span>
           </CardTitle>
-          <CardDescription>
+          <p className="mt-1 text-sm font-medium text-muted-foreground">
+            Gestão Food Delivery
+          </p>
+          <CardDescription className="mt-2">
             Entre para gerenciar seu negócio alimentício
           </CardDescription>
         </CardHeader>
