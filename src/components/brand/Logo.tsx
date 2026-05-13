@@ -10,10 +10,10 @@ interface LogoProps {
 }
 
 const sizeMap = {
-  xs: { icon: 36, text: 'text-base', padding: 'p-1' },
-  sm: { icon: 48, text: 'text-lg', padding: 'p-1.5' },
-  md: { icon: 56, text: 'text-xl', padding: 'p-1.5' },
-  lg: { icon: 72, text: 'text-2xl', padding: 'p-1.5' },
+  xs: { icon: 40, text: 'text-base' },
+  sm: { icon: 56, text: 'text-lg' },
+  md: { icon: 64, text: 'text-xl' },
+  lg: { icon: 88, text: 'text-2xl' },
 };
 
 export const Logo: React.FC<LogoProps> = ({
@@ -22,22 +22,21 @@ export const Logo: React.FC<LogoProps> = ({
   variant = 'full',
   theme = 'dark',
 }) => {
-  const { icon: iconSize, text: textSize, padding } = sizeMap[size];
-  
+  const { icon: iconSize, text: textSize } = sizeMap[size];
+
   const textColor = theme === 'dark' ? 'text-white' : 'text-primary-dark';
 
   return (
-    <div className={cn('flex items-center gap-2', className)}>
-      {/* Logo Image with white background */}
-      <div className={cn('bg-white rounded-xl shadow-sm flex-shrink-0', padding)}>
-        <img
-          src={logoImage}
-          alt="GastroGestor"
-          width={iconSize}
-          height={iconSize}
-          className="object-contain"
-        />
-      </div>
+    <div className={cn('flex items-center gap-2.5', className)}>
+      {/* Logo image — sem fundo branco, já é arredondado */}
+      <img
+        src={logoImage}
+        alt="GastroGestor"
+        width={iconSize}
+        height={iconSize}
+        className="object-contain flex-shrink-0 drop-shadow-md"
+        style={{ width: iconSize, height: iconSize }}
+      />
 
       {/* Text logo */}
       {variant === 'full' && (
