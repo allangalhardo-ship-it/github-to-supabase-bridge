@@ -104,7 +104,7 @@ const AlertasInteligentes: React.FC<AlertasInteligentesProps> = ({
     <Card className="border-amber-200 dark:border-amber-800">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Bell className="h-5 w-5 text-amber-500" />
+          <BotChef mood="alerta" size="xs" float className="shrink-0 -my-2" />
           Alertas Inteligentes
           <Badge variant="secondary" className="ml-auto">{alertas.length}</Badge>
         </CardTitle>
