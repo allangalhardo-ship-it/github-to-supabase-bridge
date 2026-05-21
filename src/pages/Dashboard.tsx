@@ -50,8 +50,8 @@ const Dashboard = () => {
       <WelcomeChecklist />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-        <div className="flex items-center gap-3">
-          <BotChef mood="principal" size="sm" float className="shrink-0 hidden sm:block" />
+        <div className="flex items-center gap-3 sm:gap-4">
+          <BotChef mood="principal" size="md" float className="shrink-0 -my-2" />
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
               {d.empresa?.nome ? `Olá, ${d.empresa.nome}!` : 'Meu Negócio'}

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { BotChef } from '@/components/brand/BotChef';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -333,9 +334,12 @@ const Vendas = () => {
         description="Cada venda registrada alimenta seus relatórios de faturamento, margem e lucro. Quanto mais dados, mais preciso fica o seu painel!"
       />
       <div className="flex flex-col gap-3 sm:gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Vendas</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">Registre e acompanhe suas vendas</p>
+        <div className="flex items-center gap-3">
+          <BotChef mood="celebrando" size="sm" float className="shrink-0 -my-2" />
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Vendas</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Registre e acompanhe suas vendas</p>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
