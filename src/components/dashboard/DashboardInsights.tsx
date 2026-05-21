@@ -210,6 +210,52 @@ export const DashboardInsights: React.FC<DashboardInsightsProps> = ({
             </div>
           </div>
         )}
+
+        {/* Fichas técnicas suspeitas */}
+        {produtosFichaSuspeita.length > 0 && (
+          <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900 flex items-center justify-center shrink-0">
+                <FileWarning className="h-5 w-5 text-amber-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-semibold text-amber-800 dark:text-amber-200">
+                  🧾 {produtosFichaSuspeita.length} {produtosFichaSuspeita.length === 1 ? 'produto com ficha técnica incompleta' : 'produtos com ficha técnica incompleta'}
+                </h4>
+                <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                  Esses produtos estão inflando sua margem estimada. Revise as fichas pra ter números reais.
+                </p>
+                <div className="mt-2 space-y-1">
+                  {produtosFichaSuspeita.slice(0, 5).map((p) => (
+                    <div key={p.id} className="flex items-center justify-between text-sm gap-2">
+                      <span className="text-amber-700 dark:text-amber-300 truncate">{p.nome}</span>
+                      <Badge
+                        variant="secondary"
+                        className="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 shrink-0"
+                      >
+                        {p.motivo === 'sem_ficha'
+                          ? 'sem ficha'
+                          : `margem ${p.margem.toFixed(0)}% · ${p.ingredientes} ${p.ingredientes === 1 ? 'ingr.' : 'ingr.'}`}
+                      </Badge>
+                    </div>
+                  ))}
+                  {produtosFichaSuspeita.length > 5 && (
+                    <p className="text-xs text-amber-500">+{produtosFichaSuspeita.length - 5} outros</p>
+                  )}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2 h-8 text-amber-700 hover:text-amber-800 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900 p-0"
+                  onClick={() => navigate('/produtos')}
+                >
+                  Revisar fichas técnicas
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
