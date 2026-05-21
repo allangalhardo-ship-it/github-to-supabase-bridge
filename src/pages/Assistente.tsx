@@ -437,14 +437,16 @@ const Assistente: React.FC = () => {
       featureDescription="Converse com a inteligência artificial para analisar seus dados, tirar dúvidas e automatizar tarefas como cadastros e atualizações."
     >
       <div className="h-[calc(100vh-8rem)] flex flex-col">
-        <div className="mb-4">
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Bot className="h-7 w-7 text-primary" />
-            Assistente IA
-          </h1>
-          <p className="text-muted-foreground">
-            Tire dúvidas sobre o sistema, peça análises dos seus dados ou dicas de gestão
-          </p>
+        <div className="mb-4 flex items-center gap-3">
+          <BotChef mood="explicando" size="sm" float className="shrink-0 -my-2" />
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              Assistente IA
+            </h1>
+            <p className="text-muted-foreground">
+              Tire dúvidas sobre o sistema, peça análises dos seus dados ou dicas de gestão
+            </p>
+          </div>
         </div>
 
         <Card className="flex-1 flex flex-col overflow-hidden">
