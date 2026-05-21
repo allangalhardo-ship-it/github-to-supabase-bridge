@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { BotChef } from '@/components/brand/BotChef';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
