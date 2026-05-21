@@ -8,7 +8,11 @@ import { formatCurrencyBRL } from '@/lib/format';
 interface MargemEstimada {
   receitaSimulada: number;
   margemSimulada: number;
-  margemPercent: number;
+  margemPercent: number; // líquida (após impostos e taxa média de canal) — usada no cálculo
+  margemPercentBruta?: number;
+  margemPercentLiquida?: number;
+  impostoPercent?: number;
+  taxaMediaCanal?: number;
 }
 
 interface PontoEquilibrioCardProps {
@@ -251,10 +255,24 @@ export const PontoEquilibrioCard: React.FC<PontoEquilibrioCardProps> = ({
 
         {/* Mensagem de projeção */}
         {usandoEstimativa && pontoEquilibrio > 0 && (
-          <div className="p-3 rounded-lg bg-primary/5 text-sm text-primary dark:text-primary">
+          <div className="p-3 rounded-lg bg-primary/5 text-sm text-primary dark:text-primary space-y-2">
             <p>
-              📊 Projeção baseada na margem média dos seus produtos ({margemContribuicaoPercent.toFixed(0)}%). Registre suas <strong>vendas</strong> para ter o cálculo real.
+              📊 Projeção baseada nos seus produtos cadastrados. Registre suas <strong>vendas</strong> para ter o cálculo real.
             </p>
+            {margemEstimada?.margemPercentBruta !== undefined && (
+              <div className="text-xs bg-background/60 rounded p-2 font-mono leading-relaxed text-foreground/80">
+                <div>Margem bruta dos produtos: <strong>{margemEstimada.margemPercentBruta.toFixed(1)}%</strong></div>
+                {(margemEstimada.impostoPercent ?? 0) > 0 && (
+                  <div>− Impostos: {margemEstimada.impostoPercent!.toFixed(1)}%</div>
+                )}
+                {(margemEstimada.taxaMediaCanal ?? 0) > 0 && (
+                  <div>− Taxa média canais ativos: {margemEstimada.taxaMediaCanal!.toFixed(1)}%</div>
+                )}
+                <div className="border-t border-border/50 mt-1 pt-1">
+                  = Margem líquida estimada: <strong className="text-primary">{margemContribuicaoPercent.toFixed(1)}%</strong>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
