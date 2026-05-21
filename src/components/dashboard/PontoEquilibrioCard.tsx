@@ -8,7 +8,11 @@ import { formatCurrencyBRL } from '@/lib/format';
 interface MargemEstimada {
   receitaSimulada: number;
   margemSimulada: number;
-  margemPercent: number;
+  margemPercent: number; // líquida (após impostos e taxa média de canal) — usada no cálculo
+  margemPercentBruta?: number;
+  margemPercentLiquida?: number;
+  impostoPercent?: number;
+  taxaMediaCanal?: number;
 }
 
 interface PontoEquilibrioCardProps {
