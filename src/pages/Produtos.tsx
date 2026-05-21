@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { EmptyState } from '@/components/brand/EmptyState';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
