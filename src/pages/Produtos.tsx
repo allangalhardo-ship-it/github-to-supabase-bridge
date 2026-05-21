@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { EmptyState } from '@/components/brand/EmptyState';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -524,16 +525,18 @@ const Produtos = () => {
           />
         </>
       ) : (
-        <Card className="p-12 text-center">
-          <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">Nenhum produto cadastrado</h3>
-          <p className="text-muted-foreground mb-4">
-            Comece adicionando seu primeiro produto.
-          </p>
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Produto
-          </Button>
+        <Card className="p-8">
+          <EmptyState
+            mood="dica"
+            title="Bora cadastrar seu primeiro produto!"
+            description="Depois eu te ajudo a precificar certinho em cada canal e mostro a margem real de cada um."
+            action={
+              <Button onClick={() => setDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Produto
+              </Button>
+            }
+          />
         </Card>
       )}
 

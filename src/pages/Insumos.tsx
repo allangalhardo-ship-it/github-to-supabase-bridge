@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
+import { EmptyState } from '@/components/brand/EmptyState';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -558,16 +559,18 @@ const Insumos = () => {
           </TabsContent>
         </Tabs>
       ) : (
-        <Card className="p-12 text-center">
-          <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">Nenhum insumo cadastrado</h3>
-          <p className="text-muted-foreground mb-4">
-            Comece adicionando seus primeiros insumos.
-          </p>
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Insumo
-          </Button>
+        <Card className="p-8">
+          <EmptyState
+            mood="apresentando"
+            title="Vamos cadastrar seus primeiros insumos?"
+            description="Os insumos são a base de tudo: com eles eu calculo custos reais, margens e te aviso quando algo subir de preço."
+            action={
+              <Button onClick={() => setDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Insumo
+              </Button>
+            }
+          />
         </Card>
       )}
 

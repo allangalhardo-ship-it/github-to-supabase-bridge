@@ -11,6 +11,7 @@ import { ClienteFormDialog } from '@/components/clientes/ClienteFormDialog';
 import { ClienteCard } from '@/components/clientes/ClienteCard';
 import { differenceInDays, parseISO } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/brand/EmptyState';
 
 const Clientes = () => {
   const { usuario } = useAuth();
