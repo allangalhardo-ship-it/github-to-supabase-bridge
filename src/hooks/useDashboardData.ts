@@ -360,7 +360,8 @@ export function useDashboardData() {
   const impostoPercent = config?.imposto_medio_sobre_vendas ?? 10;
   const impostos = receitaBruta * (impostoPercent / 100);
 
-  const { canaisConfigurados } = usePrecosCanais();
+
+
 
   const { taxaAppTotal, taxasReaisTotal } = useMemo(() => {
     let reaisTotal = 0;
