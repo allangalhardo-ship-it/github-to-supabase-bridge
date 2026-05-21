@@ -11,11 +11,11 @@ interface EmptyStateProps {
   size?: "sm" | "md" | "lg";
 }
 
-const BOT_SIZE = {
+const BOT_SIZE: Record<"sm" | "md" | "lg", "sm" | "md" | "lg"> = {
   sm: "sm",
   md: "md",
   lg: "lg",
-} as const;
+};
 
 /**
  * Empty state padrão com Bot Chef.

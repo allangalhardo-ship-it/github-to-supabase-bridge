@@ -26,6 +26,7 @@ import WelcomeChecklist from '@/components/dashboard/WelcomeChecklist';
 import AlertasInteligentes from '@/components/dashboard/AlertasInteligentes';
 import MargemEvolutionChart from '@/components/dashboard/MargemEvolutionChart';
 import { AlertaVencimento } from '@/components/producao/AlertaVencimento';
+import { BotChef } from '@/components/brand/BotChef';
 
 type PeriodoType = 'hoje' | 'semana' | 'mes' | 'ultimos30' | 'personalizado';
 
@@ -49,20 +50,23 @@ const Dashboard = () => {
       <WelcomeChecklist />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-            {d.empresa?.nome ? `Olá, ${d.empresa.nome}!` : 'Meu Negócio'}
-          </h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            Veja como está o seu negócio {
-              d.periodo === 'hoje' ? 'hoje'
-              : d.periodo === 'semana' ? 'esta semana'
-              : d.periodo === 'mes' ? 'este mês'
-              : d.periodo === 'personalizado' && d.customDateFrom && d.customDateTo
-                ? `de ${format(d.customDateFrom, 'dd/MM/yyyy')} a ${format(d.customDateTo, 'dd/MM/yyyy')}`
-                : 'nos últimos 30 dias'
-            }
-          </p>
+        <div className="flex items-center gap-3">
+          <BotChef mood="principal" size="sm" float className="shrink-0 hidden sm:block" />
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+              {d.empresa?.nome ? `Olá, ${d.empresa.nome}!` : 'Meu Negócio'}
+            </h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              Veja como está o seu negócio {
+                d.periodo === 'hoje' ? 'hoje'
+                : d.periodo === 'semana' ? 'esta semana'
+                : d.periodo === 'mes' ? 'este mês'
+                : d.periodo === 'personalizado' && d.customDateFrom && d.customDateTo
+                  ? `de ${format(d.customDateFrom, 'dd/MM/yyyy')} a ${format(d.customDateTo, 'dd/MM/yyyy')}`
+                  : 'nos últimos 30 dias'
+              }
+            </p>
+          </div>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <Select value={d.periodo} onValueChange={(v) => d.setPeriodo(v as PeriodoType)}>
