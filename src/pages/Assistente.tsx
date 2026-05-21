@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { BotChef } from '@/components/brand/BotChef';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
