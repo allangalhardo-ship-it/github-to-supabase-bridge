@@ -249,7 +249,7 @@ const Dashboard = () => {
 
       <BusinessCoach vendas={d.vendas as any} produtos={d.produtosAnalise as any} canaisConfigurados={d.canaisConfigurados as any} config={d.config} custosFixos={d.custosFixos as any} historicoPrecos={d.historicoPrecos as any} periodo={d.periodo} formatCurrency={formatCurrency} />
 
-      <DashboardInsights produtosMargemNegativa={d.produtosMargemNegativa} impactoApps={d.impactoApps} melhorProduto={d.melhorProduto} lucroTotal={d.lucroEstimado} formatCurrency={formatCurrency} />
+      <DashboardInsights produtosMargemNegativa={d.produtosMargemNegativa} impactoApps={d.impactoApps} melhorProduto={d.melhorProduto} lucroTotal={d.lucroEstimado} formatCurrency={formatCurrency} produtosFichaSuspeita={d.produtosFichaSuspeita} />
 
       <Collapsible open={showSmartInsights} onOpenChange={setShowSmartInsights}>
         <div className="flex items-center justify-between">
