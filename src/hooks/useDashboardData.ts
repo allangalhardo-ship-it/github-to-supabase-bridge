@@ -200,6 +200,7 @@ export function useDashboardData() {
     enabled: !!usuario?.empresa_id,
     staleTime: 5 * 60 * 1000,
   });
+  const { canaisConfigurados } = usePrecosCanais();
 
   // Calculations
   const receitaBruta = vendas?.reduce((sum, v) => sum + Number(v.valor_total), 0) || 0;
