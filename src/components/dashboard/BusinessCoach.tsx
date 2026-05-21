@@ -565,14 +565,17 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
     <Card className={`animate-fade-in border-2 ${styles.bg} bg-gradient-to-br ${styles.gradient} overflow-hidden`}>
       <CardContent className="p-4 sm:p-6">
         <div className="flex items-start gap-4">
-          <div className={`h-12 w-12 rounded-full flex items-center justify-center shrink-0 ${
-            coachAnalysis.status === 'success' ? 'bg-green-100 dark:bg-green-900/50' :
-            coachAnalysis.status === 'warning' ? 'bg-amber-100 dark:bg-amber-900/50' :
-            coachAnalysis.status === 'alert' ? 'bg-red-100 dark:bg-red-900/50' :
-            'bg-primary/10'
-          }`}>
-            <StatusIcon className={`h-6 w-6 ${styles.iconColor}`} />
-          </div>
+          <BotChef
+            mood={(
+              coachAnalysis.status === 'success' ? 'celebrando' :
+              coachAnalysis.status === 'warning' ? 'dica' :
+              coachAnalysis.status === 'alert' ? 'alerta' :
+              'explicando'
+            ) as BotChefMood}
+            size="sm"
+            float
+            className="shrink-0 -my-2"
+          />
           
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
