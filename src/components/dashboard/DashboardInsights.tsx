@@ -11,6 +11,7 @@ import {
   Crown,
   ChevronRight,
   Lightbulb,
+  FileWarning,
 } from 'lucide-react';
 
 interface Produto {
@@ -36,12 +37,23 @@ interface MelhorProduto {
   margem: number;
 }
 
+interface FichaSuspeita {
+  id: string;
+  nome: string;
+  preco_venda: number;
+  custo_insumos: number;
+  ingredientes: number;
+  margem: number;
+  motivo: 'sem_ficha' | 'margem_alta';
+}
+
 interface DashboardInsightsProps {
   produtosMargemNegativa: Produto[];
   impactoApps: ImpactoApp[];
   melhorProduto: MelhorProduto | null;
   lucroTotal: number;
   formatCurrency: (value: number) => string;
+  produtosFichaSuspeita?: FichaSuspeita[];
 }
 
 export const DashboardInsights: React.FC<DashboardInsightsProps> = ({
@@ -50,10 +62,15 @@ export const DashboardInsights: React.FC<DashboardInsightsProps> = ({
   melhorProduto,
   lucroTotal,
   formatCurrency,
+  produtosFichaSuspeita = [],
 }) => {
   const navigate = useNavigate();
 
-  const hasInsights = produtosMargemNegativa.length > 0 || impactoApps.length > 0 || melhorProduto;
+  const hasInsights =
+    produtosMargemNegativa.length > 0 ||
+    impactoApps.length > 0 ||
+    !!melhorProduto ||
+    produtosFichaSuspeita.length > 0;
 
   if (!hasInsights) {
     return null;
