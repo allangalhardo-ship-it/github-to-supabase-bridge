@@ -53,7 +53,7 @@ export const BotChef = ({
       className={cn(
         SIZES[size],
         "object-contain select-none pointer-events-none",
-        float && "animate-[float_3s_ease-in-out_infinite]",
+        float && "animate-bot-float",
         className
       )}
       draggable={false}
