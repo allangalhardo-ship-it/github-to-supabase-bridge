@@ -343,14 +343,16 @@ const Caixa = () => {
       />
       {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Wallet className="h-7 w-7 text-primary" />
-              Caixa
-            </h1>
-            <p className="text-muted-foreground">
-              Controle de entradas e saídas
-            </p>
+          <div className="flex items-center gap-3">
+            <BotChef mood="grafico" size="sm" float className="shrink-0 -my-2" />
+            <div>
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                Caixa
+              </h1>
+              <p className="text-muted-foreground">
+                Controle de entradas e saídas
+              </p>
+            </div>
           </div>
 
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
