@@ -457,6 +457,7 @@ export function useDashboardData() {
     taxaAppTotal, taxasReaisTotal,
     lucroEstimado,
     produtosMargemNegativa, impactoApps, melhorProduto,
+    produtosFichaSuspeita,
 
     isLoading,
   };
