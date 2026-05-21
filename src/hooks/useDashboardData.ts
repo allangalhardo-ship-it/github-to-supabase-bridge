@@ -283,9 +283,57 @@ export function useDashboardData() {
     });
 
     if (produtosComFicha === 0 || totalPreco === 0) return null;
-    const margemPercent = ((totalPreco - totalCusto) / totalPreco) * 100;
-    return { receitaSimulada: totalPreco, margemSimulada: totalPreco - totalCusto, margemPercent };
-  }, [receitaBruta, produtosAnalise]);
+    const margemPercentBruta = ((totalPreco - totalCusto) / totalPreco) * 100;
+
+    // Desconta impostos e taxa média dos canais ativos pra projeção mais realista
+    const impostoPct = Number(config?.imposto_medio_sobre_vendas || 0);
+    const canaisAtivos = (canaisConfigurados || []).filter((c: any) => c.taxa > 0);
+    const taxaMediaCanal = canaisAtivos.length > 0
+      ? canaisAtivos.reduce((s: number, c: any) => s + Number(c.taxa), 0) / canaisAtivos.length
+      : 0;
+    const margemPercentLiquida = Math.max(0, margemPercentBruta - impostoPct - taxaMediaCanal);
+
+    return {
+      receitaSimulada: totalPreco,
+      margemSimulada: totalPreco - totalCusto,
+      margemPercent: margemPercentLiquida, // usado no ponto de equilíbrio (mais realista)
+      margemPercentBruta,
+      margemPercentLiquida,
+      impostoPercent: impostoPct,
+      taxaMediaCanal,
+      produtosComFicha,
+    };
+  }, [receitaBruta, produtosAnalise, config, canaisConfigurados]);
+
+  // Produtos com ficha técnica suspeita: margem bruta > 85% (provável erro/ficha incompleta)
+  // ou sem ficha técnica nenhuma. Esses inflam a margem estimada.
+  const produtosFichaSuspeita = useMemo(() => {
+    if (!produtosAnalise) return [];
+    return produtosAnalise
+      .map((produto: any) => {
+        if (!produto.preco_venda || produto.preco_venda <= 0) return null;
+        const ingredientes = produto.fichas_tecnicas?.length || 0;
+        const custoInsumos = produto.fichas_tecnicas?.reduce(
+          (sum: number, ft: any) => sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0)),
+          0
+        ) || 0;
+        const margem = custoInsumos > 0 ? ((produto.preco_venda - custoInsumos) / produto.preco_venda) * 100 : 100;
+        const semFicha = ingredientes === 0 || custoInsumos === 0;
+        const margemAlta = margem > 85;
+        if (!semFicha && !margemAlta) return null;
+        return {
+          id: produto.id,
+          nome: produto.nome,
+          preco_venda: produto.preco_venda,
+          custo_insumos: custoInsumos,
+          ingredientes,
+          margem,
+          motivo: semFicha ? ('sem_ficha' as const) : ('margem_alta' as const),
+        };
+      })
+      .filter((p): p is NonNullable<typeof p> => p !== null)
+      .sort((a, b) => b.margem - a.margem);
+  }, [produtosAnalise]);
 
   const custoFixoMensal = custosFixos?.reduce((sum, c) => sum + Number(c.valor_mensal), 0) || 0;
   const faturamentoMensal = config?.faturamento_mensal || 0;
