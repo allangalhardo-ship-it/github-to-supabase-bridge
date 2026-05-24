@@ -171,8 +171,15 @@ const Produtos = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('produtos').delete().eq('id', id);
+      const { data, error } = await supabase
+        .from('produtos')
+        .delete()
+        .eq('id', id)
+        .select('id');
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('Nenhum produto foi excluído. Verifique se você está logado na empresa correta (RLS bloqueou).');
+      }
     },
     onSuccess: () => {
       invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
