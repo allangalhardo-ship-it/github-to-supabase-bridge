@@ -167,7 +167,7 @@ const ImportarVendasDialog: React.FC = () => {
   const { data: produtos } = useQuery({
     queryKey: ['produtos', usuario?.empresa_id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('produtos').select('id, nome, preco_venda').eq('ativo', true).order('nome');
+      const { data, error } = await supabase.from('produtos').select('id, nome, preco_venda').eq('ativo', true).eq('empresa_id', usuario!.empresa_id).order('nome');
       if (error) throw error;
       return data;
     },
