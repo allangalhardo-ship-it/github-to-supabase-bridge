@@ -55,6 +55,7 @@ const Producao = () => {
           fichas_tecnicas (id)
         `)
         .eq('ativo', true)
+        .eq('empresa_id', usuario?.empresa_id!)
         .order('nome');
 
       if (error) throw error;
