@@ -176,7 +176,8 @@ export function useDashboardData() {
       const { data, error } = await supabase
         .from('produtos')
         .select(`id, nome, preco_venda, categoria, fichas_tecnicas (quantidade, insumo_id, insumos (id, nome, custo_unitario))`)
-        .eq('ativo', true);
+        .eq('ativo', true)
+        .eq('empresa_id', usuario!.empresa_id);
       if (error) throw error;
       return data || [];
     },
