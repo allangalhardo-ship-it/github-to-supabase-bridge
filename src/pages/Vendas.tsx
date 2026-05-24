@@ -74,6 +74,7 @@ const Vendas = () => {
           )
         `)
         .eq('ativo', true)
+        .eq('empresa_id', usuario?.empresa_id!)
         .order('nome');
 
       if (error) throw error;

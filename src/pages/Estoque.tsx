@@ -66,6 +66,7 @@ const Estoque = () => {
         .from('produtos')
         .select('id, nome, estoque_acabado, preco_venda, categoria')
         .eq('ativo', true)
+        .eq('empresa_id', usuario?.empresa_id!)
         .order('nome');
 
       if (produtosError) throw produtosError;
