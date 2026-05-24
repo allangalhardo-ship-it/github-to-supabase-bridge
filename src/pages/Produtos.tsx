@@ -72,6 +72,7 @@ const Produtos = () => {
   const { data: produtos, isLoading } = useQuery({
     queryKey: ['produtos', usuario?.empresa_id],
     queryFn: async () => {
+      if (!usuario?.empresa_id) return [];
       const { data, error } = await supabase
         .from('produtos')
         .select(`
@@ -94,6 +95,7 @@ const Produtos = () => {
             )
           )
         `)
+        .eq('empresa_id', usuario.empresa_id)
         .order('nome');
 
       if (error) throw error;
