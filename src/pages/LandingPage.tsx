@@ -170,6 +170,11 @@ const AppScreenshot = ({ title, description, imageSrc }: { title: string; descri
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background overflow-y-auto">
+      <SEO
+        title="GastroGestor - Gestão para Restaurantes e Confeitarias"
+        description="Controle estoque, custos, precificação, vendas e cardápio digital do seu restaurante ou confeitaria. Teste grátis o GastroGestor."
+        path="/home"
+      />
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
