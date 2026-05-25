@@ -1,0 +1,19 @@
+# GastroGestor
+
+> Plataforma de gestão financeira e operacional para restaurantes, confeitarias, lanchonetes e food service: controle de estoque, custos, precificação, vendas e cardápio digital.
+
+O GastroGestor ajuda pequenos e médios empreendedores do setor de alimentação a controlar custos, precificar produtos corretamente e aumentar a lucratividade, com foco em simplicidade e uso pelo celular.
+
+## Pages
+
+- [Início](/home): Visão geral do produto e principais funcionalidades.
+- [Sobre](/sobre): História, missão, visão e valores do GastroGestor.
+- [Perguntas Frequentes](/faq): Dúvidas comuns sobre uso, planos e suporte.
+- [Contato](/contato): Como falar com a equipe.
+- [Cadastro](/cadastro): Criar conta gratuita para teste.
+- [Login](/login): Acesso para usuários existentes.
+
+## Optional
+
+- [Termos de Uso](/termos-de-uso)
+- [Política de Privacidade](/politica-de-privacidade)

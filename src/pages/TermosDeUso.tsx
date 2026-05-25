@@ -1,12 +1,18 @@
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { SEO } from "@/components/seo/SEO";
 
 const TermosDeUso = () => {
   const navigate = useNavigate();
 
   return (
     <div className="fixed inset-0 overflow-y-auto bg-background">
+      <SEO
+        title="Termos de Uso - GastroGestor"
+        description="Leia os Termos de Uso do GastroGestor: regras, responsabilidades e condições para utilização da plataforma."
+        path="/termos-de-uso"
+      />
       <div className="container max-w-4xl mx-auto px-4 py-8 pb-16">
         <Button 
           variant="ghost" 

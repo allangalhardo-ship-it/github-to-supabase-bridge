@@ -8,8 +8,8 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/favicon.png" />
     
-    <title>GastroGestor - Gestão para Gastronomia</title>
-    <meta name="description" content="Sistema completo de gestão para restaurantes, lanchonetes e food service" />
+    <title>GastroGestor - Gestão para Restaurantes e Confeitarias</title>
+    <meta name="description" content="Plataforma completa para gestão de restaurantes, confeitarias e food service: controle de estoque, custos, precificação e vendas." />
     <meta name="author" content="GastroGestor" />
 
     <!-- Mobile App Meta Tags -->
@@ -25,15 +25,37 @@
     <meta name="theme-color" content="#22C55E" />
     <meta name="msapplication-TileColor" content="#22C55E" />
 
-    <!-- Open Graph -->
-    <meta property="og:title" content="GastroGestor - Gestão para Gastronomia" />
-    <meta property="og:description" content="Sistema completo de gestão para restaurantes, lanchonetes e food service" />
+    <!-- Open Graph (sitewide defaults; per-page overrides via react-helmet-async) -->
+    <meta property="og:title" content="GastroGestor - Gestão para Restaurantes e Confeitarias" />
+    <meta property="og:description" content="Plataforma completa para gestão de restaurantes, confeitarias e food service." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="/icon-1024.png" />
+    <meta property="og:url" content="https://app.gastrogestor.com.br/" />
+    <meta property="og:image" content="https://app.gastrogestor.com.br/icon-1024.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@GastroGestor" />
-    <meta name="twitter:image" content="/icon-1024.png" />
+    <meta name="twitter:image" content="https://app.gastrogestor.com.br/icon-1024.png" />
+
+    <!-- Structured data: Organization + WebSite -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "name": "GastroGestor",
+            "url": "https://app.gastrogestor.com.br",
+            "logo": "https://app.gastrogestor.com.br/icon-1024.png",
+            "email": "contato@gastrogestor.com.br"
+          },
+          {
+            "@type": "WebSite",
+            "name": "GastroGestor",
+            "url": "https://app.gastrogestor.com.br"
+          }
+        ]
+      }
+    </script>
 
     <!-- Prevent zoom on input focus (iOS) -->
     <style>

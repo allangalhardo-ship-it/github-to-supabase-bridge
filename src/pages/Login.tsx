@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { PasswordInput } from '@/components/ui/password-input';
 import logoImage from '@/assets/logo.png';
+import { SEO } from '@/components/seo/SEO';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -75,7 +76,12 @@ const Login = () => {
   };
 
   return (
-    <div className="fixed inset-0 overflow-y-auto flex items-center justify-center bg-gradient-to-br from-background to-muted p-4"> 
+    <div className="fixed inset-0 overflow-y-auto flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
+      <SEO
+        title="Entrar - GastroGestor"
+        description="Acesse sua conta GastroGestor para gerenciar estoque, custos, vendas e cardápio digital do seu restaurante ou confeitaria."
+        path="/login"
+      /> 
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">

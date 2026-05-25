@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { PasswordInput } from '@/components/ui/password-input';
 import logoImage from '@/assets/logo.png';
+import { SEO } from '@/components/seo/SEO';
 
 const SEGMENTOS = [
   'Restaurante',
@@ -223,6 +224,11 @@ const Cadastro = () => {
 
   return (
     <div className="fixed inset-0 overflow-y-auto flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
+      <SEO
+        title="Criar Conta Grátis - GastroGestor"
+        description="Cadastre-se gratuitamente no GastroGestor e comece a controlar custos, estoque e vendas do seu negócio gastronômico."
+        path="/cadastro"
+      />
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">

@@ -5,6 +5,7 @@ import { useNavigate, Link } from "react-router-dom";
 import logoImage from '@/assets/logo.png';
 import { ChangelogDialog } from "@/components/pwa/ChangelogDialog";
 import { getCurrentVersion } from "@/lib/changelog";
+import { SEO } from "@/components/seo/SEO";
 
 const Sobre = () => {
   const navigate = useNavigate();
@@ -34,6 +35,11 @@ const Sobre = () => {
 
   return (
     <div className="fixed inset-0 overflow-y-auto bg-background">
+      <SEO
+        title="Sobre o GastroGestor - Missão e Valores"
+        description="Conheça a história, missão e valores do GastroGestor, a plataforma de gestão para restaurantes, confeitarias e food service."
+        path="/sobre"
+      />
       <div className="container max-w-4xl mx-auto px-4 py-8 pb-16">
         <Button 
           variant="ghost" 

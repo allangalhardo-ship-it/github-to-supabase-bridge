@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { SEO } from "@/components/seo/SEO";
 
 const Contato = () => {
   const navigate = useNavigate();
@@ -111,6 +112,11 @@ const Contato = () => {
 
   return (
     <div className="fixed inset-0 overflow-y-auto bg-background">
+      <SEO
+        title="Contato - GastroGestor"
+        description="Fale com a equipe GastroGestor: suporte, dúvidas comerciais, parcerias e sugestões. Atendimento por e-mail e WhatsApp."
+        path="/contato"
+      />
       <div className="container max-w-4xl mx-auto px-4 py-8 pb-16">
         <Button 
           variant="ghost" 
