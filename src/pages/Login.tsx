@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { PasswordInput } from '@/components/ui/password-input';
 import logoImage from '@/assets/logo.png';
+import { SEO } from '@/components/seo/SEO';
 
 const Login = () => {
   const [email, setEmail] = useState('');

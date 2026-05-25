@@ -1,12 +1,18 @@
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { SEO } from "@/components/seo/SEO";
 
 const PoliticaPrivacidade = () => {
   const navigate = useNavigate();
 
   return (
     <div className="fixed inset-0 overflow-y-auto bg-background">
+      <SEO
+        title="Política de Privacidade - GastroGestor"
+        description="Saiba como o GastroGestor coleta, armazena e protege seus dados pessoais conforme a LGPD."
+        path="/politica-de-privacidade"
+      />
       <div className="container max-w-4xl mx-auto px-4 py-8 pb-16">
         <Button 
           variant="ghost" 

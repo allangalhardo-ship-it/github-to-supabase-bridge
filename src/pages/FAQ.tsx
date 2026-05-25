@@ -2,6 +2,7 @@ import { ArrowLeft, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useNavigate, Link } from "react-router-dom";
+import { SEO } from "@/components/seo/SEO";
 
 const FAQ = () => {
   const navigate = useNavigate();
@@ -93,8 +94,26 @@ const FAQ = () => {
     }
   ];
 
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqCategories.flatMap((c) =>
+      c.perguntas.map((p) => ({
+        "@type": "Question",
+        name: p.pergunta,
+        acceptedAnswer: { "@type": "Answer", text: p.resposta },
+      }))
+    ),
+  };
+
   return (
     <div className="fixed inset-0 overflow-y-auto bg-background">
+      <SEO
+        title="Perguntas Frequentes - GastroGestor"
+        description="Tire suas dúvidas sobre o GastroGestor: funcionalidades, planos, segurança, suporte e como começar a usar o sistema."
+        path="/faq"
+        jsonLd={faqJsonLd}
+      />
       <div className="container max-w-4xl mx-auto px-4 py-8 pb-16">
         <Button 
           variant="ghost" 
