@@ -14,7 +14,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   Store,
-  Smartphone
+  Smartphone,
+  Tag
 } from 'lucide-react';
 import { ProdutoAnalise, QuadranteMenu, ConfiguracoesPrecificacao, formatCurrency, formatPercent, getQuadranteInfo } from './types';
 import { cn } from '@/lib/utils';
