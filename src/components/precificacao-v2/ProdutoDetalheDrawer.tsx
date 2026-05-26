@@ -210,9 +210,10 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
     "bg-emerald-500/10 border-emerald-500/30";
 
   const handleAplicar = (preco: number, canal?: string) => {
-    if (canal && onAplicarPrecoCanal) {
+    if (canal && canal !== 'base' && onAplicarPrecoCanal) {
       onAplicarPrecoCanal(produto.id, canal, preco, produto.preco_venda);
     } else {
+      // 'base' (ou ausência de canal) → atualiza produtos.preco_venda
       onAplicarPreco(produto.id, preco, produto.preco_venda);
     }
     // Não fecha o drawer para permitir editar outros canais sem sair
