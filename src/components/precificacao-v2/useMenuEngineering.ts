@@ -267,9 +267,13 @@ export function useMenuEngineering() {
       };
     }
 
-    // Média ponderada por quantidade vendida (produtos sem venda usam peso 1)
-    const margemMedia = produtosAnalisados.reduce((acc, p) => acc + p.margemContribuicao, 0) / produtosAnalisados.length;
-    const cmvMedio = produtosAnalisados.reduce((acc, p) => acc + p.cmv, 0) / produtosAnalisados.length;
+    // Média PONDERADA pelo preço de venda (financeiramente correta — produtos mais caros pesam mais)
+    // Alinhada com a fórmula usada no Ponto de Equilíbrio do Dashboard
+    const validos = produtosAnalisados.filter(p => p.preco_venda > 0 && p.custoInsumos > 0);
+    const somaPreco = validos.reduce((acc, p) => acc + p.preco_venda, 0);
+    const somaCusto = validos.reduce((acc, p) => acc + p.custoInsumos, 0);
+    const margemMedia = somaPreco > 0 ? ((somaPreco - somaCusto) / somaPreco) * 100 : 0;
+    const cmvMedio = somaPreco > 0 ? (somaCusto / somaPreco) * 100 : 0;
     const produtosCriticos = produtosAnalisados.filter(p => p.saudeMargem === 'critico').length;
     
     // Receita potencial: diferença se todos estivessem no preço sugerido
