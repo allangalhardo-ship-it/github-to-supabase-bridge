@@ -65,14 +65,22 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
     return produto.preco_venda; // fallback para preço base
   };
 
-  // Montar lista de canais a partir do hook
+  // Montar lista de canais a partir do hook, com "Preço Base" no topo
+  // (reflete produtos.preco_venda — fonte da verdade usada pelo Dashboard).
   const canais = useMemo(() => {
-    return (canaisConfigurados || []).map(canal => ({
+    const base = {
+      id: 'base',
+      nome: 'Base',
+      taxa: 0,
+      icone: <Tag className="h-3 w-3" />,
+    };
+    const outros = (canaisConfigurados || []).map(canal => ({
       id: canal.id,
       nome: canal.nome,
       taxa: canal.taxa,
       icone: canal.isBalcao ? <Store className="h-3 w-3" /> : <Smartphone className="h-3 w-3" />
     }));
+    return [base, ...outros];
   }, [canaisConfigurados]);
 
   const produtosFiltrados = useMemo(() => {
