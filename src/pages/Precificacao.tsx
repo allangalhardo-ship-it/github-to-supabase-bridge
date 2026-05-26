@@ -88,6 +88,8 @@ const Precificacao = () => {
         ['vendas-popularidade'],
         ['produtos'],
         ['precos-canais-todos'],
+        ['produtos-analise'],
+        ['top-produtos'],
       ]);
       toast({
         title: 'Preço atualizado',
