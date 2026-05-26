@@ -462,7 +462,7 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
           preco_venda: produto.preco_venda,
           custoInsumos: produto.custoInsumos
         } : null}
-        canais={canais.map(c => ({
+        canais={canais.filter(c => c.id !== 'base').map(c => ({
           id: c.id,
           nome: c.nome,
           taxa: c.taxa,
