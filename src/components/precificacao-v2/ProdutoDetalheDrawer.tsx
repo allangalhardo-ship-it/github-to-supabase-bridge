@@ -25,7 +25,8 @@ import {
   Zap,
   Calculator,
   Receipt,
-  Percent
+  Percent,
+  Tag
 } from 'lucide-react';
 import { ProdutoAnalise, ConfiguracoesPrecificacao, formatCurrency, formatPercent, getQuadranteInfo } from './types';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -82,17 +83,28 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
     }
   }, [produto?.id, config?.cmv_alvo]);
 
-  // Montar lista de canais a partir da nova estrutura
+  // Montar lista de canais a partir da nova estrutura.
+  // Inclui sempre um "canal" virtual "Preço Base" no topo, que reflete
+  // produtos.preco_venda — a fonte da verdade usada pelo Dashboard (Ponto
+  // de Equilíbrio, margens, etc.). Aplicar nele atualiza preco_venda.
   const canais: CanalInfo[] = useMemo(() => {
-    if (!canaisConfigurados) return [];
-    
-    return canaisConfigurados.map(canal => ({
+    const base: CanalInfo = {
+      id: 'base',
+      nome: 'Preço Base (Dashboard)',
+      taxa: 0,
+      icone: <Tag className="h-4 w-4" />,
+      destaque: true,
+    };
+    if (!canaisConfigurados) return [base];
+
+    const outros = canaisConfigurados.map(canal => ({
       id: canal.id,
       nome: canal.nome,
       taxa: canal.taxa,
       icone: canal.isBalcao ? <Store className="h-4 w-4" /> : <Smartphone className="h-4 w-4" />,
-      destaque: canal.isBalcao
+      destaque: false,
     }));
+    return [base, ...outros];
   }, [canaisConfigurados]);
 
   const imposto = (config?.imposto_medio_sobre_vendas || 0) / 100;
@@ -198,9 +210,10 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
     "bg-emerald-500/10 border-emerald-500/30";
 
   const handleAplicar = (preco: number, canal?: string) => {
-    if (canal && onAplicarPrecoCanal) {
+    if (canal && canal !== 'base' && onAplicarPrecoCanal) {
       onAplicarPrecoCanal(produto.id, canal, preco, produto.preco_venda);
     } else {
+      // 'base' (ou ausência de canal) → atualiza produtos.preco_venda
       onAplicarPreco(produto.id, preco, produto.preco_venda);
     }
     // Não fecha o drawer para permitir editar outros canais sem sair
@@ -449,7 +462,7 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
           preco_venda: produto.preco_venda,
           custoInsumos: produto.custoInsumos
         } : null}
-        canais={canais.map(c => ({
+        canais={canais.filter(c => c.id !== 'base').map(c => ({
           id: c.id,
           nome: c.nome,
           taxa: c.taxa,
