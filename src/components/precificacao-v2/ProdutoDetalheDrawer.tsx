@@ -83,17 +83,28 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
     }
   }, [produto?.id, config?.cmv_alvo]);
 
-  // Montar lista de canais a partir da nova estrutura
+  // Montar lista de canais a partir da nova estrutura.
+  // Inclui sempre um "canal" virtual "Preço Base" no topo, que reflete
+  // produtos.preco_venda — a fonte da verdade usada pelo Dashboard (Ponto
+  // de Equilíbrio, margens, etc.). Aplicar nele atualiza preco_venda.
   const canais: CanalInfo[] = useMemo(() => {
-    if (!canaisConfigurados) return [];
-    
-    return canaisConfigurados.map(canal => ({
+    const base: CanalInfo = {
+      id: 'base',
+      nome: 'Preço Base (Dashboard)',
+      taxa: 0,
+      icone: <Tag className="h-4 w-4" />,
+      destaque: true,
+    };
+    if (!canaisConfigurados) return [base];
+
+    const outros = canaisConfigurados.map(canal => ({
       id: canal.id,
       nome: canal.nome,
       taxa: canal.taxa,
       icone: canal.isBalcao ? <Store className="h-4 w-4" /> : <Smartphone className="h-4 w-4" />,
-      destaque: canal.isBalcao
+      destaque: false,
     }));
+    return [base, ...outros];
   }, [canaisConfigurados]);
 
   const imposto = (config?.imposto_medio_sobre_vendas || 0) / 100;
