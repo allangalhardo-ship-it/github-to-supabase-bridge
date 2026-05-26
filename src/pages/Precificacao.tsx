@@ -136,6 +136,7 @@ const Precificacao = () => {
       invalidateAndRefetch([
         ['produtos-menu-engineering'],
         ['precos-canais-todos'],
+        ['produtos-analise'],
       ]);
     }
   };
