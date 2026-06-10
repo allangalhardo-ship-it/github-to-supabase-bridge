@@ -546,6 +546,9 @@ const Admin = () => {
             </CardContent>
           </Card>
 
+          {/* Demo User Section */}
+          <DemoUserSection />
+
           {/* Migrate Base Section */}
           <MigrateBaseSection users={users} />
         </>
