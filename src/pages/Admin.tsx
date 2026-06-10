@@ -44,6 +44,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import MigrateBaseSection from '@/components/admin/MigrateBaseSection';
+import DemoUserSection from '@/components/admin/DemoUserSection';
 
 interface SessionInfo {
   id: string;
