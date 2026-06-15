@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import ProductCard from '@/components/produtos/ProductCard';
 import FichaTecnicaDialog from '@/components/produtos/FichaTecnicaDialog';
+import NovoProdutoWizard from '@/components/produtos/NovoProdutoWizard';
 import ImportProdutosDialog from '@/components/import/ImportProdutosDialog';
 import ImportFichaTecnicaDialog from '@/components/import/ImportFichaTecnicaDialog';
 import CategorySelect from '@/components/produtos/CategorySelect';
@@ -50,6 +51,7 @@ const Produtos = () => {
   const { usuario } = useAuth();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [importProdutosOpen, setImportProdutosOpen] = useState(false);
   const [importFichasOpen, setImportFichasOpen] = useState(false);
   const [editingProduto, setEditingProduto] = useState<Produto | null>(null);
@@ -348,12 +350,10 @@ const Produtos = () => {
             <Upload className="mr-2 h-4 w-4" />
             Importar Fichas
           </Button>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Produto
-            </Button>
-          </DialogTrigger>
+          <Button onClick={() => setWizardOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Produto
+          </Button>
         </div>
           <DialogContent>
             <DialogHeader>
@@ -540,7 +540,7 @@ const Produtos = () => {
             title="Bora cadastrar seu primeiro produto!"
             description="Depois eu te ajudo a precificar certinho em cada canal e mostro a margem real de cada um."
             action={
-              <Button onClick={() => setDialogOpen(true)}>
+              <Button onClick={() => setWizardOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Novo Produto
               </Button>
@@ -566,6 +566,13 @@ const Produtos = () => {
       <ImportFichaTecnicaDialog
         open={importFichasOpen}
         onOpenChange={setImportFichasOpen}
+      />
+
+      <NovoProdutoWizard
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        categorias={categorias}
+        onCreated={(id) => setOpenFichaForProductId(id)}
       />
 
       {/* Ficha técnica controlada para novo produto duplicado */}
