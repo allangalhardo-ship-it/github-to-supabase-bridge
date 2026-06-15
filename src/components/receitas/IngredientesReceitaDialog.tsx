@@ -95,35 +95,10 @@ export function IngredientesReceitaDialog({
   const insumoSelecionadoReceitaInfo = todosInsumosDisponiveis?.find(i => i.id === novoIngrediente.insumo_id);
 
   const recalcularCustoReceita = async () => {
-    if (!receita) return;
-
-    // Buscar ingredientes atualizados diretamente do banco
-    const { data: ingredientesAtualizados } = await supabase
-      .from("receitas_intermediarias")
-      .select(`
-        quantidade,
-        insumo_ingrediente:insumos!receitas_intermediarias_insumo_ingrediente_id_fkey (
-          custo_unitario
-        )
-      `)
-      .eq("insumo_id", receita.id);
-
-    const custoTotal = (ingredientesAtualizados || []).reduce((sum, item) => {
-      const custoIngrediente = (item.insumo_ingrediente as any)?.custo_unitario || 0;
-      return sum + (item.quantidade * custoIngrediente);
-    }, 0);
-
-    const rendimentoVal = receita.rendimento_receita || 1;
-    const custoUnitario = custoTotal / rendimentoVal;
-
-    const { error } = await supabase
-      .from("insumos")
-      .update({ custo_unitario: custoUnitario })
-      .eq("id", receita.id);
-
-    if (!error) {
-      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
-    }
+    // O recálculo agora é automático via trigger no banco
+    // (trg_ri_composicao em receitas_intermediarias).
+    // Aqui só invalidamos o cache para refletir o valor atualizado.
+    invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
   };
 
   const addIngredienteMutation = useMutation({
