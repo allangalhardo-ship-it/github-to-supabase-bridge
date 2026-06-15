@@ -217,10 +217,16 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
               const quadInfo = getQuadranteInfo(produto.quadrante);
               const precisaAjuste = produto.preco_venda < produto.precoSugerido * 0.95;
               const diferencaPreco = produto.precoSugerido - produto.preco_venda;
-
-              return (
-                <div
-                  key={produto.id}
+              const score = calcularPricingScore({
+                margemContribuicao: produto.margemContribuicao,
+                margemAlvo: config?.margem_desejada_padrao || 30,
+                cmv: produto.cmv,
+                cmvAlvo: config?.cmv_alvo || 35,
+                quantidadeVendida: produto.quantidadeVendida,
+                medianaQuantidades,
+              });
+              const precoCharm = produto.precoSugeridoViavel ? arredondarCharm(produto.precoSugerido) : 0;
+              const charmDifere = precoCharm > 0 && Math.abs(precoCharm - produto.precoSugerido) > 0.01;
                   className={cn(
                     "group p-3 border rounded-lg transition-all hover:shadow-sm cursor-pointer",
                     produto.saudeMargem === 'critico' && "border-destructive/30 bg-destructive/5",
