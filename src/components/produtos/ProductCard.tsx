@@ -14,7 +14,11 @@ import {
   Zap,
   Store,
   Smartphone,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
+import FichaTecnicaForm from "./FichaTecnicaForm";
+import CustoMargemCard from "./CustoMargemCard";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatCurrencyBRL } from '@/lib/format';
 import { calcularPrecoSugerido, ConfiguracaoPrecificacao } from '@/lib/precificacaoUtils';
@@ -77,6 +81,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const { usuario } = useAuth();
   const isMobile = useIsMobile();
   const [showDuplicar, setShowDuplicar] = useState(false);
+  const [fichaInlineAberta, setFichaInlineAberta] = useState(false);
 
   const formatCurrency = formatCurrencyBRL;
   
@@ -479,6 +484,21 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </div>
 
           <div className="mt-2 pt-2 border-t flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs gap-1"
+              onClick={() => setFichaInlineAberta((v) => !v)}
+            >
+              <FileText className="h-3.5 w-3.5" />
+              Ficha ({qtdInsumos})
+              {fichaInlineAberta ? (
+                <ChevronUp className="h-3 w-3" />
+              ) : (
+                <ChevronDown className="h-3 w-3" />
+              )}
+            </Button>
+
             <FichaTecnicaDialog
               produtoId={produto.id}
               produtoNome={produto.nome}
@@ -489,9 +509,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
               impostoPercentual={config?.imposto_medio_sobre_vendas || 0}
               margemAlvo={config?.margem_desejada_padrao || 30}
               trigger={
-                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1">
-                  <FileText className="h-3.5 w-3.5" />
-                  Ficha ({qtdInsumos})
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] text-muted-foreground">
+                  Abrir em tela cheia
                 </Button>
               }
             />
@@ -527,6 +546,28 @@ const ProductCard: React.FC<ProductCardProps> = ({
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
+
+          {fichaInlineAberta && (
+            <div className="mt-3 pt-3 border-t space-y-3 bg-muted/20 -mx-3 px-3 pb-3 rounded-b-md">
+              <div>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                  Ficha técnica
+                </h4>
+                <FichaTecnicaForm
+                  produtoId={produto.id}
+                  fichaTecnica={produto.fichas_tecnicas || []}
+                />
+              </div>
+              <CustoMargemCard
+                custoFicha={custoInsumos}
+                precoBase={precoVenda}
+                produtoId={produto.id}
+                impostoPercentual={config?.imposto_medio_sobre_vendas || 0}
+                margemAlvo={config?.margem_desejada_padrao || 30}
+                compact
+              />
+            </div>
+          )}
 
           {temFichaTecnica && (
             <details className="mt-3 pt-2 border-t">
