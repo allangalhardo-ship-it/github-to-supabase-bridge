@@ -129,15 +129,17 @@ export function useMenuEngineering() {
   });
 
   // Buscar vendas dos últimos 30 dias para popularidade
-  const { data: vendasAgregadas } = useQuery({
-    queryKey: ['vendas-popularidade', usuario?.empresa_id],
+  // Agora também agregamos receita POR CANAL (texto) para calcular
+  // a margem média ponderada pelas vendas reais, não pelo cadastro de preços.
+  const { data: vendasData } = useQuery({
+    queryKey: ['vendas-popularidade-canal', usuario?.empresa_id],
     queryFn: async () => {
       const dataInicio = subDays(new Date(), 30).toISOString().split('T')[0];
       const dataFim = new Date().toISOString().split('T')[0];
 
       const { data, error } = await supabase
         .from('vendas')
-        .select('produto_id, quantidade, valor_total')
+        .select('produto_id, quantidade, valor_total, canal')
         .eq('empresa_id', usuario?.empresa_id)
         .gte('data_venda', dataInicio)
         .lte('data_venda', dataFim)
@@ -145,8 +147,11 @@ export function useMenuEngineering() {
 
       if (error) throw error;
 
-      // Agregar por produto
+      // Agregar por produto (total)
       const agregado: Record<string, VendaProduto> = {};
+      // Agregar por produto + canal (texto): { produtoId: { canalTexto: receita } }
+      const porCanal: Record<string, Record<string, number>> = {};
+
       data?.forEach(v => {
         if (!v.produto_id) return;
         if (!agregado[v.produto_id]) {
@@ -154,12 +159,20 @@ export function useMenuEngineering() {
         }
         agregado[v.produto_id].quantidade += v.quantidade || 1;
         agregado[v.produto_id].receita += v.valor_total || 0;
+
+        const canalKey = (v.canal || '').toString().trim().toLowerCase() || 'sem-canal';
+        if (!porCanal[v.produto_id]) porCanal[v.produto_id] = {};
+        porCanal[v.produto_id][canalKey] =
+          (porCanal[v.produto_id][canalKey] || 0) + (v.valor_total || 0);
       });
 
-      return agregado;
+      return { agregado, porCanal };
     },
     enabled: !!usuario?.empresa_id,
   });
+
+  const vendasAgregadas = vendasData?.agregado;
+  const vendasPorCanal = vendasData?.porCanal;
 
   // Processar produtos e classificar
   const produtosAnalisados: ProdutoAnalise[] = useMemo(() => {
