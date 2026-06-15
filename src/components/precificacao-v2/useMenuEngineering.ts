@@ -450,7 +450,7 @@ export function useMenuEngineering(periodo: PeriodoBCG = 30) {
       };
     }
 
-    // Média PONDERADA pelo preço de venda (financeiramente correta — produtos mais caros pesam mais)
+    // Média ponderada pelo preço analisado por canal (financeiramente correta — produtos mais caros pesam mais)
     // IMPORTANTE: usar a MESMA base do cálculo por produto (margemContribuicao = preço − custo − imposto − taxa do canal).
     // Antes a métrica agregada ignorava imposto e taxa, inflando a margem exibida no card vs. realidade.
     const validos = produtosAnalisados.filter(p => (p.precoAnaliseAtual ?? p.precoReferenciaAtual ?? p.preco_venda) > 0 && p.custoInsumos > 0);
