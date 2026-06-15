@@ -124,6 +124,7 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
   const { subscription } = useSubscription();
   const navigate = useNavigate();
   const location = window.location.pathname;
+  const { qtdAtivos: qtdAlertasCusto } = useAlertasCusto();
 
   const handleSignOut = async () => {
     await signOut();
