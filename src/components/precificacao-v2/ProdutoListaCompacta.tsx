@@ -233,8 +233,12 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
           ) : (
             produtosOrdenados.map((produto) => {
               const quadInfo = getQuadranteInfo(produto.quadrante);
-              const precisaAjuste = produto.preco_venda < produto.precoSugerido * 0.95;
-              const diferencaPreco = produto.precoSugerido - produto.preco_venda;
+              // Preço de referência = Balcão (ou preço base como fallback)
+              const precoReferencia = canalBalcao
+                ? getPrecoCanal(produto, canalBalcao.id)
+                : produto.preco_venda;
+              const precisaAjuste = precoReferencia < produto.precoSugerido * 0.95;
+              const diferencaPreco = produto.precoSugerido - precoReferencia;
               const score = calcularPricingScore({
                 margemContribuicao: produto.margemContribuicao,
                 margemAlvo: config?.margem_desejada_padrao || 30,
