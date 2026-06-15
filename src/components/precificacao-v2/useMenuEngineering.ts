@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { subDays } from 'date-fns';
+import { calcularCustoFicha } from '@/utils/custoFicha';
 import {
   ProdutoBase,
   ProdutoAnalise,
@@ -37,11 +38,13 @@ export function useMenuEngineering() {
           fichas_tecnicas (
             id,
             quantidade,
+            unidade,
             insumos (
               id,
               nome,
               custo_unitario,
-              unidade_medida
+              unidade_medida,
+              fator_perda
             )
           )
         `)
@@ -214,9 +217,7 @@ export function useMenuEngineering() {
 
     // Primeiro passo: calcular métricas brutas
     const produtosComMetricas = produtosComFicha.map(produto => {
-      const custoInsumos = produto.fichas_tecnicas?.reduce((acc, ft) => {
-        return acc + (ft.quantidade * ft.insumos.custo_unitario);
-      }, 0) || 0;
+      const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas);
 
       const vendas = vendasAgregadas?.[produto.id];
       const quantidadeVendida = vendas?.quantidade || 0;

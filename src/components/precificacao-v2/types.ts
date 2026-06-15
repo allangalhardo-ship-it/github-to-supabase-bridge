@@ -14,11 +14,13 @@ export interface ProdutoBase {
   fichas_tecnicas?: {
     id: string;
     quantidade: number;
+    unidade: string | null;
     insumos: {
       id: string;
       nome: string;
       custo_unitario: number;
       unidade_medida: string;
+      fator_perda: number | null;
     };
   }[];
 }
