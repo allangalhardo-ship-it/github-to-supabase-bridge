@@ -21,6 +21,7 @@ import FichaTecnicaForm from "./FichaTecnicaForm";
 import CustoMargemCard from "./CustoMargemCard";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatCurrencyBRL } from '@/lib/format';
+import { calcularCustoFicha } from '@/utils/custoFicha';
 import { calcularPrecoSugerido, ConfiguracaoPrecificacao } from '@/lib/precificacaoUtils';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import FichaTecnicaDialog from "./FichaTecnicaDialog";
@@ -145,15 +146,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
   // Não precisamos mais buscar custos fixos para o cálculo do preço
   // O custo fixo é verificado no Dashboard, não no preço unitário
 
-  const custoInsumos = useMemo(() => {
-    if (!produto.fichas_tecnicas || produto.fichas_tecnicas.length === 0) return 0;
-    const custo = produto.fichas_tecnicas.reduce((sum, ft) => {
-      const quantidade = Number(ft.quantidade) || 0;
-      const custoUnitario = Number(ft.insumos?.custo_unitario) || 0;
-      return sum + quantidade * custoUnitario;
-    }, 0);
-    return custo;
-  }, [produto.fichas_tecnicas]);
+  const custoInsumos = useMemo(
+    () => calcularCustoFicha(produto.fichas_tecnicas as any),
+    [produto.fichas_tecnicas],
+  );
 
   const precoVenda = Number(produto.preco_venda) || 0;
   const lucro = precoVenda - custoInsumos;
