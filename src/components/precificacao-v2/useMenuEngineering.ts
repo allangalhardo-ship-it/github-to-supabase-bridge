@@ -376,6 +376,7 @@ export function useMenuEngineering(periodo: PeriodoBCG = 30) {
         cmv,
         quantidadeVendida,
         receitaTotal,
+        precoAnaliseAtual: precoEfetivo,
         precoReferenciaAtual,
         precoSugerido,
         precoSugeridoViavel,
@@ -452,8 +453,8 @@ export function useMenuEngineering(periodo: PeriodoBCG = 30) {
     // Média PONDERADA pelo preço de venda (financeiramente correta — produtos mais caros pesam mais)
     // IMPORTANTE: usar a MESMA base do cálculo por produto (margemContribuicao = preço − custo − imposto − taxa do canal).
     // Antes a métrica agregada ignorava imposto e taxa, inflando a margem exibida no card vs. realidade.
-    const validos = produtosAnalisados.filter(p => p.preco_venda > 0 && p.custoInsumos > 0);
-    const somaPreco = validos.reduce((acc, p) => acc + p.preco_venda, 0);
+    const validos = produtosAnalisados.filter(p => (p.precoAnaliseAtual ?? p.precoReferenciaAtual ?? p.preco_venda) > 0 && p.custoInsumos > 0);
+    const somaPreco = validos.reduce((acc, p) => acc + (p.precoAnaliseAtual ?? p.precoReferenciaAtual ?? p.preco_venda), 0);
     const somaCusto = validos.reduce((acc, p) => acc + p.custoInsumos, 0);
     // Lucro unitário já inclui imposto + taxa do canal (calculado na linha 224)
     const somaLucro = validos.reduce((acc, p) => acc + p.lucroUnitario, 0);
@@ -465,7 +466,8 @@ export function useMenuEngineering(periodo: PeriodoBCG = 30) {
     // Só considerar produtos que realmente vendem
     const receitaPotencial = produtosAnalisados.reduce((acc, p) => {
       if (p.quantidadeVendida === 0) return acc; // Sem vendas = sem receita potencial real
-      const diferencaPreco = p.precoSugerido - p.preco_venda;
+      const precoAtual = p.precoReferenciaAtual ?? p.preco_venda;
+      const diferencaPreco = p.precoSugerido - precoAtual;
       const ganhoMensal = diferencaPreco * p.quantidadeVendida;
       return acc + (ganhoMensal > 0 ? ganhoMensal : 0);
     }, 0);
