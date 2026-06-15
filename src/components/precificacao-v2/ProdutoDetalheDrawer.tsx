@@ -26,6 +26,7 @@ import {
   Calculator,
   Receipt,
   Percent,
+  Sparkles,
 } from 'lucide-react';
 import { ProdutoAnalise, ConfiguracoesPrecificacao, formatCurrency, formatPercent, getQuadranteInfo } from './types';
 import { useIsMobile } from '@/hooks/use-mobile';
