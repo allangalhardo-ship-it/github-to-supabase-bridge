@@ -501,13 +501,17 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
             </div>
           </div>
 
-          {/* Resumo de custos + Link para Calculador */}
+          {/* Resumo de custo + margem por canal (tempo real) + Link para Calculador */}
           <div className="border-t bg-muted/30 p-4 flex-shrink-0 space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground text-sm">Custo Total dos Ingredientes:</span>
-              <span className="font-bold text-lg">{formatCurrencyBRL(custoTotal)}</span>
-            </div>
-            
+            <CustoMargemCard
+              custoFicha={custoTotal}
+              precoBase={precoBase}
+              produtoId={produtoId}
+              impostoPercentual={impostoPercentual}
+              margemAlvo={margemAlvo}
+              compact
+            />
+
             {/* Link para Calculador de Ficha Técnica */}
             <Link 
               to="/receitas?tab=calculador" 
@@ -526,6 +530,7 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
               <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
             </Link>
           </div>
+
 
           {/* Botões Salvar/Cancelar - Padronizados */}
           <DialogFooter className="p-4 pt-0 border-t flex-shrink-0 gap-2 sm:gap-2">
