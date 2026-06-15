@@ -266,8 +266,8 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
         </div>
         <div className="grid grid-cols-2 gap-2">
           {resultadosAtuais.map(canal => {
-            const receitaLiquida = canal.preco * (1 - canal.taxa / 100);
-            const cmvCanal = receitaLiquida > 0 ? (produto.custoInsumos / receitaLiquida) * 100 : 0;
+            const cmvCanal = calcularCmvCanal(canal.preco, canal.taxa);
+
             
             return (
               <div 
