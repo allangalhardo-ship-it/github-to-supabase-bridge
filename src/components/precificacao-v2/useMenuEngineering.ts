@@ -99,19 +99,17 @@ export function useMenuEngineering() {
   const { data: canaisInfo } = useQuery({
     queryKey: ['canais-com-taxas', usuario?.empresa_id],
     queryFn: async () => {
-      const [{ data: canaisData, error: canaisError }, { data: taxasData, error: taxasError }] = await Promise.all([
-        supabase
-          .from('canais_venda')
-          .select('id, nome, tipo, ativo')
-          .eq('empresa_id', usuario?.empresa_id)
-          .eq('ativo', true),
-        supabase
-          .from('taxas_canais')
-          .select('canal_id, percentual')
-          .eq('empresa_id', usuario?.empresa_id),
-      ]);
-
+      const { data: canaisData, error: canaisError } = await supabase
+        .from('canais_venda')
+        .select('id, nome, tipo, ativo')
+        .eq('empresa_id', usuario?.empresa_id)
+        .eq('ativo', true);
       if (canaisError) throw canaisError;
+
+      const { data: taxasData, error: taxasError } = await supabase
+        .from('taxas_canais')
+        .select('canal_id, percentual')
+        .eq('empresa_id', usuario?.empresa_id);
       if (taxasError) throw taxasError;
 
       // Mapa: canalId -> { taxa, isBalcao }
