@@ -95,6 +95,38 @@ export function useMenuEngineering() {
     enabled: !!usuario?.empresa_id,
   });
 
+  // Buscar canais de venda + taxas agregadas (taxa efetiva por canal)
+  const { data: canaisInfo } = useQuery({
+    queryKey: ['canais-com-taxas', usuario?.empresa_id],
+    queryFn: async () => {
+      const { data: canaisData, error: canaisError } = await supabase
+        .from('canais_venda')
+        .select('id, nome, tipo, ativo')
+        .eq('empresa_id', usuario?.empresa_id)
+        .eq('ativo', true);
+      if (canaisError) throw canaisError;
+
+      const { data: taxasData, error: taxasError } = await supabase
+        .from('taxas_canais')
+        .select('canal_id, percentual');
+      if (taxasError) throw taxasError;
+
+      // Mapa: canalId -> { taxa, isBalcao }
+      const mapa: Record<string, { taxa: number; isBalcao: boolean; nome: string }> = {};
+      (canaisData || []).forEach(c => {
+        const taxaTotal = (taxasData || [])
+          .filter(t => t.canal_id === c.id)
+          .reduce((sum, t) => sum + Number(t.percentual || 0), 0);
+        mapa[c.id] = {
+          taxa: taxaTotal,
+          isBalcao: c.tipo === 'presencial',
+          nome: c.nome,
+        };
+      });
+      return mapa;
+    },
+    enabled: !!usuario?.empresa_id,
+  });
 
   // Buscar vendas dos últimos 30 dias para popularidade
   const { data: vendasAgregadas } = useQuery({
@@ -160,15 +192,43 @@ export function useMenuEngineering() {
 
       const cmv = precoEfetivo > 0 ? (custoInsumos / precoEfetivo) * 100 : 100;
 
-      // Margem de contribuição (sem custos fixos)
+      // === Taxa do canal: agora considerada nos cálculos ===
+      // Estratégia:
+      //  - Se o produto tem preços por canal cadastrados, calculamos a MÉDIA PONDERADA
+      //    da taxa pelos preços de cada canal (canais mais caros pesam mais).
+      //  - Caso contrário, usamos a taxa do canal "balcão/presencial" (geralmente 0%).
+      //  - Isso evita a margem otimista que ignorava o iFood/99/etc.
+      let taxaCanalEfetiva = 0;
+      const canaisDoProdutoIds = Object.keys(precosCanaisProduto);
+      if (canaisDoProdutoIds.length > 0 && canaisInfo) {
+        let somaPesos = 0;
+        let somaTaxaPonderada = 0;
+        canaisDoProdutoIds.forEach(canalId => {
+          const info = canaisInfo[canalId];
+          const preco = precosCanaisProduto[canalId];
+          if (info && preco > 0) {
+            somaPesos += preco;
+            somaTaxaPonderada += info.taxa * preco;
+          }
+        });
+        taxaCanalEfetiva = somaPesos > 0 ? somaTaxaPonderada / somaPesos : 0;
+      } else if (canaisInfo) {
+        // Sem preços por canal → fallback para o canal balcão (presencial)
+        const balcao = Object.values(canaisInfo).find(c => c.isBalcao);
+        taxaCanalEfetiva = balcao?.taxa || 0;
+      }
+
+      // Margem de contribuição AGORA inclui a taxa do canal
       const impostoValor = precoEfetivo * (config.imposto_medio_sobre_vendas / 100);
-      const lucroUnitario = precoEfetivo - custoInsumos - impostoValor;
+      const taxaValor = precoEfetivo * (taxaCanalEfetiva / 100);
+      const lucroUnitario = precoEfetivo - custoInsumos - impostoValor - taxaValor;
       const margemContribuicao = precoEfetivo > 0 ? (lucroUnitario / precoEfetivo) * 100 : 0;
 
-      // Calcular preço sugerido
+      // Preço sugerido também considera taxa do canal efetiva
       const margem = config.margem_desejada_padrao / 100;
       const imposto = config.imposto_medio_sobre_vendas / 100;
-      const divisor = 1 - margem - imposto;
+      const taxa = taxaCanalEfetiva / 100;
+      const divisor = 1 - margem - imposto - taxa;
       const precoSugeridoViavel = divisor > 0;
       const precoSugerido = precoSugeridoViavel ? custoInsumos / divisor : custoInsumos * 2;
 
@@ -232,7 +292,7 @@ export function useMenuEngineering() {
 
       return { ...produto, quadrante };
     });
-  }, [produtos, config, vendasAgregadas, precosCanaisTodos]);
+  }, [produtos, config, vendasAgregadas, precosCanaisTodos, canaisInfo]);
 
   // Resumo por quadrante
   const resumoQuadrantes: ResumoQuadrante[] = useMemo(() => {
