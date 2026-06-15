@@ -209,9 +209,7 @@ export function CalculadorFichaTecnica({
 
   const calcularCustoProduto = (produto: Produto) => {
     if (!produto?.fichas_tecnicas) return 0;
-    return produto.fichas_tecnicas.reduce((sum, ft) => {
-      return sum + (ft.quantidade * (ft.insumos?.custo_unitario || 0));
-    }, 0);
+    return calcularCustoFicha(produto.fichas_tecnicas as any);
   };
 
   return (

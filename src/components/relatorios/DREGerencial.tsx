@@ -148,9 +148,7 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
     vendas.forEach((venda) => {
       const produto = produtos.find((p) => p.id === venda.produto_id);
       if (produto && produto.fichas_tecnicas) {
-        const custoUnitario = produto.fichas_tecnicas.reduce((acc, ft) => {
-          return acc + (ft.quantidade * (ft.insumos?.custo_unitario || 0));
-        }, 0);
+        const custoUnitario = calcularCustoFicha(produto.fichas_tecnicas as any);
         // Calcular quantidade vendida baseado no valor
         const qtdVendida = produto.preco_venda > 0 
           ? venda.valor_total / produto.preco_venda 

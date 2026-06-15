@@ -158,9 +158,7 @@ export const MargensRelatorio: React.FC<MargensRelatorioProps> = ({ onBack }) =>
     const produtosComFicha = produtos.filter(p => p.fichas_tecnicas && p.fichas_tecnicas.length > 0);
     
     const produtosAnalisados = produtosComFicha.map(produto => {
-      const custoInsumos = produto.fichas_tecnicas?.reduce((acc, ft) => {
-        return acc + (ft.quantidade * ft.insumos.custo_unitario);
-      }, 0) || 0;
+      const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any);
       
       const precoVenda = produto.preco_venda || 0;
       const { percCustoFixo, percImposto } = custosPercentuais;
