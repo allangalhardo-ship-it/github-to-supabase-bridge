@@ -210,7 +210,7 @@ export function useMenuEngineering() {
     const todasMargens: number[] = [];
     const todasQuantidades: number[] = [];
 
-    const todasQuantidades: number[] = [];
+
 
     // Primeiro passo: calcular métricas brutas
     const produtosComMetricas = produtosComFicha.map(produto => {
