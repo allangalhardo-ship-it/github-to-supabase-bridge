@@ -69,6 +69,7 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
   const [precosEditaveis, setPrecosEditaveis] = useState<Record<string, string>>({});
   const [showComposicao, setShowComposicao] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showRevisao, setShowRevisao] = useState(false);
   
   // Usar hook que busca canais da nova estrutura
   const { canaisConfigurados, isLoadingPrecos } = usePrecosCanais(produto?.id);
