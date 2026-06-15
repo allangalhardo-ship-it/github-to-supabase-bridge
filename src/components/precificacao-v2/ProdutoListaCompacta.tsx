@@ -15,7 +15,6 @@ import {
   CheckCircle2,
   Store,
   Smartphone,
-  Tag
 } from 'lucide-react';
 import { ProdutoAnalise, QuadranteMenu, ConfiguracoesPrecificacao, formatCurrency, formatPercent, getQuadranteInfo } from './types';
 import { cn } from '@/lib/utils';
@@ -65,14 +64,14 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
     return produto.preco_venda; // fallback para preço base
   };
 
-  // Montar lista de canais a partir do hook, com "Preço Base" no topo
+  // Montar lista de canais a partir do hook, com "Balcão" (preço base) no topo
   // (reflete produtos.preco_venda — fonte da verdade usada pelo Dashboard).
   const canais = useMemo(() => {
     const base = {
       id: 'base',
-      nome: 'Base',
+      nome: 'Balcão',
       taxa: 0,
-      icone: <Tag className="h-3 w-3" />,
+      icone: <Store className="h-3 w-3" />,
     };
     const outros = (canaisConfigurados || []).map(canal => ({
       id: canal.id,

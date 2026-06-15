@@ -471,7 +471,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, 
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="produto-preco">Preço de venda *</Label>
+                  <Label htmlFor="produto-preco">Preço de balcão *</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">R$</span>
                     <Input
@@ -555,7 +555,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, 
                     <span className="font-medium">R$ {custoTotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Preço de venda:</span>
+                    <span>Preço de balcão:</span>
                     <span className="font-medium">R$ {precoVenda.toFixed(2)}</span>
                   </div>
                   <div className="border-t pt-2 flex justify-between">

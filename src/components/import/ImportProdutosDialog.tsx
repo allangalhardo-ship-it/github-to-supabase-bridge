@@ -79,7 +79,7 @@ const ImportProdutosDialog = ({ open, onOpenChange, existingProdutos }: ImportPr
           return {
             ...item,
             status: 'error' as const,
-            message: 'Preço de venda inválido',
+            message: 'Preço de balcão inválido',
           };
         }
 
