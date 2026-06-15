@@ -338,20 +338,18 @@ export function useMenuEngineering() {
 
     // Classificar em quadrantes
     return produtosComMetricas.map(produto => {
-      const altaMargem = produto.margemContribuicao >= medianaMargens;
-      const altaPopularidade = produto.quantidadeVendida >= medianaQtds;
-
       let quadrante: QuadranteMenu;
-      if (altaMargem && altaPopularidade) {
-        quadrante = 'estrela';
-      } else if (!altaMargem && altaPopularidade) {
-        quadrante = 'burro-de-carga';
-      } else if (altaMargem && !altaPopularidade) {
-        quadrante = 'desafio';
+      // Produto sem vendas no período → não classificar como Cão; é "sem dados"
+      if (produto.quantidadeVendida <= 0) {
+        quadrante = 'sem-dados';
       } else {
-        quadrante = 'cao';
+        const altaMargem = produto.margemContribuicao >= medianaMargens;
+        const altaPopularidade = produto.quantidadeVendida >= medianaQtds;
+        if (altaMargem && altaPopularidade) quadrante = 'estrela';
+        else if (!altaMargem && altaPopularidade) quadrante = 'burro-de-carga';
+        else if (altaMargem && !altaPopularidade) quadrante = 'desafio';
+        else quadrante = 'cao';
       }
-
       return { ...produto, quadrante };
     });
   }, [produtos, config, vendasAgregadas, vendasPorCanal, precosCanaisTodos, canaisInfo, matchCanalIdPorTexto]);
@@ -363,13 +361,14 @@ export function useMenuEngineering() {
       'burro-de-carga': 0,
       'desafio': 0,
       'cao': 0,
+      'sem-dados': 0,
     };
 
     produtosAnalisados.forEach(p => {
       contagem[p.quadrante]++;
     });
 
-    return (['estrela', 'burro-de-carga', 'desafio', 'cao'] as QuadranteMenu[]).map(q => ({
+    return (['estrela', 'burro-de-carga', 'desafio', 'cao', 'sem-dados'] as QuadranteMenu[]).map(q => ({
       ...getQuadranteInfo(q),
       quantidade: contagem[q],
     }));

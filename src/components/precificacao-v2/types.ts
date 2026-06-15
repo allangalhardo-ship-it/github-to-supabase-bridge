@@ -3,7 +3,7 @@
  */
 
 // Quadrantes do Menu Engineering Matrix
-export type QuadranteMenu = 'estrela' | 'burro-de-carga' | 'desafio' | 'cao';
+export type QuadranteMenu = 'estrela' | 'burro-de-carga' | 'desafio' | 'cao' | 'sem-dados';
 
 export interface ProdutoBase {
   id: string;
@@ -138,6 +138,16 @@ export const getQuadranteInfo = (quadrante: QuadranteMenu): ResumoQuadrante => {
       cor: 'text-red-600',
       bgCor: 'bg-red-500/10',
       acao: 'Reformular ou remover',
+    },
+    'sem-dados': {
+      tipo: 'sem-dados',
+      quantidade: 0,
+      label: 'Sem dados',
+      descricao: 'Produto novo ou sem vendas no período',
+      icone: '🆕',
+      cor: 'text-slate-600',
+      bgCor: 'bg-slate-500/10',
+      acao: 'Aguardar vendas para análise',
     },
   };
   return infos[quadrante];
