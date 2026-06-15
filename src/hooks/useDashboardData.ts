@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysInMonth, endOfMonth, subMonths } from 'date-fns';
+import { calcularCustoFicha } from '@/utils/custoFicha';
 import { ptBR } from 'date-fns/locale';
 
 export type PeriodoType = 'hoje' | 'semana' | 'mes' | 'ultimos30' | 'personalizado';
@@ -175,7 +176,7 @@ export function useDashboardData() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('produtos')
-        .select(`id, nome, preco_venda, categoria, fichas_tecnicas (quantidade, insumo_id, insumos (id, nome, custo_unitario))`)
+        .select(`id, nome, preco_venda, categoria, fichas_tecnicas (quantidade, unidade, insumo_id, insumos (id, nome, custo_unitario, unidade_medida, fator_perda))`)
         .eq('ativo', true)
         .eq('empresa_id', usuario!.empresa_id);
       if (error) throw error;
