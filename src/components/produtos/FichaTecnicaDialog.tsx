@@ -8,23 +8,40 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Trash2, FileText, Search, Calculator, ExternalLink, Lightbulb, X } from 'lucide-react';
+import { Trash2, FileText, Search, Calculator, ExternalLink, Lightbulb, X, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import BuscarInsumoDialog from './BuscarInsumoDialog';
 import CustoMargemCard from './CustoMargemCard';
 import { InsumoIcon } from '@/lib/insumoIconUtils';
 import { formatCurrencyBRL, formatCurrencySmartBRL } from '@/lib/format';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { calcularCustoItem, unidadesCompativeis } from '@/utils/custoFicha';
+
+const GRUPOS_UNIDADE: Record<string, string[]> = {
+  massa: ['mg', 'g', 'kg'],
+  volume: ['ml', 'l'],
+  contagem: ['un'],
+};
+function unidadesDoGrupo(unidadeInsumo: string): string[] {
+  const u = (unidadeInsumo || '').toLowerCase();
+  for (const [, arr] of Object.entries(GRUPOS_UNIDADE)) {
+    if (arr.some((x) => unidadesCompativeis(x, u))) return arr;
+  }
+  return [u || 'un'];
+}
 
 
 interface FichaTecnicaItem {
   id: string;
   quantidade: number;
+  unidade: string | null;
   insumos: {
     id: string;
     nome: string;
     unidade_medida: string;
     custo_unitario: number;
-  };
+    fator_perda?: number | null;
+  } | null;
 }
 
 interface FichaTecnicaDialogProps {
@@ -50,6 +67,7 @@ interface InsumoSelecionado {
   nome: string;
   unidade_medida: string;
   custo_unitario: number;
+  fator_perda?: number | null;
 }
 
 interface LocalItem {
@@ -57,6 +75,7 @@ interface LocalItem {
   id?: string;
   insumo: InsumoSelecionado;
   quantidade: number;
+  unidade: string; // unidade da quantidade na ficha (pode diferir da do insumo)
   isNew?: boolean;
   isDeleted?: boolean;
 }
