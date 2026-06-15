@@ -559,10 +559,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 />
               </div>
               <CustoMargemCard
-                fichaTecnica={produto.fichas_tecnicas || []}
+                custoFicha={custoInsumos}
                 precoBase={precoVenda}
+                produtoId={produto.id}
                 impostoPercentual={config?.imposto_medio_sobre_vendas || 0}
                 margemAlvo={config?.margem_desejada_padrao || 30}
+                compact
               />
             </div>
           )}
