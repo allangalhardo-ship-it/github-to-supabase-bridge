@@ -200,11 +200,11 @@ const ComposicaoPrecoModal: React.FC<ComposicaoPrecoModalProps> = ({
 
             {/* Detalhamento em lista */}
             <div className="bg-muted/30 rounded-lg p-3 space-y-2 text-sm">
-              {/* Preço de Venda */}
+              {/* Preço do canal */}
               <div className="flex justify-between items-center font-medium border-b pb-2 border-border/50">
                 <div className="flex items-center gap-2">
                   <Banknote className="h-4 w-4 text-muted-foreground" />
-                  <span>Preço de Venda</span>
+                  <span>Preço de venda no canal</span>
                 </div>
                 <span>{formatCurrency(canal.precoCanal)}</span>
               </div>

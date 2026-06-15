@@ -19,7 +19,7 @@ export const INSUMOS_TEMPLATE: TemplateColumn[] = [
 export const PRODUTOS_TEMPLATE: TemplateColumn[] = [
   { header: 'Nome', key: 'nome', example: 'Bolo de Chocolate', required: true },
   { header: 'Categoria', key: 'categoria', example: 'Bolos', required: false },
-  { header: 'Preço de Venda', key: 'preco_venda', example: '45.00', required: true },
+  { header: 'Preço de Balcão', key: 'preco_venda', example: '45.00', required: true },
 ];
 
 export const FICHA_TECNICA_TEMPLATE: TemplateColumn[] = [

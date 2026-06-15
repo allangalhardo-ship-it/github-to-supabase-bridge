@@ -84,15 +84,15 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
   }, [produto?.id, config?.cmv_alvo]);
 
   // Montar lista de canais a partir da nova estrutura.
-  // Inclui sempre um "canal" virtual "Preço Base" no topo, que reflete
+  // Inclui sempre um "canal" virtual "Balcão" no topo, que reflete
   // produtos.preco_venda — a fonte da verdade usada pelo Dashboard (Ponto
   // de Equilíbrio, margens, etc.). Aplicar nele atualiza preco_venda.
   const canais: CanalInfo[] = useMemo(() => {
     const base: CanalInfo = {
       id: 'base',
-      nome: 'Preço Base (Dashboard)',
+      nome: 'Balcão (preço base)',
       taxa: 0,
-      icone: <Tag className="h-4 w-4" />,
+      icone: <Store className="h-4 w-4" />,
       destaque: true,
     };
     if (!canaisConfigurados) return [base];
