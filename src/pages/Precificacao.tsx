@@ -7,11 +7,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import { Link } from 'react-router-dom';
-import { 
+import { formatCurrencyBRL } from '@/lib/format';
+import {
   Settings,
   Package,
   ArrowRight,
@@ -105,24 +110,26 @@ const Precificacao = () => {
     },
   });
 
-  const handleAplicarPreco = (produtoId: string, novoPreco: number, precoAnterior: number) => {
+  // Confirmação para variação > 10%
+  const [confirmacao, setConfirmacao] = useState<null | {
+    tipo: 'base' | 'canal';
+    produtoId: string;
+    canal?: string;
+    canalNome?: string;
+    novoPreco: number;
+    precoAnterior: number;
+    variacao: number;
+  }>(null);
+
+  const aplicarPrecoBase = (produtoId: string, novoPreco: number, precoAnterior: number) => {
     updatePrecoMutation.mutate({ produtoId, novoPreco, precoAnterior });
   };
 
-  // Handler para aplicar preço em um canal específico
-  const handleAplicarPrecoCanal = (produtoId: string, canal: string, novoPreco: number, precoAnterior: number) => {
-    // Buscar nome do canal para exibir no toast
-    const canalInfo = canaisConfigurados?.find(c => c.id === canal);
-    const canalNome = canalInfo?.nome;
-    
-    // Salvar no canal específico
+  const aplicarPrecoCanalReal = (produtoId: string, canal: string, novoPreco: number, precoAnterior: number, canalNome?: string) => {
     upsertPreco({ produtoId, canal, preco: novoPreco, canalNome });
-    
-    // Se for balcão, também atualizar o preço base do produto
     if (canal === 'balcao') {
       updatePrecoMutation.mutate({ produtoId, novoPreco, precoAnterior });
     } else {
-      // Registrar histórico para outros canais também
       supabase.from('historico_precos_produtos').insert({
         empresa_id: usuario?.empresa_id,
         produto_id: produtoId,
@@ -132,13 +139,51 @@ const Precificacao = () => {
         origem: 'precificacao',
         observacao: `Canal: ${canal}`,
       });
-      // Força refetch imediato
       invalidateAndRefetch([
         ['produtos-menu-engineering'],
         ['precos-canais-todos'],
         ['produtos-analise'],
       ]);
     }
+  };
+
+  const calcVariacao = (anterior: number, novo: number) =>
+    anterior > 0 ? Math.abs(((novo - anterior) / anterior) * 100) : 0;
+
+  const handleAplicarPreco = (produtoId: string, novoPreco: number, precoAnterior: number) => {
+    const variacao = calcVariacao(precoAnterior, novoPreco);
+    if (variacao > 10) {
+      setConfirmacao({ tipo: 'base', produtoId, novoPreco, precoAnterior, variacao });
+      return;
+    }
+    aplicarPrecoBase(produtoId, novoPreco, precoAnterior);
+  };
+
+  const handleAplicarPrecoCanal = (produtoId: string, canal: string, novoPreco: number, precoAnterior: number) => {
+    const canalInfo = canaisConfigurados?.find(c => c.id === canal);
+    const canalNome = canalInfo?.nome;
+    const variacao = calcVariacao(precoAnterior, novoPreco);
+    if (variacao > 10) {
+      setConfirmacao({ tipo: 'canal', produtoId, canal, canalNome, novoPreco, precoAnterior, variacao });
+      return;
+    }
+    aplicarPrecoCanalReal(produtoId, canal, novoPreco, precoAnterior, canalNome);
+  };
+
+  const confirmarAplicacao = () => {
+    if (!confirmacao) return;
+    if (confirmacao.tipo === 'base') {
+      aplicarPrecoBase(confirmacao.produtoId, confirmacao.novoPreco, confirmacao.precoAnterior);
+    } else if (confirmacao.canal) {
+      aplicarPrecoCanalReal(
+        confirmacao.produtoId,
+        confirmacao.canal,
+        confirmacao.novoPreco,
+        confirmacao.precoAnterior,
+        confirmacao.canalNome,
+      );
+    }
+    setConfirmacao(null);
   };
 
   const handleSelectProduto = (produto: ProdutoAnalise) => {
