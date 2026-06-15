@@ -358,16 +358,39 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
                     {/* Ações */}
                     <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                       {precisaAjuste && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => onAplicarPreco(produto.id, produto.precoSugerido, produto.preco_venda)}
-                          disabled={isAplicando}
-                          className="h-8 px-2 gap-1"
-                        >
-                          <Zap className="h-3.5 w-3.5" />
-                          {!isMobile && 'Aplicar'}
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => onAplicarPreco(produto.id, produto.precoSugerido, produto.preco_venda)}
+                            disabled={isAplicando}
+                            className="h-8 px-2 gap-1"
+                          >
+                            <Zap className="h-3.5 w-3.5" />
+                            {!isMobile && 'Aplicar'}
+                          </Button>
+                          {charmDifere && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => onAplicarPreco(produto.id, precoCharm, produto.preco_venda)}
+                                  disabled={isAplicando}
+                                  className="h-8 px-2 gap-1 text-[11px]"
+                                >
+                                  {formatCurrency(precoCharm)}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs max-w-[220px]">
+                                <p className="font-medium">Preço psicológico (X,90)</p>
+                                <p className="text-muted-foreground mt-1">
+                                  Vendas tendem a converter mais com preços terminados em ,90. Sugestão: {formatCurrency(precoCharm)} ao invés de {formatCurrency(produto.precoSugerido)}.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                        </>
                       )}
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
