@@ -170,6 +170,7 @@ export function usePrecosCanais(produtoId?: string) {
     onSuccess: () => {
       invalidateAndRefetch([
         ['precos-canais'],
+        ['precos-canais-map'],
         ['todos-precos-canais'],
         ['precos-canais-todos'],
         ['produtos-menu-engineering'],
