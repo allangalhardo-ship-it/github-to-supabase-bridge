@@ -207,26 +207,28 @@ const FichaTecnicaForm: React.FC<FichaTecnicaFormProps> = ({ produtoId, fichaTec
       )}
 
       {insumosDisponiveis.length > 0 && (
-        <div className="flex gap-2">
-          <SearchableSelect
-            options={insumosDisponiveis.map((insumo) => ({
-              value: insumo.id,
-              label: `${insumo.nome} (${insumo.unidade_medida})`,
-              searchTerms: insumo.nome,
-              icon: insumo.is_intermediario
-                ? <ClipboardList className="h-4 w-4 text-primary" />
-                : <InsumoIcon nome={insumo.nome} className="h-4 w-4" />,
-            }))}
-            value={novoInsumo.insumo_id}
-            onValueChange={(value) => {
-              const ins = insumos?.find((i) => i.id === value);
-              setNovoInsumo({ ...novoInsumo, insumo_id: value, unidade: ins?.unidade_medida || '' });
-            }}
-            placeholder="Buscar insumo..."
-            searchPlaceholder="Digite para buscar..."
-            emptyMessage="Nenhum insumo encontrado."
-            className="flex-1"
-          />
+        <div className="grid grid-cols-[1fr_70px_64px_auto] gap-2 items-center">
+          <div className="min-w-0">
+            <SearchableSelect
+              options={insumosDisponiveis.map((insumo) => ({
+                value: insumo.id,
+                label: `${insumo.nome} (${insumo.unidade_medida})`,
+                searchTerms: insumo.nome,
+                icon: insumo.is_intermediario
+                  ? <ClipboardList className="h-4 w-4 text-primary" />
+                  : <InsumoIcon nome={insumo.nome} className="h-4 w-4" />,
+              }))}
+              value={novoInsumo.insumo_id}
+              onValueChange={(value) => {
+                const ins = insumos?.find((i) => i.id === value);
+                setNovoInsumo({ ...novoInsumo, insumo_id: value, unidade: ins?.unidade_medida || '' });
+              }}
+              placeholder="Buscar insumo..."
+              searchPlaceholder="Digite para buscar..."
+              emptyMessage="Nenhum insumo encontrado."
+              className="w-full"
+            />
+          </div>
           <Input
             type="number"
             step="0.01"
@@ -234,23 +236,26 @@ const FichaTecnicaForm: React.FC<FichaTecnicaFormProps> = ({ produtoId, fichaTec
             placeholder="Qtd"
             value={novoInsumo.quantidade}
             onChange={(e) => setNovoInsumo({ ...novoInsumo, quantidade: e.target.value })}
-            className="w-20"
+            className="w-full"
           />
-          {unidadesNovo.length > 0 && (
+          {unidadesNovo.length > 0 ? (
             <Select
               value={novoInsumo.unidade}
               onValueChange={(v) => setNovoInsumo({ ...novoInsumo, unidade: v })}
             >
-              <SelectTrigger className="w-[72px]"><SelectValue placeholder="un" /></SelectTrigger>
+              <SelectTrigger className="w-full"><SelectValue placeholder="un" /></SelectTrigger>
               <SelectContent>
                 {unidadesNovo.map((u) => (
                   <SelectItem key={u} value={u}>{u}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+          ) : (
+            <div />
           )}
           <Button
             size="icon"
+            className="shrink-0"
             onClick={() => addMutation.mutate()}
             disabled={!novoInsumo.insumo_id || !novoInsumo.quantidade || addMutation.isPending}
           >
