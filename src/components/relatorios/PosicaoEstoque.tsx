@@ -32,6 +32,7 @@ import {
   CartesianGrid
 } from 'recharts';
 import { differenceInDays, parseISO, format } from 'date-fns';
+import { calcularCustoFicha } from '@/utils/custoFicha';
 
 interface PosicaoEstoqueProps {
   onBack: () => void;
@@ -125,9 +126,7 @@ export const PosicaoEstoque: React.FC<PosicaoEstoqueProps> = ({ onBack }) => {
 
     // Valor do estoque de produtos acabados
     const valorEstoqueProdutos = produtos?.reduce((acc, prod) => {
-      const custoUnitario = prod.fichas_tecnicas?.reduce((acc, ft) => {
-        return acc + (ft.quantidade * (ft.insumos?.custo_unitario || 0));
-      }, 0) || 0;
+      const custoUnitario = calcularCustoFicha(prod.fichas_tecnicas as any);
       return acc + (prod.estoque_acabado * custoUnitario);
     }, 0) || 0;
 

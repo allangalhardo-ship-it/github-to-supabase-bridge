@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { calcularCustoFicha } from '@/utils/custoFicha';
 
 interface Venda {
   id: string;
@@ -199,9 +200,7 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
       let produtoMaisCritico: { nome: string; margem: number; ajuste: number } | null = null;
       
       produtos.forEach((produto) => {
-        const custoInsumos = produto.fichas_tecnicas?.reduce((sum, ft) => {
-          return sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0));
-        }, 0) || 0;
+        const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any);
         
         if (custoInsumos === 0 || produto.preco_venda === 0) return;
         
@@ -332,9 +331,7 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
     if (produtos && produtos.length > 0 && messages.filter(m => m.status === 'success').length < 2) {
       const produtosPromo = produtos
         .map((produto) => {
-          const custoInsumos = produto.fichas_tecnicas?.reduce((sum, ft) => {
-            return sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0));
-          }, 0) || 0;
+          const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any);
           
           if (custoInsumos === 0) return null;
           
