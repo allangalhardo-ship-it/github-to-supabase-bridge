@@ -1,14 +1,17 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   Percent, 
   AlertTriangle, 
   TrendingUp,
-  Package
+  Package,
+  Info,
 } from 'lucide-react';
 import { MetricasGerais, formatCurrency, formatPercent } from './types';
 import { cn } from '@/lib/utils';
+
 
 interface ResumoExecutivoProps {
   metricas: MetricasGerais;
