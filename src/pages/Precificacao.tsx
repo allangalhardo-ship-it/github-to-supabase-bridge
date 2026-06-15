@@ -28,10 +28,14 @@ import {
   ProdutoListaCompacta,
   ProdutoDetalheDrawer,
   ResumoExecutivo,
+  MatrizScatter,
+  KpisAvancados,
   useMenuEngineering,
   QuadranteMenu,
   ProdutoAnalise,
+  PeriodoBCG,
 } from '@/components/precificacao-v2';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 import SugestaoPrecoCanal from '@/components/precificacao-v2/SugestaoPrecoCanal';
 import ImpactoReajusteReport from '@/components/precificacao-v2/ImpactoReajusteReport';
@@ -46,6 +50,7 @@ const Precificacao = () => {
   const [quadranteSelecionado, setQuadranteSelecionado] = useState<QuadranteMenu | null>(null);
   const [produtoSelecionado, setProdutoSelecionado] = useState<ProdutoAnalise | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [periodo, setPeriodo] = useState<PeriodoBCG>(30);
 
   const {
     produtosAnalisados,
@@ -54,7 +59,7 @@ const Precificacao = () => {
     categorias,
     config,
     isLoading,
-  } = useMenuEngineering();
+  } = useMenuEngineering(periodo);
 
   // Hook para gerenciar preços por canal
   const { upsertPreco, isSaving: isSavingPrecoCanal, canaisConfigurados } = usePrecosCanais();
