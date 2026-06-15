@@ -174,16 +174,6 @@ export function useMenuEngineering() {
   const vendasAgregadas = vendasData?.agregado;
   const vendasPorCanal = vendasData?.porCanal;
 
-  // Processar produtos e classificar
-  const produtosAnalisados: ProdutoAnalise[] = useMemo(() => {
-    if (!produtos || !config) return [];
-
-    const produtosComFicha = produtos.filter(p => p.fichas_tecnicas && p.fichas_tecnicas.length > 0);
-    
-    // Calcular medianas para classificação
-    const todasMargens: number[] = [];
-    const todasQuantidades: number[] = [];
-
   // Helper: encontrar canal_id a partir do texto livre salvo em vendas.canal
   // Estratégia: lowercase + match exato no nome OU contains; "balcao" → tipo presencial
   const matchCanalIdPorTexto = useMemo(() => {
@@ -215,9 +205,11 @@ export function useMenuEngineering() {
     if (!produtos || !config) return [];
 
     const produtosComFicha = produtos.filter(p => p.fichas_tecnicas && p.fichas_tecnicas.length > 0);
-    
+
     // Calcular medianas para classificação
     const todasMargens: number[] = [];
+    const todasQuantidades: number[] = [];
+
     const todasQuantidades: number[] = [];
 
     // Primeiro passo: calcular métricas brutas
