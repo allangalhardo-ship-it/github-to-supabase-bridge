@@ -116,9 +116,6 @@ const ComposicaoPrecoModal: React.FC<ComposicaoPrecoModalProps> = ({
       {/* Header do produto */}
       <div className="text-center pb-2">
         <p className="font-semibold text-lg">{produto.nome}</p>
-        <p className="text-muted-foreground text-sm">
-          Preço base: <span className="font-bold text-foreground">{formatCurrency(produto.preco_venda)}</span>
-        </p>
       </div>
 
       <Separator />

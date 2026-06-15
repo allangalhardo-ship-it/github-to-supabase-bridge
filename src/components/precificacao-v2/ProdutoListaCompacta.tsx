@@ -65,7 +65,7 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
     if (produto.precosCanais && produto.precosCanais[canalId] !== undefined) {
       return produto.precosCanais[canalId];
     }
-    return produto.preco_venda; // fallback para preço base
+    return produto.preco_venda; // fallback legado quando o canal ainda não tem preço próprio
   };
 
   // Canal Balcão (âncora) — usado pelo botão "Aplicar" da lista
@@ -74,7 +74,7 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
     [canaisConfigurados]
   );
 
-  // Aplica o reajuste no canal Balcão (ou no preço base como fallback)
+  // Aplica o reajuste no canal Balcão (ou no cadastro legado como fallback)
   const aplicarReajuste = (produto: ProdutoAnalise, novoPreco: number) => {
     if (canalBalcao && onAplicarPrecoCanal) {
       const precoAtualBalcao = getPrecoCanal(produto, canalBalcao.id);
@@ -233,7 +233,7 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
           ) : (
             produtosOrdenados.map((produto) => {
               const quadInfo = getQuadranteInfo(produto.quadrante);
-              // Preço de referência = Balcão (ou preço base como fallback)
+              // Preço de referência = Balcão (ou cadastro legado como fallback)
               const precoReferencia = canalBalcao
                 ? getPrecoCanal(produto, canalBalcao.id)
                 : produto.preco_venda;
@@ -363,7 +363,7 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
                                 </TooltipTrigger>
                                 <TooltipContent side="top" className="text-xs">
                                   <p className="font-medium">{canal.nome}</p>
-                                  <p>Preço: {formatCurrency(precoCanal)} {temPrecoCustom ? '✓' : '(base)'}</p>
+                                  <p>Preço: {formatCurrency(precoCanal)} {temPrecoCustom ? '✓' : '(fallback)'}</p>
                                   <p>Margem: {formatPercent(margem)} <span className="text-muted-foreground">(líq. impostos)</span></p>
                                   {canal.taxa > 0 && <p className="text-muted-foreground">Taxa: {canal.taxa}%</p>}
                                 </TooltipContent>

@@ -228,10 +228,10 @@ export function useMenuEngineering(periodo: PeriodoBCG = 30) {
       // Buscar preços por canal deste produto
       const precosCanaisProduto = precosCanaisTodos?.[produto.id] || {};
 
-      // SEMPRE usar o preço de cadastro atual como fonte de verdade para margem/CMV.
-      const precoEfetivo = produto.preco_venda || 0;
-
-      const cmv = precoEfetivo > 0 ? (custoInsumos / precoEfetivo) * 100 : 100;
+      // Fonte de verdade da precificação: preços por canal.
+      // produto.preco_venda fica apenas como fallback legado quando um canal ainda não tem preço próprio.
+      let precoEfetivo = produto.preco_venda || 0;
+      let cmv = precoEfetivo > 0 ? (custoInsumos / precoEfetivo) * 100 : 100;
 
       // === Taxa do canal ponderada por VENDAS REAIS (últimos 30 dias) ===
       // Prioridade:
@@ -281,19 +281,76 @@ export function useMenuEngineering(periodo: PeriodoBCG = 30) {
         }
       }
 
-      // Margem de contribuição AGORA inclui a taxa do canal
-      const impostoValor = precoEfetivo * (config.imposto_medio_sobre_vendas / 100);
-      const taxaValor = precoEfetivo * (taxaCanalEfetiva / 100);
-      const lucroUnitario = precoEfetivo - custoInsumos - impostoValor - taxaValor;
-      const margemContribuicao = precoEfetivo > 0 ? (lucroUnitario / precoEfetivo) * 100 : 0;
+      // Margem de contribuição inclui imposto + taxa do canal.
+      let impostoValor = precoEfetivo * (config.imposto_medio_sobre_vendas / 100);
+      let taxaValor = precoEfetivo * (taxaCanalEfetiva / 100);
+      let lucroUnitario = precoEfetivo - custoInsumos - impostoValor - taxaValor;
+      let margemContribuicao = precoEfetivo > 0 ? (lucroUnitario / precoEfetivo) * 100 : 0;
 
-      // Preço sugerido — UNIFICADO com o simulador do drawer:
-      // usa cmv_alvo como fonte da verdade (mesma fórmula).
-      // preco = custo / (cmv_alvo * (1 - taxa_canal))
-      // Isso garante que se o usuário já equalizou os preços por canal pelo
-      // cmv_alvo, a lista NÃO sugere reajustes desnecessários.
+      // Se existem canais ativos, recalcula as métricas usando os preços reais por canal.
+      // Isso elimina falsos alertas causados pelo preço legado do produto ou por taxa média de vendas.
+      if (canaisInfo && Object.keys(canaisInfo).length > 0) {
+        const metricasPorCanal = Object.entries(canaisInfo)
+          .map(([canalId, info]) => {
+            const precoCanal = precosCanaisProduto[canalId] ?? produto.preco_venda ?? 0;
+            const taxaCanal = info.taxa / 100;
+            const receitaLiquida = precoCanal * (1 - taxaCanal);
+            const lucroCanal = precoCanal - custoInsumos - (precoCanal * (config.imposto_medio_sobre_vendas / 100)) - (precoCanal * taxaCanal);
+            return {
+              canalId,
+              preco: precoCanal,
+              taxa: info.taxa,
+              lucro: lucroCanal,
+              margem: precoCanal > 0 ? (lucroCanal / precoCanal) * 100 : 0,
+              cmv: receitaLiquida > 0 ? (custoInsumos / receitaLiquida) * 100 : 100,
+            };
+          })
+          .filter(m => m.preco > 0);
+
+        if (metricasPorCanal.length > 0) {
+          const pesosPorCanal: Record<string, number> = {};
+          if (temVendasComCanal && canaisInfo) {
+            Object.entries(vendasCanaisProduto).forEach(([canalTexto, receita]) => {
+              const canalId = matchCanalIdPorTexto(canalTexto);
+              if (canalId && receita > 0) {
+                pesosPorCanal[canalId] = (pesosPorCanal[canalId] || 0) + receita;
+              }
+            });
+          }
+
+          const somaPesos = metricasPorCanal.reduce((sum, m) => sum + (pesosPorCanal[m.canalId] || 0), 0);
+          const media = (selector: (m: typeof metricasPorCanal[number]) => number) => {
+            if (somaPesos > 0) {
+              return metricasPorCanal.reduce((sum, m) => sum + selector(m) * (pesosPorCanal[m.canalId] || 0), 0) / somaPesos;
+            }
+            return metricasPorCanal.reduce((sum, m) => sum + selector(m), 0) / metricasPorCanal.length;
+          };
+
+          precoEfetivo = media(m => m.preco);
+          taxaCanalEfetiva = media(m => m.taxa);
+          lucroUnitario = media(m => m.lucro);
+          margemContribuicao = media(m => m.margem);
+          cmv = media(m => m.cmv);
+          impostoValor = precoEfetivo * (config.imposto_medio_sobre_vendas / 100);
+          taxaValor = precoEfetivo * (taxaCanalEfetiva / 100);
+        }
+      }
+
+      // Preço sugerido do produto = canal âncora (Balcão), não média de vendas.
+      // Preços de apps/WhatsApp são calculados individualmente nos componentes por canal.
+      // Usar taxa ponderada por vendas aqui gerava falso reajuste: Balcão já estava em 50% CMV,
+      // mas uma venda em canal com taxa alta empurrava a sugestão global para ~R$35,90.
       const cmvAlvoFrac = (config.cmv_alvo || 35) / 100;
-      const taxa = taxaCanalEfetiva / 100;
+      const canalReferenciaPreco = canaisInfo
+        ? Object.entries(canaisInfo).find(([, c]) => c.isBalcao)
+        : null;
+      const taxaReferenciaPreco = canalReferenciaPreco
+        ? canalReferenciaPreco[1].taxa
+        : taxaCanalEfetiva;
+      const precoReferenciaAtual = canalReferenciaPreco
+        ? (precosCanaisProduto[canalReferenciaPreco[0]] ?? produto.preco_venda ?? 0)
+        : (produto.preco_venda ?? 0);
+      const taxa = taxaReferenciaPreco / 100;
       const fatorReceita = 1 - taxa;
       const precoSugeridoViavel = cmvAlvoFrac > 0 && cmvAlvoFrac < 1 && fatorReceita > 0 && custoInsumos > 0;
       const precoSugerido = precoSugeridoViavel ? custoInsumos / (cmvAlvoFrac * fatorReceita) : 0;
@@ -319,6 +376,8 @@ export function useMenuEngineering(periodo: PeriodoBCG = 30) {
         cmv,
         quantidadeVendida,
         receitaTotal,
+        precoAnaliseAtual: precoEfetivo,
+        precoReferenciaAtual,
         precoSugerido,
         precoSugeridoViavel,
         saudeMargem,
@@ -391,11 +450,11 @@ export function useMenuEngineering(periodo: PeriodoBCG = 30) {
       };
     }
 
-    // Média PONDERADA pelo preço de venda (financeiramente correta — produtos mais caros pesam mais)
+    // Média ponderada pelo preço analisado por canal (financeiramente correta — produtos mais caros pesam mais)
     // IMPORTANTE: usar a MESMA base do cálculo por produto (margemContribuicao = preço − custo − imposto − taxa do canal).
     // Antes a métrica agregada ignorava imposto e taxa, inflando a margem exibida no card vs. realidade.
-    const validos = produtosAnalisados.filter(p => p.preco_venda > 0 && p.custoInsumos > 0);
-    const somaPreco = validos.reduce((acc, p) => acc + p.preco_venda, 0);
+    const validos = produtosAnalisados.filter(p => (p.precoAnaliseAtual ?? p.precoReferenciaAtual ?? p.preco_venda) > 0 && p.custoInsumos > 0);
+    const somaPreco = validos.reduce((acc, p) => acc + (p.precoAnaliseAtual ?? p.precoReferenciaAtual ?? p.preco_venda), 0);
     const somaCusto = validos.reduce((acc, p) => acc + p.custoInsumos, 0);
     // Lucro unitário já inclui imposto + taxa do canal (calculado na linha 224)
     const somaLucro = validos.reduce((acc, p) => acc + p.lucroUnitario, 0);
@@ -407,7 +466,8 @@ export function useMenuEngineering(periodo: PeriodoBCG = 30) {
     // Só considerar produtos que realmente vendem
     const receitaPotencial = produtosAnalisados.reduce((acc, p) => {
       if (p.quantidadeVendida === 0) return acc; // Sem vendas = sem receita potencial real
-      const diferencaPreco = p.precoSugerido - p.preco_venda;
+      const precoAtual = p.precoReferenciaAtual ?? p.preco_venda;
+      const diferencaPreco = p.precoSugerido - precoAtual;
       const ganhoMensal = diferencaPreco * p.quantidadeVendida;
       return acc + (ganhoMensal > 0 ? ganhoMensal : 0);
     }, 0);

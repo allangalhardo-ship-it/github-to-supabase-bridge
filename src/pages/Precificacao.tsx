@@ -395,7 +395,7 @@ const Precificacao = () => {
                       <strong>
                         {confirmacao.tipo === 'canal' && confirmacao.canalNome
                           ? `preço do canal ${confirmacao.canalNome}`
-                          : 'preço base do produto'}
+                          : 'preço do produto'}
                       </strong>{' '}
                       em{' '}
                       <strong className={confirmacao.novoPreco > confirmacao.precoAnterior ? 'text-green-600' : 'text-red-600'}>
