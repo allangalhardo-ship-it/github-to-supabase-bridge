@@ -227,6 +227,10 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
               });
               const precoCharm = produto.precoSugeridoViavel ? arredondarCharm(produto.precoSugerido) : 0;
               const charmDifere = precoCharm > 0 && Math.abs(precoCharm - produto.precoSugerido) > 0.01;
+
+              return (
+                <div
+                  key={produto.id}
                   className={cn(
                     "group p-3 border rounded-lg transition-all hover:shadow-sm cursor-pointer",
                     produto.saudeMargem === 'critico' && "border-destructive/30 bg-destructive/5",
