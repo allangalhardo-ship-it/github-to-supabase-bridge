@@ -259,6 +259,29 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
                       <div className="flex items-center gap-2">
                         {getSaudeIcon(produto.saudeMargem)}
                         <p className="font-medium text-sm truncate">{produto.nome}</p>
+                        {produto.quantidadeVendida > 0 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  'text-[10px] px-1.5 py-0 h-4 shrink-0 font-bold cursor-help',
+                                  score.cor,
+                                  score.bgCor,
+                                  'border-current/40'
+                                )}
+                              >
+                                {score.score}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs">
+                              <p className="font-medium">Pricing Score: {score.score}/100 — {score.label}</p>
+                              <p className="text-muted-foreground mt-1">
+                                Margem: {score.detalhes.margem}/50 · CMV: {score.detalhes.cmv}/30 · Popularidade: {score.detalhes.popularidade}/20
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                         {produto.quantidadeVendida === 0 && (
                           <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-muted-foreground/40 text-muted-foreground shrink-0">
                             Sem vendas
