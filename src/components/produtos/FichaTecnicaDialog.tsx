@@ -593,6 +593,24 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
               </div>
             )}
 
+            {/* Rendimento da ficha */}
+            <div className="space-y-2">
+              <Label htmlFor="rendimento">Esta ficha rende quantas unidades?</Label>
+              <Input
+                id="rendimento"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="1"
+                value={rendimentoLocal}
+                onChange={(e) => setRendimentoLocal(e.target.value)}
+                className="w-32"
+              />
+              <p className="text-xs text-muted-foreground">
+                Use quando a ficha produz um lote (ex: 1 receita = 24 brigadeiros → digite 24). Deixe 1 se a ficha é para uma unidade.
+              </p>
+            </div>
+
             {/* Observações */}
             <div className="space-y-2">
               <Label htmlFor="observacoes">Observações / Modo de Preparo (opcional)</Label>
