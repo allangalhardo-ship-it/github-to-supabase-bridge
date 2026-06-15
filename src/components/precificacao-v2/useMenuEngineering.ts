@@ -95,6 +95,41 @@ export function useMenuEngineering() {
     enabled: !!usuario?.empresa_id,
   });
 
+  // Buscar canais de venda + taxas agregadas (taxa efetiva por canal)
+  const { data: canaisInfo } = useQuery({
+    queryKey: ['canais-com-taxas', usuario?.empresa_id],
+    queryFn: async () => {
+      const [{ data: canaisData, error: canaisError }, { data: taxasData, error: taxasError }] = await Promise.all([
+        supabase
+          .from('canais_venda')
+          .select('id, nome, tipo, ativo')
+          .eq('empresa_id', usuario?.empresa_id)
+          .eq('ativo', true),
+        supabase
+          .from('taxas_canais')
+          .select('canal_id, percentual')
+          .eq('empresa_id', usuario?.empresa_id),
+      ]);
+
+      if (canaisError) throw canaisError;
+      if (taxasError) throw taxasError;
+
+      // Mapa: canalId -> { taxa, isBalcao }
+      const mapa: Record<string, { taxa: number; isBalcao: boolean; nome: string }> = {};
+      (canaisData || []).forEach(c => {
+        const taxaTotal = (taxasData || [])
+          .filter(t => t.canal_id === c.id)
+          .reduce((sum, t) => sum + Number(t.percentual || 0), 0);
+        mapa[c.id] = {
+          taxa: taxaTotal,
+          isBalcao: c.tipo === 'presencial',
+          nome: c.nome,
+        };
+      });
+      return mapa;
+    },
+    enabled: !!usuario?.empresa_id,
+  });
 
   // Buscar vendas dos últimos 30 dias para popularidade
   const { data: vendasAgregadas } = useQuery({
