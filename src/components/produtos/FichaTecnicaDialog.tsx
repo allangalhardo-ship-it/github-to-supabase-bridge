@@ -497,30 +497,50 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
               )}
             </div>
 
+            {/* Alerta de itens órfãos (insumo deletado) */}
+            {itensOrfaos.length > 0 && (
+              <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3">
+                <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                <div className="text-xs text-destructive">
+                  <p className="font-semibold">{itensOrfaos.length} ingrediente(s) removido(s) do cadastro</p>
+                  <p>Esses itens aparecem com custo zero. Remova a ficha ou recadastre o insumo na tela de Insumos.</p>
+                </div>
+              </div>
+            )}
+
             {/* Lista de ingredientes */}
             {itensVisiveis.length > 0 && (
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Ingredientes na Ficha</Label>
                 <div className="divide-y border rounded-md">
-                  {itensVisiveis.map((item) => (
-                    <div
-                      key={item.tempId}
-                      className={`p-3 ${item.isNew ? 'bg-success/5' : ''}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate flex items-center gap-1.5">
-                            <InsumoIcon nome={item.insumo.nome} className="h-3.5 w-3.5 shrink-0 text-primary" />
-                            {item.insumo.nome}
-                            {item.isNew && (
-                              <span className="text-[10px] text-success bg-success/10 px-1 rounded">novo</span>
-                            )}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {formatCurrencySmartBRL(item.insumo.custo_unitario)} por {item.insumo.unidade_medida}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1">
+                  {itensVisiveis.map((item) => {
+                    const unidadesLinha = unidadesDoGrupo(item.insumo.unidade_medida);
+                    const custoLinha = calcularCustoItem({
+                      quantidade: item.quantidade,
+                      unidade: item.unidade,
+                      insumos: item.insumo,
+                    });
+                    return (
+                      <div
+                        key={item.tempId}
+                        className={`p-3 ${item.isNew ? 'bg-success/5' : ''}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate flex items-center gap-1.5">
+                              <InsumoIcon nome={item.insumo.nome} className="h-3.5 w-3.5 shrink-0 text-primary" />
+                              {item.insumo.nome}
+                              {item.isNew && (
+                                <span className="text-[10px] text-success bg-success/10 px-1 rounded">novo</span>
+                              )}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {formatCurrencySmartBRL(item.insumo.custo_unitario)} por {item.insumo.unidade_medida}
+                              {Number(item.insumo.fator_perda || 0) > 0 && (
+                                <> • perda {Number(item.insumo.fator_perda).toFixed(0)}%</>
+                              )}
+                            </p>
+                          </div>
                           <Input
                             type="number"
                             step="0.01"
@@ -529,22 +549,37 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
                             className="w-16 h-8 text-center text-sm"
                             onChange={(e) => handleUpdateQuantidade(item.tempId, parseFloat(e.target.value) || 0)}
                           />
-                          <span className="text-xs text-muted-foreground w-8">{item.insumo.unidade_medida}</span>
+                          <Select
+                            value={item.unidade}
+                            onValueChange={(v) =>
+                              setLocalItems((prev) =>
+                                prev.map((it) => (it.tempId === item.tempId ? { ...it, unidade: v } : it)),
+                              )
+                            }
+                          >
+                            <SelectTrigger className="w-[64px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {unidadesLinha.map((u) => (
+                                <SelectItem key={u} value={u}>{u}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <span className="w-20 text-right text-sm font-semibold tabular-nums">
+                            {formatCurrencyBRL(custoLinha)}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive flex-shrink-0"
+                            onClick={() => handleRemoveItem(item.tempId)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
-                        <span className="w-20 text-right text-sm font-semibold">
-                          {formatCurrencyBRL(item.quantidade * item.insumo.custo_unitario)}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive flex-shrink-0"
-                          onClick={() => handleRemoveItem(item.tempId)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
                       </div>
-                    </div>
+                    );
+                  })}
                   ))}
                 </div>
               </div>
