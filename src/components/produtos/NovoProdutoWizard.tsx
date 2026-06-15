@@ -89,7 +89,7 @@ const NovoProdutoWizard: React.FC<NovoProdutoWizardProps> = ({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('configuracoes')
-        .select('imposto_medio_sobre_vendas, margem_desejada_padrao')
+        .select('imposto_medio_sobre_vendas, margem_desejada_padrao, cmv_alvo')
         .maybeSingle();
       if (error) throw error;
       return data;
@@ -384,6 +384,8 @@ const NovoProdutoWizard: React.FC<NovoProdutoWizardProps> = ({
                 precoBase={0}
                 custoInsumos={custoFicha}
                 impostoPercentual={config?.imposto_medio_sobre_vendas || 0}
+                cmvAlvo={config?.cmv_alvo || 35}
+                autoSugerir
               />
             </div>
           )}
