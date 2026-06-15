@@ -371,22 +371,8 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
                             );
                           })}
                         </div>
-                        <div className="text-[10px] text-muted-foreground flex items-center gap-2 flex-wrap">
-                          <span>Custo: {formatCurrency(produto.custoInsumos)}</span>
-                          <span className="text-muted-foreground/50">•</span>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="cursor-help underline decoration-dotted underline-offset-2">
-                                Preço base: {formatCurrency(produto.preco_venda)}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="text-xs max-w-[260px]">
-                              <p className="font-medium mb-1">Preço base do produto</p>
-                              <p className="text-muted-foreground">
-                                Preço cadastrado no produto. Usado como referência e como preço do canal Balcão quando não há override. O botão "Aplicar" atualiza este valor; preços por canal continuam independentes.
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
+                        <div className="text-[10px] text-muted-foreground">
+                          Custo: {formatCurrency(produto.custoInsumos)}
                         </div>
                       </div>
                     </div>
