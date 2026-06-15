@@ -26,7 +26,9 @@ interface ProdutoListaCompactaProps {
   quadranteFiltro: QuadranteMenu | null;
   categorias: string[];
   onSelectProduto: (produto: ProdutoAnalise) => void;
+  /** @deprecated mantido por compat; novo fluxo usa onAplicarPrecoCanal no Balcão */
   onAplicarPreco: (produtoId: string, novoPreco: number, precoAnterior: number) => void;
+  onAplicarPrecoCanal?: (produtoId: string, canal: string, novoPreco: number, precoAnterior: number) => void;
   isAplicando?: boolean;
   isMobile?: boolean;
   config?: ConfiguracoesPrecificacao;
@@ -38,6 +40,7 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
   categorias,
   onSelectProduto,
   onAplicarPreco,
+  onAplicarPrecoCanal,
   isAplicando,
   isMobile,
   config,
@@ -65,8 +68,23 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
     return produto.preco_venda; // fallback para preço base
   };
 
+  // Canal Balcão (âncora) — usado pelo botão "Aplicar" da lista
+  const canalBalcao = useMemo(
+    () => (canaisConfigurados || []).find(c => c.isBalcao),
+    [canaisConfigurados]
+  );
+
+  // Aplica o reajuste no canal Balcão (ou no preço base como fallback)
+  const aplicarReajuste = (produto: ProdutoAnalise, novoPreco: number) => {
+    if (canalBalcao && onAplicarPrecoCanal) {
+      const precoAtualBalcao = getPrecoCanal(produto, canalBalcao.id);
+      onAplicarPrecoCanal(produto.id, canalBalcao.id, novoPreco, precoAtualBalcao);
+    } else {
+      onAplicarPreco(produto.id, novoPreco, produto.preco_venda);
+    }
+  };
+
   // Lista de canais (Balcão real já vem de canais_venda como tipo=presencial).
-  // Não injetamos canal "base" virtual pra não duplicar Balcão.
   const canais = useMemo(() => {
     return (canaisConfigurados || []).map(canal => ({
       id: canal.id,
