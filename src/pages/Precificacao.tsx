@@ -291,6 +291,15 @@ const Precificacao = () => {
             isMobile={isMobile}
           />
 
+          {/* KPIs avançados: Food Cost Teórico vs Real + Prime Cost */}
+          <KpisAvancados
+            cmvTeorico={metricas.cmvMedio}
+            cmvAlvo={config?.cmv_alvo || 35}
+            margemAlvo={config?.margem_desejada_padrao || 30}
+            periodo={periodo}
+            isMobile={isMobile}
+          />
+
           {/* Cards de Quadrante */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -315,6 +324,14 @@ const Precificacao = () => {
               isMobile={isMobile}
             />
           </div>
+
+          {/* Matriz scatter — visão gráfica da popularidade × margem */}
+          <MatrizScatter
+            produtos={produtosAnalisados.filter(p => p.quantidadeVendida > 0)}
+            quadranteSelecionado={quadranteSelecionado}
+            onSelectProduto={handleSelectProduto}
+            margemAlvo={config?.margem_desejada_padrao || 30}
+          />
 
 
           {/* Sugestão de preço por canal */}
