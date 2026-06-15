@@ -352,7 +352,7 @@ export function useMenuEngineering() {
 
       return { ...produto, quadrante };
     });
-  }, [produtos, config, vendasAgregadas, precosCanaisTodos, canaisInfo]);
+  }, [produtos, config, vendasAgregadas, vendasPorCanal, precosCanaisTodos, canaisInfo, matchCanalIdPorTexto]);
 
   // Resumo por quadrante
   const resumoQuadrantes: ResumoQuadrante[] = useMemo(() => {
