@@ -129,15 +129,17 @@ export function useMenuEngineering() {
   });
 
   // Buscar vendas dos últimos 30 dias para popularidade
-  const { data: vendasAgregadas } = useQuery({
-    queryKey: ['vendas-popularidade', usuario?.empresa_id],
+  // Agora também agregamos receita POR CANAL (texto) para calcular
+  // a margem média ponderada pelas vendas reais, não pelo cadastro de preços.
+  const { data: vendasData } = useQuery({
+    queryKey: ['vendas-popularidade-canal', usuario?.empresa_id],
     queryFn: async () => {
       const dataInicio = subDays(new Date(), 30).toISOString().split('T')[0];
       const dataFim = new Date().toISOString().split('T')[0];
 
       const { data, error } = await supabase
         .from('vendas')
-        .select('produto_id, quantidade, valor_total')
+        .select('produto_id, quantidade, valor_total, canal')
         .eq('empresa_id', usuario?.empresa_id)
         .gte('data_venda', dataInicio)
         .lte('data_venda', dataFim)
@@ -145,8 +147,11 @@ export function useMenuEngineering() {
 
       if (error) throw error;
 
-      // Agregar por produto
+      // Agregar por produto (total)
       const agregado: Record<string, VendaProduto> = {};
+      // Agregar por produto + canal (texto): { produtoId: { canalTexto: receita } }
+      const porCanal: Record<string, Record<string, number>> = {};
+
       data?.forEach(v => {
         if (!v.produto_id) return;
         if (!agregado[v.produto_id]) {
@@ -154,22 +159,58 @@ export function useMenuEngineering() {
         }
         agregado[v.produto_id].quantidade += v.quantidade || 1;
         agregado[v.produto_id].receita += v.valor_total || 0;
+
+        const canalKey = (v.canal || '').toString().trim().toLowerCase() || 'sem-canal';
+        if (!porCanal[v.produto_id]) porCanal[v.produto_id] = {};
+        porCanal[v.produto_id][canalKey] =
+          (porCanal[v.produto_id][canalKey] || 0) + (v.valor_total || 0);
       });
 
-      return agregado;
+      return { agregado, porCanal };
     },
     enabled: !!usuario?.empresa_id,
   });
+
+  const vendasAgregadas = vendasData?.agregado;
+  const vendasPorCanal = vendasData?.porCanal;
+
+  // Helper: encontrar canal_id a partir do texto livre salvo em vendas.canal
+  // Estratégia: lowercase + match exato no nome OU contains; "balcao" → tipo presencial
+  const matchCanalIdPorTexto = useMemo(() => {
+    return (canalTexto: string): string | null => {
+      if (!canaisInfo) return null;
+      const key = (canalTexto || '').trim().toLowerCase();
+      if (!key || key === 'sem-canal') return null;
+
+      // 1) Match exato por nome (case-insensitive)
+      for (const [id, info] of Object.entries(canaisInfo)) {
+        if (info.nome.trim().toLowerCase() === key) return id;
+      }
+      // 2) "balcao" / "balcão" / "presencial" → canal presencial
+      if (['balcao', 'balcão', 'presencial', 'loja'].includes(key)) {
+        const balcao = Object.entries(canaisInfo).find(([, c]) => c.isBalcao);
+        if (balcao) return balcao[0];
+      }
+      // 3) Contains (Ex.: "99Food" → canal "99")
+      for (const [id, info] of Object.entries(canaisInfo)) {
+        const nomeLow = info.nome.trim().toLowerCase();
+        if (nomeLow && (key.includes(nomeLow) || nomeLow.includes(key))) return id;
+      }
+      return null;
+    };
+  }, [canaisInfo]);
 
   // Processar produtos e classificar
   const produtosAnalisados: ProdutoAnalise[] = useMemo(() => {
     if (!produtos || !config) return [];
 
     const produtosComFicha = produtos.filter(p => p.fichas_tecnicas && p.fichas_tecnicas.length > 0);
-    
+
     // Calcular medianas para classificação
     const todasMargens: number[] = [];
     const todasQuantidades: number[] = [];
+
+
 
     // Primeiro passo: calcular métricas brutas
     const produtosComMetricas = produtosComFicha.map(produto => {
@@ -185,37 +226,56 @@ export function useMenuEngineering() {
       const precosCanaisProduto = precosCanaisTodos?.[produto.id] || {};
 
       // SEMPRE usar o preço de cadastro atual como fonte de verdade para margem/CMV.
-      // Assim, ao alterar o preço, os indicadores refletem imediatamente o novo cenário.
-      // (Antes usávamos receita/quantidade, que congelava os cálculos no preço médio
-      // histórico das vendas, fazendo o painel não reagir a reajustes de preço.)
       const precoEfetivo = produto.preco_venda || 0;
 
       const cmv = precoEfetivo > 0 ? (custoInsumos / precoEfetivo) * 100 : 100;
 
-      // === Taxa do canal: agora considerada nos cálculos ===
-      // Estratégia:
-      //  - Se o produto tem preços por canal cadastrados, calculamos a MÉDIA PONDERADA
-      //    da taxa pelos preços de cada canal (canais mais caros pesam mais).
-      //  - Caso contrário, usamos a taxa do canal "balcão/presencial" (geralmente 0%).
-      //  - Isso evita a margem otimista que ignorava o iFood/99/etc.
+      // === Taxa do canal ponderada por VENDAS REAIS (últimos 30 dias) ===
+      // Prioridade:
+      //  1) Se o produto teve vendas nos últimos 30d → ponderar a taxa pela receita
+      //     real por canal (mapeando vendas.canal texto → canal_id).
+      //  2) Sem vendas: cair para ponderação pelos preços por canal cadastrados.
+      //  3) Nada cadastrado: usar a taxa do canal "balcão" (presencial).
       let taxaCanalEfetiva = 0;
-      const canaisDoProdutoIds = Object.keys(precosCanaisProduto);
-      if (canaisDoProdutoIds.length > 0 && canaisInfo) {
+      const vendasCanaisProduto = vendasPorCanal?.[produto.id];
+      const temVendasComCanal = vendasCanaisProduto && Object.keys(vendasCanaisProduto).length > 0;
+
+      if (temVendasComCanal && canaisInfo) {
         let somaPesos = 0;
         let somaTaxaPonderada = 0;
-        canaisDoProdutoIds.forEach(canalId => {
-          const info = canaisInfo[canalId];
-          const preco = precosCanaisProduto[canalId];
-          if (info && preco > 0) {
-            somaPesos += preco;
-            somaTaxaPonderada += info.taxa * preco;
+        Object.entries(vendasCanaisProduto).forEach(([canalTexto, receita]) => {
+          const canalId = matchCanalIdPorTexto(canalTexto);
+          const info = canalId ? canaisInfo[canalId] : null;
+          if (info && receita > 0) {
+            somaPesos += receita;
+            somaTaxaPonderada += info.taxa * receita;
           }
         });
-        taxaCanalEfetiva = somaPesos > 0 ? somaTaxaPonderada / somaPesos : 0;
-      } else if (canaisInfo) {
-        // Sem preços por canal → fallback para o canal balcão (presencial)
-        const balcao = Object.values(canaisInfo).find(c => c.isBalcao);
-        taxaCanalEfetiva = balcao?.taxa || 0;
+        if (somaPesos > 0) {
+          taxaCanalEfetiva = somaTaxaPonderada / somaPesos;
+        }
+      }
+
+      // Fallback 1: preços por canal cadastrados
+      if (taxaCanalEfetiva === 0 && !temVendasComCanal) {
+        const canaisDoProdutoIds = Object.keys(precosCanaisProduto);
+        if (canaisDoProdutoIds.length > 0 && canaisInfo) {
+          let somaPesos = 0;
+          let somaTaxaPonderada = 0;
+          canaisDoProdutoIds.forEach(canalId => {
+            const info = canaisInfo[canalId];
+            const preco = precosCanaisProduto[canalId];
+            if (info && preco > 0) {
+              somaPesos += preco;
+              somaTaxaPonderada += info.taxa * preco;
+            }
+          });
+          taxaCanalEfetiva = somaPesos > 0 ? somaTaxaPonderada / somaPesos : 0;
+        } else if (canaisInfo) {
+          // Fallback 2: balcão
+          const balcao = Object.values(canaisInfo).find(c => c.isBalcao);
+          taxaCanalEfetiva = balcao?.taxa || 0;
+        }
       }
 
       // Margem de contribuição AGORA inclui a taxa do canal
@@ -292,7 +352,7 @@ export function useMenuEngineering() {
 
       return { ...produto, quadrante };
     });
-  }, [produtos, config, vendasAgregadas, precosCanaisTodos, canaisInfo]);
+  }, [produtos, config, vendasAgregadas, vendasPorCanal, precosCanaisTodos, canaisInfo, matchCanalIdPorTexto]);
 
   // Resumo por quadrante
   const resumoQuadrantes: ResumoQuadrante[] = useMemo(() => {
