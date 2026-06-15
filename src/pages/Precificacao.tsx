@@ -409,11 +409,6 @@ const Precificacao = () => {
                       <ArrowRight className="h-4 w-4 text-muted-foreground" />
                       <span>Para: <strong>{formatCurrencyBRL(confirmacao.novoPreco)}</strong></span>
                     </div>
-                    {confirmacao.tipo === 'base' && (
-                      <p className="text-xs text-muted-foreground">
-                        ℹ️ Os preços específicos por canal (iFood, 99, WhatsApp, Balcão) <strong>não serão alterados</strong> — eles têm valores próprios cadastrados. Esta mudança afeta apenas o preço base do produto.
-                      </p>
-                    )}
                     <p className="text-xs text-muted-foreground">
                       Reajustes acima de 10% podem impactar fortemente vendas e percepção do cliente. Confirme se está correto.
                     </p>
