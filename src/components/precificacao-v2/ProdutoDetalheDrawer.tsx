@@ -315,33 +315,72 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <Label className="text-sm">CMV desejado</Label>
-            <div className="flex items-center gap-1 bg-amber-500/10 rounded-md px-2 py-1">
-              <span className="font-bold text-amber-600">{cmvDesejado.toFixed(0)}%</span>
+            <div className="flex items-center gap-2">
+              {(() => {
+                const alvo = config?.cmv_alvo || 35;
+                const dentroZona = Math.abs(cmvDesejado - alvo) <= 5;
+                return (
+                  <span className={cn(
+                    "text-[10px] font-medium px-1.5 py-0.5 rounded",
+                    dentroZona ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"
+                  )}>
+                    {dentroZona ? "✓ saudável" : "fora do alvo"}
+                  </span>
+                );
+              })()}
+              <div className="flex items-center gap-1 bg-amber-500/10 rounded-md px-2 py-1">
+                <span className="font-bold text-amber-600">{cmvDesejado.toFixed(0)}%</span>
+              </div>
             </div>
           </div>
-          <Slider
-            value={[cmvDesejado]}
-            onValueChange={([value]) => {
-              setCmvDesejado(value);
-              setCanalParaAplicar(null);
-              // Atualizar preços editáveis quando muda CMV
-              const novosPrecos: Record<string, string> = {};
-              canais.forEach(canal => {
-                const preco = calcularPrecoParaCMV(value, canal.taxa);
-                if (preco) {
-                  novosPrecos[canal.id] = preco.toFixed(2).replace('.', ',');
-                }
-              });
-              setPrecosEditaveis(novosPrecos);
-            }}
-            min={10}
-            max={70}
-            step={1}
-            className="py-2"
-          />
-          <div className="flex justify-between text-[10px] text-muted-foreground">
+          {(() => {
+            const alvo = config?.cmv_alvo || 35;
+            const min = 10, max = 70;
+            const range = max - min;
+            const zonaIni = Math.max(min, alvo - 5);
+            const zonaFim = Math.min(max, alvo + 5);
+            const leftPct = ((zonaIni - min) / range) * 100;
+            const widthPct = ((zonaFim - zonaIni) / range) * 100;
+            const alvoPct = ((alvo - min) / range) * 100;
+            return (
+              <div className="relative py-2">
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 h-2 bg-emerald-500/25 rounded-full pointer-events-none"
+                  style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
+                  aria-hidden
+                />
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 h-4 w-0.5 bg-emerald-600 pointer-events-none z-10"
+                  style={{ left: `calc(${alvoPct}% - 1px)` }}
+                  aria-hidden
+                />
+                <Slider
+                  value={[cmvDesejado]}
+                  onValueChange={([value]) => {
+                    setCmvDesejado(value);
+                    setCanalParaAplicar(null);
+                    const novosPrecos: Record<string, string> = {};
+                    canais.forEach(canal => {
+                      const preco = calcularPrecoParaCMV(value, canal.taxa);
+                      if (preco) {
+                        novosPrecos[canal.id] = preco.toFixed(2).replace('.', ',');
+                      }
+                    });
+                    setPrecosEditaveis(novosPrecos);
+                  }}
+                  min={min}
+                  max={max}
+                  step={1}
+                  className="relative"
+                />
+              </div>
+            );
+          })()}
+          <div className="flex justify-between items-center text-[10px] text-muted-foreground gap-2">
             <span>10%</span>
-            <span>Alvo: {config?.cmv_alvo || 35}%</span>
+            <span className="text-emerald-600 font-medium text-center">
+              Zona saudável: {(config?.cmv_alvo || 35) - 5}%–{(config?.cmv_alvo || 35) + 5}%
+            </span>
             <span>70%</span>
           </div>
         </div>
