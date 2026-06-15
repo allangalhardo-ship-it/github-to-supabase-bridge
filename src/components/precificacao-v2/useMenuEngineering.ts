@@ -108,8 +108,7 @@ export function useMenuEngineering() {
 
       const { data: taxasData, error: taxasError } = await supabase
         .from('taxas_canais')
-        .select('canal_id, percentual')
-        .eq('empresa_id', usuario?.empresa_id);
+        .select('canal_id, percentual');
       if (taxasError) throw taxasError;
 
       // Mapa: canalId -> { taxa, isBalcao }
