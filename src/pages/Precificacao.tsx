@@ -231,7 +231,7 @@ const Precificacao = () => {
         </div>
         <div className="flex items-center gap-2">
           <Select value={String(periodo)} onValueChange={(v) => setPeriodo(Number(v) as PeriodoBCG)}>
-            <SelectTrigger className="w-[140px]" size="sm" aria-label="Período de análise">
+            <SelectTrigger className="h-9 w-[140px]" aria-label="Período de análise">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
