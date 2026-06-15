@@ -326,11 +326,14 @@ export function useMenuEngineering() {
     }
 
     // Média PONDERADA pelo preço de venda (financeiramente correta — produtos mais caros pesam mais)
-    // Alinhada com a fórmula usada no Ponto de Equilíbrio do Dashboard
+    // IMPORTANTE: usar a MESMA base do cálculo por produto (margemContribuicao = preço − custo − imposto − taxa do canal).
+    // Antes a métrica agregada ignorava imposto e taxa, inflando a margem exibida no card vs. realidade.
     const validos = produtosAnalisados.filter(p => p.preco_venda > 0 && p.custoInsumos > 0);
     const somaPreco = validos.reduce((acc, p) => acc + p.preco_venda, 0);
     const somaCusto = validos.reduce((acc, p) => acc + p.custoInsumos, 0);
-    const margemMedia = somaPreco > 0 ? ((somaPreco - somaCusto) / somaPreco) * 100 : 0;
+    // Lucro unitário já inclui imposto + taxa do canal (calculado na linha 224)
+    const somaLucro = validos.reduce((acc, p) => acc + p.lucroUnitario, 0);
+    const margemMedia = somaPreco > 0 ? (somaLucro / somaPreco) * 100 : 0;
     const cmvMedio = somaPreco > 0 ? (somaCusto / somaPreco) * 100 : 0;
     const produtosCriticos = produtosAnalisados.filter(p => p.saudeMargem === 'critico').length;
     
