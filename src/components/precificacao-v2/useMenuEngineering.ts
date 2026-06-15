@@ -287,14 +287,17 @@ export function useMenuEngineering(periodo: PeriodoBCG = 30) {
       const lucroUnitario = precoEfetivo - custoInsumos - impostoValor - taxaValor;
       const margemContribuicao = precoEfetivo > 0 ? (lucroUnitario / precoEfetivo) * 100 : 0;
 
-      // Preço sugerido também considera taxa do canal efetiva
-      const margem = config.margem_desejada_padrao / 100;
-      const imposto = config.imposto_medio_sobre_vendas / 100;
+      // Preço sugerido — UNIFICADO com o simulador do drawer:
+      // usa cmv_alvo como fonte da verdade (mesma fórmula).
+      // preco = custo / (cmv_alvo * (1 - taxa_canal))
+      // Isso garante que se o usuário já equalizou os preços por canal pelo
+      // cmv_alvo, a lista NÃO sugere reajustes desnecessários.
+      const cmvAlvoFrac = (config.cmv_alvo || 35) / 100;
       const taxa = taxaCanalEfetiva / 100;
-      const divisor = 1 - margem - imposto - taxa;
-      const precoSugeridoViavel = divisor > 0 && custoInsumos > 0;
-      // Quando inviável, não inventa preço — UI mostra mensagem clara em vez do valor
-      const precoSugerido = precoSugeridoViavel ? custoInsumos / divisor : 0;
+      const fatorReceita = 1 - taxa;
+      const precoSugeridoViavel = cmvAlvoFrac > 0 && cmvAlvoFrac < 1 && fatorReceita > 0 && custoInsumos > 0;
+      const precoSugerido = precoSugeridoViavel ? custoInsumos / (cmvAlvoFrac * fatorReceita) : 0;
+
 
       // Saúde
       const saudeMargem: 'critico' | 'atencao' | 'saudavel' = 
