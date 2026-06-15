@@ -121,7 +121,16 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
     return { margem, lucro };
   }, [produto?.custoInsumos, imposto]);
 
-  // Calcular preço necessário para atingir CMV em um canal
+  // Calcular CMV de um canal: custo / receita líquida (descontada taxa do canal)
+  // ÚNICA fórmula de CMV usada em TODA a tela — garante consistência entre
+  // "Situação Atual" e o "Simulador por CMV".
+  const calcularCmvCanal = useCallback((preco: number, taxaCanal: number): number => {
+    if (!produto || preco <= 0) return 0;
+    const receitaLiquida = preco * (1 - taxaCanal / 100);
+    return receitaLiquida > 0 ? (produto.custoInsumos / receitaLiquida) * 100 : 0;
+  }, [produto?.custoInsumos]);
+
+  // Calcular preço necessário para atingir CMV em um canal (inverso de calcularCmvCanal)
   const calcularPrecoParaCMV = useCallback((cmvAlvo: number, taxaCanal: number): number | null => {
     if (!produto || cmvAlvo <= 0 || cmvAlvo >= 100) return null;
     const cmv = cmvAlvo / 100;
@@ -257,8 +266,8 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
         </div>
         <div className="grid grid-cols-2 gap-2">
           {resultadosAtuais.map(canal => {
-            const receitaLiquida = canal.preco * (1 - canal.taxa / 100);
-            const cmvCanal = receitaLiquida > 0 ? (produto.custoInsumos / receitaLiquida) * 100 : 0;
+            const cmvCanal = calcularCmvCanal(canal.preco, canal.taxa);
+
             
             return (
               <div 
@@ -292,7 +301,22 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
                 </div>
                 {/* Linha 3: CMV */}
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-muted-foreground">CMV</span>
+                  <TooltipProvider delayDuration={150}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="text-[10px] text-muted-foreground cursor-help underline decoration-dotted underline-offset-2">
+                          CMV
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[260px] text-xs">
+                        <p className="font-semibold mb-1">Fórmula do CMV</p>
+                        <p className="text-muted-foreground">
+                          Custo dos insumos ÷ (Preço × (1 − taxa do canal)).<br />
+                          A mesma fórmula é usada no simulador abaixo.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <span className={cn(
                     "text-xs font-medium",
                     cmvCanal > (config?.cmv_alvo || 35) + 10 ? "text-destructive" :
