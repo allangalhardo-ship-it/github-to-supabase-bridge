@@ -87,9 +87,6 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
   }, [produto?.id, config?.cmv_alvo]);
 
   // Montar lista de canais a partir da nova estrutura.
-  // Inclui sempre um "canal" virtual "Balcão" no topo, que reflete
-  // produtos.preco_venda — a fonte da verdade usada pelo Dashboard (Ponto
-  // de Equilíbrio, margens, etc.). Aplicar nele atualiza preco_venda.
   // Lista de canais — Balcão real já vem de canais_venda (tipo=presencial).
   // Não injetamos canal "base" virtual pra evitar duplicar o Balcão na UI.
   const canais: CanalInfo[] = useMemo(() => {
@@ -220,7 +217,7 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
       const precoAnteriorCanal = getPrecoCanal(canal);
       onAplicarPrecoCanal(produto.id, canal, preco, precoAnteriorCanal);
     } else {
-      // 'base' (ou ausência de canal) → atualiza produtos.preco_venda
+      // Fallback legado para instalações sem preço por canal.
       onAplicarPreco(produto.id, preco, produto.preco_venda);
     }
     // Não fecha o drawer para permitir editar outros canais sem sair
