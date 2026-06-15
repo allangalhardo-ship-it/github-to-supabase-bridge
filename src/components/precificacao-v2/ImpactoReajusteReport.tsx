@@ -71,9 +71,9 @@ const ImpactoReajusteReport: React.FC<ImpactoReajusteReportProps> = ({
     const variacoesPorInsumo: Record<string, { nome: string; variacao: number }> = {};
 
     historicoInsumos.forEach(h => {
-      const isAlta = h.variacao_percentual && 
-        h.variacao_percentual > 5 && 
-        h.variacao_percentual <= 50;
+      // Pega QUALQUER alta significativa (>5%). Removido teto de 50% — variações
+      // grandes são justamente as que mais impactam e precisam ser sinalizadas.
+      const isAlta = h.variacao_percentual && h.variacao_percentual > 5;
 
       if (!variacoesPorInsumo[h.insumo_id] && isAlta) {
         variacoesPorInsumo[h.insumo_id] = {
