@@ -390,14 +390,17 @@ const Precificacao = () => {
                 {confirmacao && (
                   <>
                     <p>
-                      A variação é de{' '}
+                      Você vai alterar o{' '}
+                      <strong>
+                        {confirmacao.tipo === 'canal' && confirmacao.canalNome
+                          ? `preço do canal ${confirmacao.canalNome}`
+                          : 'preço base do produto'}
+                      </strong>{' '}
+                      em{' '}
                       <strong className={confirmacao.novoPreco > confirmacao.precoAnterior ? 'text-green-600' : 'text-red-600'}>
                         {confirmacao.novoPreco > confirmacao.precoAnterior ? '+' : '−'}
                         {confirmacao.variacao.toFixed(1)}%
                       </strong>
-                      {confirmacao.tipo === 'canal' && confirmacao.canalNome && (
-                        <> no canal <strong>{confirmacao.canalNome}</strong></>
-                      )}
                       .
                     </p>
                     <div className="flex items-center justify-between rounded-md bg-muted p-3 text-sm">
@@ -405,6 +408,11 @@ const Precificacao = () => {
                       <ArrowRight className="h-4 w-4 text-muted-foreground" />
                       <span>Para: <strong>{formatCurrencyBRL(confirmacao.novoPreco)}</strong></span>
                     </div>
+                    {confirmacao.tipo === 'base' && (
+                      <p className="text-xs text-muted-foreground">
+                        ℹ️ Os preços específicos por canal (iFood, 99, WhatsApp, Balcão) <strong>não serão alterados</strong> — eles têm valores próprios cadastrados. Esta mudança afeta apenas o preço base do produto.
+                      </p>
+                    )}
                     <p className="text-xs text-muted-foreground">
                       Reajustes acima de 10% podem impactar fortemente vendas e percepção do cliente. Confirme se está correto.
                     </p>
