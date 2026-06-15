@@ -301,7 +301,22 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
                 </div>
                 {/* Linha 3: CMV */}
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-muted-foreground">CMV</span>
+                  <TooltipProvider delayDuration={150}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="text-[10px] text-muted-foreground cursor-help underline decoration-dotted underline-offset-2">
+                          CMV
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[260px] text-xs">
+                        <p className="font-semibold mb-1">Fórmula do CMV</p>
+                        <p className="text-muted-foreground">
+                          Custo dos insumos ÷ (Preço × (1 − taxa do canal)).<br />
+                          A mesma fórmula é usada no simulador abaixo.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <span className={cn(
                     "text-xs font-medium",
                     cmvCanal > (config?.cmv_alvo || 35) + 10 ? "text-destructive" :
