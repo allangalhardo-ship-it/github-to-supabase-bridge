@@ -22,10 +22,13 @@ const SugestaoPrecoCanal: React.FC<SugestaoPrecosCanalProps> = ({ produtos, conf
     if (!canaisConfigurados || canaisConfigurados.length <= 1 || !config || produtos.length === 0) return [];
 
     const cmvAlvo = (config.cmv_alvo || 35) / 100;
+    const canalBalcao = canaisConfigurados.find(c => c.isBalcao) ?? canaisConfigurados[0];
 
     return produtos
       .filter(p => p.custoInsumos > 0)
       .map(produto => {
+        const precoBalcao = produto.precosCanais?.[canalBalcao.id] ?? produto.preco_venda ?? 0;
+
         const canaisComSugestao = canaisConfigurados.map(canal => {
           const taxa = canal.taxa / 100;
           const fatorReceita = 1 - taxa;
@@ -33,7 +36,8 @@ const SugestaoPrecoCanal: React.FC<SugestaoPrecosCanalProps> = ({ produtos, conf
             ? produto.custoInsumos / (cmvAlvo * fatorReceita)
             : produto.custoInsumos * 3;
 
-          const precoAtual = produto.precosCanais?.[canal.id] ?? produto.preco_venda;
+          // Fallback: se o canal não tem preço próprio, usa o do Balcão (não o preco_venda legado).
+          const precoAtual = produto.precosCanais?.[canal.id] ?? precoBalcao;
           const diferenca = precoIdeal - precoAtual;
           const diferencaPercent = precoAtual > 0 ? (diferenca / precoAtual) * 100 : 0;
 

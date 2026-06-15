@@ -114,25 +114,28 @@ const ImpactoReajusteReport: React.FC<ImpactoReajusteReportProps> = ({
 
         if (insumosAfetados.length === 0 || impactoCustoTotal < 0.05) return null;
 
+        // Ancora no preço de referência (Balcão) calculado no useMenuEngineering,
+        // evitando depender do legado produto.preco_venda.
+        const precoAncora = produto.precoReferenciaAtual ?? produto.preco_venda ?? 0;
+        if (precoAncora <= 0) return null;
+
         const custoAnterior = produto.custoInsumos - impactoCustoTotal;
-        const margemAnterior = produto.preco_venda > 0
-          ? (produto.preco_venda - custoAnterior) / produto.preco_venda
-          : 0;
+        const margemAnterior = (precoAncora - custoAnterior) / precoAncora;
 
         let precoSugerido: number;
         if (margemAnterior > 0 && margemAnterior < 1) {
           precoSugerido = produto.custoInsumos / (1 - margemAnterior);
         } else {
-          precoSugerido = produto.preco_venda + impactoCustoTotal;
+          precoSugerido = precoAncora + impactoCustoTotal;
         }
 
-        const aumento = precoSugerido - produto.preco_venda;
+        const aumento = precoSugerido - precoAncora;
         if (aumento < 0.10) return null;
 
         return {
           produtoId: produto.id,
           produtoNome: produto.nome,
-          precoAtual: produto.preco_venda,
+          precoAtual: precoAncora,
           precoSugerido: Math.ceil(precoSugerido * 100) / 100,
           aumento: Math.ceil(aumento * 100) / 100,
           insumosAfetados: insumosAfetados.sort((a, b) => b.variacao - a.variacao),
