@@ -51,7 +51,7 @@ const KpisAvancados: React.FC<KpisAvancadosProps> = ({
       const somaReceita = (data || []).reduce((a, v) => a + Number(v.valor_total || 0), 0);
       const somaCusto = (data || []).reduce((a, v) => a + Number(v.custo_snapshot || 0), 0);
       const pct = somaReceita > 0 ? (somaCusto / somaReceita) * 100 : 0;
-      return { pct, temDados: somaReceita > 0 };
+      return { pct, temDados: somaReceita > 0, receita: somaReceita };
     },
     enabled: !!usuario?.empresa_id,
   });
@@ -60,17 +60,10 @@ const KpisAvancados: React.FC<KpisAvancadosProps> = ({
   const { data: maoObraInfo } = useQuery({
     queryKey: ['mao-obra-config', usuario?.empresa_id],
     queryFn: async () => {
-      const [{ data: custos }, { data: cfg }] = await Promise.all([
-        supabase
-          .from('custos_fixos')
-          .select('valor_mensal, categoria, nome')
-          .eq('empresa_id', usuario?.empresa_id),
-        supabase
-          .from('configuracoes')
-          .select('faturamento_mensal')
-          .eq('empresa_id', usuario?.empresa_id)
-          .maybeSingle(),
-      ]);
+      const { data: custos } = await supabase
+        .from('custos_fixos')
+        .select('valor_mensal, categoria, nome')
+        .eq('empresa_id', usuario?.empresa_id);
 
       // Categorias consideradas mão de obra
       const padroesMO = ['mao', 'mão', 'pessoal', 'salário', 'salario', 'funcionário', 'funcionario', 'pro labore', 'pró labore'];
@@ -83,18 +76,22 @@ const KpisAvancados: React.FC<KpisAvancadosProps> = ({
         .filter(c => isMaoObra(c.categoria, c.nome))
         .reduce((a, c) => a + Number(c.valor_mensal || 0), 0);
 
-      return { totalMO, faturamento: Number(cfg?.faturamento_mensal || 0) };
+      return { totalMO };
     },
     enabled: !!usuario?.empresa_id,
   });
 
   const cmvReal = foodCostReal?.pct ?? 0;
   const temVendas = foodCostReal?.temDados ?? false;
-  const moPct = maoObraInfo && maoObraInfo.faturamento > 0
-    ? (maoObraInfo.totalMO / maoObraInfo.faturamento) * 100
+  const receitaPeriodo = foodCostReal?.receita ?? 0;
+  // Mão de obra prorrateada pelo período (totalMO é mensal -> ajusta para os N dias) sobre a receita real do período
+  const moPeriodo = (maoObraInfo?.totalMO ?? 0) * (periodo / 30);
+  const moPct = receitaPeriodo > 0 && moPeriodo > 0
+    ? (moPeriodo / receitaPeriodo) * 100
     : 0;
   const primeCost = cmvReal + moPct;
   const primeCostAlvo = cmvAlvo + 25; // benchmark gastronômico: prime cost ≤ 60-65%
+
 
   const corCmv = (pct: number, alvo: number) =>
     pct === 0 ? 'text-muted-foreground' :
