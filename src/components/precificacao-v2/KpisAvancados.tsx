@@ -142,7 +142,15 @@ const KpisAvancados: React.FC<KpisAvancadosProps> = ({
       bg: bgCmv(primeCost, primeCostAlvo),
       subtitle: moPct > 0
         ? `CMV ${cmvReal.toFixed(0)}% + Mão de obra ${moPct.toFixed(0)}%`
-        : 'cadastre mão de obra em Custos Fixos',
+        : (
+          <Link
+            to="/custos-fixos"
+            className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline mt-1"
+          >
+            Cadastre mão de obra em Custos Fixos
+            <ArrowRight className="h-3 w-3" />
+          </Link>
+        ),
       tooltip:
         'Prime Cost = CMV + Mão de Obra. É o indicador-chave da gastronomia: ' +
         'o ideal é ficar entre 55% e 65% do faturamento. Acima de 70% o negócio sufoca.',
