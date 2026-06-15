@@ -101,8 +101,10 @@ export function calcularMetricasProduto(
     margemContribuicao,     // Margem de contribuição %
     margemBruta,
     cmv,
-    // Aliases para compatibilidade
+    // Aliases de compatibilidade — DEPRECATED: use lucroContribuicao / margemContribuicao.
+    /** @deprecated Use lucroContribuicao */
     lucroLiquido: lucroContribuicao,
+    /** @deprecated Use margemContribuicao */
     margemLiquida: margemContribuicao,
     custoTotal: custoTotalVariavel,
     custoFixoValor: 0,      // Não calculamos mais por unidade
