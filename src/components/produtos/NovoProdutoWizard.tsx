@@ -32,6 +32,7 @@ import {
   DollarSign,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { calcularCustoFicha } from '@/utils/custoFicha';
 
 interface NovoProdutoWizardProps {
   open: boolean;

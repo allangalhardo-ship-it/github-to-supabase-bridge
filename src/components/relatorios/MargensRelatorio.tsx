@@ -37,6 +37,7 @@ import {
   AlertTriangle,
   CheckCircle2,
 } from 'lucide-react';
+import { calcularCustoFicha } from '@/utils/custoFicha';
 
 interface MargensRelatorioProps {
   onBack: () => void;

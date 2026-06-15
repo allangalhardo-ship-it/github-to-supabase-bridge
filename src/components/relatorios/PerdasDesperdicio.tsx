@@ -33,6 +33,7 @@ import {
 } from 'recharts';
 import { format, subMonths, startOfMonth, endOfMonth, parseISO, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { calcularCustoFicha } from '@/utils/custoFicha';
 
 interface PerdasDesperdicioProps {
   onBack: () => void;

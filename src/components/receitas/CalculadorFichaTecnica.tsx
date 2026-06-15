@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Insumo, Produto, IngredienteLote, formatCurrency, formatCurrencySmart } from "./types";
+import { calcularCustoFicha } from '@/utils/custoFicha';
 
 interface CalculadorFichaTecnicaProps {
   produtos: Produto[] | undefined;

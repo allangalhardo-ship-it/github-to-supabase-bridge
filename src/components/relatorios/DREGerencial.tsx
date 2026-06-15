@@ -11,6 +11,7 @@ import { ArrowLeft, TrendingUp, TrendingDown, Minus, DollarSign, MinusCircle, Pi
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { calcularCustoFicha } from '@/utils/custoFicha';
 
 interface DREGerencialProps {
   onBack: () => void;

@@ -24,6 +24,7 @@ import ImportarVendasDialog from '@/components/vendas/ImportarVendasDialog';
 import { formatCurrencyBRL } from '@/lib/format';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import ContextualTip from '@/components/onboarding/ContextualTip';
+import { calcularCustoFicha } from '@/utils/custoFicha';
 
 interface Cliente {
   id: string;
