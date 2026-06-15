@@ -359,6 +359,7 @@ const Precificacao = () => {
             categorias={categorias}
             onSelectProduto={handleSelectProduto}
             onAplicarPreco={handleAplicarPreco}
+            onAplicarPrecoCanal={handleAplicarPrecoCanal}
             isAplicando={updatePrecoMutation.isPending}
             isMobile={isMobile}
             config={config}
