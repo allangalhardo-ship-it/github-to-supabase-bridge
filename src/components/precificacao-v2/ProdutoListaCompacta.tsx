@@ -19,6 +19,7 @@ import {
 import { ProdutoAnalise, QuadranteMenu, ConfiguracoesPrecificacao, formatCurrency, formatPercent, getQuadranteInfo } from './types';
 import { cn } from '@/lib/utils';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
+import { calcularPricingScore, arredondarCharm } from '@/utils/pricingScore';
 
 interface ProdutoListaCompactaProps {
   produtos: ProdutoAnalise[];
