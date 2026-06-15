@@ -69,6 +69,7 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
   const [precosEditaveis, setPrecosEditaveis] = useState<Record<string, string>>({});
   const [showComposicao, setShowComposicao] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showRevisao, setShowRevisao] = useState(false);
   
   // Usar hook que busca canais da nova estrutura
   const { canaisConfigurados, isLoadingPrecos } = usePrecosCanais(produto?.id);
@@ -605,20 +606,74 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
         <Button
           size="lg"
           className="flex-1 gap-2"
-          onClick={() => {
-            canaisComMudanca.forEach(canal => {
-              handleAplicar(canal.precoFinal, canal.id);
-            });
-          }}
+          onClick={() => setShowRevisao(true)}
           disabled={isAplicando || canaisComMudanca.length === 0}
         >
           <Zap className="h-4 w-4" />
-          Aplicar {canaisComMudanca.length > 0 ? `(${canaisComMudanca.length})` : ''}
+          Revisar e aplicar {canaisComMudanca.length > 0 ? `(${canaisComMudanca.length})` : ''}
         </Button>
         <Button size="lg" variant="outline" onClick={onClose}>
           <X className="h-4 w-4" />
         </Button>
       </div>
+
+      {/* Dialog de revisão antes de aplicar */}
+      <Dialog open={showRevisao} onOpenChange={setShowRevisao}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Revisar reajustes</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Confira as alterações de preço antes de aplicar:
+            </p>
+            <div className="space-y-2">
+              {canaisComMudanca.map(canal => {
+                const atual = getPrecoCanal(canal.id);
+                const variacao = atual > 0 ? ((canal.precoFinal - atual) / atual) * 100 : 0;
+                return (
+                  <div key={canal.id} className="flex items-center justify-between rounded-lg border p-2.5 gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {canal.icone}
+                      <span className="text-sm font-medium truncate">{canal.nome}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs shrink-0">
+                      <span className="text-muted-foreground line-through">{formatCurrency(atual)}</span>
+                      <span className="font-bold">{formatCurrency(canal.precoFinal)}</span>
+                      <span className={cn(
+                        "font-semibold tabular-nums w-14 text-right",
+                        variacao > 0 ? "text-emerald-600" : "text-destructive"
+                      )}>
+                        {variacao > 0 ? '+' : ''}{variacao.toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="rounded-md bg-muted/50 p-2.5 text-[11px] text-muted-foreground">
+              💡 Reajustes acima de 10% pedirão confirmação extra. Os preços serão atualizados imediatamente em cada canal.
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" className="flex-1" onClick={() => setShowRevisao(false)}>
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1 gap-2"
+                onClick={() => {
+                  canaisComMudanca.forEach(canal => handleAplicar(canal.precoFinal, canal.id));
+                  setShowRevisao(false);
+                }}
+                disabled={isAplicando}
+              >
+                <Zap className="h-4 w-4" />
+                Confirmar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 
