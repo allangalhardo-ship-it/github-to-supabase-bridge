@@ -345,6 +345,46 @@ const Precificacao = () => {
         config={config}
         isAplicando={updatePrecoMutation.isPending || isSavingPrecoCanal}
       />
+
+      {/* Confirmação de variação > 10% */}
+      <AlertDialog open={!!confirmacao} onOpenChange={(o) => !o && setConfirmacao(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar reajuste de preço?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                {confirmacao && (
+                  <>
+                    <p>
+                      A variação é de{' '}
+                      <strong className={confirmacao.novoPreco > confirmacao.precoAnterior ? 'text-green-600' : 'text-red-600'}>
+                        {confirmacao.novoPreco > confirmacao.precoAnterior ? '+' : '−'}
+                        {confirmacao.variacao.toFixed(1)}%
+                      </strong>
+                      {confirmacao.tipo === 'canal' && confirmacao.canalNome && (
+                        <> no canal <strong>{confirmacao.canalNome}</strong></>
+                      )}
+                      .
+                    </p>
+                    <div className="flex items-center justify-between rounded-md bg-muted p-3 text-sm">
+                      <span>De: <strong>{formatCurrencyBRL(confirmacao.precoAnterior)}</strong></span>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                      <span>Para: <strong>{formatCurrencyBRL(confirmacao.novoPreco)}</strong></span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Reajustes acima de 10% podem impactar fortemente vendas e percepção do cliente. Confirme se está correto.
+                    </p>
+                  </>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmarAplicacao}>Aplicar reajuste</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
