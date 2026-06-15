@@ -19,6 +19,7 @@ import {
 import { ProdutoAnalise, QuadranteMenu, ConfiguracoesPrecificacao, formatCurrency, formatPercent, getQuadranteInfo } from './types';
 import { cn } from '@/lib/utils';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
+import { calcularPricingScore, arredondarCharm } from '@/utils/pricingScore';
 
 interface ProdutoListaCompactaProps {
   produtos: ProdutoAnalise[];
@@ -84,6 +85,16 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
       return matchQuadrante && matchCategoria && matchSaude && matchBusca;
     });
   }, [produtos, quadranteFiltro, filtroCategoria, filtroSaude, busca]);
+
+  // Mediana de quantidades vendidas (usa só quem vendeu) — para Pricing Score
+  const medianaQuantidades = useMemo(() => {
+    const qtds = produtos
+      .filter(p => p.quantidadeVendida > 0)
+      .map(p => p.quantidadeVendida)
+      .sort((a, b) => a - b);
+    if (qtds.length === 0) return 1;
+    return qtds[Math.floor(qtds.length / 2)];
+  }, [produtos]);
 
   // Ordenar: críticos primeiro, depois por margem
   const produtosOrdenados = useMemo(() => {
@@ -206,6 +217,16 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
               const quadInfo = getQuadranteInfo(produto.quadrante);
               const precisaAjuste = produto.preco_venda < produto.precoSugerido * 0.95;
               const diferencaPreco = produto.precoSugerido - produto.preco_venda;
+              const score = calcularPricingScore({
+                margemContribuicao: produto.margemContribuicao,
+                margemAlvo: config?.margem_desejada_padrao || 30,
+                cmv: produto.cmv,
+                cmvAlvo: config?.cmv_alvo || 35,
+                quantidadeVendida: produto.quantidadeVendida,
+                medianaQuantidades,
+              });
+              const precoCharm = produto.precoSugeridoViavel ? arredondarCharm(produto.precoSugerido) : 0;
+              const charmDifere = precoCharm > 0 && Math.abs(precoCharm - produto.precoSugerido) > 0.01;
 
               return (
                 <div
@@ -238,6 +259,29 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
                       <div className="flex items-center gap-2">
                         {getSaudeIcon(produto.saudeMargem)}
                         <p className="font-medium text-sm truncate">{produto.nome}</p>
+                        {produto.quantidadeVendida > 0 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  'text-[10px] px-1.5 py-0 h-4 shrink-0 font-bold cursor-help',
+                                  score.cor,
+                                  score.bgCor,
+                                  'border-current/40'
+                                )}
+                              >
+                                {score.score}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs">
+                              <p className="font-medium">Pricing Score: {score.score}/100 — {score.label}</p>
+                              <p className="text-muted-foreground mt-1">
+                                Margem: {score.detalhes.margem}/50 · CMV: {score.detalhes.cmv}/30 · Popularidade: {score.detalhes.popularidade}/20
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                         {produto.quantidadeVendida === 0 && (
                           <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-muted-foreground/40 text-muted-foreground shrink-0">
                             Sem vendas
@@ -314,16 +358,39 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
                     {/* Ações */}
                     <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                       {precisaAjuste && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => onAplicarPreco(produto.id, produto.precoSugerido, produto.preco_venda)}
-                          disabled={isAplicando}
-                          className="h-8 px-2 gap-1"
-                        >
-                          <Zap className="h-3.5 w-3.5" />
-                          {!isMobile && 'Aplicar'}
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => onAplicarPreco(produto.id, produto.precoSugerido, produto.preco_venda)}
+                            disabled={isAplicando}
+                            className="h-8 px-2 gap-1"
+                          >
+                            <Zap className="h-3.5 w-3.5" />
+                            {!isMobile && 'Aplicar'}
+                          </Button>
+                          {charmDifere && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => onAplicarPreco(produto.id, precoCharm, produto.preco_venda)}
+                                  disabled={isAplicando}
+                                  className="h-8 px-2 gap-1 text-[11px]"
+                                >
+                                  {formatCurrency(precoCharm)}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs max-w-[220px]">
+                                <p className="font-medium">Preço psicológico (X,90)</p>
+                                <p className="text-muted-foreground mt-1">
+                                  Vendas tendem a converter mais com preços terminados em ,90. Sugestão: {formatCurrency(precoCharm)} ao invés de {formatCurrency(produto.precoSugerido)}.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                        </>
                       )}
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>

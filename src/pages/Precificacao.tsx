@@ -28,10 +28,14 @@ import {
   ProdutoListaCompacta,
   ProdutoDetalheDrawer,
   ResumoExecutivo,
+  MatrizScatter,
+  KpisAvancados,
   useMenuEngineering,
   QuadranteMenu,
   ProdutoAnalise,
+  PeriodoBCG,
 } from '@/components/precificacao-v2';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 import SugestaoPrecoCanal from '@/components/precificacao-v2/SugestaoPrecoCanal';
 import ImpactoReajusteReport from '@/components/precificacao-v2/ImpactoReajusteReport';
@@ -46,6 +50,7 @@ const Precificacao = () => {
   const [quadranteSelecionado, setQuadranteSelecionado] = useState<QuadranteMenu | null>(null);
   const [produtoSelecionado, setProdutoSelecionado] = useState<ProdutoAnalise | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [periodo, setPeriodo] = useState<PeriodoBCG>(30);
 
   const {
     produtosAnalisados,
@@ -54,7 +59,7 @@ const Precificacao = () => {
     categorias,
     config,
     isLoading,
-  } = useMenuEngineering();
+  } = useMenuEngineering(periodo);
 
   // Hook para gerenciar preços por canal
   const { upsertPreco, isSaving: isSavingPrecoCanal, canaisConfigurados } = usePrecosCanais();
@@ -224,12 +229,24 @@ const Precificacao = () => {
             Analise popularidade × rentabilidade para decisões estratégicas
           </p>
         </div>
-        <Button variant="outline" size="sm" asChild>
-          <Link to="/configuracoes" className="gap-2">
-            <Settings className="h-4 w-4" />
-            Configurações
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Select value={String(periodo)} onValueChange={(v) => setPeriodo(Number(v) as PeriodoBCG)}>
+            <SelectTrigger className="h-9 w-[140px]" aria-label="Período de análise">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">Últimos 7 dias</SelectItem>
+              <SelectItem value="30">Últimos 30 dias</SelectItem>
+              <SelectItem value="90">Últimos 90 dias</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/configuracoes" className="gap-2">
+              <Settings className="h-4 w-4" />
+              <span className="hidden sm:inline">Configurações</span>
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Alerta de configuração incompleta */}
@@ -274,6 +291,15 @@ const Precificacao = () => {
             isMobile={isMobile}
           />
 
+          {/* KPIs avançados: Food Cost Teórico vs Real + Prime Cost */}
+          <KpisAvancados
+            cmvTeorico={metricas.cmvMedio}
+            cmvAlvo={config?.cmv_alvo || 35}
+            margemAlvo={config?.margem_desejada_padrao || 30}
+            periodo={periodo}
+            isMobile={isMobile}
+          />
+
           {/* Cards de Quadrante */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -298,6 +324,14 @@ const Precificacao = () => {
               isMobile={isMobile}
             />
           </div>
+
+          {/* Matriz scatter — visão gráfica da popularidade × margem */}
+          <MatrizScatter
+            produtos={produtosAnalisados.filter(p => p.quantidadeVendida > 0)}
+            quadranteSelecionado={quadranteSelecionado}
+            onSelectProduto={handleSelectProduto}
+            margemAlvo={config?.margem_desejada_padrao || 30}
+          />
 
 
           {/* Sugestão de preço por canal */}
