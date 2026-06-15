@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysInMonth, endOfMonth, subMonths } from 'date-fns';
+import { calcularCustoFicha } from '@/utils/custoFicha';
 import { ptBR } from 'date-fns/locale';
 
 export type PeriodoType = 'hoje' | 'semana' | 'mes' | 'ultimos30' | 'personalizado';
@@ -175,7 +176,7 @@ export function useDashboardData() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('produtos')
-        .select(`id, nome, preco_venda, categoria, fichas_tecnicas (quantidade, insumo_id, insumos (id, nome, custo_unitario))`)
+        .select(`id, nome, preco_venda, categoria, fichas_tecnicas (quantidade, unidade, insumo_id, insumos (id, nome, custo_unitario, unidade_medida, fator_perda))`)
         .eq('ativo', true)
         .eq('empresa_id', usuario!.empresa_id);
       if (error) throw error;
@@ -250,7 +251,7 @@ export function useDashboardData() {
   const produtosDefasados = useMemo(() => {
     if (!produtosAnalise) return 0;
     return produtosAnalise.filter(p => {
-      const custoInsumos = p.fichas_tecnicas?.reduce((sum: number, ft: any) => sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0)), 0) || 0;
+      const custoInsumos = calcularCustoFicha(p.fichas_tecnicas as any);
       if (custoInsumos <= 0 || p.preco_venda <= 0) return false;
       const margem = ((p.preco_venda - custoInsumos) / p.preco_venda) * 100;
       return margem < (config?.margem_desejada_padrao || 30) * 0.7;
@@ -260,7 +261,7 @@ export function useDashboardData() {
   const qtdProdutosMargemNegativa = useMemo(() => {
     if (!produtosAnalise) return 0;
     return produtosAnalise.filter(p => {
-      const custoInsumos = p.fichas_tecnicas?.reduce((sum: number, ft: any) => sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0)), 0) || 0;
+      const custoInsumos = calcularCustoFicha(p.fichas_tecnicas as any);
       if (custoInsumos <= 0 || p.preco_venda <= 0) return false;
       const impostoVal = p.preco_venda * ((config?.imposto_medio_sobre_vendas || 0) / 100);
       const lucro = p.preco_venda - custoInsumos - impostoVal;
@@ -276,7 +277,7 @@ export function useDashboardData() {
 
     produtosAnalise.forEach((produto) => {
       if (!produto.preco_venda || produto.preco_venda <= 0) return;
-      const custoInsumos = produto.fichas_tecnicas?.reduce((sum: number, ft: any) => sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0)), 0) || 0;
+      const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any);
       if (custoInsumos > 0) {
         totalPreco += produto.preco_venda;
         totalCusto += custoInsumos;
@@ -315,10 +316,7 @@ export function useDashboardData() {
       .map((produto: any) => {
         if (!produto.preco_venda || produto.preco_venda <= 0) return null;
         const ingredientes = produto.fichas_tecnicas?.length || 0;
-        const custoInsumos = produto.fichas_tecnicas?.reduce(
-          (sum: number, ft: any) => sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0)),
-          0
-        ) || 0;
+        const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any);
         const margem = custoInsumos > 0 ? ((produto.preco_venda - custoInsumos) / produto.preco_venda) * 100 : 100;
         const semFicha = ingredientes === 0 || custoInsumos === 0;
         const margemAlta = margem > 85;
@@ -395,7 +393,7 @@ export function useDashboardData() {
     if (!produtosAnalise) return [];
     return produtosAnalise
       .map((produto) => {
-        const custoInsumos = produto.fichas_tecnicas?.reduce((sum: number, ft: any) => sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0)), 0) || 0;
+        const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any);
         const lucro = produto.preco_venda - custoInsumos;
         const margem = produto.preco_venda > 0 ? (lucro / produto.preco_venda) * 100 : 0;
         return { id: produto.id, nome: produto.nome, preco_venda: produto.preco_venda, custo_insumos: custoInsumos, margem, lucro };

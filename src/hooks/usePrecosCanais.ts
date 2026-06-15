@@ -29,20 +29,22 @@ export function usePrecosCanais(produtoId?: string) {
   const { data: canaisConfigurados } = useQuery({
     queryKey: ['canais-configurados', usuario?.empresa_id],
     queryFn: async () => {
-      // Buscar canais ativos
+      // Buscar canais ativos (filtro explícito de empresa além do RLS)
       const { data: canaisData, error: canaisError } = await supabase
         .from('canais_venda')
         .select('*')
+        .eq('empresa_id', usuario!.empresa_id)
         .eq('ativo', true)
         .order('tipo')
         .order('nome');
 
       if (canaisError) throw canaisError;
 
-      // Buscar todas as taxas
-      const { data: taxasData, error: taxasError } = await supabase
-        .from('taxas_canais')
-        .select('*');
+      // Buscar taxas só dos canais visíveis
+      const canalIds = (canaisData || []).map(c => c.id);
+      const { data: taxasData, error: taxasError } = canalIds.length
+        ? await supabase.from('taxas_canais').select('*').in('canal_id', canalIds)
+        : { data: [] as any[], error: null };
 
       if (taxasError) throw taxasError;
 

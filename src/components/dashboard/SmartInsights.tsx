@@ -20,6 +20,7 @@ import {
   Target,
   Activity,
 } from 'lucide-react';
+import { calcularCustoFicha } from '@/utils/custoFicha';
 
 interface Venda {
   id: string;
@@ -272,9 +273,7 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
     if (produtos && produtos.length > 0) {
       const produtosAbaixoMeta = produtos
         .map((produto) => {
-          const custoInsumos = produto.fichas_tecnicas?.reduce((sum, ft) => {
-            return sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0));
-          }, 0) || 0;
+          const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any);
           
           if (custoInsumos === 0) return null;
           
@@ -319,9 +318,7 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
       // 7. PRODUTOS COM MARGEM EXCESSIVA (oportunidade de volume)
       const produtosMargemAlta = produtos
         .map((produto) => {
-          const custoInsumos = produto.fichas_tecnicas?.reduce((sum, ft) => {
-            return sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0));
-          }, 0) || 0;
+          const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any);
           
           if (custoInsumos === 0) return null;
           
@@ -379,9 +376,7 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
       }> = [];
 
       produtos.forEach((produto) => {
-        const custoInsumos = produto.fichas_tecnicas?.reduce((sum, ft) => {
-          return sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0));
-        }, 0) || 0;
+        const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any);
         
         if (custoInsumos === 0 || produto.preco_venda === 0) return;
         
@@ -541,9 +536,7 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
     // 3. PRODUTO IDEAL PARA PROMOÇÃO (alta margem + baixa saída)
     if (produtos && produtos.length > 0) {
       const produtosComMargem = produtos.map((produto) => {
-        const custoInsumos = produto.fichas_tecnicas?.reduce((sum, ft) => {
-          return sum + (Number(ft.quantidade) * Number(ft.insumos?.custo_unitario || 0));
-        }, 0) || 0;
+        const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any);
         
         const margem = produto.preco_venda > 0 
           ? ((produto.preco_venda - custoInsumos) / produto.preco_venda) * 100 

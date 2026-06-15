@@ -33,6 +33,7 @@ import {
 } from 'recharts';
 import { format, subMonths, startOfMonth, endOfMonth, parseISO, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { calcularCustoFicha } from '@/utils/custoFicha';
 
 interface PerdasDesperdicioProps {
   onBack: () => void;
@@ -142,9 +143,7 @@ export const PerdasDesperdicio: React.FC<PerdasDesperdicioProps> = ({ onBack }) 
 
     // Perdas de produtos vencidos
     const perdasProdutos = producoesVencidas?.map(prod => {
-      const custoUnitario = prod.produtos?.fichas_tecnicas?.reduce((acc, ft) => {
-        return acc + (ft.quantidade * (ft.insumos?.custo_unitario || 0));
-      }, 0) || 0;
+      const custoUnitario = calcularCustoFicha(prod.produtos?.fichas_tecnicas as any);
       const custoTotal = custoUnitario * prod.quantidade;
       
       return {

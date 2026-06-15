@@ -8,23 +8,40 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Trash2, FileText, Search, Calculator, ExternalLink, Lightbulb, X } from 'lucide-react';
+import { Trash2, FileText, Search, Calculator, ExternalLink, Lightbulb, X, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import BuscarInsumoDialog from './BuscarInsumoDialog';
 import CustoMargemCard from './CustoMargemCard';
 import { InsumoIcon } from '@/lib/insumoIconUtils';
 import { formatCurrencyBRL, formatCurrencySmartBRL } from '@/lib/format';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { calcularCustoItem, unidadesCompativeis } from '@/utils/custoFicha';
+
+const GRUPOS_UNIDADE: Record<string, string[]> = {
+  massa: ['mg', 'g', 'kg'],
+  volume: ['ml', 'l'],
+  contagem: ['un'],
+};
+function unidadesDoGrupo(unidadeInsumo: string): string[] {
+  const u = (unidadeInsumo || '').toLowerCase();
+  for (const [, arr] of Object.entries(GRUPOS_UNIDADE)) {
+    if (arr.some((x) => unidadesCompativeis(x, u))) return arr;
+  }
+  return [u || 'un'];
+}
 
 
 interface FichaTecnicaItem {
   id: string;
   quantidade: number;
+  unidade: string | null;
   insumos: {
     id: string;
     nome: string;
     unidade_medida: string;
     custo_unitario: number;
-  };
+    fator_perda?: number | null;
+  } | null;
 }
 
 interface FichaTecnicaDialogProps {
@@ -50,6 +67,7 @@ interface InsumoSelecionado {
   nome: string;
   unidade_medida: string;
   custo_unitario: number;
+  fator_perda?: number | null;
 }
 
 interface LocalItem {
@@ -57,6 +75,7 @@ interface LocalItem {
   id?: string;
   insumo: InsumoSelecionado;
   quantidade: number;
+  unidade: string; // unidade da quantidade na ficha (pode diferir da do insumo)
   isNew?: boolean;
   isDeleted?: boolean;
 }
@@ -106,31 +125,51 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
   const [observacoes, setObservacoes] = useState('');
   const [novoInsumo, setNovoInsumo] = useState<InsumoSelecionado | null>(null);
   const [novaQuantidade, setNovaQuantidade] = useState('');
+  const [novaUnidade, setNovaUnidade] = useState('');
+  const [rendimentoLocal, setRendimentoLocal] = useState<string>('');
+  // (mantido valor inicial vindo dos props)
 
   // Inicializar estado local quando abrir o dialog
   useEffect(() => {
     if (open) {
       setLocalItems(
-        fichaTecnica.map((ft) => ({
-          tempId: `existing-${ft.id}`,
-          id: ft.id,
-          insumo: ft.insumos,
-          quantidade: ft.quantidade,
-          isNew: false,
-          isDeleted: false,
-        }))
+        fichaTecnica
+          .filter((ft) => ft.insumos !== null) // descarta itens com insumo deletado
+          .map((ft) => ({
+            tempId: `existing-${ft.id}`,
+            id: ft.id,
+            insumo: ft.insumos!,
+            quantidade: ft.quantidade,
+            unidade: ft.unidade || ft.insumos!.unidade_medida,
+            isNew: false,
+            isDeleted: false,
+          })),
       );
       setObservacoes(observacoesFicha || '');
       setNovoInsumo(null);
       setNovaQuantidade('');
+      setNovaUnidade('');
+      setRendimentoLocal((rendimentoPadrao ?? '').toString());
     }
-  }, [open, fichaTecnica, observacoesFicha]);
+  }, [open, fichaTecnica, observacoesFicha, rendimentoPadrao]);
 
-  // Calcular custo total (apenas itens não deletados)
+  // itens com insumo deletado (alerta visual)
+  const itensOrfaos = fichaTecnica.filter((ft) => ft.insumos === null);
+
+  // Calcular custo total (apenas itens não deletados) usando o util central
   const custoTotal = useMemo(() => {
     return localItems
-      .filter(item => !item.isDeleted)
-      .reduce((sum, item) => sum + (item.quantidade * item.insumo.custo_unitario), 0);
+      .filter((item) => !item.isDeleted)
+      .reduce(
+        (sum, item) =>
+          sum +
+          calcularCustoItem({
+            quantidade: item.quantidade,
+            unidade: item.unidade,
+            insumos: item.insumo,
+          }),
+        0,
+      );
   }, [localItems]);
 
   // Itens visíveis (não deletados)
@@ -142,23 +181,29 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
   // Verificar se há mudanças
   const hasChanges = useMemo(() => {
     const originalObs = observacoesFicha || '';
-    
+    const originalRend = (rendimentoPadrao ?? '').toString();
+
     if (observacoes !== originalObs) return true;
-    
+    if (rendimentoLocal !== originalRend) return true;
+
     // Verificar se há itens novos ou deletados
     if (localItems.some(item => item.isNew || item.isDeleted)) return true;
-    
-    // Verificar se quantidades mudaram
-    const originalMap = new Map(fichaTecnica.map(ft => [ft.id, ft.quantidade]));
+
+    // Verificar se quantidades/unidades mudaram
+    const originalMap = new Map(
+      fichaTecnica
+        .filter(ft => ft.insumos !== null)
+        .map(ft => [ft.id, { q: ft.quantidade, u: ft.unidade || ft.insumos!.unidade_medida }]),
+    );
     for (const item of localItems) {
       if (item.id && !item.isNew && !item.isDeleted) {
-        const originalQty = originalMap.get(item.id);
-        if (originalQty !== item.quantidade) return true;
+        const orig = originalMap.get(item.id);
+        if (!orig || orig.q !== item.quantidade || orig.u !== item.unidade) return true;
       }
     }
-    
+
     return false;
-  }, [localItems, observacoes, fichaTecnica, observacoesFicha]);
+  }, [localItems, observacoes, rendimentoLocal, rendimentoPadrao, fichaTecnica, observacoesFicha]);
 
   // Adicionar item localmente
   const handleAddItem = () => {
@@ -168,12 +213,14 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
       tempId: `new-${Date.now()}`,
       insumo: novoInsumo,
       quantidade: parseFloat(novaQuantidade) || 0,
+      unidade: novaUnidade || novoInsumo.unidade_medida,
       isNew: true,
     };
-    
+
     setLocalItems(prev => [...prev, newItem]);
     setNovoInsumo(null);
     setNovaQuantidade('');
+    setNovaUnidade('');
   };
 
   // Remover item localmente
@@ -199,14 +246,16 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
     setSaving(true);
     
     try {
-      // 1. Atualizar produto (observações)
+      // 1. Atualizar produto (observações + rendimento)
+      const rendimentoNum = parseInt(rendimentoLocal, 10);
       const { error: produtoError } = await supabase
         .from('produtos')
         .update({
           observacoes_ficha: observacoes || null,
+          rendimento_padrao: Number.isFinite(rendimentoNum) && rendimentoNum > 0 ? rendimentoNum : null,
         })
         .eq('id', produtoId);
-      
+
       if (produtoError) throw produtoError;
 
       // 2. Deletar itens marcados
@@ -228,18 +277,20 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
             produto_id: produtoId,
             insumo_id: item.insumo.id,
             quantidade: item.quantidade,
+            unidade: item.unidade,
           })));
         if (error) throw error;
       }
 
-      // 4. Atualizar quantidades de itens existentes
+      // 4. Atualizar quantidade + unidade de itens existentes
       const itensParaAtualizar = localItems.filter(item => !item.isNew && !item.isDeleted && item.id);
       for (const item of itensParaAtualizar) {
         const original = fichaTecnica.find(ft => ft.id === item.id);
-        if (original && original.quantidade !== item.quantidade) {
+        const unidadeOriginal = original?.unidade || original?.insumos?.unidade_medida;
+        if (original && (original.quantidade !== item.quantidade || unidadeOriginal !== item.unidade)) {
           const { error } = await supabase
             .from('fichas_tecnicas')
-            .update({ quantidade: item.quantidade })
+            .update({ quantidade: item.quantidade, unidade: item.unidade })
             .eq('id', item.id);
           if (error) throw error;
         }
@@ -385,9 +436,19 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
                       placeholder="0"
                       value={novaQuantidade}
                       onChange={(e) => setNovaQuantidade(e.target.value)}
-                      className="w-24 h-8 text-center"
+                      className="w-20 h-8 text-center"
                     />
-                    <span className="text-sm font-medium text-muted-foreground">{novoInsumo.unidade_medida}</span>
+                    <Select
+                      value={novaUnidade || novoInsumo.unidade_medida}
+                      onValueChange={setNovaUnidade}
+                    >
+                      <SelectTrigger className="w-[72px] h-8"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {unidadesDoGrupo(novoInsumo.unidade_medida).map((u) => (
+                          <SelectItem key={u} value={u}>{u}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <div className="flex-1" />
                     <Button
                       type="button"
@@ -399,18 +460,29 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
                       Adicionar
                     </Button>
                   </div>
-                  
-                  {/* Preview do custo em tempo real */}
-                  {novaQuantidade && parseFloat(novaQuantidade) > 0 && (
-                    <div className="flex items-center justify-between text-xs bg-primary/10 rounded px-2 py-1.5 mt-2">
-                      <span className="text-muted-foreground">
-                        {parseFloat(novaQuantidade)} {novoInsumo.unidade_medida} × {formatCurrencySmartBRL(novoInsumo.custo_unitario)}
-                      </span>
-                      <span className="font-semibold text-primary">
-                        = {formatCurrencyBRL(parseFloat(novaQuantidade) * novoInsumo.custo_unitario)}
-                      </span>
-                    </div>
-                  )}
+
+                  {/* Preview do custo em tempo real (com conversão) */}
+                  {novaQuantidade && parseFloat(novaQuantidade) > 0 && (() => {
+                    const previewUnidade = novaUnidade || novoInsumo.unidade_medida;
+                    const previewCusto = calcularCustoItem({
+                      quantidade: parseFloat(novaQuantidade),
+                      unidade: previewUnidade,
+                      insumos: novoInsumo,
+                    });
+                    return (
+                      <div className="flex items-center justify-between text-xs bg-primary/10 rounded px-2 py-1.5 mt-2">
+                        <span className="text-muted-foreground">
+                          {parseFloat(novaQuantidade)} {previewUnidade}
+                          {previewUnidade !== novoInsumo.unidade_medida && (
+                            <> (= {novoInsumo.unidade_medida})</>
+                          )}
+                        </span>
+                        <span className="font-semibold text-primary">
+                          = {formatCurrencyBRL(previewCusto)}
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </div>
               ) : (
                 <Button
@@ -425,30 +497,50 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
               )}
             </div>
 
+            {/* Alerta de itens órfãos (insumo deletado) */}
+            {itensOrfaos.length > 0 && (
+              <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3">
+                <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                <div className="text-xs text-destructive">
+                  <p className="font-semibold">{itensOrfaos.length} ingrediente(s) removido(s) do cadastro</p>
+                  <p>Esses itens aparecem com custo zero. Remova a ficha ou recadastre o insumo na tela de Insumos.</p>
+                </div>
+              </div>
+            )}
+
             {/* Lista de ingredientes */}
             {itensVisiveis.length > 0 && (
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Ingredientes na Ficha</Label>
                 <div className="divide-y border rounded-md">
-                  {itensVisiveis.map((item) => (
-                    <div
-                      key={item.tempId}
-                      className={`p-3 ${item.isNew ? 'bg-success/5' : ''}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate flex items-center gap-1.5">
-                            <InsumoIcon nome={item.insumo.nome} className="h-3.5 w-3.5 shrink-0 text-primary" />
-                            {item.insumo.nome}
-                            {item.isNew && (
-                              <span className="text-[10px] text-success bg-success/10 px-1 rounded">novo</span>
-                            )}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {formatCurrencySmartBRL(item.insumo.custo_unitario)} por {item.insumo.unidade_medida}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1">
+                  {itensVisiveis.map((item) => {
+                    const unidadesLinha = unidadesDoGrupo(item.insumo.unidade_medida);
+                    const custoLinha = calcularCustoItem({
+                      quantidade: item.quantidade,
+                      unidade: item.unidade,
+                      insumos: item.insumo,
+                    });
+                    return (
+                      <div
+                        key={item.tempId}
+                        className={`p-3 ${item.isNew ? 'bg-success/5' : ''}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate flex items-center gap-1.5">
+                              <InsumoIcon nome={item.insumo.nome} className="h-3.5 w-3.5 shrink-0 text-primary" />
+                              {item.insumo.nome}
+                              {item.isNew && (
+                                <span className="text-[10px] text-success bg-success/10 px-1 rounded">novo</span>
+                              )}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {formatCurrencySmartBRL(item.insumo.custo_unitario)} por {item.insumo.unidade_medida}
+                              {Number(item.insumo.fator_perda || 0) > 0 && (
+                                <> • perda {Number(item.insumo.fator_perda).toFixed(0)}%</>
+                              )}
+                            </p>
+                          </div>
                           <Input
                             type="number"
                             step="0.01"
@@ -457,23 +549,37 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
                             className="w-16 h-8 text-center text-sm"
                             onChange={(e) => handleUpdateQuantidade(item.tempId, parseFloat(e.target.value) || 0)}
                           />
-                          <span className="text-xs text-muted-foreground w-8">{item.insumo.unidade_medida}</span>
+                          <Select
+                            value={item.unidade}
+                            onValueChange={(v) =>
+                              setLocalItems((prev) =>
+                                prev.map((it) => (it.tempId === item.tempId ? { ...it, unidade: v } : it)),
+                              )
+                            }
+                          >
+                            <SelectTrigger className="w-[64px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {unidadesLinha.map((u) => (
+                                <SelectItem key={u} value={u}>{u}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <span className="w-20 text-right text-sm font-semibold tabular-nums">
+                            {formatCurrencyBRL(custoLinha)}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive flex-shrink-0"
+                            onClick={() => handleRemoveItem(item.tempId)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
-                        <span className="w-20 text-right text-sm font-semibold">
-                          {formatCurrencyBRL(item.quantidade * item.insumo.custo_unitario)}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive flex-shrink-0"
-                          onClick={() => handleRemoveItem(item.tempId)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -486,6 +592,24 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
                 <p className="text-xs text-muted-foreground">Clique em buscar para adicionar.</p>
               </div>
             )}
+
+            {/* Rendimento da ficha */}
+            <div className="space-y-2">
+              <Label htmlFor="rendimento">Esta ficha rende quantas unidades?</Label>
+              <Input
+                id="rendimento"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="1"
+                value={rendimentoLocal}
+                onChange={(e) => setRendimentoLocal(e.target.value)}
+                className="w-32"
+              />
+              <p className="text-xs text-muted-foreground">
+                Use quando a ficha produz um lote (ex: 1 receita = 24 brigadeiros → digite 24). Deixe 1 se a ficha é para uma unidade.
+              </p>
+            </div>
 
             {/* Observações */}
             <div className="space-y-2">

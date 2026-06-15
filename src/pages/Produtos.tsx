@@ -38,12 +38,14 @@ interface Produto {
   fichas_tecnicas?: {
     id: string;
     quantidade: number;
+    unidade: string | null;
     insumos: {
       id: string;
       nome: string;
       unidade_medida: string;
       custo_unitario: number;
-    };
+      fator_perda?: number | null;
+    } | null;
   }[];
 }
 
@@ -89,11 +91,13 @@ const Produtos = () => {
           fichas_tecnicas (
             id,
             quantidade,
+            unidade,
             insumos (
               id,
               nome,
               unidade_medida,
-              custo_unitario
+              custo_unitario,
+              fator_perda
             )
           )
         `)

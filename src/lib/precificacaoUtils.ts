@@ -20,19 +20,17 @@ export interface ConfiguracaoPrecificacao {
 export interface ResultadoPrecoSugerido {
   preco: number;
   viavel: boolean; // false se o divisor ficar <= 0 (inviável)
+  motivo?: string; // mensagem clara quando inviável
 }
 
 /**
  * Calcula o preço sugerido baseado na fórmula de precificação
- * 
+ *
  * IMPORTANTE: Custos fixos NÃO entram neste cálculo.
  * O preço unitário cobre: Custo dos insumos + Margem + Impostos + Taxa do Canal
  * Os custos fixos são cobertos pelo volume de vendas (verificado no Dashboard).
- * 
- * @param custoInsumos - Custo total dos ingredientes/insumos
- * @param config - Configurações do sistema (margem, impostos)
- * @param taxaCanal - Taxa percentual do canal de venda (opcional, padrão 0)
- * @returns Objeto com preço sugerido e indicador de viabilidade
+ *
+ * Quando inviável (margem + imposto + taxa >= 100%), retorna preco=0 e motivo claro.
  */
 export function calcularPrecoSugerido(
   custoInsumos: number,
@@ -40,22 +38,24 @@ export function calcularPrecoSugerido(
   taxaCanal: number = 0
 ): ResultadoPrecoSugerido {
   if (custoInsumos <= 0) {
-    return { preco: 0, viavel: false };
+    return { preco: 0, viavel: false, motivo: 'Custo da ficha é zero. Cadastre os insumos.' };
   }
 
   const margem = config.margem_desejada_padrao / 100;
   const imposto = config.imposto_medio_sobre_vendas / 100;
   const taxa = taxaCanal / 100;
-  
-  // Fórmula: Preço = Custo / (1 - Margem - Imposto - TaxaCanal)
-  // NÃO inclui custo fixo - ele é coberto pelo volume de vendas
+
   const divisor = 1 - margem - imposto - taxa;
-  
-  // Se o divisor for <= 0, a precificação é inviável
+
   if (divisor <= 0) {
-    return { preco: custoInsumos * 3, viavel: false };
+    const pct = (margem + imposto + taxa) * 100;
+    return {
+      preco: 0,
+      viavel: false,
+      motivo: `Margem ${(margem*100).toFixed(0)}% + Imposto ${(imposto*100).toFixed(0)}% + Taxa ${(taxa*100).toFixed(0)}% = ${pct.toFixed(0)}%. Reduza um dos três para precificar este canal.`,
+    };
   }
-  
+
   return { preco: custoInsumos / divisor, viavel: true };
 }
 
@@ -101,8 +101,10 @@ export function calcularMetricasProduto(
     margemContribuicao,     // Margem de contribuição %
     margemBruta,
     cmv,
-    // Aliases para compatibilidade
+    // Aliases de compatibilidade — DEPRECATED: use lucroContribuicao / margemContribuicao.
+    /** @deprecated Use lucroContribuicao */
     lucroLiquido: lucroContribuicao,
+    /** @deprecated Use margemContribuicao */
     margemLiquida: margemContribuicao,
     custoTotal: custoTotalVariavel,
     custoFixoValor: 0,      // Não calculamos mais por unidade

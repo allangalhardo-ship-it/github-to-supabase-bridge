@@ -32,6 +32,7 @@ import {
   DollarSign,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { calcularCustoFicha } from '@/utils/custoFicha';
 
 interface NovoProdutoWizardProps {
   open: boolean;
@@ -115,11 +116,7 @@ const NovoProdutoWizard: React.FC<NovoProdutoWizardProps> = ({
 
   const custoFicha = React.useMemo(() => {
     if (!fichaTecnica) return 0;
-    return fichaTecnica.reduce(
-      (sum, ft: any) =>
-        sum + (Number(ft.quantidade) || 0) * (Number(ft.insumos?.custo_unitario) || 0),
-      0
-    );
+    return calcularCustoFicha(fichaTecnica as any);
   }, [fichaTecnica]);
 
   // Upload de imagem

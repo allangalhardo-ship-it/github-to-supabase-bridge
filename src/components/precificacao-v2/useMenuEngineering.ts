@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { subDays } from 'date-fns';
+import { calcularCustoFicha } from '@/utils/custoFicha';
 import {
   ProdutoBase,
   ProdutoAnalise,
@@ -37,11 +38,13 @@ export function useMenuEngineering() {
           fichas_tecnicas (
             id,
             quantidade,
+            unidade,
             insumos (
               id,
               nome,
               custo_unitario,
-              unidade_medida
+              unidade_medida,
+              fator_perda
             )
           )
         `)
@@ -214,9 +217,7 @@ export function useMenuEngineering() {
 
     // Primeiro passo: calcular métricas brutas
     const produtosComMetricas = produtosComFicha.map(produto => {
-      const custoInsumos = produto.fichas_tecnicas?.reduce((acc, ft) => {
-        return acc + (ft.quantidade * ft.insumos.custo_unitario);
-      }, 0) || 0;
+      const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas);
 
       const vendas = vendasAgregadas?.[produto.id];
       const quantidadeVendida = vendas?.quantidade || 0;
@@ -289,8 +290,9 @@ export function useMenuEngineering() {
       const imposto = config.imposto_medio_sobre_vendas / 100;
       const taxa = taxaCanalEfetiva / 100;
       const divisor = 1 - margem - imposto - taxa;
-      const precoSugeridoViavel = divisor > 0;
-      const precoSugerido = precoSugeridoViavel ? custoInsumos / divisor : custoInsumos * 2;
+      const precoSugeridoViavel = divisor > 0 && custoInsumos > 0;
+      // Quando inviável, não inventa preço — UI mostra mensagem clara em vez do valor
+      const precoSugerido = precoSugeridoViavel ? custoInsumos / divisor : 0;
 
       // Saúde
       const saudeMargem: 'critico' | 'atencao' | 'saudavel' = 
@@ -336,20 +338,18 @@ export function useMenuEngineering() {
 
     // Classificar em quadrantes
     return produtosComMetricas.map(produto => {
-      const altaMargem = produto.margemContribuicao >= medianaMargens;
-      const altaPopularidade = produto.quantidadeVendida >= medianaQtds;
-
       let quadrante: QuadranteMenu;
-      if (altaMargem && altaPopularidade) {
-        quadrante = 'estrela';
-      } else if (!altaMargem && altaPopularidade) {
-        quadrante = 'burro-de-carga';
-      } else if (altaMargem && !altaPopularidade) {
-        quadrante = 'desafio';
+      // Produto sem vendas no período → não classificar como Cão; é "sem dados"
+      if (produto.quantidadeVendida <= 0) {
+        quadrante = 'sem-dados';
       } else {
-        quadrante = 'cao';
+        const altaMargem = produto.margemContribuicao >= medianaMargens;
+        const altaPopularidade = produto.quantidadeVendida >= medianaQtds;
+        if (altaMargem && altaPopularidade) quadrante = 'estrela';
+        else if (!altaMargem && altaPopularidade) quadrante = 'burro-de-carga';
+        else if (altaMargem && !altaPopularidade) quadrante = 'desafio';
+        else quadrante = 'cao';
       }
-
       return { ...produto, quadrante };
     });
   }, [produtos, config, vendasAgregadas, vendasPorCanal, precosCanaisTodos, canaisInfo, matchCanalIdPorTexto]);
@@ -361,13 +361,14 @@ export function useMenuEngineering() {
       'burro-de-carga': 0,
       'desafio': 0,
       'cao': 0,
+      'sem-dados': 0,
     };
 
     produtosAnalisados.forEach(p => {
       contagem[p.quadrante]++;
     });
 
-    return (['estrela', 'burro-de-carga', 'desafio', 'cao'] as QuadranteMenu[]).map(q => ({
+    return (['estrela', 'burro-de-carga', 'desafio', 'cao', 'sem-dados'] as QuadranteMenu[]).map(q => ({
       ...getQuadranteInfo(q),
       quantidade: contagem[q],
     }));

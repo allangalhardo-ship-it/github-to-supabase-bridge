@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Insumo, Produto, IngredienteLote, formatCurrency, formatCurrencySmart } from "./types";
+import { calcularCustoFicha } from '@/utils/custoFicha';
 
 interface CalculadorFichaTecnicaProps {
   produtos: Produto[] | undefined;
@@ -209,9 +210,7 @@ export function CalculadorFichaTecnica({
 
   const calcularCustoProduto = (produto: Produto) => {
     if (!produto?.fichas_tecnicas) return 0;
-    return produto.fichas_tecnicas.reduce((sum, ft) => {
-      return sum + (ft.quantidade * (ft.insumos?.custo_unitario || 0));
-    }, 0);
+    return calcularCustoFicha(produto.fichas_tecnicas as any);
   };
 
   return (

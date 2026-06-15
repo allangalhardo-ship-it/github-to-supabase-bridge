@@ -16,6 +16,7 @@ const CORES_QUADRANTE: Record<QuadranteMenu, string> = {
   'burro-de-carga': '#f97316', // orange-500
   'desafio': '#3b82f6',      // blue-500
   'cao': '#ef4444',          // red-500
+  'sem-dados': '#64748b',    // slate-500
 };
 
 const MatrizScatter: React.FC<MatrizScatterProps> = ({

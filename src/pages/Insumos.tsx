@@ -47,6 +47,7 @@ interface Insumo {
   estoque_minimo: number;
   is_intermediario: boolean;
   rendimento_receita: number | null;
+  fator_perda?: number | null;
 }
 
 const Insumos = () => {
@@ -67,6 +68,7 @@ const Insumos = () => {
     custo_unitario: '',
     estoque_atual: '',
     estoque_minimo: '',
+    fator_perda: '',
   });
 
   // Buscar apenas insumos simples (não intermediários)
@@ -94,10 +96,11 @@ const Insumos = () => {
         custo_unitario: parseFloat(data.custo_unitario) || 0,
         estoque_atual: parseFloat(data.estoque_atual) || 0,
         estoque_minimo: parseFloat(data.estoque_minimo) || 0,
+        fator_perda: Math.max(0, Math.min(99, parseFloat(data.fator_perda) || 0)),
         is_intermediario: false,
         rendimento_receita: null,
       });
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -120,6 +123,7 @@ const Insumos = () => {
           custo_unitario: parseFloat(data.custo_unitario) || 0,
           estoque_atual: parseFloat(data.estoque_atual) || 0,
           estoque_minimo: parseFloat(data.estoque_minimo) || 0,
+          fator_perda: Math.max(0, Math.min(99, parseFloat(data.fator_perda) || 0)),
         })
         .eq('id', data.id);
       if (error) throw error;
@@ -168,6 +172,7 @@ const Insumos = () => {
       custo_unitario: '',
       estoque_atual: '',
       estoque_minimo: '',
+      fator_perda: '',
     });
     setEditingInsumo(null);
     setDialogOpen(false);
@@ -181,6 +186,7 @@ const Insumos = () => {
       custo_unitario: insumo.custo_unitario.toString(),
       estoque_atual: insumo.estoque_atual.toString(),
       estoque_minimo: insumo.estoque_minimo.toString(),
+      fator_perda: (insumo.fator_perda ?? 0).toString(),
     });
     setDialogOpen(true);
   };
@@ -478,6 +484,24 @@ const Insumos = () => {
                   </div>
                 </div>
               )}
+
+              {/* Fator de perda — sempre disponível */}
+              <div className="space-y-2">
+                <Label htmlFor="fator_perda">Fator de perda (%)</Label>
+                <Input
+                  id="fator_perda"
+                  type="number"
+                  step="1"
+                  min="0"
+                  max="99"
+                  value={formData.fator_perda}
+                  onChange={(e) => setFormData({ ...formData, fator_perda: e.target.value })}
+                  placeholder="0"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Quanto se perde no processamento (ex: cebola descascada 20%, peixe limpo 40%, abacaxi 30%). Deixe 0 se aproveita tudo.
+                </p>
+              </div>
 
               <div className="flex justify-end gap-2 pt-4">
                 <Button type="button" variant="outline" onClick={resetForm}>
