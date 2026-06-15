@@ -37,6 +37,7 @@ export interface ProdutoAnalise extends ProdutoBase {
   // Popularidade (vendas)
   quantidadeVendida: number;
   receitaTotal: number;
+  precoReferenciaAtual?: number;
   
   // Preço sugerido
   precoSugerido: number;
