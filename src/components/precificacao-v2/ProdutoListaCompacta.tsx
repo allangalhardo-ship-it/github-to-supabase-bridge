@@ -86,6 +86,16 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
     });
   }, [produtos, quadranteFiltro, filtroCategoria, filtroSaude, busca]);
 
+  // Mediana de quantidades vendidas (usa só quem vendeu) — para Pricing Score
+  const medianaQuantidades = useMemo(() => {
+    const qtds = produtos
+      .filter(p => p.quantidadeVendida > 0)
+      .map(p => p.quantidadeVendida)
+      .sort((a, b) => a - b);
+    if (qtds.length === 0) return 1;
+    return qtds[Math.floor(qtds.length / 2)];
+  }, [produtos]);
+
   // Ordenar: críticos primeiro, depois por margem
   const produtosOrdenados = useMemo(() => {
     return [...produtosFiltrados].sort((a, b) => {
