@@ -26,7 +26,9 @@ interface ProdutoListaCompactaProps {
   quadranteFiltro: QuadranteMenu | null;
   categorias: string[];
   onSelectProduto: (produto: ProdutoAnalise) => void;
+  /** @deprecated mantido por compat; novo fluxo usa onAplicarPrecoCanal no Balcão */
   onAplicarPreco: (produtoId: string, novoPreco: number, precoAnterior: number) => void;
+  onAplicarPrecoCanal?: (produtoId: string, canal: string, novoPreco: number, precoAnterior: number) => void;
   isAplicando?: boolean;
   isMobile?: boolean;
   config?: ConfiguracoesPrecificacao;
@@ -38,6 +40,7 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
   categorias,
   onSelectProduto,
   onAplicarPreco,
+  onAplicarPrecoCanal,
   isAplicando,
   isMobile,
   config,
@@ -65,8 +68,23 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
     return produto.preco_venda; // fallback para preço base
   };
 
+  // Canal Balcão (âncora) — usado pelo botão "Aplicar" da lista
+  const canalBalcao = useMemo(
+    () => (canaisConfigurados || []).find(c => c.isBalcao),
+    [canaisConfigurados]
+  );
+
+  // Aplica o reajuste no canal Balcão (ou no preço base como fallback)
+  const aplicarReajuste = (produto: ProdutoAnalise, novoPreco: number) => {
+    if (canalBalcao && onAplicarPrecoCanal) {
+      const precoAtualBalcao = getPrecoCanal(produto, canalBalcao.id);
+      onAplicarPrecoCanal(produto.id, canalBalcao.id, novoPreco, precoAtualBalcao);
+    } else {
+      onAplicarPreco(produto.id, novoPreco, produto.preco_venda);
+    }
+  };
+
   // Lista de canais (Balcão real já vem de canais_venda como tipo=presencial).
-  // Não injetamos canal "base" virtual pra não duplicar Balcão.
   const canais = useMemo(() => {
     return (canaisConfigurados || []).map(canal => ({
       id: canal.id,
@@ -215,8 +233,12 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
           ) : (
             produtosOrdenados.map((produto) => {
               const quadInfo = getQuadranteInfo(produto.quadrante);
-              const precisaAjuste = produto.preco_venda < produto.precoSugerido * 0.95;
-              const diferencaPreco = produto.precoSugerido - produto.preco_venda;
+              // Preço de referência = Balcão (ou preço base como fallback)
+              const precoReferencia = canalBalcao
+                ? getPrecoCanal(produto, canalBalcao.id)
+                : produto.preco_venda;
+              const precisaAjuste = precoReferencia < produto.precoSugerido * 0.95;
+              const diferencaPreco = produto.precoSugerido - precoReferencia;
               const score = calcularPricingScore({
                 margemContribuicao: produto.margemContribuicao,
                 margemAlvo: config?.margem_desejada_padrao || 30,
@@ -349,22 +371,8 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
                             );
                           })}
                         </div>
-                        <div className="text-[10px] text-muted-foreground flex items-center gap-2 flex-wrap">
-                          <span>Custo: {formatCurrency(produto.custoInsumos)}</span>
-                          <span className="text-muted-foreground/50">•</span>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="cursor-help underline decoration-dotted underline-offset-2">
-                                Preço base: {formatCurrency(produto.preco_venda)}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="text-xs max-w-[260px]">
-                              <p className="font-medium mb-1">Preço base do produto</p>
-                              <p className="text-muted-foreground">
-                                Preço cadastrado no produto. Usado como referência e como preço do canal Balcão quando não há override. O botão "Aplicar" atualiza este valor; preços por canal continuam independentes.
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
+                        <div className="text-[10px] text-muted-foreground">
+                          Custo: {formatCurrency(produto.custoInsumos)}
                         </div>
                       </div>
                     </div>
@@ -376,9 +384,10 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
                           <Button
                             size="sm"
                             variant="secondary"
-                            onClick={() => onAplicarPreco(produto.id, produto.precoSugerido, produto.preco_venda)}
+                            onClick={() => aplicarReajuste(produto, produto.precoSugerido)}
                             disabled={isAplicando}
                             className="h-8 px-2 gap-1"
+                            title={canalBalcao ? `Aplicar no canal ${canalBalcao.nome}` : 'Aplicar'}
                           >
                             <Zap className="h-3.5 w-3.5" />
                             {!isMobile && 'Aplicar'}
@@ -389,7 +398,7 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => onAplicarPreco(produto.id, precoCharm, produto.preco_venda)}
+                                  onClick={() => aplicarReajuste(produto, precoCharm)}
                                   disabled={isAplicando}
                                   className="h-8 px-2 gap-1 text-[11px]"
                                 >
