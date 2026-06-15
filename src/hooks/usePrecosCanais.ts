@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -191,12 +192,14 @@ export function usePrecosCanais(produtoId?: string) {
     return precoCanal?.preco ?? precoBase;
   };
 
-  // Mapear preços do produto para um objeto por canal
-  const precosProdutoArray = Array.isArray(precosProduto) ? precosProduto : [];
-  const precosMap = precosProdutoArray.reduce((acc, p) => {
-    acc[p.canal] = p.preco;
-    return acc;
-  }, {} as Record<string, number>);
+  // Mapear preços do produto para um objeto por canal (memoizado para evitar resets em useEffect dos consumidores)
+  const precosMap = useMemo(() => {
+    const arr = Array.isArray(precosProduto) ? precosProduto : [];
+    return arr.reduce((acc, p) => {
+      acc[p.canal] = p.preco;
+      return acc;
+    }, {} as Record<string, number>);
+  }, [precosProduto]);
 
   return {
     canaisConfigurados,
