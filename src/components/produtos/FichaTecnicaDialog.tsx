@@ -436,9 +436,19 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
                       placeholder="0"
                       value={novaQuantidade}
                       onChange={(e) => setNovaQuantidade(e.target.value)}
-                      className="w-24 h-8 text-center"
+                      className="w-20 h-8 text-center"
                     />
-                    <span className="text-sm font-medium text-muted-foreground">{novoInsumo.unidade_medida}</span>
+                    <Select
+                      value={novaUnidade || novoInsumo.unidade_medida}
+                      onValueChange={setNovaUnidade}
+                    >
+                      <SelectTrigger className="w-[72px] h-8"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {unidadesDoGrupo(novoInsumo.unidade_medida).map((u) => (
+                          <SelectItem key={u} value={u}>{u}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <div className="flex-1" />
                     <Button
                       type="button"
@@ -450,18 +460,29 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
                       Adicionar
                     </Button>
                   </div>
-                  
-                  {/* Preview do custo em tempo real */}
-                  {novaQuantidade && parseFloat(novaQuantidade) > 0 && (
-                    <div className="flex items-center justify-between text-xs bg-primary/10 rounded px-2 py-1.5 mt-2">
-                      <span className="text-muted-foreground">
-                        {parseFloat(novaQuantidade)} {novoInsumo.unidade_medida} × {formatCurrencySmartBRL(novoInsumo.custo_unitario)}
-                      </span>
-                      <span className="font-semibold text-primary">
-                        = {formatCurrencyBRL(parseFloat(novaQuantidade) * novoInsumo.custo_unitario)}
-                      </span>
-                    </div>
-                  )}
+
+                  {/* Preview do custo em tempo real (com conversão) */}
+                  {novaQuantidade && parseFloat(novaQuantidade) > 0 && (() => {
+                    const previewUnidade = novaUnidade || novoInsumo.unidade_medida;
+                    const previewCusto = calcularCustoItem({
+                      quantidade: parseFloat(novaQuantidade),
+                      unidade: previewUnidade,
+                      insumos: novoInsumo,
+                    });
+                    return (
+                      <div className="flex items-center justify-between text-xs bg-primary/10 rounded px-2 py-1.5 mt-2">
+                        <span className="text-muted-foreground">
+                          {parseFloat(novaQuantidade)} {previewUnidade}
+                          {previewUnidade !== novoInsumo.unidade_medida && (
+                            <> (= {novoInsumo.unidade_medida})</>
+                          )}
+                        </span>
+                        <span className="font-semibold text-primary">
+                          = {formatCurrencyBRL(previewCusto)}
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </div>
               ) : (
                 <Button
