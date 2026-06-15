@@ -532,28 +532,44 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
     </div>
   );
 
+  const canaisComMudanca = resultadosSimulacaoCMV.filter(c => {
+    if (c.precoFinal <= 0) return false;
+    const atual = getPrecoCanal(c.id);
+    return Math.abs(c.precoFinal - atual) >= 0.01;
+  });
+
   const rodapeFixo = (
-    <div className="border-t bg-background p-3 flex gap-2">
-      <Button
-        size="lg"
-        className="flex-1 gap-2"
-        onClick={() => {
-          resultadosSimulacaoCMV.forEach(canal => {
-            if (canal.precoFinal > 0) {
+    <div className="border-t bg-background p-3 flex flex-col gap-2">
+      {canaisComMudanca.length === 0 ? (
+        <p className="text-[11px] text-center text-muted-foreground">
+          Nenhum canal com alteração de preço.
+        </p>
+      ) : (
+        <p className="text-[11px] text-center text-muted-foreground">
+          {canaisComMudanca.length} {canaisComMudanca.length === 1 ? 'canal será atualizado' : 'canais serão atualizados'}
+        </p>
+      )}
+      <div className="flex gap-2">
+        <Button
+          size="lg"
+          className="flex-1 gap-2"
+          onClick={() => {
+            canaisComMudanca.forEach(canal => {
               handleAplicar(canal.precoFinal, canal.id);
-            }
-          });
-        }}
-        disabled={isAplicando || resultadosSimulacaoCMV.every(c => c.precoFinal <= 0)}
-      >
-        <Zap className="h-4 w-4" />
-        Aplicar Todos
-      </Button>
-      <Button size="lg" variant="outline" onClick={onClose}>
-        <X className="h-4 w-4" />
-      </Button>
+            });
+          }}
+          disabled={isAplicando || canaisComMudanca.length === 0}
+        >
+          <Zap className="h-4 w-4" />
+          Aplicar {canaisComMudanca.length > 0 ? `(${canaisComMudanca.length})` : ''}
+        </Button>
+        <Button size="lg" variant="outline" onClick={onClose}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
+
 
   if (isMobile) {
     return (
