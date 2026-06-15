@@ -259,7 +259,12 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
                       }
                     >
                       <item.icon className="h-4 w-4 opacity-80" />
-                      {item.label}
+                      <span className="flex-1">{item.label}</span>
+                      {item.to === '/precificacao' && qtdAlertasCusto > 0 && (
+                        <Badge variant="destructive" className="h-4 min-w-[16px] px-1 text-[10px]">
+                          {qtdAlertasCusto}
+                        </Badge>
+                      )}
                     </NavLink>
                   ))}
                 </CollapsibleContent>
