@@ -579,6 +579,9 @@ const Produtos = () => {
             fichaTecnica={novoProduto.fichas_tecnicas || []}
             rendimentoPadrao={novoProduto.rendimento_padrao}
             observacoesFicha={novoProduto.observacoes_ficha}
+            precoBase={novoProduto.preco_venda}
+            impostoPercentual={config?.imposto_medio_sobre_vendas || 0}
+            margemAlvo={config?.margem_desejada_padrao || 30}
             defaultOpen={true}
             onClose={() => setOpenFichaForProductId(null)}
           />

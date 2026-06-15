@@ -341,6 +341,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 fichaTecnica={produto.fichas_tecnicas || []}
                 rendimentoPadrao={produto.rendimento_padrao}
                 observacoesFicha={produto.observacoes_ficha}
+                precoBase={precoVenda}
+                impostoPercentual={config?.imposto_medio_sobre_vendas || 0}
+                margemAlvo={config?.margem_desejada_padrao || 30}
                 trigger={
                   <Button variant="secondary" size="sm" className="h-8 px-2 text-xs flex-1 gap-1.5">
                     <FileText className="h-3.5 w-3.5" />
@@ -482,6 +485,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
               fichaTecnica={produto.fichas_tecnicas || []}
               rendimentoPadrao={produto.rendimento_padrao}
               observacoesFicha={produto.observacoes_ficha}
+              precoBase={precoVenda}
+              impostoPercentual={config?.imposto_medio_sobre_vendas || 0}
+              margemAlvo={config?.margem_desejada_padrao || 30}
               trigger={
                 <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1">
                   <FileText className="h-3.5 w-3.5" />
