@@ -580,7 +580,6 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
                       </div>
                     );
                   })}
-                  ))}
                 </div>
               </div>
             )}
