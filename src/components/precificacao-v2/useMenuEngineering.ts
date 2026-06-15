@@ -290,8 +290,9 @@ export function useMenuEngineering() {
       const imposto = config.imposto_medio_sobre_vendas / 100;
       const taxa = taxaCanalEfetiva / 100;
       const divisor = 1 - margem - imposto - taxa;
-      const precoSugeridoViavel = divisor > 0;
-      const precoSugerido = precoSugeridoViavel ? custoInsumos / divisor : custoInsumos * 2;
+      const precoSugeridoViavel = divisor > 0 && custoInsumos > 0;
+      // Quando inviável, não inventa preço — UI mostra mensagem clara em vez do valor
+      const precoSugerido = precoSugeridoViavel ? custoInsumos / divisor : 0;
 
       // Saúde
       const saudeMargem: 'critico' | 'atencao' | 'saudavel' = 
