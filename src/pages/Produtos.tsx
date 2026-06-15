@@ -89,11 +89,13 @@ const Produtos = () => {
           fichas_tecnicas (
             id,
             quantidade,
+            unidade,
             insumos (
               id,
               nome,
               unidade_medida,
-              custo_unitario
+              custo_unitario,
+              fator_perda
             )
           )
         `)
