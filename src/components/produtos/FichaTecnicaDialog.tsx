@@ -240,14 +240,16 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
     setSaving(true);
     
     try {
-      // 1. Atualizar produto (observações)
+      // 1. Atualizar produto (observações + rendimento)
+      const rendimentoNum = parseInt(rendimentoLocal, 10);
       const { error: produtoError } = await supabase
         .from('produtos')
         .update({
           observacoes_ficha: observacoes || null,
+          rendimento_padrao: Number.isFinite(rendimentoNum) && rendimentoNum > 0 ? rendimentoNum : null,
         })
         .eq('id', produtoId);
-      
+
       if (produtoError) throw produtoError;
 
       // 2. Deletar itens marcados
@@ -269,18 +271,20 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
             produto_id: produtoId,
             insumo_id: item.insumo.id,
             quantidade: item.quantidade,
+            unidade: item.unidade,
           })));
         if (error) throw error;
       }
 
-      // 4. Atualizar quantidades de itens existentes
+      // 4. Atualizar quantidade + unidade de itens existentes
       const itensParaAtualizar = localItems.filter(item => !item.isNew && !item.isDeleted && item.id);
       for (const item of itensParaAtualizar) {
         const original = fichaTecnica.find(ft => ft.id === item.id);
-        if (original && original.quantidade !== item.quantidade) {
+        const unidadeOriginal = original?.unidade || original?.insumos?.unidade_medida;
+        if (original && (original.quantidade !== item.quantidade || unidadeOriginal !== item.unidade)) {
           const { error } = await supabase
             .from('fichas_tecnicas')
-            .update({ quantidade: item.quantidade })
+            .update({ quantidade: item.quantidade, unidade: item.unidade })
             .eq('id', item.id);
           if (error) throw error;
         }
