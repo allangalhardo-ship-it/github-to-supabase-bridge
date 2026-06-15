@@ -181,23 +181,29 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
   // Verificar se há mudanças
   const hasChanges = useMemo(() => {
     const originalObs = observacoesFicha || '';
-    
+    const originalRend = (rendimentoPadrao ?? '').toString();
+
     if (observacoes !== originalObs) return true;
-    
+    if (rendimentoLocal !== originalRend) return true;
+
     // Verificar se há itens novos ou deletados
     if (localItems.some(item => item.isNew || item.isDeleted)) return true;
-    
-    // Verificar se quantidades mudaram
-    const originalMap = new Map(fichaTecnica.map(ft => [ft.id, ft.quantidade]));
+
+    // Verificar se quantidades/unidades mudaram
+    const originalMap = new Map(
+      fichaTecnica
+        .filter(ft => ft.insumos !== null)
+        .map(ft => [ft.id, { q: ft.quantidade, u: ft.unidade || ft.insumos!.unidade_medida }]),
+    );
     for (const item of localItems) {
       if (item.id && !item.isNew && !item.isDeleted) {
-        const originalQty = originalMap.get(item.id);
-        if (originalQty !== item.quantidade) return true;
+        const orig = originalMap.get(item.id);
+        if (!orig || orig.q !== item.quantidade || orig.u !== item.unidade) return true;
       }
     }
-    
+
     return false;
-  }, [localItems, observacoes, fichaTecnica, observacoesFicha]);
+  }, [localItems, observacoes, rendimentoLocal, rendimentoPadrao, fichaTecnica, observacoesFicha]);
 
   // Adicionar item localmente
   const handleAddItem = () => {
