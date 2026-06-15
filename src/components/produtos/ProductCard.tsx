@@ -37,12 +37,14 @@ import {
 interface FichaTecnicaItem {
   id: string;
   quantidade: number;
+  unidade: string | null;
   insumos: {
     id: string;
     nome: string;
     unidade_medida: string;
     custo_unitario: number;
-  };
+    fator_perda?: number | null;
+  } | null;
 }
 
 interface ProductCardProps {
