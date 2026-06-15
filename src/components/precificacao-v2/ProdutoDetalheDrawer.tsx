@@ -121,7 +121,16 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
     return { margem, lucro };
   }, [produto?.custoInsumos, imposto]);
 
-  // Calcular preço necessário para atingir CMV em um canal
+  // Calcular CMV de um canal: custo / receita líquida (descontada taxa do canal)
+  // ÚNICA fórmula de CMV usada em TODA a tela — garante consistência entre
+  // "Situação Atual" e o "Simulador por CMV".
+  const calcularCmvCanal = useCallback((preco: number, taxaCanal: number): number => {
+    if (!produto || preco <= 0) return 0;
+    const receitaLiquida = preco * (1 - taxaCanal / 100);
+    return receitaLiquida > 0 ? (produto.custoInsumos / receitaLiquida) * 100 : 0;
+  }, [produto?.custoInsumos]);
+
+  // Calcular preço necessário para atingir CMV em um canal (inverso de calcularCmvCanal)
   const calcularPrecoParaCMV = useCallback((cmvAlvo: number, taxaCanal: number): number | null => {
     if (!produto || cmvAlvo <= 0 || cmvAlvo >= 100) return null;
     const cmv = cmvAlvo / 100;
