@@ -287,13 +287,15 @@ export function useMenuEngineering(periodo: PeriodoBCG = 30) {
       const lucroUnitario = precoEfetivo - custoInsumos - impostoValor - taxaValor;
       const margemContribuicao = precoEfetivo > 0 ? (lucroUnitario / precoEfetivo) * 100 : 0;
 
-      // Preço sugerido — UNIFICADO com o simulador do drawer:
-      // usa cmv_alvo como fonte da verdade (mesma fórmula).
-      // preco = custo / (cmv_alvo * (1 - taxa_canal))
-      // Isso garante que se o usuário já equalizou os preços por canal pelo
-      // cmv_alvo, a lista NÃO sugere reajustes desnecessários.
+      // Preço sugerido do produto = canal âncora (Balcão), não média de vendas.
+      // Preços de apps/WhatsApp são calculados individualmente nos componentes por canal.
+      // Usar taxa ponderada por vendas aqui gerava falso reajuste: Balcão já estava em 50% CMV,
+      // mas uma venda em canal com taxa alta empurrava a sugestão global para ~R$35,90.
       const cmvAlvoFrac = (config.cmv_alvo || 35) / 100;
-      const taxa = taxaCanalEfetiva / 100;
+      const taxaReferenciaPreco = canaisInfo
+        ? (Object.values(canaisInfo).find(c => c.isBalcao)?.taxa ?? taxaCanalEfetiva)
+        : taxaCanalEfetiva;
+      const taxa = taxaReferenciaPreco / 100;
       const fatorReceita = 1 - taxa;
       const precoSugeridoViavel = cmvAlvoFrac > 0 && cmvAlvoFrac < 1 && fatorReceita > 0 && custoInsumos > 0;
       const precoSugerido = precoSugeridoViavel ? custoInsumos / (cmvAlvoFrac * fatorReceita) : 0;
