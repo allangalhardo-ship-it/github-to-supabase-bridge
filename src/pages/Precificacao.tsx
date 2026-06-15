@@ -229,12 +229,24 @@ const Precificacao = () => {
             Analise popularidade × rentabilidade para decisões estratégicas
           </p>
         </div>
-        <Button variant="outline" size="sm" asChild>
-          <Link to="/configuracoes" className="gap-2">
-            <Settings className="h-4 w-4" />
-            Configurações
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Select value={String(periodo)} onValueChange={(v) => setPeriodo(Number(v) as PeriodoBCG)}>
+            <SelectTrigger className="w-[140px]" size="sm" aria-label="Período de análise">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">Últimos 7 dias</SelectItem>
+              <SelectItem value="30">Últimos 30 dias</SelectItem>
+              <SelectItem value="90">Últimos 90 dias</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/configuracoes" className="gap-2">
+              <Settings className="h-4 w-4" />
+              <span className="hidden sm:inline">Configurações</span>
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Alerta de configuração incompleta */}
