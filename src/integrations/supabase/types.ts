@@ -726,6 +726,7 @@ export type Database = {
           insumo_id: string
           produto_id: string
           quantidade: number
+          unidade: string | null
         }
         Insert: {
           created_at?: string
@@ -733,6 +734,7 @@ export type Database = {
           insumo_id: string
           produto_id: string
           quantidade?: number
+          unidade?: string | null
         }
         Update: {
           created_at?: string
@@ -740,6 +742,7 @@ export type Database = {
           insumo_id?: string
           produto_id?: string
           quantidade?: number
+          unidade?: string | null
         }
         Relationships: [
           {
@@ -950,6 +953,7 @@ export type Database = {
           empresa_id: string
           estoque_atual: number
           estoque_minimo: number
+          fator_perda: number
           id: string
           is_intermediario: boolean
           nome: string
@@ -963,6 +967,7 @@ export type Database = {
           empresa_id: string
           estoque_atual?: number
           estoque_minimo?: number
+          fator_perda?: number
           id?: string
           is_intermediario?: boolean
           nome: string
@@ -976,6 +981,7 @@ export type Database = {
           empresa_id?: string
           estoque_atual?: number
           estoque_minimo?: number
+          fator_perda?: number
           id?: string
           is_intermediario?: boolean
           nome?: string
@@ -1687,6 +1693,7 @@ export type Database = {
           cliente_id: string | null
           comissao_plataforma: number | null
           created_at: string
+          custo_snapshot: number | null
           data_venda: string
           descricao_produto: string | null
           empresa_id: string
@@ -1710,6 +1717,7 @@ export type Database = {
           cliente_id?: string | null
           comissao_plataforma?: number | null
           created_at?: string
+          custo_snapshot?: number | null
           data_venda?: string
           descricao_produto?: string | null
           empresa_id: string
@@ -1733,6 +1741,7 @@ export type Database = {
           cliente_id?: string | null
           comissao_plataforma?: number | null
           created_at?: string
+          custo_snapshot?: number | null
           data_venda?: string
           descricao_produto?: string | null
           empresa_id?: string
@@ -1878,6 +1887,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      baixar_insumo_recursivo: {
+        Args: {
+          p_depth: number
+          p_empresa_id: string
+          p_insumo_id: string
+          p_quantidade: number
+          p_venda_id: string
+        }
+        Returns: undefined
+      }
+      calcular_custo_ficha: { Args: { p_produto_id: string }; Returns: number }
       calcular_margem_minima_produto: {
         Args: {
           p_custo_ficha: number
@@ -1888,6 +1908,10 @@ export type Database = {
           canal_pior: string
           margem_min: number
         }[]
+      }
+      converter_unidade: {
+        Args: { p_de: string; p_para: string; p_qtd: number }
+        Returns: number
       }
       get_dashboard_vendas: {
         Args: {
@@ -1949,6 +1973,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      recalcular_custo_intermediario: {
+        Args: { p_depth?: number; p_insumo_id: string }
+        Returns: number
       }
       resolver_alertas_custo_produto: {
         Args: { p_produto_id: string }
