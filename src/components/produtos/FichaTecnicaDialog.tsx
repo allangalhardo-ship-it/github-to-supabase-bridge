@@ -207,12 +207,14 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
       tempId: `new-${Date.now()}`,
       insumo: novoInsumo,
       quantidade: parseFloat(novaQuantidade) || 0,
+      unidade: novaUnidade || novoInsumo.unidade_medida,
       isNew: true,
     };
-    
+
     setLocalItems(prev => [...prev, newItem]);
     setNovoInsumo(null);
     setNovaQuantidade('');
+    setNovaUnidade('');
   };
 
   // Remover item localmente
