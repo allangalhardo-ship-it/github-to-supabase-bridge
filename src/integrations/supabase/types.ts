@@ -90,6 +90,81 @@ export type Database = {
           },
         ]
       }
+      alertas_custo: {
+        Row: {
+          canal_pior: string | null
+          created_at: string
+          custo_anterior: number
+          custo_ficha_anterior: number
+          custo_ficha_novo: number
+          custo_novo: number
+          empresa_id: string
+          id: string
+          insumo_id: string
+          margem_antes: number | null
+          margem_depois: number | null
+          margem_meta: number | null
+          produto_id: string
+          resolved_at: string | null
+          status: string
+          updated_at: string
+          variacao_pct: number
+        }
+        Insert: {
+          canal_pior?: string | null
+          created_at?: string
+          custo_anterior?: number
+          custo_ficha_anterior?: number
+          custo_ficha_novo?: number
+          custo_novo?: number
+          empresa_id: string
+          id?: string
+          insumo_id: string
+          margem_antes?: number | null
+          margem_depois?: number | null
+          margem_meta?: number | null
+          produto_id: string
+          resolved_at?: string | null
+          status?: string
+          updated_at?: string
+          variacao_pct?: number
+        }
+        Update: {
+          canal_pior?: string | null
+          created_at?: string
+          custo_anterior?: number
+          custo_ficha_anterior?: number
+          custo_ficha_novo?: number
+          custo_novo?: number
+          empresa_id?: string
+          id?: string
+          insumo_id?: string
+          margem_antes?: number | null
+          margem_depois?: number | null
+          margem_meta?: number | null
+          produto_id?: string
+          resolved_at?: string | null
+          status?: string
+          updated_at?: string
+          variacao_pct?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alertas_custo_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alertas_custo_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bairros_entrega: {
         Row: {
           ativo: boolean
@@ -1803,6 +1878,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calcular_margem_minima_produto: {
+        Args: {
+          p_custo_ficha: number
+          p_empresa_id: string
+          p_produto_id: string
+        }
+        Returns: {
+          canal_pior: string
+          margem_min: number
+        }[]
+      }
       get_dashboard_vendas: {
         Args: {
           p_data_fim: string
@@ -1863,6 +1949,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      resolver_alertas_custo_produto: {
+        Args: { p_produto_id: string }
+        Returns: undefined
       }
     }
     Enums: {

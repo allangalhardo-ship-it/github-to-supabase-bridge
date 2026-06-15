@@ -3,16 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, TrendingUp, DollarSign, Bell } from 'lucide-react';
+import { AlertTriangle, TrendingUp, DollarSign, X } from 'lucide-react';
 import { BotChef } from '@/components/brand/BotChef';
 import { formatCurrencyBRL } from '@/lib/format';
-
-interface AlertaInsumo {
-  nome: string;
-  variacao: number;
-  precoAnterior: number;
-  precoNovo: number;
-}
+import { useAlertasCusto } from '@/hooks/useAlertasCusto';
 
 interface AlertasInteligentesProps {
   historicoPrecos: any[] | undefined;
@@ -30,25 +24,7 @@ const AlertasInteligentes: React.FC<AlertasInteligentesProps> = ({
   produtosMargemNegativa = 0,
 }) => {
   const navigate = useNavigate();
-
-  const insumosComAlta = useMemo(() => {
-    if (!historicoPrecos) return [];
-    const porInsumo: Record<string, AlertaInsumo> = {};
-    historicoPrecos.forEach(h => {
-      if (h.variacao_percentual && h.variacao_percentual > 10) {
-        const nome = h.insumos?.nome || 'Insumo';
-        if (!porInsumo[nome]) {
-          porInsumo[nome] = {
-            nome,
-            variacao: h.variacao_percentual,
-            precoAnterior: h.preco_anterior || 0,
-            precoNovo: h.preco_novo,
-          };
-        }
-      }
-    });
-    return Object.values(porInsumo).slice(0, 3);
-  }, [historicoPrecos]);
+  const { alertas: alertasCusto, dispensar, isDispensando } = useAlertasCusto();
 
   const alertas: Array<{
     tipo: 'critico' | 'atencao' | 'info';
@@ -56,7 +32,9 @@ const AlertasInteligentes: React.FC<AlertasInteligentesProps> = ({
     titulo: string;
     descricao: string;
     acao?: { label: string; rota: string };
+    onDispensar?: () => void;
   }> = [];
+
 
   if (produtosMargemNegativa > 0) {
     alertas.push({
@@ -78,13 +56,17 @@ const AlertasInteligentes: React.FC<AlertasInteligentesProps> = ({
     });
   }
 
-  insumosComAlta.forEach(insumo => {
+  // Alertas persistidos (custo de insumo subiu + margem caiu abaixo da meta)
+  alertasCusto.forEach((a) => {
+    const insumoNome = a.insumos?.nome || 'Insumo';
+    const produtoNome = a.produtos?.nome || 'produto';
     alertas.push({
-      tipo: 'atencao',
+      tipo: 'critico',
       icone: <TrendingUp className="h-4 w-4" />,
-      titulo: `${insumo.nome} subiu ${insumo.variacao.toFixed(0)}%`,
-      descricao: `De ${formatCurrencyBRL(insumo.precoAnterior)} para ${formatCurrencyBRL(insumo.precoNovo)}. Verifique seus produtos.`,
-      acao: { label: 'Ver precificação', rota: '/precificacao' },
+      titulo: `${insumoNome} subiu ${a.variacao_pct.toFixed(0)}% — ${produtoNome} em risco`,
+      descricao: `De ${formatCurrencyBRL(a.custo_anterior)} para ${formatCurrencyBRL(a.custo_novo)}. Margem agora em ${a.margem_depois?.toFixed(1) ?? '—'}% no ${a.canal_pior ?? 'canal'} (meta ${a.margem_meta?.toFixed(0) ?? '?'}%).`,
+      acao: { label: 'Reajustar preço', rota: '/precificacao' },
+      onDispensar: () => dispensar(a.id),
     });
   });
 
@@ -126,16 +108,29 @@ const AlertasInteligentes: React.FC<AlertasInteligentesProps> = ({
               <div className="flex-1 min-w-0">
                 <p className="font-medium">{alerta.titulo}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{alerta.descricao}</p>
-                {alerta.acao && (
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="h-auto p-0 mt-1 text-xs"
-                    onClick={() => navigate(alerta.acao!.rota)}
-                  >
-                    {alerta.acao.label} →
-                  </Button>
-                )}
+                <div className="flex items-center gap-3 mt-1">
+                  {alerta.acao && (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-xs"
+                      onClick={() => navigate(alerta.acao!.rota)}
+                    >
+                      {alerta.acao.label} →
+                    </Button>
+                  )}
+                  {alerta.onDispensar && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto py-0 px-1 text-xs text-muted-foreground"
+                      onClick={alerta.onDispensar}
+                      disabled={isDispensando}
+                    >
+                      <X className="h-3 w-3 mr-1" /> Dispensar
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </div>

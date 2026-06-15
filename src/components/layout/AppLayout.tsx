@@ -12,6 +12,7 @@ import OfflineIndicator from '@/components/layout/OfflineIndicator';
 import NotificationSettings from '@/components/layout/NotificationSettings';
 import { UpdateIndicator } from '@/components/pwa/UpdateNotification';
 import { useAlertNotifications } from '@/hooks/useAlertNotifications';
+import { useAlertasCusto } from '@/hooks/useAlertasCusto';
 import { useSessionTracker } from '@/hooks/useSessionTracker';
 import {
   Store,
@@ -124,6 +125,7 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
   const { subscription } = useSubscription();
   const navigate = useNavigate();
   const location = window.location.pathname;
+  const { qtdAtivos: qtdAlertasCusto } = useAlertasCusto();
 
   const handleSignOut = async () => {
     await signOut();
@@ -257,7 +259,12 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
                       }
                     >
                       <item.icon className="h-4 w-4 opacity-80" />
-                      {item.label}
+                      <span className="flex-1">{item.label}</span>
+                      {item.to === '/precificacao' && qtdAlertasCusto > 0 && (
+                        <Badge variant="destructive" className="h-4 min-w-[16px] px-1 text-[10px]">
+                          {qtdAlertasCusto}
+                        </Badge>
+                      )}
                     </NavLink>
                   ))}
                 </CollapsibleContent>
