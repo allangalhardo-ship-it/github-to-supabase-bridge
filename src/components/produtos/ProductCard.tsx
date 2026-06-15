@@ -89,8 +89,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const { canaisConfigurados } = usePrecosCanais();
 
   // Buscar preços por canal para este produto
+  // IMPORTANTE: usar queryKey distinta de ['precos-canais', id] (usada pelo hook usePrecosCanais)
+  // para não colidir caches (mapa vs array) — colisão zera os preços ao abrir a ficha inline.
   const { data: precosCanais } = useQuery({
-    queryKey: ['precos-canais', produto.id],
+    queryKey: ['precos-canais-map', produto.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('precos_canais')
