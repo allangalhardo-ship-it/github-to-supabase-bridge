@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { 
   Drawer,
@@ -27,6 +28,7 @@ import {
   Receipt,
   Percent,
   Sparkles,
+  HelpCircle,
 } from 'lucide-react';
 import { ProdutoAnalise, ConfiguracoesPrecificacao, formatCurrency, formatPercent, getQuadranteInfo } from './types';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -311,7 +313,25 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
         <div className="flex items-center gap-2">
           <Percent className="h-4 w-4 text-primary" />
           <Label className="text-sm font-semibold">Simulador de Preço por CMV</Label>
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="O que é CMV?">
+                  <HelpCircle className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-[260px] text-xs">
+                <p className="font-semibold mb-1">CMV — Custo da Mercadoria Vendida</p>
+                <p className="text-muted-foreground">
+                  É quanto o insumo do prato representa do preço de venda.
+                  Ex.: prato de R$ 30 com R$ 9 de ingredientes = CMV de 30%.
+                  Quanto menor, mais sobra pra cobrir aluguel, equipe e lucro.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
+
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
@@ -421,9 +441,21 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
                       {canal.icone}
                       <span className="text-sm font-medium truncate">{canal.nome}</span>
                       {canal.taxa > 0 && (
-                        <Badge variant="outline" className="text-[9px] px-1.5 h-4 shrink-0">
-                          -{canal.taxa}%
-                        </Badge>
+                        <TooltipProvider delayDuration={150}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="outline" className="text-[9px] px-1.5 h-4 shrink-0 cursor-help">
+                                -{canal.taxa}%
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-[240px] text-xs">
+                              <p className="font-semibold mb-1">Taxa do canal: {canal.taxa}%</p>
+                              <p className="text-muted-foreground">
+                                Comissão que {canal.nome} desconta de cada venda. O preço sugerido já compensa essa taxa para você não perder margem.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
