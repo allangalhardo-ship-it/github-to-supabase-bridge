@@ -11,8 +11,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Trash2, FileText, Search, Calculator, ExternalLink, Lightbulb, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import BuscarInsumoDialog from './BuscarInsumoDialog';
+import CustoMargemCard from './CustoMargemCard';
 import { InsumoIcon } from '@/lib/insumoIconUtils';
 import { formatCurrencyBRL, formatCurrencySmartBRL } from '@/lib/format';
+
 
 interface FichaTecnicaItem {
   id: string;
@@ -31,10 +33,17 @@ interface FichaTecnicaDialogProps {
   fichaTecnica: FichaTecnicaItem[];
   rendimentoPadrao?: number | null;
   observacoesFicha?: string | null;
+  /** Preço base do produto (Balcão) — para mostrar margem em tempo real */
+  precoBase?: number;
+  /** % de imposto médio configurado — para cálculo de margem */
+  impostoPercentual?: number;
+  /** Margem-alvo configurada (% — para destacar verde/amarelo/vermelho) */
+  margemAlvo?: number;
   trigger?: React.ReactNode;
   defaultOpen?: boolean;
   onClose?: () => void;
 }
+
 
 interface InsumoSelecionado {
   id: string;
@@ -58,10 +67,14 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
   fichaTecnica, 
   rendimentoPadrao,
   observacoesFicha,
+  precoBase = 0,
+  impostoPercentual = 0,
+  margemAlvo = 30,
   trigger,
   defaultOpen = false,
   onClose,
 }) => {
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(defaultOpen);
