@@ -56,13 +56,17 @@ const AlertasInteligentes: React.FC<AlertasInteligentesProps> = ({
     });
   }
 
-  insumosComAlta.forEach(insumo => {
+  // Alertas persistidos (custo de insumo subiu + margem caiu abaixo da meta)
+  alertasCusto.forEach((a) => {
+    const insumoNome = a.insumos?.nome || 'Insumo';
+    const produtoNome = a.produtos?.nome || 'produto';
     alertas.push({
-      tipo: 'atencao',
+      tipo: 'critico',
       icone: <TrendingUp className="h-4 w-4" />,
-      titulo: `${insumo.nome} subiu ${insumo.variacao.toFixed(0)}%`,
-      descricao: `De ${formatCurrencyBRL(insumo.precoAnterior)} para ${formatCurrencyBRL(insumo.precoNovo)}. Verifique seus produtos.`,
-      acao: { label: 'Ver precificação', rota: '/precificacao' },
+      titulo: `${insumoNome} subiu ${a.variacao_pct.toFixed(0)}% — ${produtoNome} em risco`,
+      descricao: `De ${formatCurrencyBRL(a.custo_anterior)} para ${formatCurrencyBRL(a.custo_novo)}. Margem agora em ${a.margem_depois?.toFixed(1) ?? '—'}% no ${a.canal_pior ?? 'canal'} (meta ${a.margem_meta?.toFixed(0) ?? '?'}%).`,
+      acao: { label: 'Reajustar preço', rota: '/precificacao' },
+      onDispensar: () => dispensar(a.id),
     });
   });
 
