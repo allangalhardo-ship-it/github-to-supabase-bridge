@@ -108,16 +108,29 @@ const AlertasInteligentes: React.FC<AlertasInteligentesProps> = ({
               <div className="flex-1 min-w-0">
                 <p className="font-medium">{alerta.titulo}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{alerta.descricao}</p>
-                {alerta.acao && (
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="h-auto p-0 mt-1 text-xs"
-                    onClick={() => navigate(alerta.acao!.rota)}
-                  >
-                    {alerta.acao.label} →
-                  </Button>
-                )}
+                <div className="flex items-center gap-3 mt-1">
+                  {alerta.acao && (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-xs"
+                      onClick={() => navigate(alerta.acao!.rota)}
+                    >
+                      {alerta.acao.label} →
+                    </Button>
+                  )}
+                  {alerta.onDispensar && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto py-0 px-1 text-xs text-muted-foreground"
+                      onClick={alerta.onDispensar}
+                      disabled={isDispensando}
+                    >
+                      <X className="h-3 w-3 mr-1" /> Dispensar
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
