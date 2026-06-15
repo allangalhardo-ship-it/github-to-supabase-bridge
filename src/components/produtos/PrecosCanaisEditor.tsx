@@ -14,6 +14,8 @@ interface PrecosCanaisEditorProps {
   precoBase: number;
   custoInsumos: number;
   impostoPercentual?: number;
+  cmvAlvo?: number;
+  autoSugerir?: boolean;
   onSave?: () => void;
 }
 
@@ -22,6 +24,8 @@ const PrecosCanaisEditor: React.FC<PrecosCanaisEditorProps> = ({
   precoBase,
   custoInsumos,
   impostoPercentual = 0,
+  cmvAlvo = 35,
+  autoSugerir = false,
   onSave,
 }) => {
   const { 
@@ -91,20 +95,39 @@ const PrecosCanaisEditor: React.FC<PrecosCanaisEditorProps> = ({
   };
 
   // Preencher preços sugeridos baseado no CMV alvo
-  const preencherSugeridos = (cmvAlvo: number = 35) => {
+  const preencherSugeridos = (cmv: number = cmvAlvo) => {
     const novosPrecos: Record<string, string> = {};
     canaisConfigurados?.forEach(canal => {
       const taxa = canal.taxa / 100;
-      const cmv = cmvAlvo / 100;
-      const fatorReceita = 1 - taxa;
-      if (fatorReceita > 0 && cmv > 0) {
-        const precoSugerido = custoInsumos / (cmv * fatorReceita);
+      const imposto = impostoPercentual / 100;
+      const cmvFrac = cmv / 100;
+      const fatorReceita = 1 - taxa - imposto;
+      if (fatorReceita > 0 && cmvFrac > 0) {
+        const precoSugerido = custoInsumos / (cmvFrac * fatorReceita);
         novosPrecos[canal.id] = precoSugerido.toFixed(2);
       }
     });
     setPrecos(novosPrecos);
     setHasChanges(true);
   };
+
+  // Auto-sugerir preços na primeira carga quando o produto ainda não tem nenhum preço salvo
+  const autoSugeridoRef = React.useRef(false);
+  React.useEffect(() => {
+    if (
+      autoSugerir &&
+      !autoSugeridoRef.current &&
+      !isLoadingPrecos &&
+      custoInsumos > 0 &&
+      canaisConfigurados &&
+      canaisConfigurados.length > 0 &&
+      Object.keys(precosMap).length === 0
+    ) {
+      autoSugeridoRef.current = true;
+      preencherSugeridos(cmvAlvo);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSugerir, isLoadingPrecos, custoInsumos, canaisConfigurados, precosMap, cmvAlvo]);
 
   if (isLoadingPrecos) {
     return <Skeleton className="h-48" />;
@@ -121,11 +144,13 @@ const PrecosCanaisEditor: React.FC<PrecosCanaisEditorProps> = ({
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => preencherSugeridos(35)}
+            onClick={() => preencherSugeridos(cmvAlvo)}
             className="text-xs gap-1"
+            disabled={custoInsumos <= 0}
+            title={custoInsumos <= 0 ? 'Adicione ingredientes na ficha para sugerir preços' : `Sugerir preços com CMV ${cmvAlvo}%`}
           >
             <Calculator className="h-3 w-3" />
-            CMV 35%
+            CMV {cmvAlvo}%
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
