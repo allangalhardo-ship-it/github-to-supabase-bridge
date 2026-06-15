@@ -213,7 +213,7 @@ const ImpactoReajusteReport: React.FC<ImpactoReajusteReportProps> = ({
                   </div>
                 </div>
 
-                {/* Só mostra preço base se NÃO tem múltiplos canais */}
+                {/* Só mostra preço único quando NÃO tem múltiplos canais */}
                 {!temCanais && (
                   <div className="flex items-center gap-2 text-sm shrink-0">
                     <span className="text-muted-foreground">{formatCurrency(imp.precoAtual)}</span>

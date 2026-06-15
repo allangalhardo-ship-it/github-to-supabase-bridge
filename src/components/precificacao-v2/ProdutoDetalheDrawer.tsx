@@ -213,7 +213,7 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
 
   const handleAplicar = (preco: number, canal?: string) => {
     if (canal && canal !== 'base' && onAplicarPrecoCanal) {
-      // Usa o preço atual do canal (não o preço base do produto) como precoAnterior
+      // Usa o preço atual do canal como precoAnterior
       const precoAnteriorCanal = getPrecoCanal(canal);
       onAplicarPrecoCanal(produto.id, canal, preco, precoAnteriorCanal);
     } else {
