@@ -125,31 +125,51 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
   const [observacoes, setObservacoes] = useState('');
   const [novoInsumo, setNovoInsumo] = useState<InsumoSelecionado | null>(null);
   const [novaQuantidade, setNovaQuantidade] = useState('');
+  const [novaUnidade, setNovaUnidade] = useState('');
+  const [rendimentoLocal, setRendimentoLocal] = useState<string>('');
+  // (mantido valor inicial vindo dos props)
 
   // Inicializar estado local quando abrir o dialog
   useEffect(() => {
     if (open) {
       setLocalItems(
-        fichaTecnica.map((ft) => ({
-          tempId: `existing-${ft.id}`,
-          id: ft.id,
-          insumo: ft.insumos,
-          quantidade: ft.quantidade,
-          isNew: false,
-          isDeleted: false,
-        }))
+        fichaTecnica
+          .filter((ft) => ft.insumos !== null) // descarta itens com insumo deletado
+          .map((ft) => ({
+            tempId: `existing-${ft.id}`,
+            id: ft.id,
+            insumo: ft.insumos!,
+            quantidade: ft.quantidade,
+            unidade: ft.unidade || ft.insumos!.unidade_medida,
+            isNew: false,
+            isDeleted: false,
+          })),
       );
       setObservacoes(observacoesFicha || '');
       setNovoInsumo(null);
       setNovaQuantidade('');
+      setNovaUnidade('');
+      setRendimentoLocal((rendimentoPadrao ?? '').toString());
     }
-  }, [open, fichaTecnica, observacoesFicha]);
+  }, [open, fichaTecnica, observacoesFicha, rendimentoPadrao]);
 
-  // Calcular custo total (apenas itens não deletados)
+  // itens com insumo deletado (alerta visual)
+  const itensOrfaos = fichaTecnica.filter((ft) => ft.insumos === null);
+
+  // Calcular custo total (apenas itens não deletados) usando o util central
   const custoTotal = useMemo(() => {
     return localItems
-      .filter(item => !item.isDeleted)
-      .reduce((sum, item) => sum + (item.quantidade * item.insumo.custo_unitario), 0);
+      .filter((item) => !item.isDeleted)
+      .reduce(
+        (sum, item) =>
+          sum +
+          calcularCustoItem({
+            quantidade: item.quantidade,
+            unidade: item.unidade,
+            insumos: item.insumo,
+          }),
+        0,
+      );
   }, [localItems]);
 
   // Itens visíveis (não deletados)
