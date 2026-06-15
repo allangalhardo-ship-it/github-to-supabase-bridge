@@ -398,7 +398,7 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => onAplicarPreco(produto.id, precoCharm, produto.preco_venda)}
+                                  onClick={() => aplicarReajuste(produto, precoCharm)}
                                   disabled={isAplicando}
                                   className="h-8 px-2 gap-1 text-[11px]"
                                 >
