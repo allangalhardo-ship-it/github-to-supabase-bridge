@@ -446,6 +446,25 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
                           className="pl-7 text-sm font-semibold h-9 text-right"
                         />
                       </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 shrink-0 text-amber-600 hover:text-amber-700 hover:bg-amber-500/10"
+                        title="Arredondar para preço psicológico (X,90)"
+                        onClick={() => {
+                          const base = canal.precoFinal > 0 ? canal.precoFinal : (canal.precoCalculado || 0);
+                          if (base <= 0) return;
+                          const charm = Math.max(0.90, Math.ceil(base - 0.90) + 0.90);
+                          setPrecosEditaveis(prev => ({
+                            ...prev,
+                            [canal.id]: charm.toFixed(2).replace('.', ',')
+                          }));
+                          setCanalParaAplicar(canal.id);
+                        }}
+                      >
+                        <Sparkles className="h-4 w-4" />
+                      </Button>
                       <div className={cn(
                         "text-right min-w-[60px]",
                         getCorMargem(canal.margem)
