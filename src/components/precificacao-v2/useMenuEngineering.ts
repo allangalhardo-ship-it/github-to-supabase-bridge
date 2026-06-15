@@ -20,7 +20,9 @@ interface VendaProduto {
   receita: number;
 }
 
-export function useMenuEngineering() {
+export type PeriodoBCG = 7 | 30 | 90;
+
+export function useMenuEngineering(periodo: PeriodoBCG = 30) {
   const { usuario } = useAuth();
 
   // Buscar produtos com ficha técnica
@@ -135,9 +137,9 @@ export function useMenuEngineering() {
   // Agora também agregamos receita POR CANAL (texto) para calcular
   // a margem média ponderada pelas vendas reais, não pelo cadastro de preços.
   const { data: vendasData } = useQuery({
-    queryKey: ['vendas-popularidade-canal', usuario?.empresa_id],
+    queryKey: ['vendas-popularidade-canal', usuario?.empresa_id, periodo],
     queryFn: async () => {
-      const dataInicio = subDays(new Date(), 30).toISOString().split('T')[0];
+      const dataInicio = subDays(new Date(), periodo).toISOString().split('T')[0];
       const dataFim = new Date().toISOString().split('T')[0];
 
       const { data, error } = await supabase
