@@ -311,7 +311,25 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
         <div className="flex items-center gap-2">
           <Percent className="h-4 w-4 text-primary" />
           <Label className="text-sm font-semibold">Simulador de Preço por CMV</Label>
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="O que é CMV?">
+                  <HelpCircle className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-[260px] text-xs">
+                <p className="font-semibold mb-1">CMV — Custo da Mercadoria Vendida</p>
+                <p className="text-muted-foreground">
+                  É quanto o insumo do prato representa do preço de venda.
+                  Ex.: prato de R$ 30 com R$ 9 de ingredientes = CMV de 30%.
+                  Quanto menor, mais sobra pra cobrir aluguel, equipe e lucro.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
+
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
