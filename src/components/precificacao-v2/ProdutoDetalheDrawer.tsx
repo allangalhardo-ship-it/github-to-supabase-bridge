@@ -352,60 +352,85 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
             Preço por canal (edite para arredondar)
           </Label>
           <div className="space-y-2">
-            {resultadosSimulacaoCMV.map(canal => (
-              <div 
-                key={canal.id}
-                className={cn(
-                  "p-3 rounded-lg border transition-all",
-                  canalParaAplicar === canal.id 
-                    ? "border-primary bg-primary/5 ring-2 ring-primary/20" 
-                    : canal.destaque 
-                      ? "border-primary/20" 
-                      : "border-muted"
-                )}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 min-w-0">
-                    {canal.icone}
-                    <span className="text-sm font-medium truncate">{canal.nome}</span>
-                    {canal.taxa > 0 && (
-                      <Badge variant="outline" className="text-[9px] px-1.5 h-4 shrink-0">
-                        -{canal.taxa}%
-                      </Badge>
-                    )}
+            {resultadosSimulacaoCMV.map(canal => {
+              const precoAtualCanal = getPrecoCanal(canal.id);
+              const variacao = precoAtualCanal > 0
+                ? ((canal.precoFinal - precoAtualCanal) / precoAtualCanal) * 100
+                : 0;
+              const houveMudanca = Math.abs(canal.precoFinal - precoAtualCanal) >= 0.01;
+              const corVariacao = !houveMudanca
+                ? "text-muted-foreground"
+                : variacao > 0
+                  ? "text-emerald-600"
+                  : "text-destructive";
+
+              return (
+                <div
+                  key={canal.id}
+                  className={cn(
+                    "p-3 rounded-lg border transition-all",
+                    canalParaAplicar === canal.id
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                      : canal.destaque
+                        ? "border-primary/20"
+                        : "border-muted"
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {canal.icone}
+                      <span className="text-sm font-medium truncate">{canal.nome}</span>
+                      {canal.taxa > 0 && (
+                        <Badge variant="outline" className="text-[9px] px-1.5 h-4 shrink-0">
+                          -{canal.taxa}%
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="relative w-28">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">
+                          R$
+                        </span>
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          value={precosEditaveis[canal.id] || (canal.precoCalculado?.toFixed(2).replace('.', ',') || '')}
+                          onChange={(e) => {
+                            setPrecosEditaveis(prev => ({
+                              ...prev,
+                              [canal.id]: e.target.value
+                            }));
+                          }}
+                          onFocus={() => setCanalParaAplicar(canal.id)}
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onTouchStart={(e) => e.stopPropagation()}
+                          className="pl-7 text-sm font-semibold h-9 text-right"
+                        />
+                      </div>
+                      <div className={cn(
+                        "text-right min-w-[60px]",
+                        getCorMargem(canal.margem)
+                      )}>
+                        <p className="text-sm font-bold">{formatPercent(canal.margem)}</p>
+                        <p className="text-[10px]">{formatCurrency(canal.lucro)}</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="relative w-28">
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">
-                        R$
-                      </span>
-                      <Input
-                        type="text"
-                        inputMode="decimal"
-                        value={precosEditaveis[canal.id] || (canal.precoCalculado?.toFixed(2).replace('.', ',') || '')}
-                        onChange={(e) => {
-                          setPrecosEditaveis(prev => ({
-                            ...prev,
-                            [canal.id]: e.target.value
-                          }));
-                        }}
-                        onFocus={() => setCanalParaAplicar(canal.id)}
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onTouchStart={(e) => e.stopPropagation()}
-                        className="pl-7 text-sm font-semibold h-9 text-right"
-                      />
-                    </div>
-                    <div className={cn(
-                      "text-right min-w-[60px]",
-                      getCorMargem(canal.margem)
-                    )}>
-                      <p className="text-sm font-bold">{formatPercent(canal.margem)}</p>
-                      <p className="text-[10px]">{formatCurrency(canal.lucro)}</p>
-                    </div>
+                  {/* Comparação De → Para (variação real por canal) */}
+                  <div className="mt-2 pt-2 border-t border-dashed flex items-center justify-between text-[11px]">
+                    <span className="text-muted-foreground">
+                      De <span className="font-medium text-foreground">{formatCurrency(precoAtualCanal)}</span>
+                      {' '}→ Para <span className="font-semibold text-foreground">{formatCurrency(canal.precoFinal)}</span>
+                    </span>
+                    <span className={cn("font-semibold", corVariacao)}>
+                      {!houveMudanca
+                        ? 'sem alteração'
+                        : `${variacao > 0 ? '+' : ''}${variacao.toFixed(1)}%`}
+                    </span>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
