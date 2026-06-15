@@ -441,9 +441,21 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
                       {canal.icone}
                       <span className="text-sm font-medium truncate">{canal.nome}</span>
                       {canal.taxa > 0 && (
-                        <Badge variant="outline" className="text-[9px] px-1.5 h-4 shrink-0">
-                          -{canal.taxa}%
-                        </Badge>
+                        <TooltipProvider delayDuration={150}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="outline" className="text-[9px] px-1.5 h-4 shrink-0 cursor-help">
+                                -{canal.taxa}%
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-[240px] text-xs">
+                              <p className="font-semibold mb-1">Taxa do canal: {canal.taxa}%</p>
+                              <p className="text-muted-foreground">
+                                Comissão que {canal.nome} desconta de cada venda. O preço sugerido já compensa essa taxa para você não perder margem.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
