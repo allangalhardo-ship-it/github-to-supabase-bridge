@@ -292,7 +292,7 @@ export function useMenuEngineering() {
 
       return { ...produto, quadrante };
     });
-  }, [produtos, config, vendasAgregadas, precosCanaisTodos]);
+  }, [produtos, config, vendasAgregadas, precosCanaisTodos, canaisInfo]);
 
   // Resumo por quadrante
   const resumoQuadrantes: ResumoQuadrante[] = useMemo(() => {
