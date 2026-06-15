@@ -86,24 +86,17 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
   // Inclui sempre um "canal" virtual "Balcão" no topo, que reflete
   // produtos.preco_venda — a fonte da verdade usada pelo Dashboard (Ponto
   // de Equilíbrio, margens, etc.). Aplicar nele atualiza preco_venda.
+  // Lista de canais — Balcão real já vem de canais_venda (tipo=presencial).
+  // Não injetamos canal "base" virtual pra evitar duplicar o Balcão na UI.
   const canais: CanalInfo[] = useMemo(() => {
-    const base: CanalInfo = {
-      id: 'base',
-      nome: 'Balcão (preço base)',
-      taxa: 0,
-      icone: <Store className="h-4 w-4" />,
-      destaque: true,
-    };
-    if (!canaisConfigurados) return [base];
-
-    const outros = canaisConfigurados.map(canal => ({
+    if (!canaisConfigurados) return [];
+    return canaisConfigurados.map(canal => ({
       id: canal.id,
       nome: canal.nome,
       taxa: canal.taxa,
       icone: canal.isBalcao ? <Store className="h-4 w-4" /> : <Smartphone className="h-4 w-4" />,
-      destaque: false,
+      destaque: canal.isBalcao,
     }));
-    return [base, ...outros];
   }, [canaisConfigurados]);
 
   const imposto = (config?.imposto_medio_sobre_vendas || 0) / 100;
