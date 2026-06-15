@@ -384,9 +384,10 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
                           <Button
                             size="sm"
                             variant="secondary"
-                            onClick={() => onAplicarPreco(produto.id, produto.precoSugerido, produto.preco_venda)}
+                            onClick={() => aplicarReajuste(produto, produto.precoSugerido)}
                             disabled={isAplicando}
                             className="h-8 px-2 gap-1"
+                            title={canalBalcao ? `Aplicar no canal ${canalBalcao.nome}` : 'Aplicar'}
                           >
                             <Zap className="h-3.5 w-3.5" />
                             {!isMobile && 'Aplicar'}
