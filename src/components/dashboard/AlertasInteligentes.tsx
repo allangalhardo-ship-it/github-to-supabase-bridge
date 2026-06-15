@@ -3,16 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, TrendingUp, DollarSign, Bell } from 'lucide-react';
+import { AlertTriangle, TrendingUp, DollarSign, X } from 'lucide-react';
 import { BotChef } from '@/components/brand/BotChef';
 import { formatCurrencyBRL } from '@/lib/format';
-
-interface AlertaInsumo {
-  nome: string;
-  variacao: number;
-  precoAnterior: number;
-  precoNovo: number;
-}
+import { useAlertasCusto } from '@/hooks/useAlertasCusto';
 
 interface AlertasInteligentesProps {
   historicoPrecos: any[] | undefined;
@@ -30,25 +24,7 @@ const AlertasInteligentes: React.FC<AlertasInteligentesProps> = ({
   produtosMargemNegativa = 0,
 }) => {
   const navigate = useNavigate();
-
-  const insumosComAlta = useMemo(() => {
-    if (!historicoPrecos) return [];
-    const porInsumo: Record<string, AlertaInsumo> = {};
-    historicoPrecos.forEach(h => {
-      if (h.variacao_percentual && h.variacao_percentual > 10) {
-        const nome = h.insumos?.nome || 'Insumo';
-        if (!porInsumo[nome]) {
-          porInsumo[nome] = {
-            nome,
-            variacao: h.variacao_percentual,
-            precoAnterior: h.preco_anterior || 0,
-            precoNovo: h.preco_novo,
-          };
-        }
-      }
-    });
-    return Object.values(porInsumo).slice(0, 3);
-  }, [historicoPrecos]);
+  const { alertas: alertasCusto, dispensar, isDispensando } = useAlertasCusto();
 
   const alertas: Array<{
     tipo: 'critico' | 'atencao' | 'info';
@@ -56,7 +32,9 @@ const AlertasInteligentes: React.FC<AlertasInteligentesProps> = ({
     titulo: string;
     descricao: string;
     acao?: { label: string; rota: string };
+    onDispensar?: () => void;
   }> = [];
+
 
   if (produtosMargemNegativa > 0) {
     alertas.push({
