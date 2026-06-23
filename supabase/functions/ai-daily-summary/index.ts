@@ -35,8 +35,14 @@ serve(async (req) => {
     }
     const empresaId = usuario.empresa_id;
 
+    // Helper: data/hora no fuso de Brasília (UTC-3)
+    const nowBRT = new Date(Date.now() - 3 * 60 * 60 * 1000);
+    const brtDateStr = (d: Date) => d.toISOString().slice(0, 10);
+    const horaBRT = nowBRT.getUTCHours();
+    const saudacao = horaBRT < 12 ? "Bom dia" : horaBRT < 18 ? "Boa tarde" : "Boa noite";
+
     // Verificar quota + cache
-    const today = new Date().toISOString().slice(0, 10);
+    const today = brtDateStr(nowBRT);
     const cacheKey = `daily_summary_${empresaId}_${today}`;
 
     // Tenta cache primeiro
