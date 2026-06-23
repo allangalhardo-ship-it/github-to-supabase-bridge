@@ -277,27 +277,44 @@ function ChatWindow({
       </Conversation>
 
       <div className="border-t bg-background p-3">
-        <PromptInput onSubmit={handleSubmit}>
-          <PromptInputTextarea
-            ref={inputRef as any}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmit({ text: draft });
+          }}
+          className="flex items-end gap-2"
+        >
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit({ text: draft });
+              }
+            }}
             placeholder="Pergunte sobre vendas, custos, margens…"
             disabled={isLoading}
+            rows={2}
+            className="flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+            autoFocus
           />
-          <PromptInputFooter className="justify-end">
-            <PromptInputSubmit
-              status={status}
-              disabled={!input.trim() || isLoading}
-            />
-          </PromptInputFooter>
-        </PromptInput>
+          <Button
+            type="submit"
+            size="icon"
+            disabled={!draft.trim() || isLoading}
+            className="shrink-0"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </form>
         {error && (
           <p className="mt-2 text-[11px] text-destructive">
             Erro ao processar mensagem. Tente de novo.
           </p>
         )}
       </div>
+
     </div>
   );
 }
