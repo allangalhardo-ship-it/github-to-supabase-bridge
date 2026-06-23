@@ -154,7 +154,7 @@ DADOS DE HOJE (${hojeStr}):
 - Canais: ${topCanais.length ? topCanais.map(([c, v]) => `${c}: R$${v.toFixed(0)}`).join(", ") : "—"}
 - Estoque crítico: ${estoqueBaixo.length ? estoqueBaixo.join(", ") : "nenhum item abaixo do mínimo"}
 
-Comece com "Bom dia!" ou cumprimento adequado ao horário (${hoje.getHours()}h). Se a receita estiver acima da média, comemore. Se abaixo, sugira ação. Se houver estoque crítico, alerte.
+Comece com "${saudacao}!" (horário atual em Brasília: ${horaBRT}h). Se a receita estiver acima da média, comemore. Se abaixo, sugira ação. Se houver estoque crítico, alerte.
 `.trim();
 
     // Chamar Lovable AI
