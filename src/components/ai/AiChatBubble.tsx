@@ -217,12 +217,10 @@ function ChatWindow({
         <ConversationContent>
           {isEmpty ? (
             <div className="flex flex-col items-center justify-center py-10 text-center">
-              <img
-                src={mascot}
-                alt="Assistente IA"
-                width={80}
-                height={80}
-                loading="lazy"
+              <BotChef
+                mood="principal"
+                size="sm"
+                alt={MASCOTE_ALT}
                 className="mb-3 h-20 w-20"
               />
               <h3 className="text-base font-semibold">Como posso ajudar?</h3>
@@ -400,12 +398,11 @@ export default function AiChatBubble() {
           aria-label="Abrir assistente IA"
           className="fixed bottom-4 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition hover:scale-105 hover:shadow-xl md:bottom-6 md:right-6"
         >
-          <img
-            src={mascot}
+          <BotChef
+            mood="apresentando"
+            size="xs"
             alt=""
-            width={48}
-            height={48}
-            loading="lazy"
+            float
             className="h-12 w-12 rounded-full"
           />
           <span className="sr-only">Assistente IA</span>
@@ -427,12 +424,10 @@ export default function AiChatBubble() {
             >
               {sidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
             </Button>
-            <img
-              src={mascot}
-              alt="Assistente IA"
-              width={32}
-              height={32}
-              loading="lazy"
+            <BotChef
+              mood="principal"
+              size="xs"
+              alt={MASCOTE_ALT}
               className="h-8 w-8 shrink-0"
             />
             <div className="flex-1 min-w-0">
@@ -479,12 +474,10 @@ export default function AiChatBubble() {
               )
             ) : (
               <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-                <img
-                  src={mascot}
-                  alt="Assistente IA"
-                  width={96}
-                  height={96}
-                  loading="lazy"
+                <BotChef
+                  mood="analisando"
+                  size="md"
+                  alt={MASCOTE_ALT}
                   className="h-24 w-24"
                 />
                 <h3 className="text-base font-semibold">
