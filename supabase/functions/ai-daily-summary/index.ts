@@ -35,24 +35,41 @@ serve(async (req) => {
     }
     const empresaId = usuario.empresa_id;
 
+    // Helper: data/hora no fuso de Brasília (UTC-3)
+    const nowBRT = new Date(Date.now() - 3 * 60 * 60 * 1000);
+    const brtDateStr = (d: Date) => d.toISOString().slice(0, 10);
+    const horaBRT = nowBRT.getUTCHours();
+    const saudacao = horaBRT < 12 ? "Bom dia" : horaBRT < 18 ? "Boa tarde" : "Boa noite";
+
     // Verificar quota + cache
-    const today = new Date().toISOString().slice(0, 10);
+    const today = brtDateStr(nowBRT);
     const cacheKey = `daily_summary_${empresaId}_${today}`;
 
-    // Tenta cache primeiro
-    const { data: cached } = await supabase
-      .from("ai_cache")
-      .select("response, expires_at")
-      .eq("empresa_id", empresaId)
-      .eq("feature", "daily_summary")
-      .eq("cache_key", cacheKey)
-      .gt("expires_at", new Date().toISOString())
-      .maybeSingle();
+    // Permite forçar regeneração (refresh manual)
+    let force = false;
+    try {
+      if (req.method === "POST") {
+        const body = await req.json().catch(() => ({}));
+        force = !!body?.force;
+      }
+    } catch (_) {}
 
-    if (cached?.response) {
-      return new Response(JSON.stringify({ ...cached.response, cached: true }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Tenta cache primeiro (a menos que force=true)
+    if (!force) {
+      const { data: cached } = await supabase
+        .from("ai_cache")
+        .select("response, expires_at")
+        .eq("empresa_id", empresaId)
+        .eq("feature", "daily_summary")
+        .eq("cache_key", cacheKey)
+        .gt("expires_at", new Date().toISOString())
+        .maybeSingle();
+
+      if (cached?.response) {
+        return new Response(JSON.stringify({ ...cached.response, cached: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // Buscar plano
@@ -79,13 +96,12 @@ serve(async (req) => {
       });
     }
 
-    // === Coletar dados ===
-    const hoje = new Date();
-    const ontem = new Date(hoje); ontem.setDate(ontem.getDate() - 1);
-    const seteDiasAtras = new Date(hoje); seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
-    const hojeStr = hoje.toISOString().slice(0, 10);
-    const ontemStr = ontem.toISOString().slice(0, 10);
-    const seteDiasStr = seteDiasAtras.toISOString().slice(0, 10);
+    // === Coletar dados (fuso BRT) ===
+    const ontemBRT = new Date(nowBRT); ontemBRT.setUTCDate(ontemBRT.getUTCDate() - 1);
+    const seteDiasBRT = new Date(nowBRT); seteDiasBRT.setUTCDate(seteDiasBRT.getUTCDate() - 7);
+    const hojeStr = today;
+    const ontemStr = brtDateStr(ontemBRT);
+    const seteDiasStr = brtDateStr(seteDiasBRT);
 
     const [vendasHojeRes, vendasOntemRes, vendas7dRes, insumosRes] = await Promise.all([
       supabase.from("vendas").select("valor_total, quantidade, canal, descricao_produto, produto_id, produtos(nome)").eq("empresa_id", empresaId).eq("data_venda", hojeStr),
@@ -149,7 +165,7 @@ DADOS DE HOJE (${hojeStr}):
 - Canais: ${topCanais.length ? topCanais.map(([c, v]) => `${c}: R$${v.toFixed(0)}`).join(", ") : "—"}
 - Estoque crítico: ${estoqueBaixo.length ? estoqueBaixo.join(", ") : "nenhum item abaixo do mínimo"}
 
-Comece com "Bom dia!" ou cumprimento adequado ao horário (${hoje.getHours()}h). Se a receita estiver acima da média, comemore. Se abaixo, sugira ação. Se houver estoque crítico, alerte.
+Comece com "${saudacao}!" (horário atual em Brasília: ${horaBRT}h). Se a receita estiver acima da média, comemore. Se abaixo, sugira ação. Se houver estoque crítico, alerte.
 `.trim();
 
     // Chamar Lovable AI

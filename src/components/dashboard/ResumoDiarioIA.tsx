@@ -29,11 +29,13 @@ export default function ResumoDiarioIA() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchResumo = async () => {
+  const fetchResumo = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const { data: res, error: fnError } = await supabase.functions.invoke("ai-daily-summary");
+      const { data: res, error: fnError } = await supabase.functions.invoke("ai-daily-summary", {
+        body: { force },
+      });
       if (fnError) throw fnError;
       if (res?.error === "quota_excedida") {
         setError("Limite diário do resumo IA atingido. Volte amanhã!");
@@ -57,12 +59,12 @@ export default function ResumoDiarioIA() {
   };
 
   useEffect(() => {
-    fetchResumo();
+    fetchResumo(false);
   }, []);
 
   const handleRefresh = async () => {
     toast.info("Atualizando análise (consome 1 do seu limite diário)…");
-    await fetchResumo();
+    await fetchResumo(true);
   };
 
   return (
