@@ -11,6 +11,7 @@ import { Logo, LogoMark } from '@/components/brand/Logo';
 import OfflineIndicator from '@/components/layout/OfflineIndicator';
 import NotificationSettings from '@/components/layout/NotificationSettings';
 import { UpdateIndicator } from '@/components/pwa/UpdateNotification';
+import AiChatBubble from '@/components/ai/AiChatBubble';
 import { useAlertNotifications } from '@/hooks/useAlertNotifications';
 import { useAlertasCusto } from '@/hooks/useAlertasCusto';
 import { useSessionTracker } from '@/hooks/useSessionTracker';
