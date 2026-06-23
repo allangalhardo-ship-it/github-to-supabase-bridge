@@ -319,7 +319,7 @@ export default function AiChatBubble() {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [open, setOpen] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== "undefined" && window.innerWidth >= 768);
   const [threadMessages, setThreadMessages] = useState<UIMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
 
