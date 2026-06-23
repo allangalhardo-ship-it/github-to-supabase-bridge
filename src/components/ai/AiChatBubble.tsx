@@ -14,7 +14,9 @@ import {
   X,
   PanelLeftOpen,
   PanelLeftClose,
+  Send,
 } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
