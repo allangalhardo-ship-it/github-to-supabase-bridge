@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  MessageCircle,
   Plus,
   Trash2,
   X,
@@ -29,12 +28,6 @@ import {
   MessageContent,
   MessageResponse,
 } from "@/components/ai-elements/message";
-import {
-  PromptInput,
-  PromptInputTextarea,
-  PromptInputSubmit,
-  PromptInputFooter,
-} from "@/components/ai-elements/prompt-input";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import {
   AlertDialog,
@@ -48,6 +41,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useChatThreads, loadThreadMessages } from "@/hooks/useChatThreads";
 import mascot from "@/assets/ai-chef-mascot.png";
+
 
 const SUGESTOES = [
   "Por que meu lucro caiu este mês?",
