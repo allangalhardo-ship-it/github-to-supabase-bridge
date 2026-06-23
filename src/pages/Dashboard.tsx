@@ -111,6 +111,9 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Resumo diário com IA */}
+      <ResumoDiarioIA />
+
       {/* KPIs */}
       <AnimatedCardContainer className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5" staggerDelay={0.08}>
         <StaggeredCard className="p-1">
