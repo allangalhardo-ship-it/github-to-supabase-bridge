@@ -410,7 +410,11 @@ const AppLayout = () => {
 
       {/* Offline Indicator */}
       <OfflineIndicator />
+
+      {/* Assistente IA flutuante */}
+      <AiChatBubble />
     </div>
+
   );
 };
 
