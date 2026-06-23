@@ -52,13 +52,77 @@ export type Database = {
           },
         ]
       }
+      ai_cache: {
+        Row: {
+          cache_key: string
+          created_at: string
+          empresa_id: string
+          expires_at: string
+          feature: string
+          id: string
+          response: Json
+        }
+        Insert: {
+          cache_key: string
+          created_at?: string
+          empresa_id: string
+          expires_at: string
+          feature: string
+          id?: string
+          response: Json
+        }
+        Update: {
+          cache_key?: string
+          created_at?: string
+          empresa_id?: string
+          expires_at?: string
+          feature?: string
+          id?: string
+          response?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_cache_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_quotas: {
+        Row: {
+          created_at: string
+          daily_limit: number
+          feature: string
+          id: string
+          plan: string
+        }
+        Insert: {
+          created_at?: string
+          daily_limit: number
+          feature: string
+          id?: string
+          plan: string
+        }
+        Update: {
+          created_at?: string
+          daily_limit?: number
+          feature?: string
+          id?: string
+          plan?: string
+        }
+        Relationships: []
+      }
       ai_usage: {
         Row: {
           created_at: string
           date: string
           empresa_id: string
+          feature: string
           id: string
           message_count: number
+          tokens_used: number
           updated_at: string
           user_id: string
         }
@@ -66,8 +130,10 @@ export type Database = {
           created_at?: string
           date?: string
           empresa_id: string
+          feature?: string
           id?: string
           message_count?: number
+          tokens_used?: number
           updated_at?: string
           user_id: string
         }
@@ -75,8 +141,10 @@ export type Database = {
           created_at?: string
           date?: string
           empresa_id?: string
+          feature?: string
           id?: string
           message_count?: number
+          tokens_used?: number
           updated_at?: string
           user_id?: string
         }
@@ -1909,6 +1977,20 @@ export type Database = {
           margem_min: number
         }[]
       }
+      check_and_increment_ai_quota: {
+        Args: {
+          p_empresa_id: string
+          p_feature: string
+          p_plan?: string
+          p_tokens?: number
+        }
+        Returns: {
+          allowed: boolean
+          daily_limit: number
+          used: number
+        }[]
+      }
+      cleanup_ai_cache: { Args: never; Returns: number }
       converter_unidade: {
         Args: { p_de: string; p_para: string; p_qtd: number }
         Returns: number
