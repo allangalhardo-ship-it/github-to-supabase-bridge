@@ -161,8 +161,7 @@ function ChatWindow({
   initialMessages: UIMessage[];
   onMessageSent: () => void;
 }) {
-  const [input, setInput] = useState("");
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [draft, setDraft] = useState("");
 
   const transport = useMemo(() => {
     return new DefaultChatTransport({
@@ -198,24 +197,19 @@ function ChatWindow({
     },
     onFinish: () => {
       onMessageSent();
-      setTimeout(() => inputRef.current?.focus(), 50);
     },
   });
 
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, [threadId]);
-
   const isLoading = status === "submitted" || status === "streaming";
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    const text = input.trim();
+  const handleSubmit = async (message: { text: string }) => {
+    const text = (message.text || draft).trim();
     if (!text || isLoading) return;
-    setInput("");
+    setDraft("");
     await sendMessage({ text });
     onMessageSent();
   };
+
 
   const isEmpty = messages.length === 0;
 
