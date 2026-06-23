@@ -85,13 +85,12 @@ serve(async (req) => {
       });
     }
 
-    // === Coletar dados ===
-    const hoje = new Date();
-    const ontem = new Date(hoje); ontem.setDate(ontem.getDate() - 1);
-    const seteDiasAtras = new Date(hoje); seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
-    const hojeStr = hoje.toISOString().slice(0, 10);
-    const ontemStr = ontem.toISOString().slice(0, 10);
-    const seteDiasStr = seteDiasAtras.toISOString().slice(0, 10);
+    // === Coletar dados (fuso BRT) ===
+    const ontemBRT = new Date(nowBRT); ontemBRT.setUTCDate(ontemBRT.getUTCDate() - 1);
+    const seteDiasBRT = new Date(nowBRT); seteDiasBRT.setUTCDate(seteDiasBRT.getUTCDate() - 7);
+    const hojeStr = today;
+    const ontemStr = brtDateStr(ontemBRT);
+    const seteDiasStr = brtDateStr(seteDiasBRT);
 
     const [vendasHojeRes, vendasOntemRes, vendas7dRes, insumosRes] = await Promise.all([
       supabase.from("vendas").select("valor_total, quantidade, canal, descricao_produto, produto_id, produtos(nome)").eq("empresa_id", empresaId).eq("data_venda", hojeStr),
