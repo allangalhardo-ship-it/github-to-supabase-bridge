@@ -236,14 +236,14 @@ function ChatWindow({
                   <button
                     key={s}
                     onClick={() => {
-                      setInput(s);
-                      setTimeout(() => inputRef.current?.focus(), 0);
+                      setDraft(s);
                     }}
                     className="rounded-lg border bg-background px-3 py-2 text-left text-xs transition hover:border-primary hover:bg-accent"
                   >
                     {s}
                   </button>
                 ))}
+
               </div>
             </div>
           ) : (
