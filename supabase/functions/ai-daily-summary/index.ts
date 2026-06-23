@@ -71,8 +71,9 @@ serve(async (req) => {
     });
 
     if (quotaError) console.error("quota error:", quotaError);
-    if (quotaCheck && !quotaCheck.allowed) {
-      return new Response(JSON.stringify({ error: "quota_excedida", quota: quotaCheck }), {
+    const quotaRow = Array.isArray(quotaCheck) ? quotaCheck[0] : quotaCheck;
+    if (quotaRow && !quotaRow.allowed) {
+      return new Response(JSON.stringify({ error: "quota_excedida", quota: quotaRow }), {
         status: 429,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
