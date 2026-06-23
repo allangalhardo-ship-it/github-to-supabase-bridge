@@ -45,20 +45,31 @@ serve(async (req) => {
     const today = brtDateStr(nowBRT);
     const cacheKey = `daily_summary_${empresaId}_${today}`;
 
-    // Tenta cache primeiro
-    const { data: cached } = await supabase
-      .from("ai_cache")
-      .select("response, expires_at")
-      .eq("empresa_id", empresaId)
-      .eq("feature", "daily_summary")
-      .eq("cache_key", cacheKey)
-      .gt("expires_at", new Date().toISOString())
-      .maybeSingle();
+    // Permite forçar regeneração (refresh manual)
+    let force = false;
+    try {
+      if (req.method === "POST") {
+        const body = await req.json().catch(() => ({}));
+        force = !!body?.force;
+      }
+    } catch (_) {}
 
-    if (cached?.response) {
-      return new Response(JSON.stringify({ ...cached.response, cached: true }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Tenta cache primeiro (a menos que force=true)
+    if (!force) {
+      const { data: cached } = await supabase
+        .from("ai_cache")
+        .select("response, expires_at")
+        .eq("empresa_id", empresaId)
+        .eq("feature", "daily_summary")
+        .eq("cache_key", cacheKey)
+        .gt("expires_at", new Date().toISOString())
+        .maybeSingle();
+
+      if (cached?.response) {
+        return new Response(JSON.stringify({ ...cached.response, cached: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // Buscar plano
