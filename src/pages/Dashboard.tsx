@@ -27,6 +27,7 @@ import AlertasInteligentes from '@/components/dashboard/AlertasInteligentes';
 import MargemEvolutionChart from '@/components/dashboard/MargemEvolutionChart';
 import { AlertaVencimento } from '@/components/producao/AlertaVencimento';
 import { BotChef } from '@/components/brand/BotChef';
+import ResumoDiarioIA from '@/components/dashboard/ResumoDiarioIA';
 
 type PeriodoType = 'hoje' | 'semana' | 'mes' | 'ultimos30' | 'personalizado';
 
