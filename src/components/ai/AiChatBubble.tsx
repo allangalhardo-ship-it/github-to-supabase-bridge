@@ -40,7 +40,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useChatThreads, loadThreadMessages } from "@/hooks/useChatThreads";
-import mascot from "@/assets/ai-chef-mascot.png";
+import { BotChef } from "@/components/brand/BotChef";
+
+const MASCOTE_ALT = "Assistente IA";
 
 
 const SUGESTOES = [
