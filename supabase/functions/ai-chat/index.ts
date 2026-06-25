@@ -70,10 +70,7 @@ async function buildBusinessSnapshot(supabase: any, empresaId: string): Promise<
   }
   const canais = [...canalMap.entries()].sort((a, b) => b[1] - a[1]);
 
-  const custosFixosMensal = custosFixos.reduce((s: number, c: any) => {
-    const v = Number(c.valor || 0);
-    return s + (c.recorrencia === "anual" ? v / 12 : c.recorrencia === "semanal" ? v * 4.33 : v);
-  }, 0);
+  const custosFixosMensal = custosFixos.reduce((s: number, c: any) => s + Number(c.valor_mensal || 0), 0);
 
   const lucroBruto30 = receita30 - custoTotal30;
   const lucroLiquidoEst = lucroBruto30 - custosFixosMensal;
