@@ -28,12 +28,13 @@ export function createLovableAiGatewayProvider(lovableApiKey: string, initialRun
       "X-Lovable-AIG-SDK": "vercel-ai-sdk",
     },
     fetch: async (input, init) => {
-      const headers = new Headers(init?.headers);
+      const requestInit = init as (RequestInit & { headers?: HeadersInit }) | undefined;
+      const headers = new Headers(requestInit?.headers);
       if (runId && !headers.has(LOVABLE_AIG_RUN_ID_HEADER)) {
         headers.set(LOVABLE_AIG_RUN_ID_HEADER, runId);
       }
       try {
-        const response = await fetch(input, { ...init, headers });
+        const response = await fetch(input, { ...requestInit, headers });
         publishRunId(response.headers.get(LOVABLE_AIG_RUN_ID_HEADER) ?? undefined);
         return response;
       } catch (error) {

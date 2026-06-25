@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { convertToModelMessages, streamText, type UIMessage } from "npm:ai@5";
+import { convertToModelMessages, streamText, type UIMessage } from "npm:ai@6";
 import { createLovableAiGatewayProvider } from "../_shared/ai-gateway.ts";
 
 const corsHeaders = {
@@ -265,8 +265,7 @@ Responda com base nos dados acima. Se o usuário perguntar algo que requer dados
       messages: await convertToModelMessages(messages),
     });
 
-    return result.toUIMessageStreamResponse({
-      headers: corsHeaders,
+    const response = result.toUIMessageStreamResponse({
       originalMessages: messages,
       onFinish: async ({ messages: finalMessages }) => {
         try {
@@ -291,6 +290,15 @@ Responda com base nos dados acima. Se o usuário perguntar algo que requer dados
         } catch (e) {
           console.error("Erro ao salvar mensagem assistant:", e);
         }
+      },
+    });
+
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: {
+        ...Object.fromEntries(response.headers.entries()),
+        ...corsHeaders,
       },
     });
   } catch (err) {
