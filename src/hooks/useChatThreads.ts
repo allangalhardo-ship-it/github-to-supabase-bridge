@@ -45,7 +45,7 @@ export function useChatThreads() {
       .from("ai_chat_threads")
       .select("id, title, message_count, last_message_at, created_at, updated_at")
       .order("updated_at", { ascending: false })
-      .limit(50);
+      .limit(20);
     if (!error && data) setThreads(data as ChatThread[]);
     setLoading(false);
   }, []);
