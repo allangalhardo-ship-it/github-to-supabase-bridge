@@ -33,6 +33,9 @@ async function buildBusinessSnapshot(supabase: any, empresaId: string): Promise<
     alertasRes,
     produtosRes,
     configRes,
+    canaisRes,
+    taxasRes,
+    precosCanaisRes,
   ] = await Promise.all([
     supabase.from("empresas").select("nome, segmento, plano_assinatura").eq("id", empresaId).maybeSingle(),
     supabase.rpc("get_dashboard_vendas", { p_empresa_id: empresaId, p_data_inicio: inicio30, p_data_fim: hojeStr }),
@@ -42,7 +45,10 @@ async function buildBusinessSnapshot(supabase: any, empresaId: string): Promise<
     supabase.rpc("get_insumos_estoque_baixo", { p_empresa_id: empresaId }),
     supabase.from("alertas_custo").select("*, insumos:insumo_id(nome), produtos:produto_id(nome)").eq("empresa_id", empresaId).eq("status", "ativo").order("variacao_pct", { ascending: false }).limit(10),
     supabase.from("produtos").select("id, nome, preco_venda, categoria, ativo").eq("empresa_id", empresaId).eq("ativo", true),
-    supabase.from("configuracoes").select("margem_desejada_padrao, imposto_medio_sobre_vendas").eq("empresa_id", empresaId).maybeSingle(),
+    supabase.from("configuracoes").select("margem_desejada_padrao, imposto_medio_sobre_vendas, cmv_alvo").eq("empresa_id", empresaId).maybeSingle(),
+    supabase.from("canais_venda").select("id, nome, tipo, ativo").eq("empresa_id", empresaId).eq("ativo", true),
+    supabase.from("taxas_canais").select("canal_id, percentual"),
+    supabase.from("precos_canais").select("produto_id, canal, preco").eq("empresa_id", empresaId),
   ]);
 
   const empresa = empresaRes.data;
@@ -54,6 +60,32 @@ async function buildBusinessSnapshot(supabase: any, empresaId: string): Promise<
   const alertas = alertasRes.data || [];
   const produtos = produtosRes.data || [];
   const config = configRes.data;
+  const canaisAtivos = canaisRes.data || [];
+  const taxasRows = taxasRes.data || [];
+  const precosCanais = precosCanaisRes.data || [];
+
+  const impostoPct = Number(config?.imposto_medio_sobre_vendas || 0);
+  const margemAlvo = Number(config?.margem_desejada_padrao || 30);
+  const cmvAlvo = Number(config?.cmv_alvo || 35);
+
+  // Mapa canal_id -> { nome, taxa%, isBalcao }
+  const canaisMap: Record<string, { nome: string; taxa: number; isBalcao: boolean }> = {};
+  for (const c of canaisAtivos) {
+    const taxaTotal = taxasRows
+      .filter((t: any) => t.canal_id === c.id)
+      .reduce((s: number, t: any) => s + Number(t.percentual || 0), 0);
+    canaisMap[c.id] = { nome: c.nome, taxa: taxaTotal, isBalcao: c.tipo === "presencial" };
+  }
+  const balcaoEntry = Object.entries(canaisMap).find(([, v]) => v.isBalcao);
+  const balcaoTaxa = balcaoEntry ? balcaoEntry[1].taxa : 0;
+  const balcaoId = balcaoEntry ? balcaoEntry[0] : null;
+
+  // Mapa produto_id -> { canal_id -> preco }
+  const precosPorProduto: Record<string, Record<string, number>> = {};
+  for (const p of precosCanais) {
+    if (!precosPorProduto[p.produto_id]) precosPorProduto[p.produto_id] = {};
+    precosPorProduto[p.produto_id][p.canal] = Number(p.preco);
+  }
 
   const receita30 = vendas30.reduce((s: number, v: any) => s + Number(v.valor_total || 0), 0);
   const receita7 = vendas7.reduce((s: number, v: any) => s + Number(v.valor_total || 0), 0);
@@ -75,6 +107,91 @@ async function buildBusinessSnapshot(supabase: any, empresaId: string): Promise<
   const lucroBruto30 = receita30 - custoTotal30;
   const lucroLiquidoEst = lucroBruto30 - custosFixosMensal;
 
+  // Agregar vendas por produto (qtd, receita)
+  const vendasPorProduto: Record<string, { qtd: number; receita: number; nome: string }> = {};
+  for (const v of vendas30) {
+    if (!v.produto_id) continue;
+    if (!vendasPorProduto[v.produto_id]) {
+      vendasPorProduto[v.produto_id] = { qtd: 0, receita: 0, nome: v.produto_nome || "Produto" };
+    }
+    vendasPorProduto[v.produto_id].qtd += Number(v.quantidade || 0);
+    vendasPorProduto[v.produto_id].receita += Number(v.valor_total || 0);
+  }
+
+  // === MENU ENGINEERING: cálculo por produto ativo ===
+  // Custo via RPC calcular_custo_ficha (paralelo, cap 60 produtos para não estourar tempo)
+  const produtosParaAnalise = produtos.slice(0, 60);
+  const custoPorProduto: Record<string, number> = {};
+  await Promise.all(
+    produtosParaAnalise.map(async (p: any) => {
+      try {
+        const { data } = await supabase.rpc("calcular_custo_ficha", { p_produto_id: p.id });
+        custoPorProduto[p.id] = Number(data || 0);
+      } catch {
+        custoPorProduto[p.id] = 0;
+      }
+    }),
+  );
+
+  type AnaliseProd = {
+    nome: string;
+    categoria: string | null;
+    precoBalcao: number;
+    custo: number;
+    cmv: number;
+    margem: number;
+    lucroUnit: number;
+    qtdVendida: number;
+    receita: number;
+    quadrante: "estrela" | "burro-de-carga" | "desafio" | "cao" | "sem-dados";
+  };
+
+  const analises: AnaliseProd[] = produtosParaAnalise.map((p: any) => {
+    const precoBalcao = (balcaoId && precosPorProduto[p.id]?.[balcaoId]) || Number(p.preco_venda || 0);
+    const custo = custoPorProduto[p.id] || 0;
+    const taxaFrac = balcaoTaxa / 100;
+    const impFrac = impostoPct / 100;
+    const lucroUnit = precoBalcao > 0 ? precoBalcao - custo - precoBalcao * impFrac - precoBalcao * taxaFrac : 0;
+    const margem = precoBalcao > 0 ? (lucroUnit / precoBalcao) * 100 : 0;
+    const cmv = precoBalcao > 0 ? (custo / precoBalcao) * 100 : 0;
+    const v = vendasPorProduto[p.id];
+    return {
+      nome: p.nome,
+      categoria: p.categoria,
+      precoBalcao,
+      custo,
+      cmv,
+      margem,
+      lucroUnit,
+      qtdVendida: v?.qtd || 0,
+      receita: v?.receita || 0,
+      quadrante: "sem-dados",
+    };
+  });
+
+  // Medianas para classificar
+  const comVendas = analises.filter((a) => a.qtdVendida > 0);
+  const sortedMargens = [...analises.map((a) => a.margem)].sort((a, b) => a - b);
+  const sortedQtds = comVendas.map((a) => a.qtdVendida).sort((a, b) => a - b);
+  const medianMargem = sortedMargens.length ? sortedMargens[Math.floor(sortedMargens.length / 2)] : margemAlvo;
+  const medianQtd = sortedQtds.length ? sortedQtds[Math.floor(sortedQtds.length / 2)] : 1;
+  for (const a of analises) {
+    if (a.qtdVendida <= 0) {
+      a.quadrante = "sem-dados";
+    } else {
+      const altaM = a.margem >= medianMargem;
+      const altaP = a.qtdVendida >= medianQtd;
+      if (altaM && altaP) a.quadrante = "estrela";
+      else if (!altaM && altaP) a.quadrante = "burro-de-carga";
+      else if (altaM && !altaP) a.quadrante = "desafio";
+      else a.quadrante = "cao";
+    }
+  }
+  const contagemQ = analises.reduce(
+    (acc, a) => ({ ...acc, [a.quadrante]: (acc[a.quadrante] || 0) + 1 }),
+    {} as Record<string, number>,
+  );
+
   const lines: string[] = [];
   lines.push(`# Contexto do negócio: ${empresa?.nome || "Empresa"}`);
   if (empresa?.segmento) lines.push(`Segmento: ${empresa.segmento}`);
@@ -91,8 +208,10 @@ async function buildBusinessSnapshot(supabase: any, empresaId: string): Promise<
   }
   lines.push(`- Lucro líquido estimado: ${brl(lucroLiquidoEst)}`);
   lines.push(`- Receita últimos 7 dias: ${brl(receita7)}`);
-  if (config?.margem_desejada_padrao) lines.push(`- Margem desejada configurada: ${config.margem_desejada_padrao}%`);
-  if (config?.imposto_medio_sobre_vendas) lines.push(`- Imposto médio sobre vendas: ${config.imposto_medio_sobre_vendas}%`);
+  lines.push(`- Margem desejada configurada: ${margemAlvo}%`);
+  lines.push(`- CMV alvo configurado: ${cmvAlvo}%`);
+  lines.push(`- Imposto médio sobre vendas: ${impostoPct}%`);
+  if (balcaoEntry) lines.push(`- Canal âncora (Balcão "${balcaoEntry[1].nome}"): taxa ${balcaoTaxa.toFixed(1)}%`);
 
   lines.push("");
   lines.push("## Vendas por canal (30 dias)");
@@ -100,19 +219,80 @@ async function buildBusinessSnapshot(supabase: any, empresaId: string): Promise<
   else canais.forEach(([c, v]) => lines.push(`- ${c}: ${brl(v)}`));
 
   lines.push("");
-  lines.push("## Top produtos por lucro (30 dias)");
-  if (topProd.length === 0) lines.push("Sem dados.");
-  else topProd.forEach((p: any) => {
-    const margem = p.receita > 0 ? ((p.lucro / p.receita) * 100).toFixed(1) : "0";
-    lines.push(`- ${p.nome}: receita ${brl(Number(p.receita))}, lucro ${brl(Number(p.lucro))} (margem ${margem}%), ${Number(p.quantidade).toFixed(0)}un`);
-  });
+  lines.push("## Canais cadastrados e taxas (incluem comissão + impostos por canal)");
+  if (canaisAtivos.length === 0) lines.push("Nenhum canal cadastrado.");
+  else Object.values(canaisMap).forEach((c) => lines.push(`- ${c.nome}${c.isBalcao ? " (presencial/âncora)" : ""}: ${c.taxa.toFixed(1)}%`));
 
   lines.push("");
-  lines.push(`## Catálogo ativo: ${produtos.length} produtos`);
-  if (produtos.length > 0 && produtos.length <= 20) {
-    produtos.slice(0, 20).forEach((p: any) => {
-      lines.push(`- ${p.nome} (${p.categoria || "sem categoria"}): ${brl(Number(p.preco_venda))}`);
+  lines.push("## Menu Engineering — matriz BCG (preço Balcão como âncora)");
+  lines.push(`Distribuição: 🌟 Estrelas: ${contagemQ.estrela || 0} | 🐴 Burros-de-carga: ${contagemQ["burro-de-carga"] || 0} | 🎯 Desafios: ${contagemQ.desafio || 0} | 🐶 Cães: ${contagemQ.cao || 0} | ⚪ Sem vendas: ${contagemQ["sem-dados"] || 0}`);
+  lines.push(`Medianas do período: margem ${medianMargem.toFixed(1)}% | quantidade ${medianQtd}un`);
+
+  // Top 12 por receita (com vendas) + alertas críticos (margem < 0 ou cmv > alvo+15)
+  const topPorReceita = [...analises].sort((a, b) => b.receita - a.receita).slice(0, 12);
+  if (topPorReceita.length > 0) {
+    lines.push("");
+    lines.push("### Top 12 produtos por receita (30 dias)");
+    topPorReceita.forEach((a) => {
+      const flagCmv = a.cmv > cmvAlvo + 15 ? " ⚠️CMV-alto" : "";
+      const flagMargem = a.margem < 0 ? " 🚨margem-negativa" : a.margem < margemAlvo * 0.7 ? " ⚠️margem-baixa" : "";
+      lines.push(
+        `- **${a.nome}** [${a.quadrante}] — preço ${brl(a.precoBalcao)}, custo ${brl(a.custo)}, CMV ${a.cmv.toFixed(1)}%, margem ${a.margem.toFixed(1)}%, lucro/un ${brl(a.lucroUnit)} → ${a.qtdVendida}un, receita ${brl(a.receita)}${flagCmv}${flagMargem}`,
+      );
     });
+  }
+
+  // Listas críticas
+  const criticos = analises.filter((a) => a.margem < 0 || a.cmv > cmvAlvo + 15);
+  if (criticos.length > 0) {
+    lines.push("");
+    lines.push("### Produtos com problema de precificação");
+    criticos.slice(0, 10).forEach((a) => {
+      lines.push(`- ${a.nome}: CMV ${a.cmv.toFixed(1)}% (alvo ${cmvAlvo}%), margem ${a.margem.toFixed(1)}% — ${a.qtdVendida}un vendidas`);
+    });
+  }
+
+  const estrelas = analises.filter((a) => a.quadrante === "estrela").sort((a, b) => b.receita - a.receita);
+  if (estrelas.length > 0) {
+    lines.push("");
+    lines.push("### Estrelas (alta margem + alta saída) — produtos para destacar/promover");
+    estrelas.slice(0, 8).forEach((a) => lines.push(`- ${a.nome}: margem ${a.margem.toFixed(1)}%, ${a.qtdVendida}un, receita ${brl(a.receita)}`));
+  }
+
+  const desafios = analises.filter((a) => a.quadrante === "desafio").sort((a, b) => b.margem - a.margem);
+  if (desafios.length > 0) {
+    lines.push("");
+    lines.push("### Desafios (alta margem + baixa saída) — produtos que precisam de marketing/posicionamento");
+    desafios.slice(0, 8).forEach((a) => lines.push(`- ${a.nome}: margem ${a.margem.toFixed(1)}%, só ${a.qtdVendida}un`));
+  }
+
+  const burros = analises.filter((a) => a.quadrante === "burro-de-carga").sort((a, b) => b.qtdVendida - a.qtdVendida);
+  if (burros.length > 0) {
+    lines.push("");
+    lines.push("### Burros-de-carga (baixa margem + alta saída) — candidatos a reajuste de preço ou redução de custo");
+    burros.slice(0, 8).forEach((a) => lines.push(`- ${a.nome}: margem ${a.margem.toFixed(1)}% (abaixo do alvo ${margemAlvo}%), ${a.qtdVendida}un — peso real no faturamento`));
+  }
+
+  const caes = analises.filter((a) => a.quadrante === "cao");
+  if (caes.length > 0) {
+    lines.push("");
+    lines.push("### Cães (baixa margem + baixa saída) — candidatos a sair do cardápio");
+    caes.slice(0, 6).forEach((a) => lines.push(`- ${a.nome}: margem ${a.margem.toFixed(1)}%, só ${a.qtdVendida}un`));
+  }
+
+  const semVendas = analises.filter((a) => a.quadrante === "sem-dados");
+  if (semVendas.length > 0 && semVendas.length <= 10) {
+    lines.push("");
+    lines.push("### Produtos sem vendas no período");
+    semVendas.forEach((a) => lines.push(`- ${a.nome} (preço ${brl(a.precoBalcao)})`));
+  } else if (semVendas.length > 10) {
+    lines.push("");
+    lines.push(`### ${semVendas.length} produtos sem nenhuma venda nos últimos 30 dias.`);
+  }
+
+  if (produtos.length > 60) {
+    lines.push("");
+    lines.push(`(Atenção: catálogo tem ${produtos.length} produtos; análise detalhada acima cobre os 60 primeiros.)`);
   }
 
   lines.push("");
@@ -237,11 +417,12 @@ Deno.serve(async (req) => {
 Sua persona:
 - Fale em português brasileiro, tom direto, acolhedor e descontraído (como uma conversa de WhatsApp com um amigo contador).
 - Use "você" e o nome do dono quando souber.
-- Seja específico com NÚMEROS reais do negócio (use os dados do contexto abaixo).
+- Seja específico com NÚMEROS reais do negócio (use os dados do contexto abaixo) — sempre cite preço, custo, margem ou CMV exatos quando o usuário perguntar sobre um produto.
 - Quando o usuário fizer uma pergunta vaga, traga 1-2 insights concretos + 1 ação recomendada.
 - Use markdown leve (negrito, listas curtas) mas nunca títulos H1/H2 dentro de respostas — só bullets e bold.
 - Nunca invente dados que não estão no contexto. Se faltar informação, diga o que está faltando e oriente o usuário a cadastrar.
-- Evite jargão financeiro técnico. "Margem de contribuição" vira "o quanto sobra por produto vendido", etc.
+- Evite jargão financeiro técnico. "Margem de contribuição" vira "o quanto sobra por produto vendido". Para a matriz BCG, use os nomes simples: Estrela (queridinho que dá lucro), Burro-de-carga (vende muito mas dá pouca margem), Desafio (margem boa mas pouca saída — falta marketing), Cão (pouca venda e pouca margem — pensar em tirar do cardápio).
+- Quando o usuário perguntar "o que eu deveria fazer?", priorize ações baseadas no quadrante: subir preço dos burros-de-carga, divulgar os desafios, manter as estrelas em destaque, avaliar tirar os cães.
 - Respostas longas só quando o usuário pedir análise profunda. Para perguntas simples, seja sucinto (2-4 frases).
 - Nunca cite tabelas, IDs, ou nomes técnicos do sistema.
 
