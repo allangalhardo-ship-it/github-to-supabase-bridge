@@ -72,7 +72,17 @@ export const GravarReceitaVoz: React.FC<Props> = ({ produtoId, className }) => {
       node.connect(ctx.destination);
       setState('recording');
       setSeconds(0);
-      timerRef.current = window.setInterval(() => setSeconds((s) => s + 1), 1000);
+      timerRef.current = window.setInterval(() => {
+        setSeconds((s) => {
+          const next = s + 1;
+          if (next >= 60) {
+            // Auto-stop em 60s para conter custo do Whisper
+            toast({ title: 'Tempo máximo atingido', description: 'Gravação encerrada automaticamente em 60s.' });
+            stopRecording();
+          }
+          return next;
+        });
+      }, 1000);
     } catch {
       toast({
         title: 'Sem acesso ao microfone',
