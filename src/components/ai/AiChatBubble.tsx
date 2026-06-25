@@ -396,7 +396,7 @@ export default function AiChatBubble() {
         <button
           onClick={() => handleOpenChange(true)}
           aria-label="Abrir assistente IA"
-          className="fixed bottom-4 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition hover:scale-105 hover:shadow-xl md:bottom-6 md:right-6"
+          className="fixed bottom-20 right-4 z-[60] flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition hover:scale-105 hover:shadow-xl lg:bottom-6 lg:right-6"
         >
           <BotChef
             mood="apresentando"
