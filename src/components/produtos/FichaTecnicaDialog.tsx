@@ -104,6 +104,8 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
   const [showDiscardAlert, setShowDiscardAlert] = useState(false);
   const [showDuplicateAlert, setShowDuplicateAlert] = useState(false);
   const [pendingDuplicateInsumo, setPendingDuplicateInsumo] = useState<InsumoSelecionado | null>(null);
+  const [simSubstOpen, setSimSubstOpen] = useState(false);
+  const [itemSubstituirId, setItemSubstituirId] = useState<string | null>(null);
 
   // Tutorial: show only on first open ever
   const [showTutorial, setShowTutorial] = useState(() => {
