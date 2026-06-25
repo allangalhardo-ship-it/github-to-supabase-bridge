@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Trash2, FileText, Search, Calculator, ExternalLink, Lightbulb, X, AlertTriangle } from 'lucide-react';
+import { Trash2, FileText, Search, Calculator, ExternalLink, Lightbulb, X, AlertTriangle, Replace } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import BuscarInsumoDialog from './BuscarInsumoDialog';
 import CustoMargemCard from './CustoMargemCard';
@@ -17,6 +17,7 @@ import { formatCurrencyBRL, formatCurrencySmartBRL } from '@/lib/format';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { calcularCustoItem, unidadesCompativeis } from '@/utils/custoFicha';
 import { GravarReceitaVoz } from './GravarReceitaVoz';
+import SimuladorSubstituicaoDialog, { InsumoBasico } from './SimuladorSubstituicaoDialog';
 
 const GRUPOS_UNIDADE: Record<string, string[]> = {
   massa: ['mg', 'g', 'kg'],
@@ -103,6 +104,8 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
   const [showDiscardAlert, setShowDiscardAlert] = useState(false);
   const [showDuplicateAlert, setShowDuplicateAlert] = useState(false);
   const [pendingDuplicateInsumo, setPendingDuplicateInsumo] = useState<InsumoSelecionado | null>(null);
+  const [simSubstOpen, setSimSubstOpen] = useState(false);
+  const [itemSubstituirId, setItemSubstituirId] = useState<string | null>(null);
 
   // Tutorial: show only on first open ever
   const [showTutorial, setShowTutorial] = useState(() => {
@@ -353,6 +356,37 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
     setShowDuplicateAlert(false);
   };
 
+  const handleAplicarSubstituicao = (
+    tempId: string,
+    novoIns: InsumoBasico,
+    novaQtd: number,
+    novaUnid: string,
+  ) => {
+    setLocalItems((prev) =>
+      prev.map((it) => {
+        if (it.tempId !== tempId) return it;
+        // Marca o item antigo como deletado e cria um novo (rastreia substituição corretamente no save)
+        return { ...it, isDeleted: true };
+      }).concat([
+        {
+          tempId: `new-${Date.now()}`,
+          insumo: {
+            id: novoIns.id,
+            nome: novoIns.nome,
+            unidade_medida: novoIns.unidade_medida,
+            custo_unitario: novoIns.custo_unitario,
+            fator_perda: novoIns.fator_perda ?? null,
+          },
+          quantidade: novaQtd,
+          unidade: novaUnid,
+          isNew: true,
+        } as LocalItem,
+      ]),
+    );
+    toast({ title: 'Substituição aplicada', description: 'Revise e clique em Salvar para confirmar.' });
+  };
+
+
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -575,6 +609,19 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
                             type="button"
                             variant="ghost"
                             size="icon"
+                            title="Simular substituição"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary flex-shrink-0"
+                            onClick={() => {
+                              setItemSubstituirId(item.tempId);
+                              setSimSubstOpen(true);
+                            }}
+                          >
+                            <Replace className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
                             className="h-8 w-8 text-destructive hover:text-destructive flex-shrink-0"
                             onClick={() => handleRemoveItem(item.tempId)}
                           >
@@ -718,6 +765,37 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SimuladorSubstituicaoDialog
+        open={simSubstOpen}
+        onOpenChange={(v) => {
+          setSimSubstOpen(v);
+          if (!v) setItemSubstituirId(null);
+        }}
+        itemAtual={
+          itemSubstituirId
+            ? (() => {
+                const it = localItems.find((x) => x.tempId === itemSubstituirId);
+                if (!it) return null;
+                return {
+                  tempId: it.tempId,
+                  insumo: it.insumo,
+                  quantidade: it.quantidade,
+                  unidade: it.unidade,
+                };
+              })()
+            : null
+        }
+        todosItens={itensVisiveis.map((it) => ({
+          tempId: it.tempId,
+          insumo: it.insumo,
+          quantidade: it.quantidade,
+          unidade: it.unidade,
+        }))}
+        rendimento={parseInt(rendimentoLocal, 10) || 1}
+        precoBase={precoBase}
+        onAplicar={handleAplicarSubstituicao}
+      />
     </>
   );
 };
