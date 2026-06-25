@@ -38,7 +38,7 @@ async function buildBusinessSnapshot(supabase: any, empresaId: string): Promise<
     supabase.rpc("get_dashboard_vendas", { p_empresa_id: empresaId, p_data_inicio: inicio30, p_data_fim: hojeStr }),
     supabase.rpc("get_dashboard_vendas", { p_empresa_id: empresaId, p_data_inicio: inicio7, p_data_fim: hojeStr }),
     supabase.rpc("get_top_produtos", { p_empresa_id: empresaId, p_data_inicio: inicio30, p_data_fim: hojeStr, p_limit: 8 }),
-    supabase.from("custos_fixos").select("descricao, valor, recorrencia").eq("empresa_id", empresaId).eq("ativo", true),
+    supabase.from("custos_fixos").select("nome, valor_mensal, categoria").eq("empresa_id", empresaId),
     supabase.rpc("get_insumos_estoque_baixo", { p_empresa_id: empresaId }),
     supabase.from("alertas_custo").select("*, insumos:insumo_id(nome), produtos:produto_id(nome)").eq("empresa_id", empresaId).eq("status", "ativo").order("variacao_pct", { ascending: false }).limit(10),
     supabase.from("produtos").select("id, nome, preco_venda, categoria, ativo").eq("empresa_id", empresaId).eq("ativo", true),
