@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Trash2, FileText, Search, Calculator, ExternalLink, Lightbulb, X, AlertTriangle } from 'lucide-react';
+import { Trash2, FileText, Search, Calculator, ExternalLink, Lightbulb, X, AlertTriangle, Replace } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import BuscarInsumoDialog from './BuscarInsumoDialog';
 import CustoMargemCard from './CustoMargemCard';
@@ -17,6 +17,7 @@ import { formatCurrencyBRL, formatCurrencySmartBRL } from '@/lib/format';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { calcularCustoItem, unidadesCompativeis } from '@/utils/custoFicha';
 import { GravarReceitaVoz } from './GravarReceitaVoz';
+import SimuladorSubstituicaoDialog, { InsumoBasico } from './SimuladorSubstituicaoDialog';
 
 const GRUPOS_UNIDADE: Record<string, string[]> = {
   massa: ['mg', 'g', 'kg'],
