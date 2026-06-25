@@ -406,7 +406,15 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
             </DialogTitle>
           </DialogHeader>
 
+          {hasChanges && (
+            <div className="flex items-center gap-2 border-b bg-amber-50 px-4 py-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+              <span className="inline-block h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+              Alterações não salvas — clique em <strong>Salvar</strong> para confirmar.
+            </div>
+          )}
+
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
 
             {/* Tutorial para primeira vez */}
             {showTutorial && open && (
