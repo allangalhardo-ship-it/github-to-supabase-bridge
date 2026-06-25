@@ -356,6 +356,37 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
     setShowDuplicateAlert(false);
   };
 
+  const handleAplicarSubstituicao = (
+    tempId: string,
+    novoIns: InsumoBasico,
+    novaQtd: number,
+    novaUnid: string,
+  ) => {
+    setLocalItems((prev) =>
+      prev.map((it) => {
+        if (it.tempId !== tempId) return it;
+        // Marca o item antigo como deletado e cria um novo (rastreia substituição corretamente no save)
+        return { ...it, isDeleted: true };
+      }).concat([
+        {
+          tempId: `new-${Date.now()}`,
+          insumo: {
+            id: novoIns.id,
+            nome: novoIns.nome,
+            unidade_medida: novoIns.unidade_medida,
+            custo_unitario: novoIns.custo_unitario,
+            fator_perda: novoIns.fator_perda ?? null,
+          },
+          quantidade: novaQtd,
+          unidade: novaUnid,
+          isNew: true,
+        } as LocalItem,
+      ]),
+    );
+    toast({ title: 'Substituição aplicada', description: 'Revise e clique em Salvar para confirmar.' });
+  };
+
+
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
