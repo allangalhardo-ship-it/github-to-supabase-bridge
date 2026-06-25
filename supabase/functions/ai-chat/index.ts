@@ -33,6 +33,9 @@ async function buildBusinessSnapshot(supabase: any, empresaId: string): Promise<
     alertasRes,
     produtosRes,
     configRes,
+    canaisRes,
+    taxasRes,
+    precosCanaisRes,
   ] = await Promise.all([
     supabase.from("empresas").select("nome, segmento, plano_assinatura").eq("id", empresaId).maybeSingle(),
     supabase.rpc("get_dashboard_vendas", { p_empresa_id: empresaId, p_data_inicio: inicio30, p_data_fim: hojeStr }),
@@ -42,7 +45,10 @@ async function buildBusinessSnapshot(supabase: any, empresaId: string): Promise<
     supabase.rpc("get_insumos_estoque_baixo", { p_empresa_id: empresaId }),
     supabase.from("alertas_custo").select("*, insumos:insumo_id(nome), produtos:produto_id(nome)").eq("empresa_id", empresaId).eq("status", "ativo").order("variacao_pct", { ascending: false }).limit(10),
     supabase.from("produtos").select("id, nome, preco_venda, categoria, ativo").eq("empresa_id", empresaId).eq("ativo", true),
-    supabase.from("configuracoes").select("margem_desejada_padrao, imposto_medio_sobre_vendas").eq("empresa_id", empresaId).maybeSingle(),
+    supabase.from("configuracoes").select("margem_desejada_padrao, imposto_medio_sobre_vendas, cmv_alvo").eq("empresa_id", empresaId).maybeSingle(),
+    supabase.from("canais_venda").select("id, nome, tipo, ativo").eq("empresa_id", empresaId).eq("ativo", true),
+    supabase.from("taxas_canais").select("canal_id, percentual"),
+    supabase.from("precos_canais").select("produto_id, canal, preco").eq("empresa_id", empresaId),
   ]);
 
   const empresa = empresaRes.data;
