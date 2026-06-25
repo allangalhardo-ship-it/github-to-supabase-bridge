@@ -765,6 +765,37 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SimuladorSubstituicaoDialog
+        open={simSubstOpen}
+        onOpenChange={(v) => {
+          setSimSubstOpen(v);
+          if (!v) setItemSubstituirId(null);
+        }}
+        itemAtual={
+          itemSubstituirId
+            ? (() => {
+                const it = localItems.find((x) => x.tempId === itemSubstituirId);
+                if (!it) return null;
+                return {
+                  tempId: it.tempId,
+                  insumo: it.insumo,
+                  quantidade: it.quantidade,
+                  unidade: it.unidade,
+                };
+              })()
+            : null
+        }
+        todosItens={itensVisiveis.map((it) => ({
+          tempId: it.tempId,
+          insumo: it.insumo,
+          quantidade: it.quantidade,
+          unidade: it.unidade,
+        }))}
+        rendimento={parseInt(rendimentoLocal, 10) || 1}
+        precoBase={precoBase}
+        onAplicar={handleAplicarSubstituicao}
+      />
     </>
   );
 };
