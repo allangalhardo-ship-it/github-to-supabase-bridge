@@ -409,8 +409,30 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Snapshot de negócio
-    const snapshot = await buildBusinessSnapshot(supabase, empresaId);
+    // Snapshot de negócio (cacheado por 5 min para reduzir custo de RPCs e tokens)
+    const snapshotCacheKey = `chat_snapshot_${empresaId}`;
+    let snapshot: string | null = null;
+    const { data: cachedSnap } = await supabase
+      .from("ai_cache")
+      .select("response, expires_at")
+      .eq("empresa_id", empresaId)
+      .eq("feature", "chat_snapshot")
+      .eq("cache_key", snapshotCacheKey)
+      .gt("expires_at", new Date().toISOString())
+      .maybeSingle();
+
+    if (cachedSnap?.response?.text) {
+      snapshot = cachedSnap.response.text as string;
+    } else {
+      snapshot = await buildBusinessSnapshot(supabase, empresaId);
+      await supabase.from("ai_cache").upsert({
+        empresa_id: empresaId,
+        feature: "chat_snapshot",
+        cache_key: snapshotCacheKey,
+        response: { text: snapshot },
+        expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+      }, { onConflict: "empresa_id,feature,cache_key" });
+    }
 
     const systemPrompt = `Você é o **Consultor Financeiro IA** do GastroGestor, um assistente de gestão para donos de pequenos negócios de alimentação (confeitarias, marmitarias, hamburguerias, food trucks).
 
