@@ -85,7 +85,10 @@ async function buildBusinessSnapshot(supabase: any, empresaId: string): Promise<
   lines.push(`- Receita: ${brl(receita30)} (${qtdVendas30} vendas, ticket médio ${brl(ticketMedio)})`);
   lines.push(`- Custo de insumos (CMV): ${brl(custoTotal30)} (${cmvPct.toFixed(1)}%)`);
   lines.push(`- Lucro bruto: ${brl(lucroBruto30)}`);
-  lines.push(`- Custos fixos mensais (estimados): ${brl(custosFixosMensal)}`);
+  lines.push(`- Custos fixos mensais: ${brl(custosFixosMensal)} (${custosFixos.length} itens cadastrados)`);
+  if (custosFixos.length > 0) {
+    custosFixos.forEach((c: any) => lines.push(`    • ${c.nome}${c.categoria ? ` [${c.categoria}]` : ""}: ${brl(Number(c.valor_mensal || 0))}`));
+  }
   lines.push(`- Lucro líquido estimado: ${brl(lucroLiquidoEst)}`);
   lines.push(`- Receita últimos 7 dias: ${brl(receita7)}`);
   if (config?.margem_desejada_padrao) lines.push(`- Margem desejada configurada: ${config.margem_desejada_padrao}%`);
