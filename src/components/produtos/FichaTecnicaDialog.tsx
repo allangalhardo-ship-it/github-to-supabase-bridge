@@ -578,6 +578,19 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
                             type="button"
                             variant="ghost"
                             size="icon"
+                            title="Simular substituição"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary flex-shrink-0"
+                            onClick={() => {
+                              setItemSubstituirId(item.tempId);
+                              setSimSubstOpen(true);
+                            }}
+                          >
+                            <Replace className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
                             className="h-8 w-8 text-destructive hover:text-destructive flex-shrink-0"
                             onClick={() => handleRemoveItem(item.tempId)}
                           >
