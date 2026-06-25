@@ -12,6 +12,7 @@ import { Plus, Trash2, ClipboardList, AlertTriangle } from 'lucide-react';
 import { InsumoIcon } from '@/lib/insumoIconUtils';
 import { formatCurrencyBRL } from '@/lib/format';
 import { calcularCustoItem, unidadesCompativeis } from '@/utils/custoFicha';
+import { GravarReceitaVoz } from './GravarReceitaVoz';
 
 interface FichaTecnicaItem {
   id: string;
@@ -123,6 +124,9 @@ const FichaTecnicaForm: React.FC<FichaTecnicaFormProps> = ({ produtoId, fichaTec
 
   return (
     <div className="space-y-3 pt-2 border-t">
+      <div className="flex justify-end">
+        <GravarReceitaVoz produtoId={produtoId} />
+      </div>
       {fichaTecnica.length > 0 && (
         <div className="space-y-2">
           {fichaTecnica.map((item) => {
