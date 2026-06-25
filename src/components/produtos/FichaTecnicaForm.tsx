@@ -12,6 +12,7 @@ import { Plus, Trash2, ClipboardList, AlertTriangle } from 'lucide-react';
 import { InsumoIcon } from '@/lib/insumoIconUtils';
 import { formatCurrencyBRL } from '@/lib/format';
 import { calcularCustoItem, unidadesCompativeis } from '@/utils/custoFicha';
+import { GravarReceitaVoz } from './GravarReceitaVoz';
 
 interface FichaTecnicaItem {
   id: string;
