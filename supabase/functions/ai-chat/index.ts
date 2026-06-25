@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { convertToModelMessages, streamText, type UIMessage } from "npm:ai@6";
+import { convertToModelMessages, streamText, type UIMessage } from "npm:ai@7";
 import { createLovableAiGatewayProvider } from "../_shared/ai-gateway.ts";
 
 const corsHeaders = {
