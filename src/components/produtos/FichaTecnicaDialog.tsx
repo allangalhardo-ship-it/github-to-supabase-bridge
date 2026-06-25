@@ -396,7 +396,10 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
             )}
             {/* Adicionar novo insumo */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Adicionar Ingrediente</Label>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <Label className="text-sm font-medium">Adicionar Ingrediente</Label>
+                <GravarReceitaVoz produtoId={produtoId} />
+              </div>
               
               {/* Insumo selecionado ou botão de busca */}
               {novoInsumo ? (
