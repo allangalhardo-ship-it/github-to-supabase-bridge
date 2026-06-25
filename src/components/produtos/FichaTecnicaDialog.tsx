@@ -16,6 +16,7 @@ import { InsumoIcon } from '@/lib/insumoIconUtils';
 import { formatCurrencyBRL, formatCurrencySmartBRL } from '@/lib/format';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { calcularCustoItem, unidadesCompativeis } from '@/utils/custoFicha';
+import { GravarReceitaVoz } from './GravarReceitaVoz';
 
 const GRUPOS_UNIDADE: Record<string, string[]> = {
   massa: ['mg', 'g', 'kg'],
@@ -395,7 +396,10 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
             )}
             {/* Adicionar novo insumo */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Adicionar Ingrediente</Label>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <Label className="text-sm font-medium">Adicionar Ingrediente</Label>
+                <GravarReceitaVoz produtoId={produtoId} />
+              </div>
               
               {/* Insumo selecionado ou botão de busca */}
               {novoInsumo ? (
