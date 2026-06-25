@@ -16,6 +16,7 @@ import { InsumoIcon } from '@/lib/insumoIconUtils';
 import { formatCurrencyBRL, formatCurrencySmartBRL } from '@/lib/format';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { calcularCustoItem, unidadesCompativeis } from '@/utils/custoFicha';
+import { GravarReceitaVoz } from './GravarReceitaVoz';
 
 const GRUPOS_UNIDADE: Record<string, string[]> = {
   massa: ['mg', 'g', 'kg'],
