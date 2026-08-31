@@ -15,6 +15,7 @@ import {
   PanelLeftClose,
   Send,
 } from "lucide-react";
+import { VoiceInputButton } from "@/components/ai/VoiceInputButton";
 
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -294,6 +295,10 @@ function ChatWindow({
             rows={2}
             className="flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
             autoFocus
+          />
+          <VoiceInputButton
+            disabled={isLoading}
+            onTranscribed={(texto) => setDraft((d) => (d ? `${d} ${texto}` : texto))}
           />
           <Button
             type="submit"
