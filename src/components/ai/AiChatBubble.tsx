@@ -15,6 +15,7 @@ import {
   PanelLeftClose,
   Send,
 } from "lucide-react";
+import { VoiceInputButton } from "@/components/ai/VoiceInputButton";
 
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
