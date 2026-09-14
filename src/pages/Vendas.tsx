@@ -156,6 +156,9 @@ const Vendas = () => {
     return { totalValor, totalQuantidade, totalVendas, totalTaxaServico, totalIncentivoLoja, totalIncentivoPlataforma, totalLiquido };
   }, [vendasFiltradas]);
 
+  // Paginação da lista (evita renderizar centenas de linhas de uma vez)
+  const vendasPagination = usePagination(vendasFiltradas, { pageSize: 30 });
+
   // Extrair canais únicos para o filtro
   const canaisUnicos = useMemo(() => {
     if (!vendas) return [];
