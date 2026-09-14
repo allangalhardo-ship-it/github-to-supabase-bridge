@@ -338,6 +338,10 @@ export function useDashboardData() {
       }
       case 'mes':
       case 'ultimos30': return custoFixoMensal;
+      case 'personalizado': {
+        const dias = differenceInDays(parseDataLocal(fim), parseDataLocal(inicio)) + 1;
+        return custoDiario * Math.max(dias, 1);
+      }
       default: return custoFixoMensal;
     }
   };
