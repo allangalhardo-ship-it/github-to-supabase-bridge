@@ -44,29 +44,47 @@ export async function syncPendingActions(): Promise<{ success: number; failed: n
     // Sort by creation time to maintain order
     actions.sort((a, b) => a.createdAt - b.createdAt);
 
+    let discarded = 0;
+
     for (const action of actions) {
+      let errorMessage: string | undefined;
       try {
         const result = await executeAction(action);
-        
+
         if (result.success) {
           await clearPendingAction(action.id);
           success++;
-        } else {
-          console.error(`Failed to sync action ${action.id}:`, result.error);
-          failed++;
+          continue;
         }
+        errorMessage = result.error;
       } catch (error) {
-        console.error(`Error syncing action ${action.id}:`, error);
+        errorMessage = String(error);
+      }
+
+      console.error(`Failed to sync action ${action.id}:`, errorMessage);
+      const attempts = await registerPendingAttempt(action.id, errorMessage);
+
+      if (attempts >= MAX_ATTEMPTS) {
+        await clearPendingAction(action.id);
+        discarded++;
+      } else {
         failed++;
       }
     }
 
     if (success > 0) {
-      toast.success(`${success} ${success === 1 ? 'ação sincronizada' : 'ações sincronizadas'} com sucesso!`);
+      toast.success(`${success} ${success === 1 ? 'lançamento salvo' : 'lançamentos salvos'} no sistema!`);
     }
 
     if (failed > 0) {
-      toast.error(`${failed} ${failed === 1 ? 'ação falhou' : 'ações falharam'} ao sincronizar`);
+      toast.error(`${failed} ${failed === 1 ? 'lançamento ainda não foi salvo' : 'lançamentos ainda não foram salvos'}. Vamos tentar de novo.`);
+    }
+
+    if (discarded > 0) {
+      toast.error(
+        `${discarded} ${discarded === 1 ? 'lançamento não pôde ser salvo' : 'lançamentos não puderam ser salvos'} depois de várias tentativas. Registre novamente à mão.`,
+        { duration: 10000 }
+      );
     }
 
     return { success, failed };
@@ -78,12 +96,8 @@ export async function syncPendingActions(): Promise<{ success: number; failed: n
 async function executeAction(action: PendingAction): Promise<{ success: boolean; error?: string }> {
   const { type, table, data } = action;
 
-  // Validate table name to prevent injection
-  const allowedTables = [
-    'vendas', 'produtos', 'insumos', 'clientes', 'custos_fixos',
-    'producoes', 'fichas_tecnicas', 'estoque_movimentos', 'caixa_movimentos',
-    'configuracoes', 'receitas_intermediarias'
-  ];
+  // Apenas venda e caixa são enfileirados offline (fluxos que o usuário faz no balcão)
+  const allowedTables = ['vendas', 'caixa_movimentos'];
 
   if (!allowedTables.includes(table)) {
     return { success: false, error: `Invalid table: ${table}` };
