@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, Clock, XCircle } from 'lucide-react';
 import { format, differenceInDays, isAfter, isBefore, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { parseDataLocal } from '@/lib/format';
 
 interface ProducaoComVencimento {
   id: string;
