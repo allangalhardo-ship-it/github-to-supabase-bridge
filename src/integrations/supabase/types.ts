@@ -1851,6 +1851,7 @@ export type Database = {
           origem: string
           plataforma: string | null
           produto_id: string | null
+          qtd_acabado_baixada: number
           quantidade: number
           subtotal: number | null
           taxa_entrega: number | null
@@ -1875,6 +1876,7 @@ export type Database = {
           origem?: string
           plataforma?: string | null
           produto_id?: string | null
+          qtd_acabado_baixada?: number
           quantidade?: number
           subtotal?: number | null
           taxa_entrega?: number | null
@@ -1899,6 +1901,7 @@ export type Database = {
           origem?: string
           plataforma?: string | null
           produto_id?: string | null
+          qtd_acabado_baixada?: number
           quantidade?: number
           subtotal?: number | null
           taxa_entrega?: number | null
@@ -2074,6 +2077,14 @@ export type Database = {
         Args: { p_de: string; p_para: string; p_qtd: number }
         Returns: number
       }
+      estornar_venda_encomenda: {
+        Args: { p_encomenda_id: string }
+        Returns: undefined
+      }
+      estornar_venda_pedido: {
+        Args: { p_pedido_id: string }
+        Returns: undefined
+      }
       get_dashboard_vendas: {
         Args: {
           p_data_fim: string
@@ -2138,6 +2149,14 @@ export type Database = {
       recalcular_custo_intermediario: {
         Args: { p_depth?: number; p_insumo_id: string }
         Returns: number
+      }
+      registrar_venda_encomenda: {
+        Args: { p_encomenda_id: string }
+        Returns: undefined
+      }
+      registrar_venda_pedido: {
+        Args: { p_pedido_id: string }
+        Returns: undefined
       }
       resolver_alertas_custo_produto: {
         Args: { p_produto_id: string }

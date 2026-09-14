@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion, AnimatePresence } from "framer-motion";
 import { Pedido } from "@/components/cardapio/types";
+import { invalidateEmpresaCachesAndRefetch } from "@/lib/queryConfig";
 
 const COLUNAS = [
   { key: "pendente", label: "Novos", icon: Clock, color: "bg-amber-500" },
@@ -55,6 +56,7 @@ export default function Pedidos() {
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
+  const [processando, setProcessando] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -80,25 +82,52 @@ export default function Pedidos() {
   }, [empresaId]);
 
   const atualizarStatus = async (pedido: Pedido, novoStatus: string) => {
-    const timestampCol = `${novoStatus}_em`;
-    const { error } = await supabase.from("pedidos").update({ status: novoStatus, [timestampCol]: new Date().toISOString() } as any).eq("id", pedido.id);
-    if (error) { toast.error("Erro ao atualizar"); return; }
-    toast.success(`Pedido #${pedido.numero_pedido} → ${NEXT_LABEL[pedido.status] || novoStatus}`);
-    if (pedido.cliente_whatsapp) {
-      const msg = buildWhatsAppMsg({ ...pedido, status: novoStatus }, novoStatus);
-      if (msg) {
-        const num = pedido.cliente_whatsapp.replace(/\D/g, "");
-        const fullNum = num.length <= 11 ? `55${num}` : num;
-        window.open(`https://wa.me/${fullNum}?text=${encodeURIComponent(msg)}`, "_blank");
+    if (processando) return;
+    setProcessando(pedido.id);
+    try {
+      const timestampCol = `${novoStatus}_em`;
+      const { error } = await supabase
+        .from("pedidos")
+        .update({ status: novoStatus, [timestampCol]: new Date().toISOString() } as any)
+        .eq("id", pedido.id)
+        .neq("status", novoStatus);
+      if (error) { toast.error("Erro ao atualizar"); return; }
+      toast.success(
+        novoStatus === "entregue"
+          ? `Pedido #${pedido.numero_pedido} entregue! Venda e caixa atualizados.`
+          : `Pedido #${pedido.numero_pedido} → ${NEXT_LABEL[pedido.status] || novoStatus}`
+      );
+      if (novoStatus === "entregue") invalidateEmpresaCachesAndRefetch(empresaId);
+      if (pedido.cliente_whatsapp) {
+        const msg = buildWhatsAppMsg({ ...pedido, status: novoStatus }, novoStatus);
+        if (msg) {
+          const num = pedido.cliente_whatsapp.replace(/\D/g, "");
+          const fullNum = num.length <= 11 ? `55${num}` : num;
+          window.open(`https://wa.me/${fullNum}?text=${encodeURIComponent(msg)}`, "_blank");
+        }
       }
+    } finally {
+      setProcessando(null);
     }
   };
 
   const cancelarPedido = async (pedido: Pedido) => {
+    if (processando) return;
     const motivo = prompt("Motivo do cancelamento:");
     if (!motivo) return;
-    await supabase.from("pedidos").update({ status: "cancelado", cancelado_em: new Date().toISOString(), motivo_cancelamento: motivo } as any).eq("id", pedido.id);
-    toast.success(`Pedido #${pedido.numero_pedido} cancelado`);
+    setProcessando(pedido.id);
+    try {
+      const { error } = await supabase
+        .from("pedidos")
+        .update({ status: "cancelado", cancelado_em: new Date().toISOString(), motivo_cancelamento: motivo } as any)
+        .eq("id", pedido.id)
+        .neq("status", "cancelado");
+      if (error) { toast.error("Erro ao cancelar"); return; }
+      toast.success(`Pedido #${pedido.numero_pedido} cancelado`);
+      invalidateEmpresaCachesAndRefetch(empresaId);
+    } finally {
+      setProcessando(null);
+    }
   };
 
   const pedidosFiltrados = pedidos.filter(p => {
@@ -203,12 +232,12 @@ export default function Pedidos() {
                   <span className="font-bold text-foreground">{formatCurrencyBRL(pedido.valor_total)}</span>
                   <div className="flex gap-2">
                     {pedido.status !== "cancelado" && pedido.status !== "entregue" && (
-                      <Button variant="outline" size="sm" onClick={() => cancelarPedido(pedido)} className="text-xs text-destructive border-destructive/30 hover:bg-destructive/10">
+                      <Button variant="outline" size="sm" disabled={processando === pedido.id} onClick={() => cancelarPedido(pedido)} className="text-xs text-destructive border-destructive/30 hover:bg-destructive/10">
                         Cancelar
                       </Button>
                     )}
                     {nextStatus && (
-                      <Button size="sm" onClick={() => atualizarStatus(pedido, nextStatus)} className="text-xs">
+                      <Button size="sm" disabled={processando === pedido.id} onClick={() => atualizarStatus(pedido, nextStatus)} className="text-xs">
                         {NEXT_LABEL[pedido.status]}
                       </Button>
                     )}
