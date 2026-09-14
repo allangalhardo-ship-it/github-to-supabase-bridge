@@ -261,6 +261,17 @@ export default function Pedidos() {
           })}
         </AnimatePresence>
 
+        <PaginationControls
+          currentPage={pedidosPagination.currentPage}
+          totalPages={pedidosPagination.totalPages}
+          startIndex={pedidosPagination.startIndex}
+          endIndex={pedidosPagination.endIndex}
+          totalItems={pedidosPagination.totalItems}
+          onPrevPage={pedidosPagination.prevPage}
+          onNextPage={pedidosPagination.nextPage}
+        />
+
+
         {pedidosFiltrados.length === 0 && (
           <div className="text-center py-16">
             <ClipboardList className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
