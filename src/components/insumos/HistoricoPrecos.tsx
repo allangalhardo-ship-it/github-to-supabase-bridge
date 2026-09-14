@@ -90,7 +90,7 @@ const HistoricoPrecos: React.FC<HistoricoPrecosProps> = ({
     if (recent.length >= 2) {
       const first = Number(recent[0].preco_novo);
       const last = Number(recent[recent.length - 1].preco_novo);
-      const diff = ((last - first) / first) * 100;
+      const diff = first > 0 ? ((last - first) / first) * 100 : 0;
       if (diff > 5) trend = 'up';
       else if (diff < -5) trend = 'down';
     }
@@ -98,7 +98,8 @@ const HistoricoPrecos: React.FC<HistoricoPrecosProps> = ({
     // Total variation from first to last
     const firstPrice = Number(historico[0].preco_novo);
     const lastPrice = Number(historico[historico.length - 1].preco_novo);
-    const variation = ((lastPrice - firstPrice) / firstPrice) * 100;
+    const variationRaw = firstPrice > 0 ? ((lastPrice - firstPrice) / firstPrice) * 100 : 0;
+    const variation = Number.isFinite(variationRaw) ? variationRaw : 0;
 
     return { min, max, avg, variation, trend };
   }, [historico, custoAtual]);

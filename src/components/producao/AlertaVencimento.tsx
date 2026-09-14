@@ -59,7 +59,7 @@ export const AlertaVencimento = () => {
     producoesPerto.forEach(prod => {
       if (!prod.data_vencimento) return;
       
-      const dataVenc = new Date(prod.data_vencimento);
+      const dataVenc = parseDataLocal(prod.data_vencimento);
       dataVenc.setHours(0, 0, 0, 0);
       
       const diasRestantes = differenceInDays(dataVenc, hoje);
@@ -93,7 +93,7 @@ export const AlertaVencimento = () => {
                 </p>
                 <div className="mt-2 space-y-1.5">
                   {alertas.vencidos.map(prod => {
-                    const diasVencido = differenceInDays(new Date(), new Date(prod.data_vencimento));
+                    const diasVencido = differenceInDays(new Date(), parseDataLocal(prod.data_vencimento));
                     return (
                       <div key={prod.id} className="flex items-center justify-between gap-2 text-sm">
                         <span className="text-destructive/90 truncate">
@@ -125,7 +125,7 @@ export const AlertaVencimento = () => {
                 <div className="mt-2 space-y-1.5">
                   {alertas.proximos.map(prod => {
                     const hoje = new Date();
-                    const dataVenc = new Date(prod.data_vencimento);
+                    const dataVenc = parseDataLocal(prod.data_vencimento);
                     const diasRestantes = differenceInDays(dataVenc, hoje);
                     
                     return (
