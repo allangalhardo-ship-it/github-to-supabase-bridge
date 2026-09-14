@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion, AnimatePresence } from "framer-motion";
 import { Pedido } from "@/components/cardapio/types";
+import { invalidateEmpresaCachesAndRefetch } from "@/lib/queryConfig";
 
 const COLUNAS = [
   { key: "pendente", label: "Novos", icon: Clock, color: "bg-amber-500" },
@@ -55,6 +56,7 @@ export default function Pedidos() {
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
+  const [processando, setProcessando] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
