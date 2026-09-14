@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { motion, AnimatePresence } from "framer-motion";
 import { Pedido } from "@/components/cardapio/types";
 import { invalidateEmpresaCachesAndRefetch } from "@/lib/queryConfig";
+import { usePagination } from "@/hooks/usePagination";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 
 const COLUNAS = [
   { key: "pendente", label: "Novos", icon: Clock, color: "bg-amber-500" },
@@ -62,7 +64,16 @@ export default function Pedidos() {
   useEffect(() => {
     if (!empresaId) return;
     const fetchPedidos = async () => {
-      const { data } = await supabase.from("pedidos").select("*").eq("empresa_id", empresaId).order("created_at", { ascending: false }).limit(200);
+      // Últimos 30 dias: pedidos antigos ficam no relatório, não no painel do dia
+      const desde = new Date();
+      desde.setDate(desde.getDate() - 30);
+      const { data } = await supabase
+        .from("pedidos")
+        .select("*")
+        .eq("empresa_id", empresaId)
+        .gte("created_at", desde.toISOString())
+        .order("created_at", { ascending: false })
+        .limit(300);
       setPedidos((data as unknown as Pedido[]) || []);
       setLoading(false);
     };
@@ -141,6 +152,8 @@ export default function Pedidos() {
 
   const pedidosAtivos = pedidos.filter(p => !["entregue", "cancelado"].includes(p.status));
 
+  const pedidosPagination = usePagination(pedidosFiltrados, { pageSize: 20 });
+
   if (loading) return <div className="space-y-4">{[1, 2, 3].map(i => <div key={i} className="h-24 bg-muted rounded-xl animate-pulse" />)}</div>;
 
   return (
@@ -194,7 +207,7 @@ export default function Pedidos() {
       {/* Pedidos list */}
       <div className="space-y-3">
         <AnimatePresence>
-          {pedidosFiltrados.map(pedido => {
+          {pedidosPagination.paginatedData.map(pedido => {
             const nextStatus = NEXT_STATUS[pedido.status];
             const coluna = COLUNAS.find(c => c.key === pedido.status);
             const itens = Array.isArray(pedido.itens) ? pedido.itens : [];
@@ -247,6 +260,17 @@ export default function Pedidos() {
             );
           })}
         </AnimatePresence>
+
+        <PaginationControls
+          currentPage={pedidosPagination.currentPage}
+          totalPages={pedidosPagination.totalPages}
+          startIndex={pedidosPagination.startIndex}
+          endIndex={pedidosPagination.endIndex}
+          totalItems={pedidosPagination.totalItems}
+          onPrevPage={pedidosPagination.prevPage}
+          onNextPage={pedidosPagination.nextPage}
+        />
+
 
         {pedidosFiltrados.length === 0 && (
           <div className="text-center py-16">

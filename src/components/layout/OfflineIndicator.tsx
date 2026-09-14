@@ -75,8 +75,8 @@ const OfflineIndicator = () => {
             <p className="font-medium text-sm">Você está offline</p>
             <p className="text-xs opacity-80">
               {pendingCount > 0 
-                ? `${pendingCount} ações serão sincronizadas quando voltar` 
-                : 'Os dados em cache estão disponíveis'}
+                ? `${pendingCount} ${pendingCount === 1 ? 'lançamento guardado' : 'lançamentos guardados'} no aparelho. Entram no sistema quando a internet voltar.` 
+                : 'Você pode consultar o que já foi carregado e registrar vendas e caixa.'}
             </p>
           </div>
         </>
@@ -106,7 +106,7 @@ const OfflineIndicator = () => {
           )}
           <div className="flex-1 min-w-0">
             <p className="font-medium text-sm">
-              {isSyncing ? 'Sincronizando...' : `${pendingCount} ações pendentes`}
+              {isSyncing ? 'Sincronizando...' : `${pendingCount} ${pendingCount === 1 ? 'lançamento pendente' : 'lançamentos pendentes'}`}
             </p>
           </div>
           {!isSyncing && (

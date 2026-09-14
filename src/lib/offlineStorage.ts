@@ -119,11 +119,23 @@ export async function getCachedData<T>(key: string): Promise<T | null> {
   }
 }
 
+export interface PendingActionRecord {
+  id: number;
+  type: string;
+  table: string;
+  data: unknown;
+  createdAt: number;
+  attempts?: number;
+  lastError?: string;
+  label?: string;
+}
+
 // Store pending action for sync
 export async function storePendingAction(action: {
   type: string;
   table: string;
   data: unknown;
+  label?: string;
 }): Promise<void> {
   try {
     const database = await openDB();
@@ -132,6 +144,7 @@ export async function storePendingAction(action: {
     
     store.add({
       ...action,
+      attempts: 0,
       createdAt: Date.now(),
     });
   } catch (error) {
@@ -140,13 +153,7 @@ export async function storePendingAction(action: {
 }
 
 // Get all pending actions
-export async function getPendingActions(): Promise<Array<{
-  id: number;
-  type: string;
-  table: string;
-  data: unknown;
-  createdAt: number;
-}>> {
+export async function getPendingActions(): Promise<PendingActionRecord[]> {
   try {
     const database = await openDB();
     const transaction = database.transaction(['pendingActions'], 'readonly');
@@ -154,12 +161,39 @@ export async function getPendingActions(): Promise<Array<{
     
     return new Promise((resolve) => {
       const request = store.getAll();
-      request.onsuccess = () => resolve(request.result || []);
+      request.onsuccess = () => resolve((request.result || []) as PendingActionRecord[]);
       request.onerror = () => resolve([]);
     });
   } catch (error) {
     console.error('Error getting pending actions:', error);
     return [];
+  }
+}
+
+// Register a failed attempt on a pending action (used to give up after N tries)
+export async function registerPendingAttempt(id: number, errorMessage?: string): Promise<number> {
+  try {
+    const database = await openDB();
+    const transaction = database.transaction(['pendingActions'], 'readwrite');
+    const store = transaction.objectStore('pendingActions');
+
+    return new Promise((resolve) => {
+      const request = store.get(id);
+      request.onsuccess = () => {
+        const record = request.result as PendingActionRecord | undefined;
+        if (!record) {
+          resolve(0);
+          return;
+        }
+        const attempts = (record.attempts ?? 0) + 1;
+        store.put({ ...record, attempts, lastError: errorMessage });
+        resolve(attempts);
+      };
+      request.onerror = () => resolve(0);
+    });
+  } catch (error) {
+    console.error('Error registering pending attempt:', error);
+    return 0;
   }
 }
 

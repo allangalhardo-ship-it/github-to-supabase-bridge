@@ -167,11 +167,24 @@ const Importar99FoodTab: React.FC<Props> = ({ onImportComplete }) => {
   const checkDuplicates = async (orders: ExtratoPedido[]): Promise<ExtratoPedido[]> => {
     if (!usuario?.empresa_id) return orders;
     try {
-      const { data: existing } = await supabase
+      // Restringe a busca às datas do arquivo importado (evita bater no limite de linhas)
+      const datas = orders.map(o => o.data_pedido).filter(Boolean).sort();
+      const dataInicio = datas[0];
+      const dataFim = datas[datas.length - 1];
+
+      let query = supabase
         .from('vendas')
         .select('numero_pedido_externo, plataforma, data_venda, subtotal')
         .eq('empresa_id', usuario.empresa_id)
         .ilike('plataforma', '%99%');
+
+      if (dataInicio && dataFim) {
+        query = query.gte('data_venda', dataInicio).lte('data_venda', dataFim);
+      } else {
+        query = query.order('data_venda', { ascending: false }).limit(1000);
+      }
+
+      const { data: existing } = await query;
 
       if (!existing || existing.length === 0) return orders;
 

@@ -22,6 +22,8 @@ import { ptBR } from 'date-fns/locale';
 import { inserirMovimentoEstoque, calcularEstoqueDeMovimentos } from '@/lib/estoqueUtils';
 import { formatCurrencySmartBRL } from '@/lib/format';
 import ContextualTip from '@/components/onboarding/ContextualTip';
+import { usePagination } from '@/hooks/usePagination';
+import { PaginationControls } from '@/components/ui/pagination-controls';
 const Estoque = () => {
   const { usuario } = useAuth();
   const { toast } = useToast();
@@ -94,17 +96,32 @@ const Estoque = () => {
     enabled: !!usuario?.empresa_id,
   });
 
-  // Fetch movimentos
+  // Fetch movimentos (já filtrado por período no banco, para não trazer o histórico inteiro)
   const { data: movimentos, isLoading: loadingMovimentos } = useQuery({
-    queryKey: ['estoque-movimentos', usuario?.empresa_id],
+    queryKey: ['estoque-movimentos', usuario?.empresa_id, filtroPeriodo],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const hoje = new Date();
+      let query = supabase
         .from('estoque_movimentos')
         .select(`
           *,
           insumos (nome, unidade_medida)
         `)
         .order('created_at', { ascending: false });
+
+      if (filtroPeriodo === 'mes') {
+        query = query.gte('created_at', startOfMonth(hoje).toISOString());
+      } else if (filtroPeriodo === 'mesPassado') {
+        query = query
+          .gte('created_at', startOfMonth(subMonths(hoje, 1)).toISOString())
+          .lte('created_at', endOfMonth(subMonths(hoje, 1)).toISOString());
+      } else if (filtroPeriodo === 'ultimos3meses') {
+        query = query.gte('created_at', startOfMonth(subMonths(hoje, 2)).toISOString());
+      } else {
+        query = query.limit(2000);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       return data;
@@ -198,6 +215,9 @@ const Estoque = () => {
     if (!movimentos) return [];
     return [...new Set(movimentos.map(m => m.origem))];
   }, [movimentos]);
+
+  // Paginação do histórico de movimentações
+  const movimentosPagination = usePagination(movimentosFiltrados, { pageSize: 30 });
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -616,8 +636,9 @@ const Estoque = () => {
                   <Skeleton className="h-64" />
                 </div>
               ) : movimentosFiltrados && movimentosFiltrados.length > 0 ? (
+                <>
                 <MobileDataView
-                  data={movimentosFiltrados}
+                  data={movimentosPagination.paginatedData}
                   keyExtractor={(mov) => mov.id}
                   columns={[
                     { key: 'data', header: 'Data', mobilePriority: 3, render: (m) => (
@@ -650,6 +671,19 @@ const Estoque = () => {
                     </Button>
                   ) : undefined}
                 />
+                <div className="px-4 pb-4">
+                  <PaginationControls
+                    currentPage={movimentosPagination.currentPage}
+                    totalPages={movimentosPagination.totalPages}
+                    startIndex={movimentosPagination.startIndex}
+                    endIndex={movimentosPagination.endIndex}
+                    totalItems={movimentosPagination.totalItems}
+                    onPrevPage={movimentosPagination.prevPage}
+                    onNextPage={movimentosPagination.nextPage}
+                  />
+                </div>
+                </>
+
               ) : (
                 <div className="p-12 text-center">
                   <Warehouse className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

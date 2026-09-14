@@ -4,6 +4,9 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { invalidateEmpresaCachesAndRefetch } from '@/lib/queryConfig';
+import { storePendingAction } from '@/lib/offlineStorage';
+import { usePagination } from '@/hooks/usePagination';
+import { PaginationControls } from '@/components/ui/pagination-controls';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -153,6 +156,9 @@ const Vendas = () => {
     return { totalValor, totalQuantidade, totalVendas, totalTaxaServico, totalIncentivoLoja, totalIncentivoPlataforma, totalLiquido };
   }, [vendasFiltradas]);
 
+  // Paginação da lista (evita renderizar centenas de linhas de uma vez)
+  const vendasPagination = usePagination(vendasFiltradas, { pageSize: 30 });
+
   // Extrair canais únicos para o filtro
   const canaisUnicos = useMemo(() => {
     if (!vendas) return [];
@@ -161,7 +167,7 @@ const Vendas = () => {
   }, [vendas]);
 
   const createMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
+    mutationFn: async (data: typeof formData): Promise<{ queued: boolean }> => {
       const produto = produtos?.find(p => p.id === data.produto_id);
       const cliente = clientes?.find(c => c.id === data.cliente_id);
       
@@ -171,7 +177,7 @@ const Vendas = () => {
         canal = `Cliente: ${cliente.nome}`;
       }
 
-      const { error } = await supabase.from('vendas').insert({
+      const payload = {
         empresa_id: usuario!.empresa_id,
         produto_id: data.produto_id || null,
         descricao_produto: produto?.nome || null,
@@ -182,12 +188,43 @@ const Vendas = () => {
         origem: 'manual',
         tipo_venda: data.tipo_venda,
         cliente_id: data.tipo_venda === 'direto' ? (data.cliente_id || null) : null,
-      });
-      if (error) throw error;
+      };
+
+      // Sem internet: guarda no aparelho e sincroniza quando a conexão voltar
+      if (!navigator.onLine) {
+        await storePendingAction({
+          type: 'insert',
+          table: 'vendas',
+          data: payload,
+          label: `Venda ${produto?.nome || ''}`.trim(),
+        });
+        return { queued: true };
+      }
+
+      const { error } = await supabase.from('vendas').insert(payload);
+      if (error) {
+        // Falha de rede (não de validação): também vai para a fila
+        const isNetworkError = /fetch|network|failed to fetch|timeout/i.test(error.message || '');
+        if (isNetworkError) {
+          await storePendingAction({
+            type: 'insert',
+            table: 'vendas',
+            data: payload,
+            label: `Venda ${produto?.nome || ''}`.trim(),
+          });
+          return { queued: true };
+        }
+        throw error;
+      }
+      return { queued: false };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
-      toast({ title: 'Venda registrada!' });
+      toast(
+        result.queued
+          ? { title: 'Venda guardada no aparelho', description: 'Ela entra no sistema assim que a internet voltar.' }
+          : { title: 'Venda registrada!' }
+      );
       resetForm();
     },
     onError: (error) => {
@@ -681,8 +718,9 @@ const Vendas = () => {
           {isLoading ? (
             <Skeleton className="h-96" />
           ) : (
+            <>
             <MobileDataView
-              data={vendasFiltradas}
+              data={vendasPagination.paginatedData}
               columns={[
                 {
                   key: 'data',
@@ -807,6 +845,16 @@ const Vendas = () => {
                 ) : undefined
               }
             />
+            <PaginationControls
+              currentPage={vendasPagination.currentPage}
+              totalPages={vendasPagination.totalPages}
+              startIndex={vendasPagination.startIndex}
+              endIndex={vendasPagination.endIndex}
+              totalItems={vendasPagination.totalItems}
+              onPrevPage={vendasPagination.prevPage}
+              onNextPage={vendasPagination.nextPage}
+            />
+            </>
           )}
       </div>
 

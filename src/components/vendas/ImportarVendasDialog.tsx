@@ -330,11 +330,24 @@ const ImportarVendasDialog: React.FC = () => {
     if (!usuario?.empresa_id || results.length === 0) return results;
 
     try {
-      // Fetch existing sales for comparison
-      const { data: existingVendas } = await supabase
+      // Busca apenas as vendas das datas envolvidas na importação (evita trazer a base inteira
+      // e bater no limite de linhas, o que fazia duplicata passar batido)
+      const datas = results.map(r => r.data).filter(Boolean).sort();
+      const dataInicio = datas[0];
+      const dataFim = datas[datas.length - 1];
+
+      let query = supabase
         .from('vendas')
         .select('numero_pedido_externo, plataforma, data_venda, subtotal, valor_total')
         .eq('empresa_id', usuario.empresa_id);
+
+      if (dataInicio && dataFim) {
+        query = query.gte('data_venda', dataInicio).lte('data_venda', dataFim);
+      } else {
+        query = query.order('data_venda', { ascending: false }).limit(1000);
+      }
+
+      const { data: existingVendas } = await query;
 
       if (!existingVendas || existingVendas.length === 0) return results;
 
