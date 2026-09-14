@@ -22,7 +22,7 @@ import CustoMargemCard from "./CustoMargemCard";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatCurrencyBRL } from '@/lib/format';
 import { calcularCustoFicha } from '@/utils/custoFicha';
-import { calcularPrecoSugerido, ConfiguracaoPrecificacao } from '@/lib/precificacaoUtils';
+import { calcularPrecoPorCmvAlvo } from '@/lib/precificacaoUtils';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import FichaTecnicaDialog from "./FichaTecnicaDialog";
 import DuplicarProdutoDialog from "./DuplicarProdutoDialog";
@@ -175,12 +175,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
       return { precoSugerido: 0, precoSugeridoValido: false, precoAbaixoSugerido: false };
     }
     
-    const configPrecificacao: ConfiguracaoPrecificacao = {
-      margem_desejada_padrao: config?.margem_desejada_padrao || 30,
-      imposto_medio_sobre_vendas: config?.imposto_medio_sobre_vendas || 0,
-    };
-
-    const resultado = calcularPrecoSugerido(custoInsumos, configPrecificacao, 0);
+    const resultado = calcularPrecoPorCmvAlvo(
+      custoInsumos,
+      Number(config?.cmv_alvo ?? 35),
+      0,
+      Number(config?.imposto_medio_sobre_vendas ?? 0),
+    );
     const valido = Number.isFinite(resultado.preco) && resultado.preco > 0 && resultado.viavel;
     const abaixo = valido && precoVenda < resultado.preco;
 

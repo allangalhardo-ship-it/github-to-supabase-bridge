@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { subDays } from 'date-fns';
 import { calcularCustoFicha } from '@/utils/custoFicha';
+import { calcularPrecoPorCmvAlvo } from '@/lib/precificacaoUtils';
 import {
   ProdutoBase,
   ProdutoAnalise,
@@ -351,10 +352,14 @@ export function useMenuEngineering(periodo: PeriodoBCG = 30) {
       const precoReferenciaAtual = canalReferenciaPreco
         ? (precosCanaisProduto[canalReferenciaPreco[0]] ?? produto.preco_venda ?? 0)
         : (produto.preco_venda ?? 0);
-      const taxa = taxaReferenciaPreco / 100;
-      const fatorReceita = 1 - taxa;
-      const precoSugeridoViavel = cmvAlvoFrac > 0 && cmvAlvoFrac < 1 && fatorReceita > 0 && custoInsumos > 0;
-      const precoSugerido = precoSugeridoViavel ? custoInsumos / (cmvAlvoFrac * fatorReceita) : 0;
+      const resultadoSugerido = calcularPrecoPorCmvAlvo(
+        custoInsumos,
+        cmvAlvoFrac * 100,
+        taxaReferenciaPreco,
+        config.imposto_medio_sobre_vendas,
+      );
+      const precoSugeridoViavel = resultadoSugerido.viavel;
+      const precoSugerido = resultadoSugerido.preco;
 
 
       // Saúde
