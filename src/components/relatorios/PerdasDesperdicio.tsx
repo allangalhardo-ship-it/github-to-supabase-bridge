@@ -105,6 +105,7 @@ export const PerdasDesperdicio: React.FC<PerdasDesperdicioProps> = ({ onBack }) 
             id,
             nome,
             preco_venda,
+            rendimento_padrao,
             fichas_tecnicas (
               quantidade,
               insumos (
@@ -143,7 +144,7 @@ export const PerdasDesperdicio: React.FC<PerdasDesperdicioProps> = ({ onBack }) 
 
     // Perdas de produtos vencidos
     const perdasProdutos = producoesVencidas?.map(prod => {
-      const custoUnitario = calcularCustoFicha(prod.produtos?.fichas_tecnicas as any);
+      const custoUnitario = calcularCustoFicha(prod.produtos?.fichas_tecnicas as any, (prod.produtos as any)?.rendimento_padrao || 1);
       const custoTotal = custoUnitario * prod.quantidade;
       
       return {

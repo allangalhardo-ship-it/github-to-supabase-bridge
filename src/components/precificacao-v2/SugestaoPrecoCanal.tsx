@@ -6,6 +6,7 @@ import { Store, Smartphone, ArrowRight, Check } from 'lucide-react';
 import { ProdutoAnalise, ConfiguracoesPrecificacao, formatCurrency, formatPercent } from './types';
 import { cn } from '@/lib/utils';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
+import { calcularPrecoPorCmvAlvo } from '@/lib/precificacaoUtils';
 
 interface SugestaoPrecosCanalProps {
   produtos: ProdutoAnalise[];
@@ -31,10 +32,16 @@ const SugestaoPrecoCanal: React.FC<SugestaoPrecosCanalProps> = ({ produtos, conf
 
         const canaisComSugestao = canaisConfigurados.map(canal => {
           const taxa = canal.taxa / 100;
-          const fatorReceita = 1 - taxa;
-          const precoIdeal = fatorReceita > 0 && cmvAlvo > 0
-            ? produto.custoInsumos / (cmvAlvo * fatorReceita)
-            : produto.custoInsumos * 3;
+          const imposto = (config.imposto_medio_sobre_vendas || 0) / 100;
+          const fatorReceita = 1 - taxa - imposto;
+          const resultadoIdeal = calcularPrecoPorCmvAlvo(
+            produto.custoInsumos,
+            cmvAlvo * 100,
+            canal.taxa,
+            config.imposto_medio_sobre_vendas || 0,
+          );
+          const precoIdeal = resultadoIdeal.preco;
+          const motivoInviavel = resultadoIdeal.viavel ? null : resultadoIdeal.motivo;
 
           // Fallback: se o canal não tem preço próprio, usa o do Balcão (não o preco_venda legado).
           const precoAtual = produto.precosCanais?.[canal.id] ?? precoBalcao;
@@ -45,6 +52,7 @@ const SugestaoPrecoCanal: React.FC<SugestaoPrecosCanalProps> = ({ produtos, conf
           const cmvAtual = receitaLiquida > 0 ? (produto.custoInsumos / receitaLiquida) * 100 : 100;
 
           return {
+            motivoInviavel,
             canalId: canal.id,
             canalNome: canal.nome,
             taxa: canal.taxa,
@@ -54,7 +62,7 @@ const SugestaoPrecoCanal: React.FC<SugestaoPrecosCanalProps> = ({ produtos, conf
             diferenca,
             diferencaPercent,
             cmvAtual,
-            precisaAjuste: Math.abs(diferencaPercent) > 5,
+            precisaAjuste: resultadoIdeal.viavel && Math.abs(diferencaPercent) > 5,
           };
         });
 
@@ -147,7 +155,12 @@ const SugestaoPrecoCanal: React.FC<SugestaoPrecosCanalProps> = ({ produtos, conf
                             )}
                           </>
                         )}
-                        {!canal.precisaAjuste && (
+                        {!canal.precisaAjuste && canal.motivoInviavel && (
+                          <Badge variant="outline" className="text-[9px] px-1 h-4 text-amber-600 border-amber-500/30" title={canal.motivoInviavel}>
+                            Não dá pra calcular
+                          </Badge>
+                        )}
+                        {!canal.precisaAjuste && !canal.motivoInviavel && (
                           <Badge variant="outline" className="text-[9px] px-1 h-4 text-emerald-600 border-emerald-500/30">
                             OK
                           </Badge>

@@ -44,6 +44,7 @@ interface Produto {
   nome: string;
   preco_venda: number;
   categoria: string | null;
+  rendimento_padrao?: number | null;
   fichas_tecnicas?: Array<{
     quantidade: number;
     insumo_id: string;
@@ -200,7 +201,7 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
       let produtoMaisCritico: { nome: string; margem: number; ajuste: number } | null = null;
       
       produtos.forEach((produto) => {
-        const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any);
+        const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any, produto.rendimento_padrao || 1);
         
         if (custoInsumos === 0 || produto.preco_venda === 0) return;
         
@@ -331,7 +332,7 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
     if (produtos && produtos.length > 0 && messages.filter(m => m.status === 'success').length < 2) {
       const produtosPromo = produtos
         .map((produto) => {
-          const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any);
+          const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any, produto.rendimento_padrao || 1);
           
           if (custoInsumos === 0) return null;
           

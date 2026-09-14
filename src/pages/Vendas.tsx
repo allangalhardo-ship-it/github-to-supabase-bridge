@@ -67,6 +67,7 @@ const Vendas = () => {
           id, 
           nome, 
           preco_venda,
+          rendimento_padrao,
           fichas_tecnicas (
             quantidade,
             insumos (
@@ -311,7 +312,7 @@ const Vendas = () => {
     if (!produto) return null;
     
     // Calcular custo unitário do produto (soma dos insumos da ficha técnica)
-    const custoUnitario = calcularCustoFicha((produto.fichas_tecnicas || []) as any);
+    const custoUnitario = calcularCustoFicha((produto.fichas_tecnicas || []) as any, (produto as any).rendimento_padrao || 1);
     
     const quantidade = parseFloat(formData.quantidade) || 1;
     const valorTotal = parseFloat(formData.valor_total) || 0;

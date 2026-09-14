@@ -40,6 +40,7 @@ interface Produto {
   nome: string;
   preco_venda: number;
   categoria: string | null;
+  rendimento_padrao?: number | null;
   fichas_tecnicas?: Array<{
     quantidade: number;
     insumo_id: string;
@@ -273,7 +274,7 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
     if (produtos && produtos.length > 0) {
       const produtosAbaixoMeta = produtos
         .map((produto) => {
-          const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any);
+          const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any, produto.rendimento_padrao || 1);
           
           if (custoInsumos === 0) return null;
           
@@ -318,7 +319,7 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
       // 7. PRODUTOS COM MARGEM EXCESSIVA (oportunidade de volume)
       const produtosMargemAlta = produtos
         .map((produto) => {
-          const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any);
+          const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any, produto.rendimento_padrao || 1);
           
           if (custoInsumos === 0) return null;
           
@@ -376,7 +377,7 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
       }> = [];
 
       produtos.forEach((produto) => {
-        const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any);
+        const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any, produto.rendimento_padrao || 1);
         
         if (custoInsumos === 0 || produto.preco_venda === 0) return;
         
@@ -536,7 +537,7 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
     // 3. PRODUTO IDEAL PARA PROMOÇÃO (alta margem + baixa saída)
     if (produtos && produtos.length > 0) {
       const produtosComMargem = produtos.map((produto) => {
-        const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any);
+        const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any, produto.rendimento_padrao || 1);
         
         const margem = produto.preco_venda > 0 
           ? ((produto.preco_venda - custoInsumos) / produto.preco_venda) * 100 

@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Store, Smartphone, Save, Calculator, Info } from 'lucide-react';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import { cn } from '@/lib/utils';
+import { calcularPrecoPorCmvAlvo } from '@/lib/precificacaoUtils';
 
 interface PrecosCanaisEditorProps {
   produtoId: string;
@@ -98,13 +99,9 @@ const PrecosCanaisEditor: React.FC<PrecosCanaisEditorProps> = ({
   const preencherSugeridos = (cmv: number = cmvAlvo) => {
     const novosPrecos: Record<string, string> = {};
     canaisConfigurados?.forEach(canal => {
-      const taxa = canal.taxa / 100;
-      const imposto = impostoPercentual / 100;
-      const cmvFrac = cmv / 100;
-      const fatorReceita = 1 - taxa - imposto;
-      if (fatorReceita > 0 && cmvFrac > 0) {
-        const precoSugerido = custoInsumos / (cmvFrac * fatorReceita);
-        novosPrecos[canal.id] = precoSugerido.toFixed(2);
+      const resultado = calcularPrecoPorCmvAlvo(custoInsumos, cmv, canal.taxa, impostoPercentual);
+      if (resultado.viavel) {
+        novosPrecos[canal.id] = resultado.preco.toFixed(2);
       }
     });
     setPrecos(novosPrecos);
