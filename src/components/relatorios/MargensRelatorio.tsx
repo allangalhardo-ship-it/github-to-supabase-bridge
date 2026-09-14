@@ -91,6 +91,7 @@ export const MargensRelatorio: React.FC<MargensRelatorioProps> = ({ onBack }) =>
           nome,
           preco_venda,
           categoria,
+          rendimento_padrao,
           fichas_tecnicas (
             id,
             quantidade,
@@ -159,7 +160,7 @@ export const MargensRelatorio: React.FC<MargensRelatorioProps> = ({ onBack }) =>
     const produtosComFicha = produtos.filter(p => p.fichas_tecnicas && p.fichas_tecnicas.length > 0);
     
     const produtosAnalisados = produtosComFicha.map(produto => {
-      const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any);
+      const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any, (produto as any).rendimento_padrao || 1);
       
       const precoVenda = produto.preco_venda || 0;
       const { percCustoFixo, percImposto } = custosPercentuais;

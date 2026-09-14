@@ -99,6 +99,7 @@ export const PosicaoEstoque: React.FC<PosicaoEstoqueProps> = ({ onBack }) => {
           nome,
           estoque_acabado,
           preco_venda,
+          rendimento_padrao,
           fichas_tecnicas (
             quantidade,
             insumos (
@@ -126,7 +127,7 @@ export const PosicaoEstoque: React.FC<PosicaoEstoqueProps> = ({ onBack }) => {
 
     // Valor do estoque de produtos acabados
     const valorEstoqueProdutos = produtos?.reduce((acc, prod) => {
-      const custoUnitario = calcularCustoFicha(prod.fichas_tecnicas as any);
+      const custoUnitario = calcularCustoFicha(prod.fichas_tecnicas as any, (prod as any).rendimento_padrao || 1);
       return acc + (prod.estoque_acabado * custoUnitario);
     }, 0) || 0;
 

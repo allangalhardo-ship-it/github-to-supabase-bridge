@@ -210,7 +210,7 @@ export function CalculadorFichaTecnica({
 
   const calcularCustoProduto = (produto: Produto) => {
     if (!produto?.fichas_tecnicas) return 0;
-    return calcularCustoFicha(produto.fichas_tecnicas as any);
+    return calcularCustoFicha(produto.fichas_tecnicas as any, produto.rendimento_padrao || 1);
   };
 
   return (

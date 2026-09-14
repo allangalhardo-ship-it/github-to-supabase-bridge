@@ -67,6 +67,7 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
         .select(`
           id,
           preco_venda,
+          rendimento_padrao,
           fichas_tecnicas (
             quantidade,
             insumos (
@@ -149,7 +150,7 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
     vendas.forEach((venda) => {
       const produto = produtos.find((p) => p.id === venda.produto_id);
       if (produto && produto.fichas_tecnicas) {
-        const custoUnitario = calcularCustoFicha(produto.fichas_tecnicas as any);
+        const custoUnitario = calcularCustoFicha(produto.fichas_tecnicas as any, (produto as any).rendimento_padrao || 1);
         // Calcular quantidade vendida baseado no valor
         const qtdVendida = produto.preco_venda > 0 
           ? venda.valor_total / produto.preco_venda 

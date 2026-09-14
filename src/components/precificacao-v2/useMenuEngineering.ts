@@ -37,6 +37,7 @@ export function useMenuEngineering(periodo: PeriodoBCG = 30) {
           preco_venda,
           categoria,
           imagem_url,
+          rendimento_padrao,
           fichas_tecnicas (
             id,
             quantidade,
@@ -219,7 +220,7 @@ export function useMenuEngineering(periodo: PeriodoBCG = 30) {
 
     // Primeiro passo: calcular métricas brutas
     const produtosComMetricas = produtosComFicha.map(produto => {
-      const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas);
+      const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas, (produto as any).rendimento_padrao || 1);
 
       const vendas = vendasAgregadas?.[produto.id];
       const quantidadeVendida = vendas?.quantidade || 0;
