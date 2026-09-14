@@ -94,17 +94,32 @@ const Estoque = () => {
     enabled: !!usuario?.empresa_id,
   });
 
-  // Fetch movimentos
+  // Fetch movimentos (já filtrado por período no banco, para não trazer o histórico inteiro)
   const { data: movimentos, isLoading: loadingMovimentos } = useQuery({
-    queryKey: ['estoque-movimentos', usuario?.empresa_id],
+    queryKey: ['estoque-movimentos', usuario?.empresa_id, filtroPeriodo],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const hoje = new Date();
+      let query = supabase
         .from('estoque_movimentos')
         .select(`
           *,
           insumos (nome, unidade_medida)
         `)
         .order('created_at', { ascending: false });
+
+      if (filtroPeriodo === 'mes') {
+        query = query.gte('created_at', startOfMonth(hoje).toISOString());
+      } else if (filtroPeriodo === 'mesPassado') {
+        query = query
+          .gte('created_at', startOfMonth(subMonths(hoje, 1)).toISOString())
+          .lte('created_at', endOfMonth(subMonths(hoje, 1)).toISOString());
+      } else if (filtroPeriodo === 'ultimos3meses') {
+        query = query.gte('created_at', startOfMonth(subMonths(hoje, 2)).toISOString());
+      } else {
+        query = query.limit(2000);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       return data;
