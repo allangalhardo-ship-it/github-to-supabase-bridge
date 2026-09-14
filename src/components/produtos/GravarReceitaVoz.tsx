@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { unidadesCompativeis } from '@/utils/custoFicha';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -145,6 +146,22 @@ export const GravarReceitaVoz: React.FC<Props> = ({ produtoId, className }) => {
       toast({ title: 'Nada para salvar', description: 'Preencha quantidade dos insumos.', variant: 'destructive' });
       return;
     }
+    // Unidade ditada precisa ser compatível com a unidade do insumo já cadastrado
+    const incompativeis = validos.filter(
+      (i) => i.insumo_id && i.insumo_unidade && !unidadesCompativeis(i.unidade, i.insumo_unidade),
+    );
+    if (incompativeis.length > 0) {
+      const lista = incompativeis
+        .map((i) => `${i.insumo_nome || i.nome_falado} (${i.unidade || '—'} → ${i.insumo_unidade})`)
+        .join(', ');
+      toast({
+        title: 'Unidade incompatível',
+        description: `Ajuste a unidade destes itens antes de salvar: ${lista}.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setSalvando(true);
     try {
       let criados = 0;
@@ -289,6 +306,11 @@ export const GravarReceitaVoz: React.FC<Props> = ({ produtoId, className }) => {
                             <span className="text-xs text-muted-foreground">
                               Falou: "{it.nome_falado}"
                             </span>
+                          )}
+                          {linkado && it.insumo_unidade && !unidadesCompativeis(it.unidade, it.insumo_unidade) && (
+                            <p className="text-xs text-destructive mt-1">
+                              Unidade {it.unidade || '—'} não converte para {it.insumo_unidade}. Corrija abaixo.
+                            </p>
                           )}
                         </div>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removerItem(idx)}>
