@@ -176,6 +176,10 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
       );
   }, [localItems]);
 
+  // Custo POR UNIDADE (divide pelo rendimento) — mesma base do simulador de substituição
+  const rendimentoNumLocal = Math.max(1, Number(rendimentoLocal) || 1);
+  const custoPorUnidade = custoTotal / rendimentoNumLocal;
+
   // Itens visíveis (não deletados)
   const itensVisiveis = localItems.filter(item => !item.isDeleted);
   
@@ -687,7 +691,7 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
           {/* Resumo de custo + margem por canal (tempo real) + Link para Calculador */}
           <div className="border-t bg-muted/30 p-4 flex-shrink-0 space-y-3">
             <CustoMargemCard
-              custoFicha={custoTotal}
+              custoFicha={custoPorUnidade}
               precoBase={precoBase}
               produtoId={produtoId}
               impostoPercentual={impostoPercentual}
