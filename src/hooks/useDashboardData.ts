@@ -7,6 +7,7 @@ import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysInMonth, endOfMonth, subMonths } from 'date-fns';
 import { calcularCustoFicha } from '@/utils/custoFicha';
 import { somarCustoVendas } from '@/lib/vendasUtils';
+import { parseDataLocal } from '@/lib/format';
 import { ptBR } from 'date-fns/locale';
 
 export type PeriodoType = 'hoje' | 'semana' | 'mes' | 'ultimos30' | 'personalizado';
