@@ -94,6 +94,14 @@ const navCategories = [
     ],
   },
   {
+    label: 'Avançado',
+    icon: BarChart2,
+    items: [
+      { to: '/relatorios', icon: BarChart3, label: 'Relatórios' },
+      { to: '/caixa', icon: Wallet, label: 'Caixa' },
+    ],
+  },
+  {
     label: 'Configurar',
     icon: Sliders,
     items: [
