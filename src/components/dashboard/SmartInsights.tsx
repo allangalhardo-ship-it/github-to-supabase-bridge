@@ -434,16 +434,9 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
     
     vendas.forEach((venda) => {
       const categoria = venda.produto_categoria || 'Sem categoria';
-      const custoUnitario = Number(venda.custo_insumos) || 0;
-      const precoVenda = Number(venda.produto_preco_venda) || 0;
       const valorTotal = Number(venda.valor_total) || 0;
-      
-      let unidadesReais = Number(venda.quantidade) || 1;
-      if (precoVenda > 0) {
-        unidadesReais = valorTotal / precoVenda;
-      }
-      
-      const lucroVenda = valorTotal - (custoUnitario * unidadesReais);
+      const unidadesReais = unidadesVenda(venda as any);
+      const lucroVenda = valorTotal - custoVenda(venda as any);
       
       if (!lucroPorCategoria[categoria]) {
         lucroPorCategoria[categoria] = { lucro: 0, receita: 0, quantidade: 0 };

@@ -12,6 +12,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { calcularCustoFicha } from '@/utils/custoFicha';
+import { custoVenda } from '@/lib/vendasUtils';
 
 interface DREGerencialProps {
   onBack: () => void;
@@ -47,7 +48,7 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('vendas')
-        .select('id, valor_total, quantidade, produto_id, canal, comissao_plataforma, taxa_servico, incentivo_loja, subtotal')
+        .select('id, valor_total, quantidade, produto_id, canal, comissao_plataforma, taxa_servico, incentivo_loja, subtotal, custo_snapshot')
         .eq('empresa_id', usuario?.empresa_id)
         .gte('data_venda', dataInicio)
         .lte('data_venda', dataFim);
@@ -149,14 +150,14 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
     let cmvTotal = 0;
     vendas.forEach((venda) => {
       const produto = produtos.find((p) => p.id === venda.produto_id);
-      if (produto && produto.fichas_tecnicas) {
-        const custoUnitario = calcularCustoFicha(produto.fichas_tecnicas as any, (produto as any).rendimento_padrao || 1);
-        // Calcular quantidade vendida baseado no valor
-        const qtdVendida = produto.preco_venda > 0 
-          ? venda.valor_total / produto.preco_venda 
-          : venda.quantidade;
-        cmvTotal += custoUnitario * qtdVendida;
-      }
+      const custoUnitario = produto?.fichas_tecnicas
+        ? calcularCustoFicha(produto.fichas_tecnicas as any, (produto as any).rendimento_padrao || 1)
+        : 0;
+      cmvTotal += custoVenda({
+        quantidade: venda.quantidade,
+        custo_snapshot: (venda as any).custo_snapshot,
+        custo_insumos: custoUnitario,
+      });
     });
 
     // Taxas de Apps: usar dados reais quando disponíveis, senão estimar pelo canal
