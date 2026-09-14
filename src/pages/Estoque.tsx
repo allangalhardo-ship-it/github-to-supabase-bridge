@@ -22,6 +22,8 @@ import { ptBR } from 'date-fns/locale';
 import { inserirMovimentoEstoque, calcularEstoqueDeMovimentos } from '@/lib/estoqueUtils';
 import { formatCurrencySmartBRL } from '@/lib/format';
 import ContextualTip from '@/components/onboarding/ContextualTip';
+import { usePagination } from '@/hooks/usePagination';
+import { PaginationControls } from '@/components/ui/pagination-controls';
 const Estoque = () => {
   const { usuario } = useAuth();
   const { toast } = useToast();
