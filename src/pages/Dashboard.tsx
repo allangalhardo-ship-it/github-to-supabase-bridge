@@ -231,7 +231,7 @@ const Dashboard = () => {
         </StaggeredCard>
       </AnimatedCardContainer>
 
-      <PontoEquilibrioCard receitaBruta={d.receitaBruta} margemContribuicao={d.margemContribuicao} custoFixoMensal={d.custoFixoMensal} isLoading={d.isLoading} margemEstimada={d.margemContribuicaoEstimada} />
+      <PontoEquilibrioCard receitaBruta={d.receitaBruta} margemContribuicao={d.margemContribuicaoLiquida} custoFixoMensal={d.custoFixoMensal} isLoading={d.isLoading} margemEstimada={d.margemContribuicaoEstimada} />
 
       {/* Platform taxes card */}
       {d.vendasFinanceiro && d.vendasFinanceiro.length > 0 && (() => {

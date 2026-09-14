@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysInMonth, endOfMonth, subMonths } from 'date-fns';
 import { calcularCustoFicha } from '@/utils/custoFicha';
+import { somarCustoVendas } from '@/lib/vendasUtils';
 import { ptBR } from 'date-fns/locale';
 
 export type PeriodoType = 'hoje' | 'semana' | 'mes' | 'ultimos30' | 'personalizado';
@@ -223,27 +224,13 @@ export function useDashboardData() {
       .sort((a, b) => b.quantidade - a.quantidade);
   }, [vendas]);
 
-  const cmvTotal = vendas?.reduce((sum, venda) => {
-    if (!venda.custo_insumos) return sum;
-    const custoUnitarioProduto = Number(venda.custo_insumos) || 0;
-    const precoVendaProduto = Number(venda.produto_preco_venda) || 0;
-    const valorTotal = Number(venda.valor_total) || 0;
-    const unidadesReais = precoVendaProduto > 0 ? valorTotal / precoVendaProduto : Number(venda.quantidade);
-    return sum + (custoUnitarioProduto * unidadesReais);
-  }, 0) || 0;
+  const cmvTotal = somarCustoVendas(vendas as any);
 
   const cmvPercent = receitaBruta > 0 ? (cmvTotal / receitaBruta) * 100 : 0;
   const margemContribuicao = receitaBruta - cmvTotal;
 
   const receitaBrutaAnterior = vendasAnterior?.reduce((sum, v) => sum + Number(v.valor_total), 0) || 0;
-  const cmvTotalAnterior = vendasAnterior?.reduce((sum, venda) => {
-    if (!venda.custo_insumos) return sum;
-    const custoUnit = Number(venda.custo_insumos) || 0;
-    const precoVenda = Number(venda.produto_preco_venda) || 0;
-    const valorTotal = Number(venda.valor_total) || 0;
-    const unidades = precoVenda > 0 ? valorTotal / precoVenda : Number(venda.quantidade);
-    return sum + (custoUnit * unidades);
-  }, 0) || 0;
+  const cmvTotalAnterior = somarCustoVendas(vendasAnterior as any);
   const margemAnterior = receitaBrutaAnterior - cmvTotalAnterior;
   const deltaReceita = receitaBrutaAnterior > 0 ? ((receitaBruta - receitaBrutaAnterior) / receitaBrutaAnterior) * 100 : null;
   const deltaLucroBruto = margemAnterior > 0 ? ((margemContribuicao - margemAnterior) / margemAnterior) * 100 : null;
@@ -389,6 +376,10 @@ export function useDashboardData() {
 
   const lucroEstimado = margemContribuicao - custoFixoTotal - impostos - taxaAppTotal;
 
+  // Margem de contribuição LÍQUIDA: já sem imposto e sem taxa de app.
+  // É essa que deve alimentar o ponto de equilíbrio (mesma base da projeção sem vendas).
+  const margemContribuicaoLiquida = margemContribuicao - impostos - taxaAppTotal;
+
   const produtosMargemNegativa = useMemo(() => {
     if (!produtosAnalise) return [];
     return produtosAnalise
@@ -447,7 +438,7 @@ export function useDashboardData() {
 
     // Calculations
     receitaBruta, totalVendas, ticketMedio, ticketPorCanal,
-    cmvTotal, cmvPercent, margemContribuicao,
+    cmvTotal, cmvPercent, margemContribuicao, margemContribuicaoLiquida,
     deltaReceita, deltaLucroBruto,
     produtosDefasados, qtdProdutosMargemNegativa,
     margemContribuicaoEstimada,

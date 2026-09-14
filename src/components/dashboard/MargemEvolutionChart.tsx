@@ -8,6 +8,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import { TrendingUp } from 'lucide-react';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { somarCustoVendas } from '@/lib/vendasUtils';
 
 const MargemEvolutionChart: React.FC = () => {
   const { usuario } = useAuth();
@@ -28,12 +29,7 @@ const MargemEvolutionChart: React.FC = () => {
         });
 
         const receita = data?.reduce((s: number, v: any) => s + Number(v.valor_total), 0) || 0;
-        const custo = data?.reduce((s: number, v: any) => {
-          const custoUnit = Number(v.custo_insumos) || 0;
-          const precoVenda = Number(v.produto_preco_venda) || 0;
-          const unidades = precoVenda > 0 ? Number(v.valor_total) / precoVenda : Number(v.quantidade);
-          return s + custoUnit * unidades;
-        }, 0) || 0;
+        const custo = somarCustoVendas(data as any);
 
         const margem = receita > 0 ? ((receita - custo) / receita) * 100 : 0;
 
