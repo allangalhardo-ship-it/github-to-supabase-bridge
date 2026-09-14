@@ -54,12 +54,34 @@ const ComprasTab = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Antes de apagar a nota, devolve o estoque que ela tinha lançado
+      const { data: itens, error: itensError } = await supabase
+        .from('xml_itens')
+        .select('insumo_id, quantidade')
+        .eq('xml_id', id)
+        .eq('mapeado', true);
+      if (itensError) throw itensError;
+
+      for (const item of itens || []) {
+        if (item.insumo_id && item.quantidade) {
+          await inserirMovimentoEstoque({
+            empresa_id: usuario!.empresa_id,
+            insumo_id: item.insumo_id,
+            tipo: 'saida',
+            quantidade: item.quantidade,
+            origem: 'nfe_exclusao',
+            referencia: id,
+            observacao: 'Reversão - Exclusão da NF-e',
+          });
+        }
+      }
+
       const { error } = await supabase.from('xml_notas').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
-      toast({ title: 'Nota excluída!' });
+      toast({ title: 'Nota excluída!', description: 'Estoque revertido.' });
       setDeleteConfirmOpen(false);
       setNotaToDelete(null);
     },
