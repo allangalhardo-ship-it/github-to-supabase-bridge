@@ -1,3 +1,14 @@
+/**
+ * Converte uma data no formato 'YYYY-MM-DD' para Date no fuso local.
+ * `new Date('2026-09-14')` é interpretado como UTC e "volta um dia" no Brasil.
+ */
+export function parseDataLocal(value: string | Date | null | undefined): Date {
+  if (!value) return new Date(NaN);
+  if (value instanceof Date) return value;
+  const somenteData = /^\d{4}-\d{2}-\d{2}$/.test(value);
+  return new Date(somenteData ? `${value}T12:00:00` : value);
+}
+
 export function formatCurrencyBRL(value: number, options?: Intl.NumberFormatOptions) {
   const safe = Number.isFinite(value) ? value : 0;
   return new Intl.NumberFormat("pt-BR", {
