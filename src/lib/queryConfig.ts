@@ -20,9 +20,9 @@ export const queryClient = new QueryClient({
       // Não re-buscar automaticamente ao focar janela (economiza requests)
       refetchOnWindowFocus: false,
 
-      // Ao entrar numa tela (mount), sempre buscar do backend para evitar lista “desatualizada”
-      // quando o usuário acabou de cadastrar algo em outra tela.
-      refetchOnMount: 'always',
+      // Ao entrar numa tela, buscar do backend só se os dados já estiverem "velhos" (staleTime).
+      // As telas que gravam algo já invalidam o cache, então não precisa refazer tudo sempre.
+      refetchOnMount: true,
       
       // Apenas 1 retry em caso de erro
       retry: 1,
