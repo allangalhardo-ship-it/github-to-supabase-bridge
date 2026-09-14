@@ -671,6 +671,19 @@ const Estoque = () => {
                     </Button>
                   ) : undefined}
                 />
+                <div className="px-4 pb-4">
+                  <PaginationControls
+                    currentPage={movimentosPagination.currentPage}
+                    totalPages={movimentosPagination.totalPages}
+                    startIndex={movimentosPagination.startIndex}
+                    endIndex={movimentosPagination.endIndex}
+                    totalItems={movimentosPagination.totalItems}
+                    onPrevPage={movimentosPagination.prevPage}
+                    onNextPage={movimentosPagination.nextPage}
+                  />
+                </div>
+                </>
+
               ) : (
                 <div className="p-12 text-center">
                   <Warehouse className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
