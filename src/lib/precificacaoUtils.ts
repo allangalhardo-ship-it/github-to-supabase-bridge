@@ -110,3 +110,47 @@ export function calcularMetricasProduto(
     custoFixoValor: 0,      // Não calculamos mais por unidade
   };
 }
+
+/**
+ * FONTE ÚNICA de preço sugerido por CMV alvo.
+ *
+ * Preço = Custo / (CMV% × (1 - Imposto% - TaxaCanal%))
+ *
+ * Usada por: card do produto, matriz (Menu Engineering), sugestão por canal
+ * e editor de preços por canal — para todas mostrarem o MESMO número.
+ * Quando o cálculo é inviável retorna preco=0 e um motivo claro (sem fallback silencioso).
+ */
+export function calcularPrecoPorCmvAlvo(
+  custoInsumos: number,
+  cmvAlvoPercent: number,
+  taxaCanalPercent: number = 0,
+  impostoPercent: number = 0,
+): ResultadoPrecoSugerido {
+  const custo = Number(custoInsumos) || 0;
+  if (custo <= 0) {
+    return { preco: 0, viavel: false, motivo: 'Custo da ficha é zero. Cadastre os insumos.' };
+  }
+
+  const cmv = (Number(cmvAlvoPercent) || 0) / 100;
+  const taxa = (Number(taxaCanalPercent) || 0) / 100;
+  const imposto = (Number(impostoPercent) || 0) / 100;
+
+  if (cmv <= 0 || cmv >= 1) {
+    return { preco: 0, viavel: false, motivo: 'CMV alvo precisa estar entre 1% e 99%.' };
+  }
+
+  const fatorReceita = 1 - taxa - imposto;
+  if (fatorReceita <= 0) {
+    return {
+      preco: 0,
+      viavel: false,
+      motivo: `Taxa ${(taxa * 100).toFixed(0)}% + Imposto ${(imposto * 100).toFixed(0)}% consomem toda a receita. Reduza um dos dois para precificar este canal.`,
+    };
+  }
+
+  const preco = custo / (cmv * fatorReceita);
+  if (!Number.isFinite(preco) || preco <= 0) {
+    return { preco: 0, viavel: false, motivo: 'Não foi possível calcular o preço com esses parâmetros.' };
+  }
+  return { preco, viavel: true };
+}
