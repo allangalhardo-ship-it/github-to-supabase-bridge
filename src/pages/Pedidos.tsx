@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { motion, AnimatePresence } from "framer-motion";
 import { Pedido } from "@/components/cardapio/types";
 import { invalidateEmpresaCachesAndRefetch } from "@/lib/queryConfig";
+import { usePagination } from "@/hooks/usePagination";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 
 const COLUNAS = [
   { key: "pendente", label: "Novos", icon: Clock, color: "bg-amber-500" },
