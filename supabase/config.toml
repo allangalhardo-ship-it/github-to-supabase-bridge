@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.asaas-cancel-subscription]
 verify_jwt = false
+
+[functions.criar-pedido-publico]
+verify_jwt = false
