@@ -2077,6 +2077,10 @@ export type Database = {
         Args: { p_de: string; p_para: string; p_qtd: number }
         Returns: number
       }
+      estornar_venda_encomenda: {
+        Args: { p_encomenda_id: string }
+        Returns: undefined
+      }
       estornar_venda_pedido: {
         Args: { p_pedido_id: string }
         Returns: undefined
@@ -2145,6 +2149,10 @@ export type Database = {
       recalcular_custo_intermediario: {
         Args: { p_depth?: number; p_insumo_id: string }
         Returns: number
+      }
+      registrar_venda_encomenda: {
+        Args: { p_encomenda_id: string }
+        Returns: undefined
       }
       registrar_venda_pedido: {
         Args: { p_pedido_id: string }
