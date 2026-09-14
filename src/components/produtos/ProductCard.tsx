@@ -148,18 +148,19 @@ const ProductCard: React.FC<ProductCardProps> = ({
   // Não precisamos mais buscar custos fixos para o cálculo do preço
   // O custo fixo é verificado no Dashboard, não no preço unitário
 
+  const rendimento = Number(produto.rendimento_padrao) || 0;
+
+  // Custo POR UNIDADE VENDIDA (já dividido pelo rendimento da receita)
   const custoInsumos = useMemo(
-    () => calcularCustoFicha(produto.fichas_tecnicas as any),
-    [produto.fichas_tecnicas],
+    () => calcularCustoFicha(produto.fichas_tecnicas as any, rendimento || 1),
+    [produto.fichas_tecnicas, rendimento],
   );
 
   const precoVenda = Number(produto.preco_venda) || 0;
   const lucro = precoVenda - custoInsumos;
   const cmvAtual = precoVenda > 0 ? (custoInsumos / precoVenda) * 100 : 0;
 
-  // Custo por unidade
-  const rendimento = Number(produto.rendimento_padrao) || 0;
-  const custoPorUnidade = rendimento > 0 && custoInsumos > 0 ? custoInsumos / rendimento : 0;
+  const custoPorUnidade = rendimento > 0 && custoInsumos > 0 ? custoInsumos : 0;
 
   const cmvAlvo = Number(config?.cmv_alvo ?? 35);
   const margemDesejada = Number(config?.margem_desejada_padrao ?? 30);
