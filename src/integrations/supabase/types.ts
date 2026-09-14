@@ -2094,6 +2094,7 @@ export type Database = {
         Returns: {
           canal: string
           custo_insumos: number
+          custo_snapshot: number
           data_venda: string
           id: string
           produto_id: string
