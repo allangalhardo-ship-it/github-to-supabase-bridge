@@ -21,6 +21,7 @@ import {
   Activity,
 } from 'lucide-react';
 import { calcularCustoFicha } from '@/utils/custoFicha';
+import { custoVenda, unidadesVenda } from '@/lib/vendasUtils';
 
 interface Venda {
   id: string;
