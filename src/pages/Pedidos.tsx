@@ -232,12 +232,12 @@ export default function Pedidos() {
                   <span className="font-bold text-foreground">{formatCurrencyBRL(pedido.valor_total)}</span>
                   <div className="flex gap-2">
                     {pedido.status !== "cancelado" && pedido.status !== "entregue" && (
-                      <Button variant="outline" size="sm" onClick={() => cancelarPedido(pedido)} className="text-xs text-destructive border-destructive/30 hover:bg-destructive/10">
+                      <Button variant="outline" size="sm" disabled={processando === pedido.id} onClick={() => cancelarPedido(pedido)} className="text-xs text-destructive border-destructive/30 hover:bg-destructive/10">
                         Cancelar
                       </Button>
                     )}
                     {nextStatus && (
-                      <Button size="sm" onClick={() => atualizarStatus(pedido, nextStatus)} className="text-xs">
+                      <Button size="sm" disabled={processando === pedido.id} onClick={() => atualizarStatus(pedido, nextStatus)} className="text-xs">
                         {NEXT_LABEL[pedido.status]}
                       </Button>
                     )}
