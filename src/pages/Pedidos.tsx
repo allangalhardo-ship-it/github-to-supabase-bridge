@@ -207,7 +207,7 @@ export default function Pedidos() {
       {/* Pedidos list */}
       <div className="space-y-3">
         <AnimatePresence>
-          {pedidosFiltrados.map(pedido => {
+          {pedidosPagination.paginatedData.map(pedido => {
             const nextStatus = NEXT_STATUS[pedido.status];
             const coluna = COLUNAS.find(c => c.key === pedido.status);
             const itens = Array.isArray(pedido.itens) ? pedido.itens : [];
