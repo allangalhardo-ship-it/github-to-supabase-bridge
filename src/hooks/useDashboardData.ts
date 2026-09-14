@@ -7,6 +7,7 @@ import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysInMonth, endOfMonth, subMonths } from 'date-fns';
 import { calcularCustoFicha } from '@/utils/custoFicha';
 import { somarCustoVendas } from '@/lib/vendasUtils';
+import { parseDataLocal } from '@/lib/format';
 import { ptBR } from 'date-fns/locale';
 
 export type PeriodoType = 'hoje' | 'semana' | 'mes' | 'ultimos30' | 'personalizado';
@@ -338,6 +339,10 @@ export function useDashboardData() {
       }
       case 'mes':
       case 'ultimos30': return custoFixoMensal;
+      case 'personalizado': {
+        const dias = differenceInDays(parseDataLocal(fim), parseDataLocal(inicio)) + 1;
+        return custoDiario * Math.max(dias, 1);
+      }
       default: return custoFixoMensal;
     }
   };

@@ -246,7 +246,7 @@ const ComprasTab = () => {
         onOpenChange={setDeleteConfirmOpen}
         onConfirm={() => notaToDelete && deleteMutation.mutate(notaToDelete)}
         title="Excluir nota fiscal"
-        description="Tem certeza que deseja excluir esta nota? Os movimentos de estoque relacionados NÃO serão revertidos."
+        description="Tem certeza que deseja excluir esta nota? O estoque lançado por ela será devolvido automaticamente."
       />
     </div>
   );

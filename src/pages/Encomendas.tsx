@@ -96,7 +96,10 @@ export default function Encomendas() {
             <VistaoDiaria
               dia={diaSelecionado}
               encomendas={encomendasDoDia}
-              onAtualizarStatus={(id, status) => atualizarStatus.mutate({ id, status })}
+              onAtualizarStatus={(id, status) => {
+                if (atualizarStatus.isPending) return;
+                atualizarStatus.mutate({ id, status });
+              }}
               onExcluir={(id) => excluirEncomenda.mutate(id)}
             />
           </div>

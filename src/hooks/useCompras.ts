@@ -446,15 +446,9 @@ export function useCompras() {
         });
 
         if (item.insumo_id && item.mapeado) {
-          const { data: insumoAtual } = await supabase
-            .from('insumos')
-            .select('custo_unitario')
-            .eq('id', item.insumo_id)
-            .single();
-
-          const custoAnterior = insumoAtual?.custo_unitario || 0;
-          const variacao = custoAnterior > 0 ? ((item.custo_unitario - custoAnterior) / custoAnterior) * 100 : 0;
-
+          // O banco calcula custo médio ponderado, atualiza estoque e grava
+          // o histórico de preços a partir deste movimento.
+          // Não sobrescrever custo_unitario nem inserir histórico aqui.
           await inserirMovimentoEstoque({
             empresa_id: usuario!.empresa_id,
             insumo_id: item.insumo_id,
@@ -463,22 +457,8 @@ export function useCompras() {
             origem: 'xml',
             referencia: nota.id,
             observacao: `NF-e ${parsedNota.numero} - ${parsedNota.fornecedor}`,
+            custo_total: item.custo_unitario * item.quantidade,
           });
-
-          await supabase.from('historico_precos').insert({
-            empresa_id: usuario!.empresa_id,
-            insumo_id: item.insumo_id,
-            preco_anterior: custoAnterior,
-            preco_novo: item.custo_unitario,
-            variacao_percentual: variacao,
-            origem: 'xml',
-            observacao: `NF-e ${parsedNota.numero} - ${parsedNota.fornecedor}`,
-          });
-
-          await supabase
-            .from('insumos')
-            .update({ custo_unitario: item.custo_unitario })
-            .eq('id', item.insumo_id);
         }
       }
     },
