@@ -135,24 +135,19 @@ export function useEncomendas(mesAtual: Date) {
   // Atualizar status
   const atualizarStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: EncomendaStatus }) => {
+      // A venda, o caixa e o estoque são gerados/estornados pelo banco
+      // (gatilho trg_encomenda_financeiro), de forma idempotente.
       const { error } = await supabase
         .from('encomendas')
         .update({ status } as any)
-        .eq('id', id);
+        .eq('id', id)
+        .neq('status', status);
 
       if (error) throw error;
-
-      // Se marcou como entregue, registrar venda + caixa
-      if (status === 'entregue') {
-        const encomenda = encomendas.find(e => e.id === id);
-        if (encomenda) {
-          await registrarEntrega(encomenda);
-        }
-      }
     },
     onSuccess: (_, { status }) => {
       queryClient.invalidateQueries({ queryKey: ['encomendas'] });
-      if (status === 'entregue') {
+      if (status === 'entregue' || status === 'cancelada') {
         // Invalidar todas as queries que dependem de vendas e caixa
         queryClient.invalidateQueries({ queryKey: ['vendas'] });
         queryClient.invalidateQueries({ queryKey: ['vendas-dashboard'] });
@@ -161,12 +156,14 @@ export function useEncomendas(mesAtual: Date) {
         queryClient.invalidateQueries({ queryKey: ['top-produtos'] });
         queryClient.invalidateQueries({ queryKey: ['caixa'] });
         queryClient.invalidateQueries({ queryKey: ['caixa-movimentos'] });
+        queryClient.invalidateQueries({ queryKey: ['caixa-saldo-total'] });
+        queryClient.invalidateQueries({ queryKey: ['caixa-vendas'] });
       }
       const msgs: Record<string, string> = {
         em_producao: 'Encomenda em produção!',
         pronta: 'Encomenda pronta!',
         entregue: 'Encomenda entregue! Venda e caixa atualizados.',
-        cancelada: 'Encomenda cancelada.',
+        cancelada: 'Encomenda cancelada. Venda e caixa estornados.',
       };
       toast.success(msgs[status] || 'Status atualizado!');
     },
@@ -174,53 +171,6 @@ export function useEncomendas(mesAtual: Date) {
       toast.error('Erro ao atualizar: ' + error.message);
     },
   });
-
-  // Registrar venda + caixa ao entregar
-  const registrarEntrega = async (encomenda: Encomenda) => {
-    const itens = encomenda.encomenda_itens || [];
-
-    // Registrar vendas por item
-    for (const item of itens) {
-      await supabase.from('vendas').insert({
-        empresa_id: empresaId!,
-        produto_id: item.produto_id,
-        descricao_produto: item.produto_nome,
-        quantidade: item.quantidade,
-        valor_total: item.quantidade * item.preco_unitario,
-        data_venda: encomenda.data_entrega,
-        origem: 'encomenda',
-        tipo_venda: 'encomenda',
-        canal: 'encomenda',
-      } as any);
-    }
-
-    // Registrar entrada no caixa (valor total - sinal já pago)
-    const saldoRestante = encomenda.valor_total - encomenda.valor_sinal;
-    if (saldoRestante > 0) {
-      await supabase.from('caixa_movimentos').insert({
-        empresa_id: empresaId!,
-        tipo: 'entrada',
-        categoria: 'Encomenda',
-        descricao: `Encomenda - ${encomenda.cliente_nome}`,
-        valor: saldoRestante,
-        data_movimento: encomenda.data_entrega,
-        origem: 'encomenda',
-      } as any);
-    }
-
-    // Se teve sinal, já foi registrado na criação — registrar agora se não foi
-    if (encomenda.valor_sinal > 0) {
-      await supabase.from('caixa_movimentos').insert({
-        empresa_id: empresaId!,
-        tipo: 'entrada',
-        categoria: 'Sinal Encomenda',
-        descricao: `Sinal - ${encomenda.cliente_nome}`,
-        valor: encomenda.valor_sinal,
-        data_movimento: format(new Date(encomenda.created_at), 'yyyy-MM-dd'),
-        origem: 'encomenda',
-      } as any);
-    }
-  };
 
   // Excluir encomenda
   const excluirEncomenda = useMutation({
