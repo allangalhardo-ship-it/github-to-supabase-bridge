@@ -105,7 +105,7 @@ const NovoProdutoWizard: React.FC<NovoProdutoWizardProps> = ({
       if (!produtoId) return [];
       const { data, error } = await supabase
         .from('fichas_tecnicas')
-        .select('id, quantidade, insumos (id, nome, unidade_medida, custo_unitario)')
+        .select('id, quantidade, unidade, insumos (id, nome, unidade_medida, custo_unitario, fator_perda)')
         .eq('produto_id', produtoId);
       if (error) throw error;
       return (data || []) as any[];
@@ -114,10 +114,27 @@ const NovoProdutoWizard: React.FC<NovoProdutoWizardProps> = ({
     refetchInterval: step === 2 ? 1500 : false,
   });
 
+  // Rendimento do produto (lote) para o custo sair POR UNIDADE
+  const { data: produtoRendimento } = useQuery({
+    queryKey: ['produto-rendimento-wizard', produtoId],
+    queryFn: async () => {
+      if (!produtoId) return null;
+      const { data, error } = await supabase
+        .from('produtos')
+        .select('rendimento_padrao')
+        .eq('id', produtoId)
+        .maybeSingle();
+      if (error) throw error;
+      return data?.rendimento_padrao ?? 1;
+    },
+    enabled: !!produtoId && step >= 2,
+    refetchInterval: step === 2 ? 1500 : false,
+  });
+
   const custoFicha = React.useMemo(() => {
     if (!fichaTecnica) return 0;
-    return calcularCustoFicha(fichaTecnica as any);
-  }, [fichaTecnica]);
+    return calcularCustoFicha(fichaTecnica as any, Number(produtoRendimento) || 1);
+  }, [fichaTecnica, produtoRendimento]);
 
   // Upload de imagem
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
