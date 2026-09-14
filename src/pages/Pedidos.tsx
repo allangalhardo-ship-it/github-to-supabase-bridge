@@ -150,6 +150,8 @@ export default function Pedidos() {
 
   const pedidosAtivos = pedidos.filter(p => !["entregue", "cancelado"].includes(p.status));
 
+  const pedidosPagination = usePagination(pedidosFiltrados, { pageSize: 20 });
+
   if (loading) return <div className="space-y-4">{[1, 2, 3].map(i => <div key={i} className="h-24 bg-muted rounded-xl animate-pulse" />)}</div>;
 
   return (
