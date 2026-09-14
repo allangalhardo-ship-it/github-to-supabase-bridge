@@ -153,18 +153,6 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
   // Register purchase mutation
   const registrarCompraMutation = useMutation({
     mutationFn: async () => {
-      // Get current insumo cost for history
-      const { data: insumoAtual } = await supabase
-        .from('insumos')
-        .select('custo_unitario')
-        .eq('id', formData.insumo_id)
-        .single();
-
-      const custoAnterior = insumoAtual?.custo_unitario || 0;
-      const variacao = custoAnterior > 0 
-        ? ((custoUnitarioProducao - custoAnterior) / custoAnterior) * 100 
-        : 0;
-
       // Insert stock movement with conversion info - uses helper that normalizes qty
       await inserirMovimentoEstoque({
         empresa_id: usuario!.empresa_id,
@@ -181,29 +169,16 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
           : 'Compra manual',
       });
 
-      // Record price history
-      await supabase.from('historico_precos').insert({
-        empresa_id: usuario!.empresa_id,
-        insumo_id: formData.insumo_id,
-        preco_anterior: custoAnterior,
-        preco_novo: custoUnitarioProducao,
-        variacao_percentual: variacao,
-        origem: 'manual',
-        observacao: formData.fornecedor || 'Compra manual',
-      });
-
-      // Update insumo cost
-      await supabase
-        .from('insumos')
-        .update({ custo_unitario: custoUnitarioProducao })
-        .eq('id', formData.insumo_id);
+      // O custo médio ponderado, o estoque e o histórico de preços são
+      // atualizados pelos gatilhos do banco a partir deste movimento.
+      // Não sobrescrever custo_unitario aqui (destruiria a média).
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['insumos'] });
       queryClient.invalidateQueries({ queryKey: ['estoque-movimentos'] });
       queryClient.invalidateQueries({ queryKey: ['compras-manuais'] });
       queryClient.invalidateQueries({ queryKey: ['historico-precos'] });
-      toast({ title: 'Compra registrada!', description: 'Estoque e custo atualizados.' });
+      toast({ title: 'Compra registrada!', description: 'Estoque atualizado e custo médio recalculado.' });
       resetForm();
       onOpenChange(false);
     },

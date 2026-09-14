@@ -627,18 +627,6 @@ const XmlImport = () => {
           const quantidadeConv = item.quantidade_convertida || item.quantidade * fator;
           const custoConv = item.custo_unitario_convertido || item.valor_total / quantidadeConv;
 
-          // Get current insumo cost for history
-          const { data: insumoAtual } = await supabase
-            .from('insumos')
-            .select('custo_unitario, unidade_medida')
-            .eq('id', item.insumo_id)
-            .single();
-
-          const custoAnterior = insumoAtual?.custo_unitario || 0;
-          const variacao = custoAnterior > 0 
-            ? ((custoConv - custoAnterior) / custoAnterior) * 100 
-            : 0;
-
           // Insert stock movement with conversion info - uses helper that normalizes qty
           await inserirMovimentoEstoque({
             empresa_id: usuario!.empresa_id,
@@ -654,22 +642,8 @@ const XmlImport = () => {
             observacao: `NF-e ${parsedNota.numero} - ${parsedNota.fornecedor}`,
           });
 
-          // Record price history
-          await supabase.from('historico_precos').insert({
-            empresa_id: usuario!.empresa_id,
-            insumo_id: item.insumo_id,
-            preco_anterior: custoAnterior,
-            preco_novo: custoConv,
-            variacao_percentual: variacao,
-            origem: 'xml',
-            observacao: `NF-e ${parsedNota.numero}`,
-          });
-
-          // Update insumo cost with converted value
-          await supabase
-            .from('insumos')
-            .update({ custo_unitario: custoConv })
-            .eq('id', item.insumo_id);
+          // Custo médio ponderado, estoque e histórico de preços ficam a cargo
+          // dos gatilhos do banco (a partir de quantidade + custo_total do movimento).
         }
       }
     },
