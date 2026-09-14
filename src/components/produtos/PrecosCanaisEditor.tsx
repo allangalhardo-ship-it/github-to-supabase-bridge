@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Store, Smartphone, Save, Calculator, Info } from 'lucide-react';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import { cn } from '@/lib/utils';
+import { calcularPrecoPorCmvAlvo } from '@/lib/precificacaoUtils';
 
 interface PrecosCanaisEditorProps {
   produtoId: string;
