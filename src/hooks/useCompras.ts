@@ -517,17 +517,7 @@ export function useCompras() {
             referencia: notaId,
             observacao: `Reversão - Exclusão da NF-e`,
           });
-
-          const { data: insumo, error: insumoError } = await supabase
-            .from('insumos')
-            .select('estoque_atual')
-            .eq('id', item.insumo_id)
-            .single();
-
-          if (!insumoError && insumo) {
-            const novoEstoque = Math.max(0, (insumo.estoque_atual || 0) - item.quantidade);
-            await supabase.from('insumos').update({ estoque_atual: novoEstoque }).eq('id', item.insumo_id);
-          }
+          // O gatilho do banco já baixa o estoque a partir deste movimento de saída.
         }
       }
 
@@ -551,53 +541,23 @@ export function useCompras() {
       const quantidade = parseFloat(data.quantidade) || 0;
       const custoUnitario = parseFloat(data.custo_unitario) || 0;
 
-      const { data: insumoAtual } = await supabase
-        .from('insumos')
-        .select('custo_unitario')
-        .eq('id', data.insumo_id)
-        .single();
-
-      const custoAnterior = insumoAtual?.custo_unitario || 0;
-      const variacao = custoAnterior > 0 ? ((custoUnitario - custoAnterior) / custoAnterior) * 100 : 0;
-
+      // custo_total permite ao banco calcular o custo médio ponderado
+      // e registrar o histórico de preços em um único lugar.
       await inserirMovimentoEstoque({
         empresa_id: usuario!.empresa_id,
         insumo_id: data.insumo_id,
         tipo: 'entrada',
         quantidade,
+        custo_total: custoUnitario > 0 ? custoUnitario * quantidade : null,
         origem: 'manual',
         observacao: data.fornecedor ? `Compra - ${data.fornecedor}` : data.observacao || 'Compra manual',
       });
-
-      await supabase.from('historico_precos').insert({
-        empresa_id: usuario!.empresa_id,
-        insumo_id: data.insumo_id,
-        preco_anterior: custoAnterior,
-        preco_novo: custoUnitario,
-        variacao_percentual: variacao,
-        origem: 'manual',
-        observacao: data.fornecedor || 'Compra manual',
-      });
-
-      const { data: movimentos, error: movimentosError } = await supabase
-        .from('estoque_movimentos')
-        .select('tipo, quantidade')
-        .eq('insumo_id', data.insumo_id);
-      if (movimentosError) throw movimentosError;
-
-      const novoEstoque = calcularEstoqueDeMovimentos(movimentos || []);
-
-      const { error: updateError } = await supabase
-        .from('insumos')
-        .update({ estoque_atual: Math.max(0, novoEstoque), custo_unitario: custoUnitario })
-        .eq('id', data.insumo_id);
-      if (updateError) throw updateError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['insumos'] });
       queryClient.invalidateQueries({ queryKey: ['estoque-movimentos'] });
       queryClient.invalidateQueries({ queryKey: ['historico-precos'] });
-      toast({ title: 'Compra registrada!', description: 'Estoque atualizado.' });
+      toast({ title: 'Compra registrada!', description: 'Estoque atualizado e custo médio recalculado.' });
       resetManualForm();
     },
     onError: (error) => {
