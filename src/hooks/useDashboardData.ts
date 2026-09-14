@@ -376,6 +376,10 @@ export function useDashboardData() {
 
   const lucroEstimado = margemContribuicao - custoFixoTotal - impostos - taxaAppTotal;
 
+  // Margem de contribuição LÍQUIDA: já sem imposto e sem taxa de app.
+  // É essa que deve alimentar o ponto de equilíbrio (mesma base da projeção sem vendas).
+  const margemContribuicaoLiquida = margemContribuicao - impostos - taxaAppTotal;
+
   const produtosMargemNegativa = useMemo(() => {
     if (!produtosAnalise) return [];
     return produtosAnalise
@@ -434,7 +438,7 @@ export function useDashboardData() {
 
     // Calculations
     receitaBruta, totalVendas, ticketMedio, ticketPorCanal,
-    cmvTotal, cmvPercent, margemContribuicao,
+    cmvTotal, cmvPercent, margemContribuicao, margemContribuicaoLiquida,
     deltaReceita, deltaLucroBruto,
     produtosDefasados, qtdProdutosMargemNegativa,
     margemContribuicaoEstimada,
