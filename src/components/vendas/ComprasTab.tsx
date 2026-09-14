@@ -16,6 +16,7 @@ import { Trash2, FileText, Filter, DollarSign, Package, ExternalLink } from 'luc
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
+import { inserirMovimentoEstoque } from '@/lib/estoqueUtils';
 
 interface XmlNota {
   id: string;
