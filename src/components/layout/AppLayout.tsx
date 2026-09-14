@@ -331,27 +331,13 @@ const SidebarContent = ({ onNavigate, isAdmin }: { onNavigate?: () => void; isAd
 
 const AppLayout = () => {
   const [open, setOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  
-  const { user } = useAuth();
-  
+
+  // Fonte única do "sou admin" (já consultado no contexto de assinatura)
+  const { isAdmin } = useSubscription();
+
   // Track user session
   useSessionTracker();
-  
-  // Check if user is admin
-  useEffect(() => {
-    const checkAdmin = async () => {
-      if (!user) return;
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .maybeSingle();
-      setIsAdmin(!!data);
-    };
-    checkAdmin();
-  }, [user]);
+
   
   // Initialize alert notifications
   useAlertNotifications();
