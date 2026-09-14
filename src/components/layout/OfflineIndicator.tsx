@@ -106,7 +106,7 @@ const OfflineIndicator = () => {
           )}
           <div className="flex-1 min-w-0">
             <p className="font-medium text-sm">
-              {isSyncing ? 'Sincronizando...' : `${pendingCount} ações pendentes`}
+              {isSyncing ? 'Sincronizando...' : `${pendingCount} ${pendingCount === 1 ? 'lançamento pendente' : 'lançamentos pendentes'}`}
             </p>
           </div>
           {!isSyncing && (
