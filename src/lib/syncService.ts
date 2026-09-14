@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { getPendingActions, clearPendingAction } from './offlineStorage';
+import { getPendingActions, clearPendingAction, registerPendingAttempt } from './offlineStorage';
 import { toast } from 'sonner';
 
 interface PendingAction {
@@ -8,7 +8,12 @@ interface PendingAction {
   table: string;
   data: Record<string, unknown>;
   createdAt: number;
+  attempts?: number;
+  label?: string;
 }
+
+// Após esse número de tentativas a ação é descartada para não ficar em loop infinito
+const MAX_ATTEMPTS = 5;
 
 let isSyncing = false;
 
