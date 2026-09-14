@@ -214,6 +214,9 @@ const Estoque = () => {
     return [...new Set(movimentos.map(m => m.origem))];
   }, [movimentos]);
 
+  // Paginação do histórico de movimentações
+  const movimentosPagination = usePagination(movimentosFiltrados, { pageSize: 30 });
+
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const quantidade = parseFloat(data.quantidade) || 0;
