@@ -62,7 +62,16 @@ export default function Pedidos() {
   useEffect(() => {
     if (!empresaId) return;
     const fetchPedidos = async () => {
-      const { data } = await supabase.from("pedidos").select("*").eq("empresa_id", empresaId).order("created_at", { ascending: false }).limit(200);
+      // Últimos 30 dias: pedidos antigos ficam no relatório, não no painel do dia
+      const desde = new Date();
+      desde.setDate(desde.getDate() - 30);
+      const { data } = await supabase
+        .from("pedidos")
+        .select("*")
+        .eq("empresa_id", empresaId)
+        .gte("created_at", desde.toISOString())
+        .order("created_at", { ascending: false })
+        .limit(300);
       setPedidos((data as unknown as Pedido[]) || []);
       setLoading(false);
     };
