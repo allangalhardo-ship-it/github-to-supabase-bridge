@@ -25,6 +25,7 @@ import {
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { calcularCustoFicha } from '@/utils/custoFicha';
+import { custoVenda } from '@/lib/vendasUtils';
 
 interface Venda {
   id: string;
@@ -277,23 +278,17 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
     vendas.forEach((venda) => {
       const canal = venda.canal || 'Balcão';
       const canalLower = canal.toLowerCase();
-      const custoUnitario = Number(venda.custo_insumos) || 0;
-      const precoVenda = Number(venda.produto_preco_venda) || 0;
       const valorTotal = Number(venda.valor_total) || 0;
-      
-      let unidadesReais = Number(venda.quantidade) || 1;
-      if (precoVenda > 0) {
-        unidadesReais = valorTotal / precoVenda;
-      }
-      
+
       // Buscar taxa do canal na nova estrutura
       const canalConfig = canaisConfigurados?.find(c => 
         c.nome.toLowerCase() === canalLower ||
         c.id === canal
       );
       const taxaValor = canalConfig ? (valorTotal * canalConfig.taxa / 100) : 0;
-      
-      const lucroVenda = valorTotal - (custoUnitario * unidadesReais) - taxaValor;
+      const impostoValor = valorTotal * (impostoPercent / 100);
+
+      const lucroVenda = valorTotal - custoVenda(venda as any) - taxaValor - impostoValor;
       
       if (!lucroPorCanal[canal]) {
         lucroPorCanal[canal] = { lucro: 0, receita: 0, vendas: 0 };
