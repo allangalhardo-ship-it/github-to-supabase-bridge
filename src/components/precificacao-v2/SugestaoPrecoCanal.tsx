@@ -155,7 +155,12 @@ const SugestaoPrecoCanal: React.FC<SugestaoPrecosCanalProps> = ({ produtos, conf
                             )}
                           </>
                         )}
-                        {!canal.precisaAjuste && (
+                        {!canal.precisaAjuste && canal.motivoInviavel && (
+                          <Badge variant="outline" className="text-[9px] px-1 h-4 text-amber-600 border-amber-500/30" title={canal.motivoInviavel}>
+                            Não dá pra calcular
+                          </Badge>
+                        )}
+                        {!canal.precisaAjuste && !canal.motivoInviavel && (
                           <Badge variant="outline" className="text-[9px] px-1 h-4 text-emerald-600 border-emerald-500/30">
                             OK
                           </Badge>
