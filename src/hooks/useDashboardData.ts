@@ -223,27 +223,13 @@ export function useDashboardData() {
       .sort((a, b) => b.quantidade - a.quantidade);
   }, [vendas]);
 
-  const cmvTotal = vendas?.reduce((sum, venda) => {
-    if (!venda.custo_insumos) return sum;
-    const custoUnitarioProduto = Number(venda.custo_insumos) || 0;
-    const precoVendaProduto = Number(venda.produto_preco_venda) || 0;
-    const valorTotal = Number(venda.valor_total) || 0;
-    const unidadesReais = precoVendaProduto > 0 ? valorTotal / precoVendaProduto : Number(venda.quantidade);
-    return sum + (custoUnitarioProduto * unidadesReais);
-  }, 0) || 0;
+  const cmvTotal = somarCustoVendas(vendas as any);
 
   const cmvPercent = receitaBruta > 0 ? (cmvTotal / receitaBruta) * 100 : 0;
   const margemContribuicao = receitaBruta - cmvTotal;
 
   const receitaBrutaAnterior = vendasAnterior?.reduce((sum, v) => sum + Number(v.valor_total), 0) || 0;
-  const cmvTotalAnterior = vendasAnterior?.reduce((sum, venda) => {
-    if (!venda.custo_insumos) return sum;
-    const custoUnit = Number(venda.custo_insumos) || 0;
-    const precoVenda = Number(venda.produto_preco_venda) || 0;
-    const valorTotal = Number(venda.valor_total) || 0;
-    const unidades = precoVenda > 0 ? valorTotal / precoVenda : Number(venda.quantidade);
-    return sum + (custoUnit * unidades);
-  }, 0) || 0;
+  const cmvTotalAnterior = somarCustoVendas(vendasAnterior as any);
   const margemAnterior = receitaBrutaAnterior - cmvTotalAnterior;
   const deltaReceita = receitaBrutaAnterior > 0 ? ((receitaBruta - receitaBrutaAnterior) / receitaBrutaAnterior) * 100 : null;
   const deltaLucroBruto = margemAnterior > 0 ? ((margemContribuicao - margemAnterior) / margemAnterior) * 100 : null;
