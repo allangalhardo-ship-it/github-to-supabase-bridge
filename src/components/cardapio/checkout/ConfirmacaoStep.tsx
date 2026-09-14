@@ -26,35 +26,48 @@ export function ConfirmacaoStep({ carrinho, data, empresa, subtotal, onBack, onS
   const total = subtotal + data.taxa_entrega;
 
   const confirmarPedido = async () => {
+    if (enviando) return;
     setEnviando(true);
     try {
-      const itensJson = carrinho.map(item => ({
-        produto_id: item.produto.id,
-        nome: item.produto.nome,
-        quantidade: item.quantidade,
-        preco_unitario: item.produto.preco_venda,
-        observacao: item.observacao || null,
-        opcionais: item.opcionais.map(o => ({ nome: o.nome, preco_adicional: o.preco_adicional })),
-      }));
+      const { data: resposta, error } = await supabase.functions.invoke("criar-pedido-publico", {
+        body: {
+          slug: empresa.slug,
+          itens: carrinho.map(item => ({
+            produto_id: item.produto.id,
+            quantidade: item.quantidade,
+            observacao: item.observacao || null,
+            opcionais_ids: item.opcionais.map(o => o.item_id),
+          })),
+          tipo_entrega: data.tipo_entrega,
+          bairro_id: data.bairro_id || null,
+          endereco: data.endereco || null,
+          complemento: data.complemento || null,
+          forma_pagamento: data.forma_pagamento,
+          troco_para: data.troco_para,
+          cliente_nome: data.nome.trim(),
+          cliente_whatsapp: data.whatsapp,
+          observacoes: data.observacoes || null,
+        },
+      });
 
-      const enderecoCompleto = data.tipo_entrega === "entrega"
-        ? `${data.endereco}${data.complemento ? ` - ${data.complemento}` : ""}${data.bairro_nome ? ` (${data.bairro_nome})` : ""}`
-        : null;
+      if (error) {
+        let msg = "Erro ao enviar pedido. Tente novamente.";
+        try {
+          const ctx = (error as any).context;
+          if (ctx?.json) {
+            const corpo = await ctx.json();
+            if (corpo?.error) msg = corpo.error;
+          }
+        } catch { /* mantém mensagem padrão */ }
+        toast.error(msg);
+        return;
+      }
+      if (!resposta?.id) {
+        toast.error(resposta?.error || "Erro ao enviar pedido. Tente novamente.");
+        return;
+      }
 
-      const { data: pedido, error } = await supabase
-        .from("pedidos")
-        .insert({
-          empresa_id: empresa.id, itens: itensJson, valor_total: total,
-          subtotal, taxa_entrega: data.taxa_entrega, tipo_entrega: data.tipo_entrega,
-          bairro_entrega: data.bairro_nome || null, endereco_entrega: enderecoCompleto,
-          forma_pagamento: data.forma_pagamento, troco_para: data.troco_para,
-          cliente_nome: data.nome.trim(), cliente_whatsapp: data.whatsapp.replace(/\D/g, ""),
-          observacoes: data.observacoes || null, origem: "cardapio", status: "pendente",
-        })
-        .select("id, numero_pedido").single();
-
-      if (error) throw error;
-      onSuccess(pedido.id, pedido.numero_pedido);
+      onSuccess(resposta.id, resposta.numero_pedido);
     } catch (error: any) {
       console.error("Erro ao enviar pedido:", error);
       toast.error("Erro ao enviar pedido. Tente novamente.");
