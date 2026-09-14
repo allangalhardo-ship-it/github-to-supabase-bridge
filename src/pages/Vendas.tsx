@@ -161,7 +161,7 @@ const Vendas = () => {
   }, [vendas]);
 
   const createMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
+    mutationFn: async (data: typeof formData): Promise<{ queued: boolean }> => {
       const produto = produtos?.find(p => p.id === data.produto_id);
       const cliente = clientes?.find(c => c.id === data.cliente_id);
       
@@ -171,7 +171,7 @@ const Vendas = () => {
         canal = `Cliente: ${cliente.nome}`;
       }
 
-      const { error } = await supabase.from('vendas').insert({
+      const payload = {
         empresa_id: usuario!.empresa_id,
         produto_id: data.produto_id || null,
         descricao_produto: produto?.nome || null,
@@ -182,12 +182,43 @@ const Vendas = () => {
         origem: 'manual',
         tipo_venda: data.tipo_venda,
         cliente_id: data.tipo_venda === 'direto' ? (data.cliente_id || null) : null,
-      });
-      if (error) throw error;
+      };
+
+      // Sem internet: guarda no aparelho e sincroniza quando a conexão voltar
+      if (!navigator.onLine) {
+        await storePendingAction({
+          type: 'insert',
+          table: 'vendas',
+          data: payload,
+          label: `Venda ${produto?.nome || ''}`.trim(),
+        });
+        return { queued: true };
+      }
+
+      const { error } = await supabase.from('vendas').insert(payload);
+      if (error) {
+        // Falha de rede (não de validação): também vai para a fila
+        const isNetworkError = /fetch|network|failed to fetch|timeout/i.test(error.message || '');
+        if (isNetworkError) {
+          await storePendingAction({
+            type: 'insert',
+            table: 'vendas',
+            data: payload,
+            label: `Venda ${produto?.nome || ''}`.trim(),
+          });
+          return { queued: true };
+        }
+        throw error;
+      }
+      return { queued: false };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
-      toast({ title: 'Venda registrada!' });
+      toast(
+        result.queued
+          ? { title: 'Venda guardada no aparelho', description: 'Ela entra no sistema assim que a internet voltar.' }
+          : { title: 'Venda registrada!' }
+      );
       resetForm();
     },
     onError: (error) => {
