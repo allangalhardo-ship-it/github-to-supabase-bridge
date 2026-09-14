@@ -715,8 +715,9 @@ const Vendas = () => {
           {isLoading ? (
             <Skeleton className="h-96" />
           ) : (
+            <>
             <MobileDataView
-              data={vendasFiltradas}
+              data={vendasPagination.paginatedData}
               columns={[
                 {
                   key: 'data',
