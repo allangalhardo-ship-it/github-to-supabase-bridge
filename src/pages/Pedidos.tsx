@@ -80,25 +80,52 @@ export default function Pedidos() {
   }, [empresaId]);
 
   const atualizarStatus = async (pedido: Pedido, novoStatus: string) => {
-    const timestampCol = `${novoStatus}_em`;
-    const { error } = await supabase.from("pedidos").update({ status: novoStatus, [timestampCol]: new Date().toISOString() } as any).eq("id", pedido.id);
-    if (error) { toast.error("Erro ao atualizar"); return; }
-    toast.success(`Pedido #${pedido.numero_pedido} → ${NEXT_LABEL[pedido.status] || novoStatus}`);
-    if (pedido.cliente_whatsapp) {
-      const msg = buildWhatsAppMsg({ ...pedido, status: novoStatus }, novoStatus);
-      if (msg) {
-        const num = pedido.cliente_whatsapp.replace(/\D/g, "");
-        const fullNum = num.length <= 11 ? `55${num}` : num;
-        window.open(`https://wa.me/${fullNum}?text=${encodeURIComponent(msg)}`, "_blank");
+    if (processando) return;
+    setProcessando(pedido.id);
+    try {
+      const timestampCol = `${novoStatus}_em`;
+      const { error } = await supabase
+        .from("pedidos")
+        .update({ status: novoStatus, [timestampCol]: new Date().toISOString() } as any)
+        .eq("id", pedido.id)
+        .neq("status", novoStatus);
+      if (error) { toast.error("Erro ao atualizar"); return; }
+      toast.success(
+        novoStatus === "entregue"
+          ? `Pedido #${pedido.numero_pedido} entregue! Venda e caixa atualizados.`
+          : `Pedido #${pedido.numero_pedido} → ${NEXT_LABEL[pedido.status] || novoStatus}`
+      );
+      if (novoStatus === "entregue") invalidateEmpresaCachesAndRefetch(empresaId);
+      if (pedido.cliente_whatsapp) {
+        const msg = buildWhatsAppMsg({ ...pedido, status: novoStatus }, novoStatus);
+        if (msg) {
+          const num = pedido.cliente_whatsapp.replace(/\D/g, "");
+          const fullNum = num.length <= 11 ? `55${num}` : num;
+          window.open(`https://wa.me/${fullNum}?text=${encodeURIComponent(msg)}`, "_blank");
+        }
       }
+    } finally {
+      setProcessando(null);
     }
   };
 
   const cancelarPedido = async (pedido: Pedido) => {
+    if (processando) return;
     const motivo = prompt("Motivo do cancelamento:");
     if (!motivo) return;
-    await supabase.from("pedidos").update({ status: "cancelado", cancelado_em: new Date().toISOString(), motivo_cancelamento: motivo } as any).eq("id", pedido.id);
-    toast.success(`Pedido #${pedido.numero_pedido} cancelado`);
+    setProcessando(pedido.id);
+    try {
+      const { error } = await supabase
+        .from("pedidos")
+        .update({ status: "cancelado", cancelado_em: new Date().toISOString(), motivo_cancelamento: motivo } as any)
+        .eq("id", pedido.id)
+        .neq("status", "cancelado");
+      if (error) { toast.error("Erro ao cancelar"); return; }
+      toast.success(`Pedido #${pedido.numero_pedido} cancelado`);
+      invalidateEmpresaCachesAndRefetch(empresaId);
+    } finally {
+      setProcessando(null);
+    }
   };
 
   const pedidosFiltrados = pedidos.filter(p => {
