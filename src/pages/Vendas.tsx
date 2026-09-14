@@ -842,6 +842,16 @@ const Vendas = () => {
                 ) : undefined
               }
             />
+            <PaginationControls
+              currentPage={vendasPagination.currentPage}
+              totalPages={vendasPagination.totalPages}
+              startIndex={vendasPagination.startIndex}
+              endIndex={vendasPagination.endIndex}
+              totalItems={vendasPagination.totalItems}
+              onPrevPage={vendasPagination.prevPage}
+              onNextPage={vendasPagination.nextPage}
+            />
+            </>
           )}
       </div>
 
