@@ -87,12 +87,18 @@ const navCategories = [
     ],
   },
   {
-    label: 'Análises',
+    label: 'Assistente',
+    icon: null,
+    items: [
+      { to: '/assistente', icon: Bot, label: 'Assistente IA' },
+    ],
+  },
+  {
+    label: 'Avançado',
     icon: BarChart2,
     items: [
       { to: '/relatorios', icon: BarChart3, label: 'Relatórios' },
       { to: '/caixa', icon: Wallet, label: 'Caixa' },
-      { to: '/assistente', icon: Bot, label: 'Assistente IA' },
     ],
   },
   {
