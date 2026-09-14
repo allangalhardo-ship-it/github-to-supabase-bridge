@@ -60,8 +60,9 @@ export const useSessionTracker = () => {
 
     startSession();
 
-    // Send heartbeat every 2 minutes to keep session active
+    // Send heartbeat every 2 minutes to keep session active (só com internet e aba visível)
     heartbeatIntervalRef.current = setInterval(() => {
+      if (!navigator.onLine || document.visibilityState !== 'visible') return;
       trackAction('heartbeat');
     }, 120000);
 
