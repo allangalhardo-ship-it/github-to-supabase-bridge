@@ -636,8 +636,9 @@ const Estoque = () => {
                   <Skeleton className="h-64" />
                 </div>
               ) : movimentosFiltrados && movimentosFiltrados.length > 0 ? (
+                <>
                 <MobileDataView
-                  data={movimentosFiltrados}
+                  data={movimentosPagination.paginatedData}
                   keyExtractor={(mov) => mov.id}
                   columns={[
                     { key: 'data', header: 'Data', mobilePriority: 3, render: (m) => (
