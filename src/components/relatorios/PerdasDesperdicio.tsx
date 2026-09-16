@@ -156,7 +156,7 @@ export const PerdasDesperdicio: React.FC<PerdasDesperdicioProps> = ({ onBack }) 
         custo: custoTotal,
         origem: 'vencimento',
         data: prod.data_vencimento!,
-        observacao: `Vencido em ${format(parseISO(prod.data_vencimento!), 'dd/MM/yyyy')}`,
+        observacao: `Vencido em ${format(parseDataLocal(prod.data_vencimento!), 'dd/MM/yyyy')}`,
       };
     }) || [];
 
