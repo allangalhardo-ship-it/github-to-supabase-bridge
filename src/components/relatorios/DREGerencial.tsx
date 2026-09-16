@@ -238,9 +238,9 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
       { name: 'Receita Bruta', valor: dre.receitaBruta, fill: '#10b981' },
       { name: 'CMV', valor: -dre.cmv, fill: '#ef4444', isSubtraction: true },
       { name: 'Taxas Apps', valor: -dre.taxasApps, fill: '#f97316', isSubtraction: true },
+      { name: 'Impostos', valor: -dre.impostos, fill: '#f97316', isSubtraction: true },
       { name: 'Margem Contrib.', valor: dre.margemContribuicao, fill: '#3b82f6', isTotal: true },
       { name: 'Custos Fixos', valor: -dre.custosFixos, fill: '#ef4444', isSubtraction: true },
-      { name: 'Impostos', valor: -dre.impostos, fill: '#f97316', isSubtraction: true },
       { name: 'Lucro Líquido', valor: dre.lucroLiquido, fill: dre.lucroLiquido >= 0 ? '#10b981' : '#ef4444', isTotal: true },
     ];
   }, [dre]);
