@@ -577,13 +577,8 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
       const produto = produtos?.find(p => p.id === venda.produto_id);
       if (!produto?.fichas_tecnicas) return;
       
-      const precoVenda = Number(venda.produto_preco_venda) || 0;
-      const valorTotal = Number(venda.valor_total) || 0;
+      const unidadesReais = unidadesVenda(venda as any);
       
-      let unidadesReais = Number(venda.quantidade) || 1;
-      if (precoVenda > 0) {
-        unidadesReais = valorTotal / precoVenda;
-      }
       
       produto.fichas_tecnicas.forEach((ft) => {
         if (!ft.insumos) return;

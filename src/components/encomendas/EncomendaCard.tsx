@@ -121,7 +121,7 @@ export default function EncomendaCard({ encomenda, onAtualizarStatus, onExcluir 
       )}
 
       {/* Ações */}
-      {encomenda.status !== 'entregue' && encomenda.status !== 'cancelada' && (
+      {encomenda.status !== 'cancelada' && (
         <div className="flex items-center gap-2 pt-1">
           {proximo && (
             <Button
