@@ -181,27 +181,31 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
       }
     });
 
-    // Custos Variáveis = CMV + Taxas
-    const custosVariaveis = cmvTotal + taxasApps;
-
-    // Margem de Contribuição
-    const margemContribuicao = receitaBruta - custosVariaveis;
-
     // Custos Fixos (proporcional ao período)
     const totalCustosFixosMensal = custosFixos?.reduce((acc, cf) => acc + cf.valor_mensal, 0) || 0;
     const totalCustosFixosPeriodo = totalCustosFixosMensal * meses;
 
-    // Impostos estimados
+    // Impostos estimados (custo variável — entra ANTES da margem de contribuição)
     const percentualImposto = config?.imposto_medio_sobre_vendas || 0;
     const impostos = (receitaBruta * percentualImposto) / 100;
 
+    // Margem de Contribuição — fonte única compartilhada com o Painel
+    const margem = calcularMargemContribuicao({
+      receitaBruta,
+      cmv: cmvTotal,
+      taxasCanais: taxasApps,
+      impostos,
+    });
+    const custosVariaveis = margem.custosVariaveis;
+    const margemContribuicao = margem.valor;
+
     // Lucro Líquido
-    const lucroLiquido = margemContribuicao - totalCustosFixosPeriodo - impostos;
+    const lucroLiquido = margemContribuicao - totalCustosFixosPeriodo;
 
     // Percentuais
     const percCMV = receitaBruta > 0 ? (cmvTotal / receitaBruta) * 100 : 0;
     const percTaxas = receitaBruta > 0 ? (taxasApps / receitaBruta) * 100 : 0;
-    const percMargemContribuicao = receitaBruta > 0 ? (margemContribuicao / receitaBruta) * 100 : 0;
+    const percMargemContribuicao = margem.percentual;
     const percCustosFixos = receitaBruta > 0 ? (totalCustosFixosPeriodo / receitaBruta) * 100 : 0;
     const percImpostos = receitaBruta > 0 ? (impostos / receitaBruta) * 100 : 0;
     const percLucroLiquido = receitaBruta > 0 ? (lucroLiquido / receitaBruta) * 100 : 0;
