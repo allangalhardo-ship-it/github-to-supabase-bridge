@@ -670,7 +670,21 @@ const ImportarVendasDialog: React.FC = () => {
     if (!usuario?.empresa_id) return rows;
     setCheckingDuplicates(true);
     try {
-      const { data: existingVendas, error } = await supabase.from('vendas').select('data_venda, valor_total, canal, descricao_produto').eq('empresa_id', usuario.empresa_id);
+      // Limita a checagem à janela de datas do arquivo importado (evita varrer todo o histórico)
+      const datas = rows.map(r => r.data).filter(Boolean).sort();
+      const minData = datas[0];
+      const maxData = datas[datas.length - 1];
+
+      let query = supabase
+        .from('vendas')
+        .select('data_venda, valor_total, canal, descricao_produto')
+        .eq('empresa_id', usuario.empresa_id);
+      if (minData && maxData) {
+        query = query.gte('data_venda', minData).lte('data_venda', maxData);
+      } else {
+        query = query.limit(1000);
+      }
+      const { data: existingVendas, error } = await query;
       if (error) throw error;
       const existingKeys = new Set((existingVendas || []).map(v => `${v.data_venda}|${v.valor_total}|${(v.canal || '').toLowerCase()}|${(v.descricao_produto || '').toLowerCase()}`));
       let dupes = 0;
