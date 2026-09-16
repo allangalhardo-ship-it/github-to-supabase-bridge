@@ -379,11 +379,17 @@ export function useDashboardData() {
     return { taxaAppTotal: estimadaTotal, taxasReaisTotal: 0 };
   }, [vendas, vendasFinanceiro, canaisConfigurados]);
 
-  const lucroEstimado = margemContribuicao - custoFixoTotal - impostos - taxaAppTotal;
+  // Margem de contribuição LÍQUIDA: fonte única compartilhada com o DRE Gerencial.
+  // Já sem imposto e sem taxa de app — é ela que alimenta o ponto de equilíbrio.
+  const margemCalculada = calcularMargemContribuicao({
+    receitaBruta,
+    cmv: cmvTotal,
+    taxasCanais: taxaAppTotal,
+    impostos,
+  });
+  const margemContribuicaoLiquida = margemCalculada.valor;
 
-  // Margem de contribuição LÍQUIDA: já sem imposto e sem taxa de app.
-  // É essa que deve alimentar o ponto de equilíbrio (mesma base da projeção sem vendas).
-  const margemContribuicaoLiquida = margemContribuicao - impostos - taxaAppTotal;
+  const lucroEstimado = margemContribuicaoLiquida - custoFixoTotal;
 
   const produtosMargemNegativa = useMemo(() => {
     if (!produtosAnalise) return [];
