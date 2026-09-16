@@ -8,6 +8,7 @@ import { format, subDays, startOfMonth, startOfWeek, differenceInDays, getDaysIn
 import { calcularCustoFicha } from '@/utils/custoFicha';
 import { somarCustoVendas } from '@/lib/vendasUtils';
 import { parseDataLocal } from '@/lib/format';
+import { calcularMargemContribuicao } from '@/lib/margemUtils';
 import { ptBR } from 'date-fns/locale';
 
 export type PeriodoType = 'hoje' | 'semana' | 'mes' | 'ultimos30' | 'personalizado';
