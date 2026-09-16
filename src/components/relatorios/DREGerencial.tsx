@@ -13,6 +13,7 @@ import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { calcularCustoFicha } from '@/utils/custoFicha';
 import { custoVenda } from '@/lib/vendasUtils';
+import { calcularMargemContribuicao } from '@/lib/margemUtils';
 
 interface DREGerencialProps {
   onBack: () => void;
@@ -181,27 +182,31 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
       }
     });
 
-    // Custos Variáveis = CMV + Taxas
-    const custosVariaveis = cmvTotal + taxasApps;
-
-    // Margem de Contribuição
-    const margemContribuicao = receitaBruta - custosVariaveis;
-
     // Custos Fixos (proporcional ao período)
     const totalCustosFixosMensal = custosFixos?.reduce((acc, cf) => acc + cf.valor_mensal, 0) || 0;
     const totalCustosFixosPeriodo = totalCustosFixosMensal * meses;
 
-    // Impostos estimados
+    // Impostos estimados (custo variável — entra ANTES da margem de contribuição)
     const percentualImposto = config?.imposto_medio_sobre_vendas || 0;
     const impostos = (receitaBruta * percentualImposto) / 100;
 
+    // Margem de Contribuição — fonte única compartilhada com o Painel
+    const margem = calcularMargemContribuicao({
+      receitaBruta,
+      cmv: cmvTotal,
+      taxasCanais: taxasApps,
+      impostos,
+    });
+    const custosVariaveis = margem.custosVariaveis;
+    const margemContribuicao = margem.valor;
+
     // Lucro Líquido
-    const lucroLiquido = margemContribuicao - totalCustosFixosPeriodo - impostos;
+    const lucroLiquido = margemContribuicao - totalCustosFixosPeriodo;
 
     // Percentuais
     const percCMV = receitaBruta > 0 ? (cmvTotal / receitaBruta) * 100 : 0;
     const percTaxas = receitaBruta > 0 ? (taxasApps / receitaBruta) * 100 : 0;
-    const percMargemContribuicao = receitaBruta > 0 ? (margemContribuicao / receitaBruta) * 100 : 0;
+    const percMargemContribuicao = margem.percentual;
     const percCustosFixos = receitaBruta > 0 ? (totalCustosFixosPeriodo / receitaBruta) * 100 : 0;
     const percImpostos = receitaBruta > 0 ? (impostos / receitaBruta) * 100 : 0;
     const percLucroLiquido = receitaBruta > 0 ? (lucroLiquido / receitaBruta) * 100 : 0;
@@ -233,9 +238,9 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
       { name: 'Receita Bruta', valor: dre.receitaBruta, fill: '#10b981' },
       { name: 'CMV', valor: -dre.cmv, fill: '#ef4444', isSubtraction: true },
       { name: 'Taxas Apps', valor: -dre.taxasApps, fill: '#f97316', isSubtraction: true },
+      { name: 'Impostos', valor: -dre.impostos, fill: '#f97316', isSubtraction: true },
       { name: 'Margem Contrib.', valor: dre.margemContribuicao, fill: '#3b82f6', isTotal: true },
       { name: 'Custos Fixos', valor: -dre.custosFixos, fill: '#ef4444', isSubtraction: true },
-      { name: 'Impostos', valor: -dre.impostos, fill: '#f97316', isSubtraction: true },
       { name: 'Lucro Líquido', valor: dre.lucroLiquido, fill: dre.lucroLiquido >= 0 ? '#10b981' : '#ef4444', isTotal: true },
     ];
   }, [dre]);
@@ -350,6 +355,13 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
                     <span className="text-xs text-muted-foreground ml-2">({dre.percentuais.taxas.toFixed(1)}%)</span>
                   </div>
                 </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-muted-foreground">(-) Impostos Estimados</span>
+                  <div className="text-right">
+                    <span className="text-destructive">{formatCurrencyBRL(dre.impostos)}</span>
+                    <span className="text-xs text-muted-foreground ml-2">({dre.percentuais.impostos.toFixed(1)}%)</span>
+                  </div>
+                </div>
               </div>
 
               {/* Margem de Contribuição */}
@@ -361,20 +373,13 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
                 </div>
               </div>
 
-              {/* Custos Fixos e Impostos */}
+              {/* Custos Fixos */}
               <div className="space-y-2 pl-4 border-l-2 border-muted">
                 <div className="flex justify-between items-center py-1">
                   <span className="text-muted-foreground">(-) Custos Fixos</span>
                   <div className="text-right">
                     <span className="text-destructive">{formatCurrencyBRL(dre.custosFixos)}</span>
                     <span className="text-xs text-muted-foreground ml-2">({dre.percentuais.custosFixos.toFixed(1)}%)</span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center py-1">
-                  <span className="text-muted-foreground">(-) Impostos Estimados</span>
-                  <div className="text-right">
-                    <span className="text-destructive">{formatCurrencyBRL(dre.impostos)}</span>
-                    <span className="text-xs text-muted-foreground ml-2">({dre.percentuais.impostos.toFixed(1)}%)</span>
                   </div>
                 </div>
               </div>
