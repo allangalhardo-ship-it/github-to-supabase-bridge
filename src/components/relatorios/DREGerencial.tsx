@@ -13,6 +13,7 @@ import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { calcularCustoFicha } from '@/utils/custoFicha';
 import { custoVenda } from '@/lib/vendasUtils';
+import { calcularMargemContribuicao } from '@/lib/margemUtils';
 
 interface DREGerencialProps {
   onBack: () => void;
