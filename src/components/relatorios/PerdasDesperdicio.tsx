@@ -79,8 +79,9 @@ export const PerdasDesperdicio: React.FC<PerdasDesperdicioProps> = ({ onBack }) 
         .eq('empresa_id', usuario?.empresa_id)
         .eq('tipo', 'saida')
         .in('origem', ['perda', 'vencimento', 'avaria', 'ajuste_negativo'])
-        .gte('created_at', dataInicio)
-        .lte('created_at', dataFim + 'T23:59:59')
+        // created_at é timestamp com fuso: usar limites do dia no horário local
+        .gte('created_at', new Date(dataInicio + 'T00:00:00').toISOString())
+        .lte('created_at', new Date(dataFim + 'T23:59:59.999').toISOString())
         .order('created_at', { ascending: false });
 
       if (error) throw error;
