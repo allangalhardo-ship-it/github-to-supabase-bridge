@@ -170,8 +170,9 @@ Deno.serve(async (req) => {
       enderecoEntrega = `${endereco}${complemento ? ` - ${complemento}` : ""} (${bairro.nome})`;
     }
 
-    if (subtotal < (Number(empresa.pedido_minimo) || 0)) {
-      return json({ error: "Pedido abaixo do valor mínimo da loja" }, 400);
+    // Pedido mínimo vale apenas para entrega (retirada no balcão é livre)
+    if (tipoEntrega === "entrega" && subtotal < (Number(empresa.pedido_minimo) || 0)) {
+      return json({ error: "Pedido abaixo do valor mínimo para entrega" }, 400);
     }
 
     const valorTotal = round2(subtotal + taxaEntrega);
