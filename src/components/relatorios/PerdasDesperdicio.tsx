@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { formatCurrencyBRL } from '@/lib/format';
+import { formatCurrencyBRL, parseDataLocal } from '@/lib/format';
 import { 
   ArrowLeft, 
   AlertTriangle,
@@ -79,8 +79,9 @@ export const PerdasDesperdicio: React.FC<PerdasDesperdicioProps> = ({ onBack }) 
         .eq('empresa_id', usuario?.empresa_id)
         .eq('tipo', 'saida')
         .in('origem', ['perda', 'vencimento', 'avaria', 'ajuste_negativo'])
-        .gte('created_at', dataInicio)
-        .lte('created_at', dataFim + 'T23:59:59')
+        // created_at é timestamp com fuso: usar limites do dia no horário local
+        .gte('created_at', new Date(dataInicio + 'T00:00:00').toISOString())
+        .lte('created_at', new Date(dataFim + 'T23:59:59.999').toISOString())
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -156,7 +157,7 @@ export const PerdasDesperdicio: React.FC<PerdasDesperdicioProps> = ({ onBack }) 
         custo: custoTotal,
         origem: 'vencimento',
         data: prod.data_vencimento!,
-        observacao: `Vencido em ${format(parseISO(prod.data_vencimento!), 'dd/MM/yyyy')}`,
+        observacao: `Vencido em ${format(parseDataLocal(prod.data_vencimento!), 'dd/MM/yyyy')}`,
       };
     }) || [];
 

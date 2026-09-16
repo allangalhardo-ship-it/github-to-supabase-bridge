@@ -561,22 +561,8 @@ export function useCompras() {
         .eq('id', movimentoId);
       if (deleteError) throw deleteError;
 
-      const { data: movimentos, error: movimentosError } = await supabase
-        .from('estoque_movimentos')
-        .select('tipo, quantidade')
-        .eq('insumo_id', movimento.insumo_id);
-      if (movimentosError) throw movimentosError;
-
-      const novoEstoque = (movimentos || []).reduce((acc, mov) => {
-        const qty = Number(mov.quantidade) || 0;
-        return mov.tipo === 'entrada' ? acc + qty : acc - qty;
-      }, 0);
-
-      const { error: updateError } = await supabase
-        .from('insumos')
-        .update({ estoque_atual: Math.max(0, novoEstoque) })
-        .eq('id', movimento.insumo_id);
-      if (updateError) throw updateError;
+      // O estoque é ajustado atomicamente pelo trigger de exclusão no banco.
+      // Não recalcular nem sobrescrever estoque_atual aqui (evita condição de corrida).
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['insumos'] });

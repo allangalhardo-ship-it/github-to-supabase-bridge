@@ -20,7 +20,7 @@ import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { format, startOfMonth, endOfMonth, subMonths, differenceInDays, isBefore } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { inserirMovimentoEstoque, calcularEstoqueDeMovimentos } from '@/lib/estoqueUtils';
-import { formatCurrencySmartBRL } from '@/lib/format';
+import { formatCurrencySmartBRL, parseDataLocal } from '@/lib/format';
 import ContextualTip from '@/components/onboarding/ContextualTip';
 import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/ui/pagination-controls';
@@ -484,14 +484,14 @@ const Estoque = () => {
                     { key: 'validade', header: 'Validade', mobilePriority: 3, render: (p) => {
                       if (!p.proxima_validade) return <span className="text-muted-foreground/50 text-sm">-</span>;
                       const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-                      const dataVenc = new Date(p.proxima_validade); dataVenc.setHours(0, 0, 0, 0);
+                      const dataVenc = parseDataLocal(p.proxima_validade); dataVenc.setHours(0, 0, 0, 0);
                       const diasRestantes = differenceInDays(dataVenc, hoje);
                       const statusValidade = isBefore(dataVenc, hoje) ? 'vencido' : diasRestantes <= 3 ? 'proximo' : 'ok';
                       return (
                         <div className="flex items-center gap-1.5">
                           <Clock className={`h-3.5 w-3.5 ${statusValidade === 'vencido' ? 'text-destructive' : statusValidade === 'proximo' ? 'text-amber-500' : 'text-muted-foreground'}`} />
                           <span className={`text-sm whitespace-nowrap ${statusValidade === 'vencido' ? 'text-destructive font-medium' : statusValidade === 'proximo' ? 'text-amber-600 font-medium' : 'text-muted-foreground'}`}>
-                            {format(new Date(p.proxima_validade), 'dd/MM/yy', { locale: ptBR })}
+                            {format(parseDataLocal(p.proxima_validade), 'dd/MM/yy', { locale: ptBR })}
                             {statusValidade === 'vencido' && ' (vencido)'}
                             {statusValidade === 'proximo' && diasRestantes === 0 && ' (hoje)'}
                             {statusValidade === 'proximo' && diasRestantes > 0 && ` (${diasRestantes}d)`}

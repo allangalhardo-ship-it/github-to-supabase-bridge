@@ -4,6 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { invalidateEmpresaCachesAndRefetch } from '@/lib/queryConfig';
+import { storePendingAction } from '@/lib/offlineStorage';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -193,21 +194,51 @@ const Caixa = () => {
       valor: number;
       data_movimento: string;
     }) => {
+      const payload = {
+        ...movimento,
+        empresa_id: usuario?.empresa_id,
+        origem: 'manual',
+      };
+
+      // Sem internet: guarda no aparelho e sincroniza quando a conexão voltar
+      if (!navigator.onLine) {
+        await storePendingAction({
+          type: 'insert',
+          table: 'caixa_movimentos',
+          data: payload,
+          label: `${movimento.tipo === 'entrada' ? 'Entrada' : 'Saída'} ${movimento.descricao}`.trim(),
+        });
+        return { queued: true };
+      }
+
       const { error } = await supabase
         .from('caixa_movimentos')
-        .insert({
-          ...movimento,
-          empresa_id: usuario?.empresa_id,
-          origem: 'manual',
-        });
-      
-      if (error) throw error;
+        .insert(payload);
+
+      if (error) {
+        const isNetworkError = /fetch|network|failed to fetch|timeout/i.test(error.message || '');
+        if (isNetworkError) {
+          await storePendingAction({
+            type: 'insert',
+            table: 'caixa_movimentos',
+            data: payload,
+            label: `${movimento.tipo === 'entrada' ? 'Entrada' : 'Saída'} ${movimento.descricao}`.trim(),
+          });
+          return { queued: true };
+        }
+        throw error;
+      }
+      return { queued: false };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
       setDialogOpen(false);
       resetForm();
-      toast({ title: 'Movimento registrado!', description: 'O lançamento foi salvo com sucesso.' });
+      toast(
+        result?.queued
+          ? { title: 'Lançamento guardado no aparelho', description: 'Ele entra no caixa assim que a internet voltar.' }
+          : { title: 'Movimento registrado!', description: 'O lançamento foi salvo com sucesso.' }
+      );
     },
     onError: (error) => {
       toast({ title: 'Erro', description: 'Não foi possível salvar o movimento.', variant: 'destructive' });

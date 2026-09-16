@@ -99,8 +99,9 @@ export const FluxoCaixa: React.FC<FluxoCaixaProps> = ({ onBack }) => {
         .select('id, custo_total, created_at')
         .eq('empresa_id', usuario?.empresa_id)
         .eq('tipo', 'entrada')
-        .gte('created_at', dataInicio)
-        .lte('created_at', dataFim + 'T23:59:59');
+        // created_at é timestamp com fuso: usar limites do dia no horário local
+        .gte('created_at', new Date(dataInicio + 'T00:00:00').toISOString())
+        .lte('created_at', new Date(dataFim + 'T23:59:59.999').toISOString());
 
       if (error) throw error;
       return data;
