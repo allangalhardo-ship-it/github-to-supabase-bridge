@@ -373,20 +373,13 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
                 </div>
               </div>
 
-              {/* Custos Fixos e Impostos */}
+              {/* Custos Fixos */}
               <div className="space-y-2 pl-4 border-l-2 border-muted">
                 <div className="flex justify-between items-center py-1">
                   <span className="text-muted-foreground">(-) Custos Fixos</span>
                   <div className="text-right">
                     <span className="text-destructive">{formatCurrencyBRL(dre.custosFixos)}</span>
                     <span className="text-xs text-muted-foreground ml-2">({dre.percentuais.custosFixos.toFixed(1)}%)</span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center py-1">
-                  <span className="text-muted-foreground">(-) Impostos Estimados</span>
-                  <div className="text-right">
-                    <span className="text-destructive">{formatCurrencyBRL(dre.impostos)}</span>
-                    <span className="text-xs text-muted-foreground ml-2">({dre.percentuais.impostos.toFixed(1)}%)</span>
                   </div>
                 </div>
               </div>
