@@ -355,6 +355,13 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
                     <span className="text-xs text-muted-foreground ml-2">({dre.percentuais.taxas.toFixed(1)}%)</span>
                   </div>
                 </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-muted-foreground">(-) Impostos Estimados</span>
+                  <div className="text-right">
+                    <span className="text-destructive">{formatCurrencyBRL(dre.impostos)}</span>
+                    <span className="text-xs text-muted-foreground ml-2">({dre.percentuais.impostos.toFixed(1)}%)</span>
+                  </div>
+                </div>
               </div>
 
               {/* Margem de Contribuição */}
