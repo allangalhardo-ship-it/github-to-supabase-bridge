@@ -53,6 +53,8 @@ const Precificacao = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [periodo, setPeriodo] = useState<PeriodoBCG>(30);
 
+  const semVendasNoPeriodo = !produtosAnalisados.some(p => p.quantidadeVendida > 0);
+
   const {
     produtosAnalisados,
     resumoQuadrantes,
