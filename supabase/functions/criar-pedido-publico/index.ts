@@ -183,27 +183,35 @@ Deno.serve(async (req) => {
       if (Number.isFinite(t) && t > 0) trocoPara = round2(t);
     }
 
-    // ---- Proteção contra reenvio/duplo clique (janela de 90s) ----
-    const desde = new Date(Date.now() - 90_000).toISOString();
-    const { data: duplicado } = await supabase
-      .from("pedidos")
-      .select("id, numero_pedido")
-      .eq("empresa_id", empresa.id)
-      .eq("cliente_whatsapp", whatsapp)
-      .eq("valor_total", valorTotal)
-      .gte("created_at", desde)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // ---- Idempotência atômica: UNIQUE (empresa_id, idempotency_key) no banco ----
+    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const idemKey = typeof body.idempotency_key === "string" && uuidRe.test(body.idempotency_key)
+      ? body.idempotency_key.toLowerCase()
+      : null;
 
-    if (duplicado) {
-      return json({ id: duplicado.id, numero_pedido: duplicado.numero_pedido, duplicado: true });
+    if (!idemKey) {
+      // Fallback para clientes antigos sem chave (janela de 90s, não atômica)
+      const desde = new Date(Date.now() - 90_000).toISOString();
+      const { data: duplicado } = await supabase
+        .from("pedidos")
+        .select("id, numero_pedido")
+        .eq("empresa_id", empresa.id)
+        .eq("cliente_whatsapp", whatsapp)
+        .eq("valor_total", valorTotal)
+        .gte("created_at", desde)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (duplicado) {
+        return json({ id: duplicado.id, numero_pedido: duplicado.numero_pedido, duplicado: true });
+      }
     }
 
     const { data: pedido, error: insErr } = await supabase
       .from("pedidos")
       .insert({
         empresa_id: empresa.id,
+        idempotency_key: idemKey,
         itens: itensJson,
         subtotal,
         taxa_entrega: taxaEntrega,
@@ -221,6 +229,17 @@ Deno.serve(async (req) => {
       })
       .select("id, numero_pedido")
       .single();
+
+    if (insErr && (insErr as any).code === "23505" && idemKey) {
+      const { data: existente, error: exErr } = await supabase
+        .from("pedidos")
+        .select("id, numero_pedido")
+        .eq("empresa_id", empresa.id)
+        .eq("idempotency_key", idemKey)
+        .single();
+      if (exErr) throw exErr;
+      return json({ id: existente.id, numero_pedido: existente.numero_pedido, duplicado: true });
+    }
     if (insErr) throw insErr;
 
     return json({ id: pedido.id, numero_pedido: pedido.numero_pedido });

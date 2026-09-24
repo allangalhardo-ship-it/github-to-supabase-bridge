@@ -23,6 +23,8 @@ const formasPagLabel: Record<string, string> = {
 
 export function ConfirmacaoStep({ carrinho, data, empresa, subtotal, onBack, onSuccess }: ConfirmacaoStepProps) {
   const [enviando, setEnviando] = useState(false);
+  // Chave fixa por tela de confirmação: reenvios e toques duplos usam a mesma chave
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
   const total = subtotal + data.taxa_entrega;
 
   const confirmarPedido = async () => {
@@ -31,6 +33,7 @@ export function ConfirmacaoStep({ carrinho, data, empresa, subtotal, onBack, onS
     try {
       const { data: resposta, error } = await supabase.functions.invoke("criar-pedido-publico", {
         body: {
+          idempotency_key: idempotencyKey,
           slug: empresa.slug,
           itens: carrinho.map(item => ({
             produto_id: item.produto.id,
