@@ -381,17 +381,30 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
                     <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                       {precisaAjuste && (
                         <>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => aplicarReajuste(produto, produto.precoSugerido)}
-                            disabled={isAplicando}
-                            className="h-8 px-2 gap-1"
-                            title={canalBalcao ? `Aplicar no canal ${canalBalcao.nome}` : 'Aplicar'}
-                          >
-                            <Zap className="h-3.5 w-3.5" />
-                            {!isMobile && 'Aplicar'}
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => aplicarReajuste(produto, produto.precoSugerido)}
+                                disabled={isAplicando}
+                                className="h-8 px-2 gap-1"
+                              >
+                                <Zap className="h-3.5 w-3.5" />
+                                {!isMobile && `Aplicar ${formatCurrency(produto.precoSugerido)}`}
+                                {isMobile && formatCurrency(produto.precoSugerido)}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs max-w-[260px]">
+                              <p className="font-medium">Preço sugerido p/ {canalBalcao?.nome || 'Balcão'}: {formatCurrency(produto.precoSugerido)}</p>
+                              <p className="text-muted-foreground mt-1">
+                                Calculado para o custo ({formatCurrency(produto.custoInsumos)}) ficar em {config?.cmv_alvo || 35}% do preço, já descontando {config?.imposto_medio_sobre_vendas || 0}% de imposto.
+                              </p>
+                              <p className="text-muted-foreground mt-1">
+                                Conta: {formatCurrency(produto.custoInsumos)} ÷ ({(config?.cmv_alvo || 35)}% × (1 − {config?.imposto_medio_sobre_vendas || 0}%))
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
                           {charmDifere && (
                             <Tooltip>
                               <TooltipTrigger asChild>
