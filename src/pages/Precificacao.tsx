@@ -62,6 +62,8 @@ const Precificacao = () => {
     isLoading,
   } = useMenuEngineering(periodo);
 
+  const semVendasNoPeriodo = !produtosAnalisados.some(p => p.quantidadeVendida > 0);
+
   // Hook para gerenciar preços por canal
   const { upsertPreco, isSaving: isSavingPrecoCanal, canaisConfigurados } = usePrecosCanais();
 
@@ -332,61 +334,75 @@ const Precificacao = () => {
               isMobile={isMobile}
             />
 
-            {/* Cards de Quadrante */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-medium text-muted-foreground">
-                  Classificação por Quadrante
-                </h2>
+            {semVendasNoPeriodo ? (
+              <Alert className="border-primary/30 bg-primary/5">
+                <Info className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  <strong>Sem vendas nos últimos {periodo} dias.</strong>
+                  <br />
+                  A análise de quadrantes e o gráfico só aparecem quando há vendas registradas no período.
+                  Registre vendas na tela de Vendas ou importe do iFood/99Food para ver a análise aqui.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <>
+                {/* Cards de Quadrante */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-medium text-muted-foreground">
+                      Classificação por Quadrante
+                    </h2>
+                    {quadranteSelecionado && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setQuadranteSelecionado(null)}
+                        className="text-xs h-7"
+                      >
+                        Limpar filtro
+                      </Button>
+                    )}
+                  </div>
+                  <QuadranteCards
+                    resumo={resumoQuadrantes}
+                    quadranteSelecionado={quadranteSelecionado}
+                    onSelectQuadrante={setQuadranteSelecionado}
+                    isMobile={isMobile}
+                  />
+                </div>
+
+                {/* Matriz scatter — visão gráfica da popularidade × margem */}
+                <MatrizScatter
+                  produtos={produtosAnalisados.filter(p => p.quantidadeVendida > 0)}
+                  quadranteSelecionado={quadranteSelecionado}
+                  onSelectProduto={handleSelectProduto}
+                  margemAlvo={config?.margem_desejada_padrao || 30}
+                />
+
+                {/* Relatório de impacto de reajustes */}
+                <ImpactoReajusteReport
+                  produtos={produtosAnalisados}
+                  config={config}
+                  onAplicarPreco={handleAplicarPreco}
+                  onAplicarPrecoCanal={handleAplicarPrecoCanal}
+                  isAplicando={updatePrecoMutation.isPending || isSavingPrecoCanal}
+                />
+
+                {/* Lista filtrada pelo quadrante selecionado */}
                 {quadranteSelecionado && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setQuadranteSelecionado(null)}
-                    className="text-xs h-7"
-                  >
-                    Limpar filtro
-                  </Button>
+                  <ProdutoListaCompacta
+                    produtos={produtosAnalisados}
+                    quadranteFiltro={quadranteSelecionado}
+                    categorias={categorias}
+                    onSelectProduto={handleSelectProduto}
+                    onAplicarPreco={handleAplicarPreco}
+                    onAplicarPrecoCanal={handleAplicarPrecoCanal}
+                    isAplicando={updatePrecoMutation.isPending}
+                    isMobile={isMobile}
+                    config={config}
+                  />
                 )}
-              </div>
-              <QuadranteCards
-                resumo={resumoQuadrantes}
-                quadranteSelecionado={quadranteSelecionado}
-                onSelectQuadrante={setQuadranteSelecionado}
-                isMobile={isMobile}
-              />
-            </div>
-
-            {/* Matriz scatter — visão gráfica da popularidade × margem */}
-            <MatrizScatter
-              produtos={produtosAnalisados.filter(p => p.quantidadeVendida > 0)}
-              quadranteSelecionado={quadranteSelecionado}
-              onSelectProduto={handleSelectProduto}
-              margemAlvo={config?.margem_desejada_padrao || 30}
-            />
-
-            {/* Relatório de impacto de reajustes */}
-            <ImpactoReajusteReport
-              produtos={produtosAnalisados}
-              config={config}
-              onAplicarPreco={handleAplicarPreco}
-              onAplicarPrecoCanal={handleAplicarPrecoCanal}
-              isAplicando={updatePrecoMutation.isPending || isSavingPrecoCanal}
-            />
-
-            {/* Lista filtrada pelo quadrante selecionado */}
-            {quadranteSelecionado && (
-              <ProdutoListaCompacta
-                produtos={produtosAnalisados}
-                quadranteFiltro={quadranteSelecionado}
-                categorias={categorias}
-                onSelectProduto={handleSelectProduto}
-                onAplicarPreco={handleAplicarPreco}
-                onAplicarPrecoCanal={handleAplicarPrecoCanal}
-                isAplicando={updatePrecoMutation.isPending}
-                isMobile={isMobile}
-                config={config}
-              />
+              </>
             )}
           </TabsContent>
         </Tabs>
