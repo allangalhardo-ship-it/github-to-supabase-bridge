@@ -1244,6 +1244,7 @@ export type Database = {
           forma_pagamento: string
           hora_entrega: string | null
           id: string
+          idempotency_key: string | null
           itens: Json
           motivo_cancelamento: string | null
           numero_pedido: number
@@ -1275,6 +1276,7 @@ export type Database = {
           forma_pagamento?: string
           hora_entrega?: string | null
           id?: string
+          idempotency_key?: string | null
           itens?: Json
           motivo_cancelamento?: string | null
           numero_pedido?: number
@@ -1306,6 +1308,7 @@ export type Database = {
           forma_pagamento?: string
           hora_entrega?: string | null
           id?: string
+          idempotency_key?: string | null
           itens?: Json
           motivo_cancelamento?: string | null
           numero_pedido?: number
