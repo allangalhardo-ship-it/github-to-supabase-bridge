@@ -53,8 +53,6 @@ const Precificacao = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [periodo, setPeriodo] = useState<PeriodoBCG>(30);
 
-  const semVendasNoPeriodo = !produtosAnalisados.some(p => p.quantidadeVendida > 0);
-
   const {
     produtosAnalisados,
     resumoQuadrantes,
@@ -63,6 +61,8 @@ const Precificacao = () => {
     config,
     isLoading,
   } = useMenuEngineering(periodo);
+
+  const semVendasNoPeriodo = !produtosAnalisados.some(p => p.quantidadeVendida > 0);
 
   // Hook para gerenciar preços por canal
   const { upsertPreco, isSaving: isSavingPrecoCanal, canaisConfigurados } = usePrecosCanais();
