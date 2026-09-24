@@ -283,89 +283,113 @@ const Precificacao = () => {
           </Button>
         </div>
       ) : (
-        <>
-          {/* Resumo Executivo */}
-          <ResumoExecutivo
-            metricas={metricas}
-            cmvAlvo={config?.cmv_alvo || 35}
-            margemAlvo={config?.margem_desejada_padrao || 30}
-            isMobile={isMobile}
-          />
+        <Tabs defaultValue="simples" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="simples">Visão simples</TabsTrigger>
+            <TabsTrigger value="avancada">Visão avançada</TabsTrigger>
+          </TabsList>
 
-          {/* KPIs avançados: Food Cost Teórico vs Real + Prime Cost */}
-          <KpisAvancados
-            cmvTeorico={metricas.cmvMedio}
-            cmvAlvo={config?.cmv_alvo || 35}
-            margemAlvo={config?.margem_desejada_padrao || 30}
-            periodo={periodo}
-            isMobile={isMobile}
-          />
-
-          {/* Cards de Quadrante */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-medium text-muted-foreground">
-                Classificação por Quadrante
-              </h2>
-              {quadranteSelecionado && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setQuadranteSelecionado(null)}
-                  className="text-xs h-7"
-                >
-                  Limpar filtro
-                </Button>
-              )}
-            </div>
-            <QuadranteCards
-              resumo={resumoQuadrantes}
-              quadranteSelecionado={quadranteSelecionado}
-              onSelectQuadrante={setQuadranteSelecionado}
+          {/* Visão simples: lista de produtos + preço sugerido */}
+          <TabsContent value="simples" className="space-y-6">
+            {/* Resumo Executivo */}
+            <ResumoExecutivo
+              metricas={metricas}
+              cmvAlvo={config?.cmv_alvo || 35}
+              margemAlvo={config?.margem_desejada_padrao || 30}
               isMobile={isMobile}
             />
-          </div>
 
-          {/* Matriz scatter — visão gráfica da popularidade × margem */}
-          <MatrizScatter
-            produtos={produtosAnalisados.filter(p => p.quantidadeVendida > 0)}
-            quadranteSelecionado={quadranteSelecionado}
-            onSelectProduto={handleSelectProduto}
-            margemAlvo={config?.margem_desejada_padrao || 30}
-          />
+            {/* Sugestão de preço por canal */}
+            <SugestaoPrecoCanal
+              produtos={produtosAnalisados}
+              config={config}
+              onAplicarPrecoCanal={handleAplicarPrecoCanal}
+              isAplicando={updatePrecoMutation.isPending || isSavingPrecoCanal}
+            />
 
+            {/* Lista de Produtos */}
+            <ProdutoListaCompacta
+              produtos={produtosAnalisados}
+              quadranteFiltro={null}
+              categorias={categorias}
+              onSelectProduto={handleSelectProduto}
+              onAplicarPreco={handleAplicarPreco}
+              onAplicarPrecoCanal={handleAplicarPrecoCanal}
+              isAplicando={updatePrecoMutation.isPending}
+              isMobile={isMobile}
+              config={config}
+            />
+          </TabsContent>
 
-          {/* Sugestão de preço por canal */}
-          <SugestaoPrecoCanal 
-            produtos={produtosAnalisados} 
-            config={config}
-            onAplicarPrecoCanal={handleAplicarPrecoCanal}
-            isAplicando={updatePrecoMutation.isPending || isSavingPrecoCanal}
-          />
+          {/* Visão avançada: matriz de menu engineering */}
+          <TabsContent value="avancada" className="space-y-6">
+            {/* KPIs avançados: Food Cost Teórico vs Real + Prime Cost */}
+            <KpisAvancados
+              cmvTeorico={metricas.cmvMedio}
+              cmvAlvo={config?.cmv_alvo || 35}
+              margemAlvo={config?.margem_desejada_padrao || 30}
+              periodo={periodo}
+              isMobile={isMobile}
+            />
 
-          {/* Relatório de impacto de reajustes */}
-          <ImpactoReajusteReport 
-            produtos={produtosAnalisados} 
-            config={config}
-            onAplicarPreco={handleAplicarPreco}
-            onAplicarPrecoCanal={handleAplicarPrecoCanal}
-            isAplicando={updatePrecoMutation.isPending || isSavingPrecoCanal}
-          />
+            {/* Cards de Quadrante */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-medium text-muted-foreground">
+                  Classificação por Quadrante
+                </h2>
+                {quadranteSelecionado && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setQuadranteSelecionado(null)}
+                    className="text-xs h-7"
+                  >
+                    Limpar filtro
+                  </Button>
+                )}
+              </div>
+              <QuadranteCards
+                resumo={resumoQuadrantes}
+                quadranteSelecionado={quadranteSelecionado}
+                onSelectQuadrante={setQuadranteSelecionado}
+                isMobile={isMobile}
+              />
+            </div>
 
+            {/* Matriz scatter — visão gráfica da popularidade × margem */}
+            <MatrizScatter
+              produtos={produtosAnalisados.filter(p => p.quantidadeVendida > 0)}
+              quadranteSelecionado={quadranteSelecionado}
+              onSelectProduto={handleSelectProduto}
+              margemAlvo={config?.margem_desejada_padrao || 30}
+            />
 
-          {/* Lista de Produtos */}
-          <ProdutoListaCompacta
-            produtos={produtosAnalisados}
-            quadranteFiltro={quadranteSelecionado}
-            categorias={categorias}
-            onSelectProduto={handleSelectProduto}
-            onAplicarPreco={handleAplicarPreco}
-            onAplicarPrecoCanal={handleAplicarPrecoCanal}
-            isAplicando={updatePrecoMutation.isPending}
-            isMobile={isMobile}
-            config={config}
-          />
-        </>
+            {/* Relatório de impacto de reajustes */}
+            <ImpactoReajusteReport
+              produtos={produtosAnalisados}
+              config={config}
+              onAplicarPreco={handleAplicarPreco}
+              onAplicarPrecoCanal={handleAplicarPrecoCanal}
+              isAplicando={updatePrecoMutation.isPending || isSavingPrecoCanal}
+            />
+
+            {/* Lista filtrada pelo quadrante selecionado */}
+            {quadranteSelecionado && (
+              <ProdutoListaCompacta
+                produtos={produtosAnalisados}
+                quadranteFiltro={quadranteSelecionado}
+                categorias={categorias}
+                onSelectProduto={handleSelectProduto}
+                onAplicarPreco={handleAplicarPreco}
+                onAplicarPrecoCanal={handleAplicarPrecoCanal}
+                isAplicando={updatePrecoMutation.isPending}
+                isMobile={isMobile}
+                config={config}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
       )}
 
       {/* Drawer de Detalhe */}
