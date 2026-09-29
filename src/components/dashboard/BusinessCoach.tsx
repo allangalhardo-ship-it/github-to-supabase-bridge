@@ -26,6 +26,9 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { calcularCustoFicha } from '@/utils/custoFicha';
 import { custoVenda } from '@/lib/vendasUtils';
+import { encontrarCanal } from '@/lib/canalUtils';
+import { calcularMargemContribuicao } from '@/lib/margemUtils';
+import { calcularPrecoPorCmvAlvo } from '@/lib/precificacaoUtils';
 
 interface Venda {
   id: string;
@@ -157,108 +160,137 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
 
     const hoje = new Date();
     const receitaTotal = vendas.reduce((sum, v) => sum + Number(v.valor_total), 0);
-    
-    // 1. ANÁLISE DE META MENSAL
-    if (custoFixoMensal > 0 && (periodo === 'mes' || periodo === 'ultimos30')) {
-      const metaMensal = custoFixoMensal / 0.20;
-      const diasNoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate();
-      const diaAtual = hoje.getDate();
-      const diasRestantes = diasNoMes - diaAtual;
-      
-      const progressoEsperado = (diaAtual / diasNoMes) * 100;
-      const progressoReal = (receitaTotal / metaMensal) * 100;
-      const faltaParaMeta = metaMensal - receitaTotal;
-      const mediaDiariaAtual = diaAtual > 0 ? receitaTotal / diaAtual : 0;
-      const mediaNecessaria = diasRestantes > 0 ? faltaParaMeta / diasRestantes : 0;
-      
-      if (faltaParaMeta <= 0) {
-        messages.push({
-          status: 'success',
-          headline: '🎉 Meta do mês atingida!',
-          detail: `Você já faturou ${formatCurrency(receitaTotal)} e ultrapassou sua meta. Continue assim!`,
-          priority: 10,
-        });
-      } else if (progressoReal < progressoEsperado - 15) {
+    const cmvAlvo = Number(config?.cmv_alvo) || 35;
+
+    // Lucro por canal (base para margem de contribuição real e análise de canais)
+    const lucroPorCanal: Record<string, { lucro: number; receita: number; vendas: number }> = {};
+    let custoTotalVendas = 0;
+    let taxasTotalVendas = 0;
+    vendas.forEach((venda) => {
+      const canalConfig = encontrarCanal(canaisConfigurados, venda.canal || 'Balcão');
+      const canal = canalConfig?.nome || venda.canal || 'Balcão';
+      const valorTotal = Number(venda.valor_total) || 0;
+      const taxaValor = canalConfig ? (valorTotal * canalConfig.taxa / 100) : 0;
+      const impostoValor = valorTotal * (impostoPercent / 100);
+      const custo = custoVenda(venda as any);
+      custoTotalVendas += custo;
+      taxasTotalVendas += taxaValor;
+
+      if (!lucroPorCanal[canal]) lucroPorCanal[canal] = { lucro: 0, receita: 0, vendas: 0 };
+      lucroPorCanal[canal].lucro += valorTotal - custo - taxaValor - impostoValor;
+      lucroPorCanal[canal].receita += valorTotal;
+      lucroPorCanal[canal].vendas += 1;
+    });
+
+    // 1. META DO MÊS
+    // Meta = faturamento mensal configurado, mas nunca abaixo do ponto de equilíbrio
+    // (custo fixo ÷ margem de contribuição real das vendas). Mesma lógica do Painel.
+    if (periodo === 'mes' || periodo === 'ultimos30') {
+      const mc = calcularMargemContribuicao({
+        receitaBruta: receitaTotal,
+        cmv: custoTotalVendas,
+        taxasCanais: taxasTotalVendas,
+        impostos: receitaTotal * (impostoPercent / 100),
+      });
+      const mcPct = mc.percentual / 100;
+      const pontoEquilibrio = custoFixoMensal > 0 && mcPct > 0 ? custoFixoMensal / mcPct : 0;
+      const faturamentoConfig = Number(config?.faturamento_mensal) || 0;
+      const usaConfig = faturamentoConfig > pontoEquilibrio;
+      const metaMensal = usaConfig ? faturamentoConfig : pontoEquilibrio;
+      const nomeMeta = usaConfig ? 'meta do mês' : 'ponto de equilíbrio';
+
+      if (custoFixoMensal > 0 && mcPct <= 0) {
         messages.push({
           status: 'alert',
-          headline: 'Atenção: ritmo abaixo do esperado',
-          detail: `Para bater a meta, você precisa aumentar para ${formatCurrency(mediaNecessaria)}/dia. Considere fazer uma promoção.`,
+          headline: 'Suas vendas não estão cobrindo os custos',
+          detail: 'Depois de insumos, taxas e impostos, não sobra nada para pagar os custos fixos. Revise preços e taxas dos canais.',
           action: { label: 'Ver precificação', route: '/precificacao' },
-          priority: 9,
+          priority: 10,
         });
-      } else if (progressoReal >= progressoEsperado + 10) {
-        messages.push({
-          status: 'success',
-          headline: 'Ótimo ritmo de vendas!',
-          detail: `Com média de ${formatCurrency(mediaDiariaAtual)}/dia, você deve bater a meta antes do fim do mês.`,
-          priority: 7,
-        });
+      } else if (metaMensal > 0 && periodo === 'ultimos30') {
+        const falta = metaMensal - receitaTotal;
+        messages.push(falta <= 0
+          ? { status: 'success', headline: '🎉 Últimos 30 dias acima da meta!', detail: `Você faturou ${formatCurrency(receitaTotal)}, acima do ${nomeMeta} de ${formatCurrency(metaMensal)}.`, priority: 7 }
+          : { status: 'warning', headline: `Faltou ${formatCurrency(falta)} nos últimos 30 dias`, detail: `Você faturou ${formatCurrency(receitaTotal)}; o ${nomeMeta} é ${formatCurrency(metaMensal)} por mês.`, action: { label: 'Ver precificação', route: '/precificacao' }, priority: 8 });
+      } else if (metaMensal > 0) {
+        const diasNoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate();
+        const diaAtual = hoje.getDate();
+        const diasRestantes = diasNoMes - diaAtual;
+        const falta = metaMensal - receitaTotal;
+        const mediaDiariaAtual = receitaTotal / diaAtual;
+        const projecao = mediaDiariaAtual * diasNoMes;
+
+        if (falta <= 0) {
+          messages.push({ status: 'success', headline: '🎉 Meta do mês atingida!', detail: `Você já faturou ${formatCurrency(receitaTotal)} e passou do ${nomeMeta} (${formatCurrency(metaMensal)}). Continue assim!`, priority: 10 });
+        } else if (diaAtual >= 5) {
+          if (diasRestantes <= 3) {
+            messages.push({ status: 'alert', headline: `Faltam ${formatCurrency(falta)} para fechar o mês`, detail: `O ${nomeMeta} é ${formatCurrency(metaMensal)} e você está em ${formatCurrency(receitaTotal)}. Anote o que faltou para planejar o próximo mês.`, action: { label: 'Ver precificação', route: '/precificacao' }, priority: 9 });
+          } else if (projecao < metaMensal * 0.9) {
+            messages.push({ status: 'alert', headline: 'Atenção: ritmo abaixo do esperado', detail: `Nesse ritmo você fecha o mês em ${formatCurrency(projecao)}, abaixo do ${nomeMeta} de ${formatCurrency(metaMensal)}. Para chegar lá, precisa vender ${formatCurrency(falta / diasRestantes)}/dia até o fim do mês.`, action: { label: 'Ver precificação', route: '/precificacao' }, priority: 9 });
+          } else if (projecao >= metaMensal * 1.1) {
+            messages.push({ status: 'success', headline: 'Ótimo ritmo de vendas!', detail: `Com média de ${formatCurrency(mediaDiariaAtual)}/dia, você deve fechar o mês em ${formatCurrency(projecao)}, acima do ${nomeMeta}.`, priority: 7 });
+          }
+        }
       }
     }
-    
-    // 2. ANÁLISE DE MARGEM
+
+    // 2. CUSTO DOS PRODUTOS ACIMA DA META (mesma regra da Precificação)
     if (produtos && produtos.length > 0) {
-      let produtosAbaixoMeta = 0;
-      let produtoMaisCritico: { nome: string; margem: number; ajuste: number } | null = null;
-      
+      let produtosAcimaMeta = 0;
+      let produtoMaisCritico: { nome: string; cmv: number; preco: number; sugerido: number } | null = null;
+
       produtos.forEach((produto) => {
         const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any, produto.rendimento_padrao || 1);
-        
-        if (custoInsumos === 0 || produto.preco_venda === 0) return;
-        
-        const margemAtual = ((produto.preco_venda - custoInsumos) / produto.preco_venda) * 100;
-        const diferenca = margemMeta - margemAtual;
-        
-        if (diferenca > 5) {
-          produtosAbaixoMeta++;
-          const precoSugerido = custoInsumos / (1 - margemMeta / 100);
-          const ajuste = precoSugerido - produto.preco_venda;
-          
-          if (!produtoMaisCritico || diferenca > (margemMeta - produtoMaisCritico.margem)) {
-            produtoMaisCritico = { nome: produto.nome, margem: margemAtual, ajuste };
+        const preco = Number(produto.preco_venda) || 0;
+        if (custoInsumos <= 0 || preco <= 0) return;
+
+        const cmvAtual = (custoInsumos / preco) * 100;
+        if (cmvAtual > cmvAlvo + 5) {
+          produtosAcimaMeta++;
+          const sug = calcularPrecoPorCmvAlvo(custoInsumos, cmvAlvo, 0, impostoPercent);
+          if (sug.viavel && (!produtoMaisCritico || cmvAtual > produtoMaisCritico.cmv)) {
+            produtoMaisCritico = { nome: produto.nome, cmv: cmvAtual, preco, sugerido: sug.preco };
           }
         }
       });
-      
-      if (produtosAbaixoMeta > 0 && produtoMaisCritico) {
+
+      if (produtosAcimaMeta > 0 && produtoMaisCritico) {
+        const p = produtoMaisCritico as { nome: string; cmv: number; preco: number; sugerido: number };
         messages.push({
           status: 'warning',
-          headline: `${produtosAbaixoMeta} produto${produtosAbaixoMeta > 1 ? 's' : ''} com margem baixa`,
-          detail: `${produtoMaisCritico.nome} está com ${produtoMaisCritico.margem.toFixed(0)}% de margem. Aumente ${formatCurrency(produtoMaisCritico.ajuste)} para atingir a meta.`,
+          headline: `${produtosAcimaMeta} produto${produtosAcimaMeta > 1 ? 's' : ''} com custo acima da meta`,
+          detail: `No ${p.nome}, o custo come ${p.cmv.toFixed(0)}% do preço (meta: ${cmvAlvo.toFixed(0)}%). Preço sugerido no Balcão: ${formatCurrency(p.sugerido)} (hoje ${formatCurrency(p.preco)}).`,
           action: { label: 'Ajustar preços', route: '/precificacao' },
           priority: 8,
         });
       }
     }
-    
-    // 3. TENDÊNCIA SEMANAL
-    const inicioSemanaAtual = new Date(hoje);
-    inicioSemanaAtual.setDate(hoje.getDate() - hoje.getDay());
-    
+
+    // 3. TENDÊNCIA SEMANAL — compara os mesmos dias da semana (dom→hoje vs dom→mesmo dia da semana passada)
+    const inicioSemanaAtual = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - hoje.getDay());
     const inicioSemanaAnterior = new Date(inicioSemanaAtual);
     inicioSemanaAnterior.setDate(inicioSemanaAnterior.getDate() - 7);
+    const fimComparavelAnterior = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - 7, 23, 59, 59);
+    const diasDecorridos = hoje.getDay() + 1;
 
     let receitaSemanaAtual = 0;
     let receitaSemanaAnterior = 0;
-
     vendas.forEach((venda) => {
       const dataVenda = new Date(venda.data_venda + 'T12:00:00');
-      
       if (dataVenda >= inicioSemanaAtual) {
         receitaSemanaAtual += Number(venda.valor_total);
-      } else if (dataVenda >= inicioSemanaAnterior && dataVenda < inicioSemanaAtual) {
+      } else if (dataVenda >= inicioSemanaAnterior && dataVenda <= fimComparavelAnterior) {
         receitaSemanaAnterior += Number(venda.valor_total);
       }
     });
 
-    if (receitaSemanaAnterior > 0) {
+    if (receitaSemanaAnterior > 0 && diasDecorridos >= 2) {
       const variacao = ((receitaSemanaAtual - receitaSemanaAnterior) / receitaSemanaAnterior) * 100;
-      
       if (variacao < -20) {
         messages.push({
           status: 'alert',
           headline: 'Vendas em queda esta semana',
-          detail: `Queda de ${Math.abs(variacao).toFixed(0)}% vs semana passada. Hora de impulsionar as vendas!`,
+          detail: `Queda de ${Math.abs(variacao).toFixed(0)}% comparando com os mesmos dias da semana passada. Hora de impulsionar as vendas!`,
           action: { label: 'Criar promoção', route: '/precificacao' },
           priority: 8,
         });
@@ -266,58 +298,31 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
         messages.push({
           status: 'success',
           headline: 'Semana excelente! 📈',
-          detail: `Crescimento de ${variacao.toFixed(0)}% em relação à semana passada. Você está arrasando!`,
+          detail: `Crescimento de ${variacao.toFixed(0)}% comparando com os mesmos dias da semana passada. Você está arrasando!`,
           priority: 6,
         });
       }
     }
-    
+
     // 4. ANÁLISE DE CANAL
-    const lucroPorCanal: Record<string, { lucro: number; receita: number; vendas: number }> = {};
-    
-    vendas.forEach((venda) => {
-      const canal = venda.canal || 'Balcão';
-      const canalLower = canal.toLowerCase();
-      const valorTotal = Number(venda.valor_total) || 0;
-
-      // Buscar taxa do canal na nova estrutura
-      const canalConfig = canaisConfigurados?.find(c => 
-        c.nome.toLowerCase() === canalLower ||
-        c.id === canal
-      );
-      const taxaValor = canalConfig ? (valorTotal * canalConfig.taxa / 100) : 0;
-      const impostoValor = valorTotal * (impostoPercent / 100);
-
-      const lucroVenda = valorTotal - custoVenda(venda as any) - taxaValor - impostoValor;
-      
-      if (!lucroPorCanal[canal]) {
-        lucroPorCanal[canal] = { lucro: 0, receita: 0, vendas: 0 };
-      }
-      lucroPorCanal[canal].lucro += lucroVenda;
-      lucroPorCanal[canal].receita += valorTotal;
-      lucroPorCanal[canal].vendas += 1;
-    });
-
     const canais = Object.entries(lucroPorCanal)
       .filter(([_, d]) => d.receita > 0)
       .map(([canal, dados]) => ({
         canal,
         ...dados,
-        margem: dados.receita > 0 ? (dados.lucro / dados.receita) * 100 : 0,
+        margem: (dados.lucro / dados.receita) * 100,
       }))
       .sort((a, b) => b.margem - a.margem);
 
     if (canais.length >= 2) {
       const melhor = canais[0];
       const pior = canais[canais.length - 1];
-      const diferencaMargem = melhor.margem - pior.margem;
-      
-      if (diferencaMargem > 15 && pior.vendas >= 3) {
+      if (melhor.margem - pior.margem > 15 && pior.vendas >= 3) {
         messages.push({
           status: 'warning',
           headline: `${pior.canal} está corroendo sua margem`,
-          detail: `A margem no ${pior.canal} é ${pior.margem.toFixed(0)}%, enquanto no ${melhor.canal} é ${melhor.margem.toFixed(0)}%. Considere ajustar preços por canal.`,
-          action: { label: 'Ver configurações', route: '/configuracoes' },
+          detail: `Depois de insumos, taxa e imposto, sobra ${pior.margem.toFixed(0)}% no ${pior.canal}, contra ${melhor.margem.toFixed(0)}% no ${melhor.canal}. Ajuste o preço desse canal.`,
+          action: { label: 'Ajustar preços', route: '/precificacao' },
           priority: 7,
         });
       }
@@ -368,7 +373,7 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
       trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 30);
       
       historicoPrecos
-        .filter(h => new Date(h.created_at) >= trintaDiasAtras && h.variacao_percentual && h.variacao_percentual > 0)
+        .filter(h => new Date(h.created_at) >= trintaDiasAtras && h.variacao_percentual != null)
         .forEach((h) => {
           const insumoId = h.insumo_id;
           const nomeInsumo = h.insumos?.nome || 'Insumo';
@@ -382,7 +387,9 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
             };
           }
           
-          variacaoPorInsumo[insumoId].variacaoTotal += Number(h.variacao_percentual);
+          // Variações se acumulam de forma composta (ex.: +10% e +10% = +21%)
+          const v = variacaoPorInsumo[insumoId];
+          v.variacaoTotal = ((1 + v.variacaoTotal / 100) * (1 + Number(h.variacao_percentual) / 100) - 1) * 100;
           variacaoPorInsumo[insumoId].alteracoes += 1;
           variacaoPorInsumo[insumoId].ultimoPreco = h.preco_novo;
         });

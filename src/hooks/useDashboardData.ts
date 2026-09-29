@@ -1,3 +1,4 @@
+import { encontrarCanal } from "@/lib/canalUtils";
 import { useState, useMemo } from 'react';
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -371,7 +372,7 @@ export function useDashboardData() {
     vendas?.forEach((venda) => {
       if (!venda.canal) return;
       const canalVenda = venda.canal.toLowerCase();
-      const canalConfig = canaisConfigurados?.find(c => c.nome.toLowerCase() === canalVenda || c.id === venda.canal);
+      const canalConfig = encontrarCanal(canaisConfigurados, venda.canal);
       if (canalConfig && canalConfig.taxa > 0) {
         estimadaTotal += (Number(venda.valor_total) * canalConfig.taxa / 100);
       }
@@ -409,7 +410,7 @@ export function useDashboardData() {
     const porCanal: Record<string, { taxaTotal: number; vendas: number }> = {};
     vendas.forEach((venda) => {
       if (!venda.canal) return;
-      const canalConfig = canaisConfigurados.find(c => c.nome.toLowerCase() === venda.canal!.toLowerCase() || c.id === venda.canal);
+      const canalConfig = encontrarCanal(canaisConfigurados, venda.canal);
       if (canalConfig && canalConfig.taxa > 0) {
         const nomeCanal = canalConfig.nome;
         if (!porCanal[nomeCanal]) porCanal[nomeCanal] = { taxaTotal: 0, vendas: 0 };
