@@ -33,10 +33,40 @@ export default function ResumoDiarioIA() {
     setLoading(true);
     setError(null);
     try {
-      const { data: res, error: fnError } = await supabase.functions.invoke("ai-daily-summary", {
-        body: { force },
-      });
-      if (fnError) throw fnError;
+      // Garante sessão válida antes de chamar (evita 401 na troca de conta/logout)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setLoading(false);
+        return;
+      }
+
+      const invoke = () =>
+        supabase.functions.invoke("ai-daily-summary", {
+          body: { force },
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+
+      let { data: res, error: fnError } = await invoke();
+
+      // Token expirado/trocado: renova a sessão e tenta mais uma vez
+      const status = (fnError as any)?.context?.status;
+      if (fnError && status === 401) {
+        const { data: refreshed } = await supabase.auth.refreshSession();
+        if (!refreshed.session) {
+          setLoading(false);
+          return;
+        }
+        ({ data: res, error: fnError } = await supabase.functions.invoke("ai-daily-summary", {
+          body: { force },
+          headers: { Authorization: `Bearer ${refreshed.session.access_token}` },
+        }));
+      }
+
+      if (fnError) {
+        console.warn("ai-daily-summary:", fnError);
+        setError("Não consegui gerar o resumo agora. Tente novamente em instantes.");
+        return;
+      }
       if (res?.error === "quota_excedida") {
         setError("Limite diário do resumo IA atingido. Volte amanhã!");
         return;
@@ -51,7 +81,7 @@ export default function ResumoDiarioIA() {
       }
       setData(res as ResumoData);
     } catch (e) {
-      console.error(e);
+      console.warn(e);
       setError("Erro ao carregar o resumo do dia.");
     } finally {
       setLoading(false);
