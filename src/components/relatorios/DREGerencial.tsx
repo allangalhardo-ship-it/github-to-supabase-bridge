@@ -1,3 +1,4 @@
+import { encontrarCanal } from "@/lib/canalUtils";
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -174,7 +175,7 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
         taxasApps += totalReal;
       } else {
         // Fallback: estimar pelo canal configurado
-        const canal = canais?.find((c) => c.nome.toLowerCase() === venda.canal?.toLowerCase());
+        const canal = encontrarCanal(canais as any[], venda.canal) as typeof canais extends (infer U)[] | null | undefined ? U | undefined : never;
         if (canal && canal.taxas_canais && canal.taxas_canais.length > 0) {
           const taxaTotal = canal.taxas_canais.reduce((acc, t) => acc + t.percentual, 0);
           taxasApps += (venda.valor_total * taxaTotal) / 100;

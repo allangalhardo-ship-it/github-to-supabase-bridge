@@ -1,3 +1,4 @@
+import { encontrarCanal } from "@/lib/canalUtils";
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -478,10 +479,7 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
       const valorTotal = Number(venda.valor_total) || 0;
 
       // Encontrar taxa do canal na nova estrutura
-      const canalConfig = canaisConfigurados?.find(c => 
-        c.nome.toLowerCase() === canalLower ||
-        c.id === canal
-      );
+      const canalConfig = encontrarCanal(canaisConfigurados, canal);
       const taxaValor = canalConfig ? (valorTotal * canalConfig.taxa / 100) : 0;
       const impostoValor = valorTotal * (impostoPercent / 100);
 
