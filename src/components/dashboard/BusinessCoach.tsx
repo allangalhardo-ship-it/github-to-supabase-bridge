@@ -26,6 +26,9 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { calcularCustoFicha } from '@/utils/custoFicha';
 import { custoVenda } from '@/lib/vendasUtils';
+import { encontrarCanal } from '@/lib/canalUtils';
+import { calcularMargemContribuicao } from '@/lib/margemUtils';
+import { calcularPrecoPorCmvAlvo } from '@/lib/precificacaoUtils';
 
 interface Venda {
   id: string;
@@ -370,7 +373,7 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
       trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 30);
       
       historicoPrecos
-        .filter(h => new Date(h.created_at) >= trintaDiasAtras && h.variacao_percentual && h.variacao_percentual > 0)
+        .filter(h => new Date(h.created_at) >= trintaDiasAtras && h.variacao_percentual != null)
         .forEach((h) => {
           const insumoId = h.insumo_id;
           const nomeInsumo = h.insumos?.nome || 'Insumo';
@@ -384,7 +387,9 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
             };
           }
           
-          variacaoPorInsumo[insumoId].variacaoTotal += Number(h.variacao_percentual);
+          // Variações se acumulam de forma composta (ex.: +10% e +10% = +21%)
+          const v = variacaoPorInsumo[insumoId];
+          v.variacaoTotal = ((1 + v.variacaoTotal / 100) * (1 + Number(h.variacao_percentual) / 100) - 1) * 100;
           variacaoPorInsumo[insumoId].alteracoes += 1;
           variacaoPorInsumo[insumoId].ultimoPreco = h.preco_novo;
         });
