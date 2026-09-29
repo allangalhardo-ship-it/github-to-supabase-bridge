@@ -175,7 +175,7 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
         taxasApps += totalReal;
       } else {
         // Fallback: estimar pelo canal configurado
-        const canal = encontrarCanal(canais as any[], venda.canal) as typeof canais extends (infer U)[] | null | undefined ? U | undefined : never;
+        const canal = encontrarCanal(canais ?? [], venda.canal);
         if (canal && canal.taxas_canais && canal.taxas_canais.length > 0) {
           const taxaTotal = canal.taxas_canais.reduce((acc, t) => acc + t.percentual, 0);
           taxasApps += (venda.valor_total * taxaTotal) / 100;
