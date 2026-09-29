@@ -244,7 +244,31 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Sem produtos na demo após clone" }), { status: 500, headers: corsHeaders });
     }
 
-    // Preços canais
+    // Canais de venda da demo (precos_canais.canal guarda o id do canal)
+    const { data: demoCanais } = await admin
+      .from("canais_venda").select("id, nome, taxas_canais(percentual)")
+      .eq("empresa_id", demoEmpresaId);
+    const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const canalInfo = (key: "balcao" | "ifood" | "99" | "whatsapp") =>
+      demoCanais?.find((c: any) => norm(c.nome).startsWith(key));
+
+    // Mix de canais: Balcão 45%, iFood 20%, 99Food 15%, WhatsApp 20%
+    const CANAIS_MIX = [
+      { key: "balcao" as const, db: "balcao", peso: 0.45, isApp: false },
+      { key: "ifood" as const, db: "Ifood", peso: 0.20, isApp: true },
+      { key: "99" as const, db: "99Food", peso: 0.15, isApp: true },
+      { key: "whatsapp" as const, db: "WhatsApp", peso: 0.20, isApp: false },
+    ].map((c) => {
+      const info: any = canalInfo(c.key);
+      const taxa = (info?.taxas_canais || []).reduce((s: number, t: any) => s + Number(t.percentual || 0), 0);
+      return { ...c, canalId: info?.id as string | undefined, taxa: taxa / 100 };
+    });
+    const pickCanal = () => {
+      let r = Math.random();
+      for (const c of CANAIS_MIX) { if ((r -= c.peso) <= 0) return c; }
+      return CANAIS_MIX[0];
+    };
+
     const { data: demoPrecos } = await admin
       .from("precos_canais").select("produto_id, canal, preco")
       .eq("empresa_id", demoEmpresaId);
@@ -253,9 +277,36 @@ serve(async (req) => {
       if (!precoMap[p.produto_id]) precoMap[p.produto_id] = {};
       precoMap[p.produto_id][p.canal] = Number(p.preco);
     });
+    const precoDe = (prod: any, canal: typeof CANAIS_MIX[number]) => {
+      const p = canal.canalId ? precoMap[prod.id]?.[canal.canalId] : undefined;
+      return p && p > 0 ? p : Number(prod.preco_venda);
+    };
+
+    // Volumes-alvo mensais fixos (vídeoaulas)
+    const METAS_MENSAIS: Record<string, number> = {
+      "Brownie Classico de Chocolate": 150,
+      "Brownie Fatia Jasmine": 30,
+      "Brownie Fatia Kinder": 25,
+      "Brownie Fatia Morango": 25,
+      "Petisqueira Brownie": 15,
+      "Travessa Morango c/ Brownie (650g)": 8,
+      "Copo da Felicidade - Jasmine 200ml": 20,
+      "Copo da Felicidade Jasmine - 300ml": 40,
+      "Copo da Felicidade Aurora - 200ml": 20,
+      "Copo da Felicidade Aurora - 300ml": 15,
+      "Copo da Felicidade Branca de Neve (300ml)": 15,
+      "Copo da Felicidade Christie (300ml)": 15,
+      "Copo da Felicidade Fiona - 200ml": 15,
+      "Copo da Felicidade Fiona - 300ml": 15,
+      "Copo da Felicidade Mérida (300ml)": 15,
+      "Copo da Felicidade Rapunzel - 200ml": 15,
+      "Copo da Felicidade Rapunzel (300ml)": 15,
+    };
+    const metasNorm: Record<string, number> = {};
+    Object.entries(METAS_MENSAIS).forEach(([n, v]) => { metasNorm[norm(n)] = v; });
 
     // 1) Clientes
-    const clientesPayload = NOMES_CLIENTES.map((nome, i) => ({
+    const clientesPayload = NOMES_CLIENTES.map((nome) => ({
       empresa_id: demoEmpresaId,
       nome,
       whatsapp: `(11) 9${rndInt(1000, 9999)}-${rndInt(1000, 9999)}`,
@@ -267,54 +318,107 @@ serve(async (req) => {
     const { data: clientesInseridos } = await admin.from("clientes").insert(clientesPayload).select("id");
     const clienteIds = clientesInseridos?.map((c: any) => c.id) || [];
 
-    // 2) Vendas (90 dias, ~3-5 por dia)
-    const vendasPayload: any[] = [];
-    for (let d = 0; d < 90; d++) {
-      const vendasDia = rndInt(3, 6);
-      for (let v = 0; v < vendasDia; v++) {
-        const prod = pick(demoProdutos);
-        const canal = pick(CANAIS_NOMES);
-        const canalDb = canal === "Balcão" ? "balcao" : canal === "iFood" ? "Ifood" : canal;
-        const qtd = rndInt(1, 3);
-        const precoCanal = precoMap[prod.id]?.[canalDb] ?? precoMap[prod.id]?.[canal] ?? Number(prod.preco_venda);
-        const subtotal = precoCanal * qtd;
-        const isApp = canal === "iFood" || canal === "99Food";
-        const comissao = isApp ? subtotal * 0.27 : 0;
-        vendasPayload.push({
-          empresa_id: demoEmpresaId,
-          produto_id: prod.id,
-          quantidade: qtd,
-          subtotal,
-          valor_total: subtotal,
-          canal: canalDb,
-          tipo_venda: isApp ? "app" : "direto",
-          origem: "manual",
-          data_venda: daysAgo(d),
-          comissao_plataforma: comissao,
-          cliente_id: !isApp && Math.random() < 0.3 && clienteIds.length ? pick(clienteIds) : null,
-        });
+    // 2) Vendas (90 dias) com volumes fixos por produto
+    const DIAS = 90;
+    // Peso por dia: fim de semana com boost de 25%
+    const pesosDias = Array.from({ length: DIAS }, (_, d) => {
+      const dow = new Date(Date.now() - d * 86400000).getDay();
+      return dow === 0 || dow === 6 ? 1.25 : 1;
+    });
+    const somaPesos = pesosDias.reduce((a, b) => a + b, 0);
+    const sorteiaDia = () => {
+      let r = Math.random() * somaPesos;
+      for (let d = 0; d < DIAS; d++) { if ((r -= pesosDias[d]) <= 0) return d; }
+      return 0;
+    };
+
+    // Agrupa unidades por produto+dia+canal => uma linha de venda
+    const agrupado: Record<string, { prod: any; dia: number; canal: typeof CANAIS_MIX[number]; qtd: number }> = {};
+    const addUnidade = (prod: any, dia: number, canal: typeof CANAIS_MIX[number], qtd = 1) => {
+      const k = `${prod.id}|${dia}|${canal.db}`;
+      if (!agrupado[k]) agrupado[k] = { prod, dia, canal, qtd: 0 };
+      agrupado[k].qtd += qtd;
+    };
+
+    for (const prod of demoProdutos) {
+      const meta = metasNorm[norm(prod.nome)];
+      if (meta) {
+        // Total em 90 dias = meta mensal × 3, variação natural de ±10%
+        const total = Math.round(meta * 3 * (0.9 + Math.random() * 0.2));
+        for (let u = 0; u < total; u++) addUnidade(prod, sorteiaDia(), pickCanal());
+      } else if (!/^teste$/i.test(prod.nome.trim())) {
+        // Demais produtos: poucas vendas aleatórias, sem prioridade
+        const vendasAleatorias = rndInt(3, 9);
+        for (let v = 0; v < vendasAleatorias; v++) addUnidade(prod, rndInt(0, DIAS - 1), pickCanal(), rndInt(1, 2));
       }
     }
-    // Insere em lotes de 100
+
+    const vendasPayload: any[] = [];
+    const entradasCaixa: Record<string, { dia: number; canal: typeof CANAIS_MIX[number]; bruto: number; taxa: number }> = {};
+    for (const { prod, dia, canal, qtd } of Object.values(agrupado)) {
+      const preco = precoDe(prod, canal);
+      const subtotal = Math.round(preco * qtd * 100) / 100;
+      const comissao = Math.round(subtotal * canal.taxa * 100) / 100;
+      vendasPayload.push({
+        empresa_id: demoEmpresaId,
+        produto_id: prod.id,
+        quantidade: qtd,
+        subtotal,
+        valor_total: subtotal,
+        canal: canal.db,
+        tipo_venda: canal.isApp ? "app" : "direto",
+        origem: "manual",
+        data_venda: daysAgo(dia),
+        comissao_plataforma: comissao,
+        valor_liquido: subtotal - comissao,
+        cliente_id: !canal.isApp && Math.random() < 0.3 && clienteIds.length ? pick(clienteIds) : null,
+      });
+      const ck = `${dia}|${canal.db}`;
+      if (!entradasCaixa[ck]) entradasCaixa[ck] = { dia, canal, bruto: 0, taxa: 0 };
+      entradasCaixa[ck].bruto += subtotal;
+      entradasCaixa[ck].taxa += comissao;
+    }
     for (let i = 0; i < vendasPayload.length; i += 100) {
-      const lote = vendasPayload.slice(i, i + 100);
-      const { error } = await admin.from("vendas").insert(lote);
+      const { error } = await admin.from("vendas").insert(vendasPayload.slice(i, i + 100));
       if (error) console.error("vendas lote err", error);
     }
     console.log(`Vendas inseridas: ${vendasPayload.length}`);
 
-    // 3) Caixa movimentos (saídas mensais)
+    // 3) Caixa: entradas diárias por canal (proporcionais às vendas) + custos fixos mensais
+    const nomeCanal: Record<string, string> = { balcao: "Balcão", Ifood: "iFood", "99Food": "99Food", WhatsApp: "WhatsApp" };
     const caixaPayload: any[] = [];
+    for (const e of Object.values(entradasCaixa)) {
+      const data = daysAgo(e.dia);
+      caixaPayload.push({
+        empresa_id: demoEmpresaId, tipo: "entrada", categoria: "venda",
+        descricao: `Vendas ${nomeCanal[e.canal.db]}`, valor: Math.round(e.bruto * 100) / 100,
+        data_movimento: data, origem: "manual",
+      });
+      if (e.taxa > 0) {
+        caixaPayload.push({
+          empresa_id: demoEmpresaId, tipo: "saida", categoria: "taxa_plataforma",
+          descricao: `Taxa ${nomeCanal[e.canal.db]}`, valor: Math.round(e.taxa * 100) / 100,
+          data_movimento: data, origem: "manual",
+        });
+      }
+    }
+    const { data: demoCustosFixos } = await admin
+      .from("custos_fixos").select("nome, valor_mensal, categoria").eq("empresa_id", demoEmpresaId);
     for (let mes = 0; mes < 3; mes++) {
       const mesData = new Date(); mesData.setMonth(mesData.getMonth() - mes); mesData.setDate(5);
+      if (mesData > new Date()) continue;
       const dataStr = mesData.toISOString().split("T")[0];
-      caixaPayload.push(
-        { empresa_id: demoEmpresaId, tipo: "saida", categoria: "Aluguel", descricao: "Aluguel do ponto", valor: 1800, data_movimento: dataStr, origem: "manual" },
-        { empresa_id: demoEmpresaId, tipo: "saida", categoria: "Energia", descricao: "Conta de luz", valor: rndInt(250, 450), data_movimento: dataStr, origem: "manual" },
-        { empresa_id: demoEmpresaId, tipo: "saida", categoria: "Internet", descricao: "Internet/Telefone", valor: 120, data_movimento: dataStr, origem: "manual" },
-      );
+      for (const cf of demoCustosFixos || []) {
+        caixaPayload.push({
+          empresa_id: demoEmpresaId, tipo: "saida", categoria: cf.categoria || "custo_fixo",
+          descricao: cf.nome, valor: Number(cf.valor_mensal), data_movimento: dataStr, origem: "manual",
+        });
+      }
     }
-    await admin.from("caixa_movimentos").insert(caixaPayload);
+    for (let i = 0; i < caixaPayload.length; i += 200) {
+      const { error } = await admin.from("caixa_movimentos").insert(caixaPayload.slice(i, i + 200));
+      if (error) console.error("caixa lote err", error);
+    }
 
     // 4) Encomendas futuras (3-4)
     const encomendasPayload: any[] = [];
