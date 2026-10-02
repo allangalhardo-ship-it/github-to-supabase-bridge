@@ -93,20 +93,6 @@ const WelcomeChecklist = () => {
 
   const steps = [
     {
-      label: 'Cadastre seus ingredientes',
-      description: 'Adicione o que você usa nas receitas (farinha, açúcar, etc.). Pode importar uma base pronta!',
-      done: counts.insumos >= 2,
-      to: '/insumos',
-      icon: Carrot,
-    },
-    {
-      label: 'Implante o saldo dos ingredientes',
-      description: 'Informe quanto você tem de cada ingrediente agora e quanto pagou. Assim o custo fica certinho.',
-      done: counts.estoque > 0,
-      to: '/estoque?implantar=1',
-      icon: PackageOpen,
-    },
-    {
       label: 'Cadastre seus custos fixos',
       description: 'Aluguel, luz, internet, salários... Isso mostra quanto você precisa vender por mês pra não ter prejuízo.',
       done: counts.custosFixos > 0,
@@ -119,6 +105,20 @@ const WelcomeChecklist = () => {
       done: counts.canais > 0,
       to: '/configuracoes#canais',
       icon: Store,
+    },
+    {
+      label: 'Cadastre seus ingredientes',
+      description: 'Adicione o que você usa nas receitas (farinha, açúcar, etc.). Pode importar uma base pronta!',
+      done: counts.insumos >= 2,
+      to: '/insumos',
+      icon: Carrot,
+    },
+    {
+      label: 'Implante o saldo dos ingredientes',
+      description: 'Informe quanto você tem de cada ingrediente agora e quanto pagou. Assim o custo fica certinho.',
+      done: counts.estoque > 0,
+      to: '/estoque?implantar=1',
+      icon: PackageOpen,
     },
     {
       label: 'Crie uma receita base',
