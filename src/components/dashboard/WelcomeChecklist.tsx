@@ -28,7 +28,15 @@ const WelcomeChecklist = () => {
         .eq('empresa_id', empresaId!);
       const produtoIds = produtosData?.map(p => p.id) || [];
 
-      const [insumosRes, produtosRes, fichasRes, receitasRes, estoqueRes, vendasRes] = await Promise.all([
+      // Canais com taxa configurada (Balcão 0% também vale: basta existir canal ativo)
+      const { data: canaisData } = await supabase
+        .from('canais_venda')
+        .select('id')
+        .eq('empresa_id', empresaId!)
+        .eq('ativo', true);
+      const canais = canaisData?.length || 0;
+
+      const [insumosRes, produtosRes, fichasRes, receitasRes, estoqueRes, vendasRes, custosRes] = await Promise.all([
         supabase
           .from('insumos')
           .select('id', { count: 'exact', head: true })
