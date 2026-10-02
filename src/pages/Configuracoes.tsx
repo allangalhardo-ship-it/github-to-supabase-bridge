@@ -177,7 +177,17 @@ const Configuracoes = () => {
         </Card>
       </form>
 
-      <CanaisVendaConfig />
+      <div
+        id="canais"
+        className="scroll-mt-20"
+        ref={(el) => {
+          if (el && window.location.hash === '#canais') {
+            setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+          }
+        }}
+      >
+        <CanaisVendaConfig />
+      </div>
 
       <Card>
         <CardHeader>

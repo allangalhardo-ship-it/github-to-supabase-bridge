@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom';
 import { 
   Check, Carrot, UtensilsCrossed, ClipboardList, 
   PackageOpen, ShoppingCart, ArrowRight, Sparkles, 
-  ChevronDown, ChevronUp, ChefHat
+  ChevronDown, ChevronUp, ChefHat, Wallet, Store
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -28,7 +28,15 @@ const WelcomeChecklist = () => {
         .eq('empresa_id', empresaId!);
       const produtoIds = produtosData?.map(p => p.id) || [];
 
-      const [insumosRes, produtosRes, fichasRes, receitasRes, estoqueRes, vendasRes] = await Promise.all([
+      // Canais com taxa configurada (Balcão 0% também vale: basta existir canal ativo)
+      const { data: canaisData } = await supabase
+        .from('canais_venda')
+        .select('id')
+        .eq('empresa_id', empresaId!)
+        .eq('ativo', true);
+      const canais = canaisData?.length || 0;
+
+      const [insumosRes, produtosRes, fichasRes, receitasRes, estoqueRes, vendasRes, custosRes] = await Promise.all([
         supabase
           .from('insumos')
           .select('id', { count: 'exact', head: true })
@@ -60,6 +68,10 @@ const WelcomeChecklist = () => {
           .from('vendas')
           .select('id', { count: 'exact', head: true })
           .eq('empresa_id', empresaId!),
+        supabase
+          .from('custos_fixos')
+          .select('id', { count: 'exact', head: true })
+          .eq('empresa_id', empresaId!),
       ]);
 
       return {
@@ -69,6 +81,8 @@ const WelcomeChecklist = () => {
         receitas: receitasRes.count || 0,
         estoque: estoqueRes.count || 0,
         vendas: vendasRes.count || 0,
+        custosFixos: custosRes.count || 0,
+        canais,
       };
     },
     enabled: !!empresaId,
@@ -91,6 +105,20 @@ const WelcomeChecklist = () => {
       done: counts.estoque > 0,
       to: '/estoque?implantar=1',
       icon: PackageOpen,
+    },
+    {
+      label: 'Cadastre seus custos fixos',
+      description: 'Aluguel, luz, internet, salários... Isso mostra quanto você precisa vender por mês pra não ter prejuízo.',
+      done: counts.custosFixos > 0,
+      to: '/custos-fixos',
+      icon: Wallet,
+    },
+    {
+      label: 'Configure seus canais de venda',
+      description: 'Balcão, WhatsApp, iFood... com a taxa de cada um. Assim o sistema já sugere o preço certo por canal.',
+      done: counts.canais > 0,
+      to: '/configuracoes#canais',
+      icon: Store,
     },
     {
       label: 'Crie uma receita base',
