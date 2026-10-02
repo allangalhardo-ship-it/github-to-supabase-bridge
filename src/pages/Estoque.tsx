@@ -43,7 +43,9 @@ const Estoque = () => {
   const [filtroPeriodo, setFiltroPeriodo] = useState<string>('mes');
   const [buscaInsumo, setBuscaInsumo] = useState('');
   const [buscaProduto, setBuscaProduto] = useState('');
-  const [implantacaoOpen, setImplantacaoOpen] = useState(false);
+  const [implantacaoOpen, setImplantacaoOpen] = useState(
+    () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('implantar') === '1'
+  );
   // Fetch insumos para o select e lista de saldo
   const { data: insumos, isLoading: loadingInsumos } = useQuery({
     queryKey: ['insumos', usuario?.empresa_id],

@@ -49,10 +49,13 @@ const WelcomeChecklist = () => {
           .select('id', { count: 'exact', head: true })
           .eq('empresa_id', empresaId!)
           .eq('is_intermediario', true),
+        // Saldo inicial com custo: entrada de estoque com custo informado
         supabase
           .from('estoque_movimentos')
           .select('id', { count: 'exact', head: true })
-          .eq('empresa_id', empresaId!),
+          .eq('empresa_id', empresaId!)
+          .eq('tipo', 'entrada')
+          .gt('custo_total', 0),
         supabase
           .from('vendas')
           .select('id', { count: 'exact', head: true })
@@ -83,11 +86,11 @@ const WelcomeChecklist = () => {
       icon: Carrot,
     },
     {
-      label: 'Crie seu primeiro produto',
-      description: 'Cadastre o que você vende (ex: bolo, brigadeiro, marmita).',
-      done: counts.produtos > 0,
-      to: '/produtos',
-      icon: UtensilsCrossed,
+      label: 'Implante o saldo dos ingredientes',
+      description: 'Informe quanto você tem de cada ingrediente agora e quanto pagou. Assim o custo fica certinho.',
+      done: counts.estoque > 0,
+      to: '/estoque?implantar=1',
+      icon: PackageOpen,
     },
     {
       label: 'Crie uma receita base',
@@ -98,18 +101,18 @@ const WelcomeChecklist = () => {
       optional: true,
     },
     {
+      label: 'Cadastre seu primeiro produto',
+      description: 'Cadastre o que você vende (ex: bolo, brigadeiro, marmita).',
+      done: counts.produtos > 0,
+      to: '/produtos',
+      icon: UtensilsCrossed,
+    },
+    {
       label: 'Monte a ficha técnica',
       description: 'Vincule os ingredientes (e receitas) ao produto para calcular o custo automaticamente.',
       done: counts.fichas > 0,
       to: '/produtos',
       icon: ClipboardList,
-    },
-    {
-      label: 'Informe seu estoque inicial',
-      description: 'Diga quanto de cada ingrediente você tem em mãos agora.',
-      done: counts.estoque > 0,
-      to: '/estoque',
-      icon: PackageOpen,
     },
     {
       label: 'Registre sua primeira venda',
