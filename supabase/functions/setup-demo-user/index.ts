@@ -193,7 +193,9 @@ serve(async (req) => {
       if (srcCanais?.length) {
         const novos = srcCanais.map((c: any) => {
           const { id, empresa_id, created_at, updated_at, ...rest } = c;
-          return { ...rest, empresa_id: demoEmpresaId };
+          // WhatsApp e Instagram são canais próprios, não app de delivery
+          const tipo = /whats|insta/i.test(rest.nome || "") ? "proprio" : rest.tipo;
+          return { ...rest, tipo, empresa_id: demoEmpresaId };
         });
         await admin.from("canais_venda").insert(novos);
       }

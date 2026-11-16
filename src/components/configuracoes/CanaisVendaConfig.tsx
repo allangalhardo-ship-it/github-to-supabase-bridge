@@ -163,7 +163,12 @@ const CanaisVendaConfig: React.FC = () => {
                     id="nome"
                     placeholder="Ex: iFood, Balcão VIP, WhatsApp..."
                     value={formData.nome}
-                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                    onChange={(e) => {
+                      const nome = e.target.value;
+                      // Ao criar, WhatsApp/Instagram já vêm como Canal Próprio (pode trocar)
+                      const sugerirProprio = !editingCanal && /whats|insta/i.test(nome) && formData.tipo === 'app_delivery';
+                      setFormData({ ...formData, nome, tipo: sugerirProprio ? 'proprio' : formData.tipo });
+                    }}
                     required
                   />
                 </div>
