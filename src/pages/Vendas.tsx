@@ -16,6 +16,7 @@ import { Plus, Package, Filter, DollarSign, ShoppingCart, AlertTriangle, Chevron
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import ImportarVendasDialog from '@/components/vendas/ImportarVendasDialog';
+import FechamentoDiaDialog from '@/components/vendas/FechamentoDiaDialog';
 import VendaRapidaDialog, { PedidoParaEditar } from '@/components/vendas/VendaRapidaDialog';
 import PedidoDetalheDialog, { PedidoLista, ORIGEM_LABEL } from '@/components/vendas/PedidoDetalheDialog';
 import { formatCurrencyBRL, parseDataLocal } from '@/lib/format';
@@ -129,6 +130,9 @@ const Vendas = () => {
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => { setPedidoEditar(null); setVendaRapidaAberta(true); }}>
             <Plus className="mr-2 h-4 w-4" />Nova Venda
+          </Button>
+          <Button variant="outline" onClick={() => setFechamentoAberto(true)}>
+            <CalendarCheck className="mr-2 h-4 w-4" />Fechamento do dia
           </Button>
           <ImportarVendasDialog />
         </div>
@@ -277,6 +281,7 @@ const Vendas = () => {
         onOpenChange={(o) => { setVendaRapidaAberta(o); if (!o) setPedidoEditar(null); }}
         pedido={pedidoEditar}
       />
+      <FechamentoDiaDialog open={fechamentoAberto} onOpenChange={setFechamentoAberto} />
       <PedidoDetalheDialog
         pedido={pedidoAberto}
         onClose={() => setPedidoAberto(null)}
