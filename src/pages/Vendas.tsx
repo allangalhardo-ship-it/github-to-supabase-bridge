@@ -24,7 +24,7 @@ import { Plus, Trash2, Package, User, Filter, DollarSign, ShoppingCart, Upload, 
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import ImportarVendasDialog from '@/components/vendas/ImportarVendasDialog';
-import { formatCurrencyBRL } from '@/lib/format';
+import { formatCurrencyBRL, parseDataLocal, formatCanalLabel } from '@/lib/format';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import ContextualTip from '@/components/onboarding/ContextualTip';
 import { calcularCustoFicha } from '@/utils/custoFicha';
@@ -119,7 +119,8 @@ const Vendas = () => {
         .from('vendas')
         .select(`
           *,
-          produtos (nome)
+          produtos (nome),
+          clientes (nome)
         `)
         .gte('data_venda', filtroDataInicio)
         .lte('data_venda', filtroDataFim)
@@ -172,10 +173,8 @@ const Vendas = () => {
       const cliente = clientes?.find(c => c.id === data.cliente_id);
       
       // Define canal baseado no tipo de venda
-      let canal = data.canal;
-      if (data.tipo_venda === 'direto' && cliente) {
-        canal = `Cliente: ${cliente.nome}`;
-      }
+      // O cliente fica só em cliente_id; o canal continua o escolhido
+      const canal = data.canal || 'balcao';
 
       const payload = {
         empresa_id: usuario!.empresa_id,
@@ -728,7 +727,7 @@ const Vendas = () => {
                   mobilePriority: 2,
                   render: (venda) => (
                     <span className="text-muted-foreground whitespace-nowrap text-xs sm:text-sm">
-                      {format(new Date(venda.data_venda), 'dd/MM/yy', { locale: ptBR })}
+                      {format(parseDataLocal(venda.data_venda), 'dd/MM/yy', { locale: ptBR })}
                     </span>
                   ),
                 },
@@ -778,8 +777,11 @@ const Vendas = () => {
                   hideOnMobile: true,
                   render: (venda) => (
                     <Badge variant="secondary" className="text-[10px] px-1.5 py-0 truncate max-w-[80px]">
-                      {venda.canal}
+                      {formatCanalLabel(venda.canal)}
                     </Badge>
+                    {(venda as any).clientes?.nome && (
+                      <span className="block text-[10px] text-muted-foreground truncate max-w-[100px]">{(venda as any).clientes.nome}</span>
+                    )}
                   ),
                 },
                 {
@@ -815,8 +817,9 @@ const Vendas = () => {
               )}
               renderMobileSubtitle={(venda) => (
                 <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
-                  <span className="text-xs whitespace-nowrap">{format(new Date(venda.data_venda), 'dd/MM/yy', { locale: ptBR })}</span>
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 truncate max-w-[70px] shrink-0">{venda.canal}</Badge>
+                  <span className="text-xs whitespace-nowrap">{format(parseDataLocal(venda.data_venda), 'dd/MM/yy', { locale: ptBR })}</span>
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 truncate max-w-[70px] shrink-0">{formatCanalLabel(venda.canal)}</Badge>
+                  {(venda as any).clientes?.nome && <span className="text-[10px] text-muted-foreground truncate">{(venda as any).clientes.nome}</span>}
                 </div>
               )}
               renderMobileHighlight={(venda) => (

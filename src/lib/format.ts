@@ -34,3 +34,45 @@ export function formatCurrencySmartBRL(value: number) {
     maximumFractionDigits,
   });
 }
+
+/** Percentual pt-BR: 23,7% */
+export function formatPercentBR(value: number, casas = 1) {
+  const safe = Number.isFinite(value) ? value : 0;
+  return `${safe.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas })}%`;
+}
+
+/** Quantidade pt-BR sem zeros sobrando: 230, 1,5, 0,125 */
+export function formatQuantidadeBR(value: number, maxCasas = 3) {
+  const safe = Number.isFinite(value) ? value : 0;
+  return safe.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: maxCasas });
+}
+
+/** Custo unitário (R$/g, R$/ml): 2 a 4 casas com vírgula. */
+export function formatCustoUnitarioBRL(value: number) {
+  return formatCurrencyBRL(value, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+}
+
+const CANAL_LABELS: Record<string, string> = {
+  balcao: 'Balcão', 'balcão': 'Balcão', ifood: 'iFood', '99food': '99Food', '99': '99Food',
+  whatsapp: 'WhatsApp', instagram: 'Instagram', rappi: 'Rappi', delivery: 'Delivery',
+};
+
+export function formatCanalLabel(canal: string | null | undefined) {
+  if (!canal) return '-';
+  return CANAL_LABELS[canal.trim().toLowerCase()] ?? canal;
+}
+
+const CATEGORIA_CAIXA_LABELS: Record<string, string> = {
+  venda: 'Venda', taxa_plataforma: 'Taxa de plataforma', custo_fixo: 'Custo fixo', compra: 'Compra',
+  compra_insumo: 'Compra de insumo', encomenda: 'Encomenda', pedido: 'Pedido', sinal: 'Sinal',
+  estorno: 'Estorno', outros: 'Outros', taxa_entrega: 'Taxa de entrega', retirada: 'Retirada',
+  aporte: 'Aporte', salario: 'Salário', imposto: 'Imposto',
+};
+
+export function formatCategoriaCaixa(cat: string | null | undefined) {
+  if (!cat) return '-';
+  if (CATEGORIA_CAIXA_LABELS[cat]) return CATEGORIA_CAIXA_LABELS[cat];
+  if (!cat.includes('_')) return cat;
+  const t = cat.replace(/_/g, ' ');
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
