@@ -26,6 +26,7 @@ import ContextualTip from '@/components/onboarding/ContextualTip';
 type TipoProducao = 'produto' | 'receita';
 
 const Producao = () => {
+  const { precoDe } = usePrecoUnico();
   const { usuario } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();

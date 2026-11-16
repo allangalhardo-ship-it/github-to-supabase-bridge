@@ -26,6 +26,7 @@ import ContextualTip from '@/components/onboarding/ContextualTip';
 import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/ui/pagination-controls';
 const Estoque = () => {
+  const { precoDe } = usePrecoUnico();
   const { usuario } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
