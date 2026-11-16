@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { usePrecosCanais } from '@/hooks/usePrecosCanais';
+import { usePrecosCanais, sincronizarBalcaoComBase } from '@/hooks/usePrecosCanais';
 import { Link } from 'react-router-dom';
 import { formatCurrencyBRL, fmtNum } from '@/lib/format';
 import {
@@ -76,6 +76,7 @@ const Precificacao = () => {
         .eq('id', produtoId);
 
       if (updateError) throw updateError;
+      if (usuario?.empresa_id) await sincronizarBalcaoComBase(usuario.empresa_id, produtoId, novoPreco);
 
       const variacao = precoAnterior > 0
         ? ((novoPreco - precoAnterior) / precoAnterior) * 100

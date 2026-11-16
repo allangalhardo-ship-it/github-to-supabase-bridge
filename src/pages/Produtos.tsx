@@ -1,3 +1,4 @@
+import { sincronizarBalcaoComBase } from '@/hooks/usePrecosCanais';
 import React, { useState, useRef, useEffect } from 'react';
 import { EmptyState } from '@/components/brand/EmptyState';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -208,6 +209,7 @@ const Produtos = () => {
         .update({ preco_venda: novoPreco })
         .eq('id', id);
       if (error) throw error;
+      if (usuario?.empresa_id) await sincronizarBalcaoComBase(usuario.empresa_id, id, novoPreco);
     },
     onSuccess: () => {
       invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);

@@ -26,6 +26,22 @@ async function sincronizarPrecoBase(empresaId: string, precos: { produtoId: stri
   }
 }
 
+/** Quando o preço base muda, grava o mesmo valor no Balcão (se existir) para os dois não divergirem. */
+export async function sincronizarBalcaoComBase(empresaId: string, produtoId: string, preco: number) {
+  if (!(Number(preco) > 0)) return;
+  const { data: canais } = await supabase
+    .from('canais_venda')
+    .select('id, nome, tipo, ativo, created_at')
+    .eq('empresa_id', empresaId)
+    .eq('ativo', true);
+  const principal = canalPrincipal(canais || []);
+  if (!principal) return;
+  const { error } = await supabase
+    .from('precos_canais')
+    .upsert({ empresa_id: empresaId, produto_id: produtoId, canal: principal.id, preco }, { onConflict: 'produto_id,canal,empresa_id' });
+  if (error) throw error;
+}
+
 export interface PrecoCanal {
   id: string;
   produto_id: string;
