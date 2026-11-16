@@ -12,6 +12,8 @@ Nada muda na estrutura do banco. Só telas citadas e as regras pedidas.
 - Correção dos dados antigos: troco o canal das vendas que começam com "Cliente: " para "balcao". O cliente vinculado continua igual.
 
 ## C11 - Números e nomes no padrão brasileiro
+- Só troco `toFixed` usado para EXIBIR texto. Valores de formulário, inputs type=number, cálculos e dados enviados ao banco continuam com ponto (ex.: valor_unitario/valor_total do formData em Vendas).
+- Custo unitário de insumo e receita mantém até 4 casas com vírgula (R$ 0,014, R$ 0,0033), nunca 2 casas.
 - Em `src/lib/format.ts` crio `formatPercentBR` (23,7%) e `formatQuantidadeBR` (230 g, 1,5 kg, sem zeros sobrando). Para dinheiro uso o `formatCurrencyBRL` que já existe.
 - Troco os `toFixed` que aparecem na tela: Painel, Insumos, Estoque (incluindo a aba Acabados), canais em Configurações e onde mais aparecer.
 - Crio nomes legíveis para as categorias do Caixa ("Taxa de plataforma", "Venda", etc.) e para o canal ("Balcão").
@@ -27,7 +29,7 @@ Nada muda na estrutura do banco. Só telas citadas e as regras pedidas.
 
 ## Detalhes técnicos
 - C4: `parseDataLocal(venda.data_venda)` no lugar de `new Date(...)`. Procuro com rg os outros lugares com `new Date(x.data_venda)` ou `data_movimento`.
-- C5: a correção é um UPDATE de dados em `vendas` (`canal LIKE 'Cliente: %'` → `'balcao'`), não muda o banco. Também confiro `caixa_movimentos.descricao` caso tenha o mesmo texto.
+- C5: a correção é um UPDATE de dados em `vendas` (`canal LIKE 'Cliente: %'` → `'balcao'`), não muda o banco. A descrição dos movimentos do Caixa não é alterada.
 - C11: uso `Intl.NumberFormat('pt-BR')` com `maximumFractionDigits` (quantidade com até 3 casas, percentual com 1). Os mapas de rótulos ficam em `format.ts`.
 - C12: em `setup-demo-user`, defino o tipo pelo nome (`/whats|insta/i` → proprio). Em `CanaisVendaConfig`, sugiro o tipo pelo nome digitado.
 - C13a: provavelmente é o `onKeyDown` do Popover/Command que trata o espaço como seleção. Vou impedir que o espaço chegue até a lista e manter o filtro com `includes`.
