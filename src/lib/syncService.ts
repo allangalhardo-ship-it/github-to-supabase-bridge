@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 
 interface PendingAction {
   id: number;
-  type: 'insert' | 'update' | 'delete';
+  type: 'insert' | 'update' | 'delete' | 'rpc';
   table: string;
   data: Record<string, unknown>;
   createdAt: number;
@@ -98,6 +98,13 @@ async function executeAction(action: PendingAction): Promise<{ success: boolean;
 
   // Apenas venda e caixa são enfileirados offline (fluxos que o usuário faz no balcão)
   const allowedTables = ['vendas', 'caixa_movimentos'];
+
+  // Venda rápida: pedido inteiro salvo de uma vez (chave única evita duplicar)
+  if (type === 'rpc') {
+    if (table !== 'salvar_venda_pedido') return { success: false, error: `Invalid rpc: ${table}` };
+    const { error } = await supabase.rpc('salvar_venda_pedido' as any, data as any);
+    return error ? { success: false, error: error.message } : { success: true };
+  }
 
   if (!allowedTables.includes(table)) {
     return { success: false, error: `Invalid table: ${table}` };
