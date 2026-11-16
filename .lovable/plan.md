@@ -26,16 +26,19 @@ Será feita em 3 entregas, nesta ordem, com verificação no fim de cada uma: V5
 - Caixa: cartão "A receber das plataformas" com total; ao clicar, lista por canal e data prevista (descontos de repasse mostrados abatendo).
 - Fluxo de Caixa: a receber nas datas previstas. DRE não muda. Venda cancelada some do a receber (é calculado a partir do pedido, sem lançamento separado).
 - Pedidos antigos: prazo considerado 0, então o Saldo de hoje não muda.
+- **Prazo não é retroativo**: a data de repasse prevista fica gravada no pedido na hora da venda. Mudar o prazo no canal vale só para pedidos novos.
+- **Mensalidade no Caixa**: abate do "A receber" do canal no mês (linha de desconto, como a comissão dos pedidos recebidos pela loja). Se o canal não tiver nada a receber naquele mês, entra como saída automática no Caixa.
 
 ## Critérios de aceite (vou testar no banco com rollback)
 - 99Food e iFood entram pela aba Planilha sem escolher formato.
 - Pedido já importado por foto não vira venda nova pela planilha.
 - Canal 23% + 3,2% online + 30 dias, venda online R$ 100 → líquido R$ 73,80, fora do Saldo hoje, "A receber" em 30 dias.
 - Mesma venda em dinheiro → R$ 100 no Caixa hoje, R$ 23,00 a descontar do próximo repasse.
+- Preço sugerido e líquido de todos os produtos e pedidos existentes iguais aos de antes da migração.
 - Totais do mês, DRE e Vendas iguais aos de antes para vendas já existentes (comparo antes/depois).
 
 ## Detalhes técnicos
-- Migração: `canais_venda` + `comissao_pct`, `taxa_online_pct`, `mensalidade`, `prazo_repasse_dias` (backfill comissão = soma de `taxas_canais`); `vendas_pedidos` + `taxa_prevista`, `taxa_real`, `data_repasse_prevista`. `salvar_venda_pedido`/`recalcular_totais_pedido` passam a calcular prevista, usar real quando houver e gravar data de repasse; nova RPC `atualizar_taxa_real_pedido`. `get_saldo_caixa` passa a ignorar líquido com repasse futuro e descontar comissão de pedidos recebidos pela loja quando o repasse ocorrer. `taxas_canais` continua existindo para não quebrar leituras antigas.
+- Migração: `canais_venda` + `comissao_pct`, `taxa_online_pct`, `mensalidade`, `prazo_repasse_dias` (backfill comissão = soma só das taxas em percentual de `taxas_canais`; hoje essa tabela só guarda percentual, então confirmo na migração se algum canal tem taxa com nome de valor fixo e, se tiver, aviso e mantenho o cálculo atual dele); `vendas_pedidos` + `taxa_prevista`, `taxa_real`, `data_repasse_prevista`. `salvar_venda_pedido`/`recalcular_totais_pedido` passam a calcular prevista, usar real quando houver e gravar data de repasse; nova RPC `atualizar_taxa_real_pedido`. `get_saldo_caixa` passa a ignorar líquido com repasse futuro e descontar comissão de pedidos recebidos pela loja quando o repasse ocorrer. `taxas_canais` continua existindo para não quebrar leituras antigas.
 - Lógica pura nova em `src/lib/taxaCanalUtils.ts`, `src/lib/repasseUtils.ts`, `src/lib/planilhaFormatos.ts` com testes dos números acima.
 - Arquivos: `ImportarVendasDialog.tsx` (abas, planilha), `Importar99FoodDialog.tsx` (parser reaproveitado), `CanaisVendaConfig.tsx`, `AnalisePlataformas.tsx`, `DREGerencial.tsx`, `useMenuEngineering.ts`/precificação, `Caixa.tsx`, `FluxoCaixa.tsx`.
 - Ressalva: sem planilhas reais de exemplo, a identificação usará os cabeçalhos conhecidos; se você tiver um arquivo de cada, mande que eu valido.
