@@ -22,7 +22,7 @@ import {
   Settings,
   Package,
   ArrowRight,
-  Info
+  Info,
   AlertTriangle,
 } from 'lucide-react';
 
