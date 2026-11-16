@@ -41,8 +41,18 @@ import {
   Receipt,
   Filter,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Pencil,
+  Trash2,
+  Info
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { format, startOfMonth, endOfMonth, subMonths, parseISO, addMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -65,6 +75,8 @@ interface CaixaMovimento {
 interface Venda {
   id: string;
   valor_total: number;
+  valor_liquido: number | null;
+  comissao_plataforma: number | null;
   data_venda: string;
   quantidade: number;
   produto_id: string | null;
@@ -79,6 +91,17 @@ interface XmlNota {
   data_emissao: string | null;
   fornecedor: string | null;
 }
+
+/** Entrada de venda no Caixa: valor líquido (já sem a taxa do app) quando existir, senão o total. */
+export const valorCaixaVenda = (v: { valor_total: number; valor_liquido?: number | null }) =>
+  v.valor_liquido != null && Number(v.valor_liquido) > 0 ? Number(v.valor_liquido) : Number(v.valor_total || 0);
+
+const descricaoVenda = (v: Venda, produtoNome: string) => {
+  const base = `${produtoNome} (${v.quantidade}x) - ${v.canal || 'balcão'}`;
+  const taxa = Number(v.valor_total || 0) - valorCaixaVenda(v);
+  if (taxa > 0.004) return `${base} | bruto ${formatCurrencyBRL(v.valor_total)}, taxa ${formatCurrencyBRL(taxa)}`;
+  return base;
+};
 
 const CATEGORIAS_ENTRADA = [
   'Venda',
@@ -102,6 +125,10 @@ const CATEGORIAS_SAIDA = [
 const Caixa = () => {
   const { usuario } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [editId, setEditId] = useState<string | null>(null);
+  const [excluir, setExcluir] = useState<{ id: string; descricao: string; valor: number } | null>(null);
+  const [confirmaVenda, setConfirmaVenda] = useState(false);
   
   
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -154,7 +181,7 @@ const Caixa = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('vendas')
-        .select('id, valor_total, data_venda, quantidade, produto_id, descricao_produto, canal, produtos(nome)')
+        .select('id, valor_total, valor_liquido, comissao_plataforma, data_venda, quantidade, produto_id, descricao_produto, canal, produtos(nome)')
         .gte('data_venda', dataInicio)
         .lte('data_venda', dataFim)
         .order('data_venda', { ascending: false });
@@ -246,7 +273,48 @@ const Caixa = () => {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async (m: { id: string; tipo: 'entrada' | 'saida'; categoria: string; descricao: string; valor: number; data_movimento: string }) => {
+      const { id, ...rest } = m;
+      const { error } = await supabase.from('caixa_movimentos').update(rest).eq('id', id).eq('origem', 'manual');
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
+      setDialogOpen(false);
+      resetForm();
+      toast({ title: 'Lançamento atualizado!' });
+    },
+    onError: () => toast({ title: 'Erro', description: 'Não foi possível atualizar o lançamento.', variant: 'destructive' }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('caixa_movimentos').delete().eq('id', id).eq('origem', 'manual');
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
+      setExcluir(null);
+      toast({ title: 'Lançamento excluído' });
+    },
+    onError: () => toast({ title: 'Erro', description: 'Não foi possível excluir o lançamento.', variant: 'destructive' }),
+  });
+
+  const abrirEdicao = (m: { id: string; tipo: 'entrada' | 'saida'; categoria: string; descricao: string; valor: number; data: string }) => {
+    setEditId(m.id);
+    setTipoMovimento(m.tipo);
+    setCategoria(m.categoria);
+    setDescricao(m.descricao);
+    setValor(String(m.valor));
+    setDataMovimento(m.data);
+    setConfirmaVenda(true);
+    setDialogOpen(true);
+  };
+
   const resetForm = () => {
+    setEditId(null);
+    setConfirmaVenda(false);
     setTipoMovimento('entrada');
     setCategoria('');
     setDescricao('');
@@ -254,10 +322,20 @@ const Caixa = () => {
     setDataMovimento(format(new Date(), 'yyyy-MM-dd'));
   };
 
+  const precisaConfirmarVenda = tipoMovimento === 'entrada' && /^venda/i.test(categoria);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!categoria || !descricao || !valor) {
       toast({ title: 'Preencha todos os campos', variant: 'destructive' });
+      return;
+    }
+    if (precisaConfirmarVenda && !confirmaVenda) {
+      toast({ title: 'Confirme o lançamento de venda', description: 'Marque a caixa de confirmação para lançar mesmo assim.', variant: 'destructive' });
+      return;
+    }
+    if (editId) {
+      updateMutation.mutate({ id: editId, tipo: tipoMovimento, categoria, descricao, valor: parseFloat(valor), data_movimento: dataMovimento });
       return;
     }
     createMutation.mutate({
@@ -290,7 +368,7 @@ const Caixa = () => {
         descricao: m.descricao,
         valor: m.valor,
         data: m.data_movimento,
-        origem: 'manual',
+        origem: m.origem || 'manual',
       });
     });
 
@@ -301,8 +379,8 @@ const Caixa = () => {
         id: `venda-${v.id}`,
         tipo: 'entrada',
         categoria: 'Venda',
-        descricao: `${produtoNome} (${v.quantidade}x) - ${v.canal || 'balcão'}`,
-        valor: v.valor_total,
+        descricao: descricaoVenda(v, produtoNome),
+        valor: valorCaixaVenda(v),
         data: v.data_venda,
         origem: 'venda',
       });
@@ -363,6 +441,36 @@ const Caixa = () => {
     }
   };
 
+  type Mov = (typeof todosMovimentos)[number];
+  const renderAcoes = (m: Mov) => {
+    if (m.origem === 'manual') {
+      return (
+        <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+          <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Editar lançamento" onClick={() => abrirEdicao(m)}>
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" aria-label="Excluir lançamento" onClick={() => setExcluir({ id: m.id, descricao: m.descricao, valor: m.valor })}>
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      );
+    }
+    const msg = m.origem === 'venda' ? 'Gerado por uma venda. Altere na tela de Vendas.'
+      : m.origem === 'nota' || m.origem === 'compra' ? 'Gerado por uma compra. Altere na tela de Compras.'
+      : m.origem === 'encomenda' ? 'Gerado por uma encomenda. Altere na tela de Encomendas.'
+      : 'Lançamento automático. Altere na tela de origem.';
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex h-7 w-7 items-center justify-center text-muted-foreground" aria-label={msg} onClick={(e) => e.stopPropagation()}>
+            <Info className="h-3.5 w-3.5" />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>{msg}</TooltipContent>
+      </Tooltip>
+    );
+  };
+
   const isLoading = loadingMovimentos || loadingVendas || loadingNotas;
 
   return (
@@ -386,16 +494,16 @@ const Caixa = () => {
             </div>
           </div>
 
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
             <DialogTrigger asChild>
               <Button className="gap-2">
                 <Plus className="h-4 w-4" />
                 Novo Lançamento
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Novo Lançamento</DialogTitle>
+                <DialogTitle>{editId ? 'Editar Lançamento' : 'Novo Lançamento'}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Tipo */}
@@ -428,6 +536,17 @@ const Caixa = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                  {precisaConfirmarVenda && (
+                    <div className="rounded-md border border-warning/40 bg-warning/10 p-3 space-y-2 text-sm">
+                      <p className="font-medium">As vendas já entram sozinhas no Caixa.</p>
+                      <p className="text-muted-foreground text-xs">Toda venda registrada na tela de Vendas já aparece aqui automaticamente. Lançar de novo vai contar o valor em dobro.</p>
+                      <Button type="button" variant="outline" size="sm" onClick={() => navigate('/vendas')}>Ir para Vendas</Button>
+                      <label className="flex items-center gap-2 text-xs cursor-pointer">
+                        <Checkbox checked={confirmaVenda} onCheckedChange={(c) => setConfirmaVenda(!!c)} />
+                        Entendi, quero lançar mesmo assim
+                      </label>
+                    </div>
+                  )}
                 </div>
 
                 {/* Descrição */}
@@ -460,8 +579,8 @@ const Caixa = () => {
                   />
                 </div>
 
-                <Button type="submit" className="w-full" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? 'Salvando...' : 'Salvar Lançamento'}
+                <Button type="submit" className="w-full" disabled={createMutation.isPending || updateMutation.isPending || (precisaConfirmarVenda && !confirmaVenda)}>
+                  {createMutation.isPending || updateMutation.isPending ? 'Salvando...' : editId ? 'Salvar alterações' : 'Salvar Lançamento'}
                 </Button>
               </form>
             </DialogContent>
@@ -606,6 +725,7 @@ const Caixa = () => {
                       if (m.origem === 'nota') return <Badge variant="outline" className="gap-1 text-[10px] px-1.5 py-0"><Receipt className="h-3 w-3" />NF-e</Badge>;
                       return <Badge variant="secondary" className="gap-1 text-[10px] px-1.5 py-0">Manual</Badge>;
                     }},
+                    { key: 'acoes', header: '', align: 'right', mobilePriority: 7, render: (m) => renderAcoes(m) },
                     { key: 'valor', header: 'Valor', align: 'right', mobilePriority: 6, render: (m) => (
                       <span className={`font-medium whitespace-nowrap text-sm ${m.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
                         {m.tipo === 'entrada' ? '+' : '-'} {formatCurrency(m.valor)}
@@ -627,9 +747,9 @@ const Caixa = () => {
                     </div>
                   )}
                   renderMobileHighlight={(m) => (
-                    <span className={`font-bold whitespace-nowrap ${m.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
+                    <div className="flex items-center gap-1">{renderAcoes(m)}<span className={`font-bold whitespace-nowrap ${m.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
                       {m.tipo === 'entrada' ? '+' : '-'} {formatCurrency(m.valor)}
-                    </span>
+                    </span></div>
                   )}
                   emptyMessage="Não há movimentações neste período."
                 />
@@ -654,6 +774,23 @@ const Caixa = () => {
             )}
           </CardContent>
         </Card>
+
+        <AlertDialog open={!!excluir} onOpenChange={(o) => !o && setExcluir(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir lançamento?</AlertDialogTitle>
+              <AlertDialogDescription>
+                "{excluir?.descricao}" de {formatCurrencyBRL(excluir?.valor || 0)} será removido do Caixa. Essa ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={deleteMutation.isPending} onClick={(e) => { e.preventDefault(); if (excluir) deleteMutation.mutate(excluir.id); }}>
+                {deleteMutation.isPending ? 'Excluindo...' : 'Excluir'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
   );
 };
