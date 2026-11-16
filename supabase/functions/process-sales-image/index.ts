@@ -16,7 +16,7 @@ interface SaleItem {
 interface SalesData {
   tipo: 'comanda' | 'relatorio';
   plataforma: string;
-  data: string;
+  data: string | null;
   numero_pedido: string | null;
   cliente: string | null;
   subtotal: number;
@@ -34,7 +34,6 @@ async function processImageWithAI(imageBase64: string): Promise<SalesData | null
     throw new Error("LOVABLE_API_KEY not configured");
   }
 
-  const currentDate = new Date().toISOString().split('T')[0];
 
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -47,60 +46,59 @@ async function processImageWithAI(imageBase64: string): Promise<SalesData | null
       messages: [
         {
           role: "system",
-          content: `Você é um extrator de dados de comandas, cupons fiscais, recibos e relatórios de vendas de plataformas como iFood, 99Food, Rappi, etc.
+          content: `Você é um extrator de dados de comandas, cupons, recibos e prints de pedidos de plataformas como iFood, 99Food, Rappi, Brendi, Anota AI etc.
 
-Analise a imagem e extraia TODOS OS ITENS INDIVIDUAIS vendidos, além do BREAKDOWN FINANCEIRO COMPLETO.
+Leia a imagem com atenção e transcreva os dados. NÃO invente valores.
 
-Retorne APENAS um JSON válido no seguinte formato:
+Retorne APENAS um JSON válido neste formato:
 {
   "tipo": "comanda",
   "plataforma": "iFood",
-  "data": "${currentDate}",
+  "canal_proprio": false,
+  "data": "2026-07-06 ou null",
+  "data_texto": "texto da data como aparece (ex: '06 de jul 22:19') ou null",
   "numero_pedido": "#4A5B ou null",
   "cliente": "nome do cliente ou null",
+  "telefone_cliente": "telefone do cliente ou null",
   "subtotal": 194.50,
   "taxa_entrega": 0,
+  "entrega_por": "loja | plataforma | null",
   "taxa_servico": 0.99,
+  "descontos": [ { "texto": "Incentivos iFood", "valor": 10.00 } ],
   "incentivos_plataforma": 10.00,
   "incentivos_loja": 5.00,
+  "forma_pagamento": "pix | credito | debito | dinheiro | online | vale_refeicao | null",
+  "cobrar_do_cliente": 0,
   "total_geral": 180.49,
   "itens": [
     {
       "produto": "Nome do Produto",
       "quantidade": 1,
       "valor_unitario": 29.60,
-      "valor_total": 29.60
+      "valor_total": 29.60,
+      "componentes": []
     }
   ]
 }
 
-REGRAS CRÍTICAS:
-1. Extraia CADA ITEM INDIVIDUALMENTE - cada linha de produto é um item separado
-2. Para cada item: nome, quantidade, valor unitário e valor total
-3. Se o item tem "(1)" antes, quantidade = 1
-4. Use a data de hoje (${currentDate}) se não houver data visível
-5. O tipo é "comanda" para cupons/comandas e "relatorio" para relatórios de apps
-
-BREAKDOWN FINANCEIRO (MUITO IMPORTANTE):
-6. "subtotal" = soma dos itens ANTES de descontos/taxas
-7. "taxa_entrega" = taxa de entrega cobrada do cliente (0 se "Grátis")
-8. "taxa_servico" = taxa de serviço da plataforma (geralmente R$ 0,99 ou similar)
-9. "incentivos_plataforma" = desconto BANCADO PELA PLATAFORMA (ex: "Incentivos iFood"). NÃO reduz o que o vendedor recebe.
-10. "incentivos_loja" = desconto BANCADO PELA LOJA (ex: "Incentivos e cobrança da loja"). REDUZ o que o vendedor recebe.
-11. "total_geral" = valor final pago pelo cliente
-12. Se não encontrar algum campo financeiro, use 0
-13. "numero_pedido" = número/código do pedido se visível (ex: "#4A5B", "Pedido 123")
-14. "cliente" = nome do cliente se visível
-
-DIFERENÇA CRÍTICA ENTRE INCENTIVOS:
-- "Incentivos iFood" ou "Cupom iFood" → incentivos_plataforma (o iFood paga, o vendedor NÃO perde dinheiro)
-- "Incentivos da loja" ou "Cupom da loja" ou "Desconto da loja" → incentivos_loja (o VENDEDOR paga, sai do seu bolso)
-
-15. Retorne APENAS o JSON, sem explicações, sem markdown, sem \`\`\`
+REGRAS:
+1. Cada linha de produto vendida é um item. Quantidade "(1)" ou "1x" = 1.
+2. DATA: preencha "data" (AAAA-MM-DD) SOMENTE se a data com ano estiver escrita. Se aparecer só dia e mês (ex: "06 de jul 22:19", "28 de fev"), coloque "data": null e copie o texto em "data_texto". Se não houver data nenhuma, os dois ficam null. NUNCA use a data de hoje.
+3. "subtotal" = soma dos itens antes de descontos e taxas, como está no comprovante.
+4. "taxa_entrega" = taxa de entrega cobrada do cliente (0 se grátis). "entrega_por": "loja" se o comprovante indicar entrega própria/da loja; "plataforma" se a entrega for feita pela plataforma (ex: "Entrega iFood", "entregador parceiro"); null se não estiver claro.
+5. "taxa_servico" = taxa de serviço cobrada do cliente pela plataforma.
+6. "descontos": liste CADA linha de desconto/incentivo/cupom separadamente, com o texto EXATO do comprovante e o valor positivo. Inclua "Entrega promocional para cliente" quando aparecer com valor.
+7. "incentivos_plataforma" e "incentivos_loja": seu melhor palpite da soma (o sistema reclassifica pelo texto de "descontos").
+8. "forma_pagamento": como o cliente pagou. "cobrar_do_cliente": valor que o entregador deve cobrar na entrega ("Cobrar do cliente R$ X"); 0 se o pedido foi pago online.
+9. "canal_proprio": true para cardápio próprio (Brendi, Anota AI, Goomer, cardápio digital da loja, WhatsApp); false para iFood, 99Food, Rappi, Keeta.
+10. COMBOS: quando um item for um combo/promoção com produtos dentro (ex: "Compre 2 Leve 4" com quatro copos listados abaixo), o combo é o item com o valor cheio, e os produtos de dentro vão em "componentes" como { "produto": "Copo da Felicidade Mulan 300ml", "quantidade": 1 }. NÃO crie itens separados para os produtos de dentro e não some o valor deles. Adicionais pagos já estão no valor do combo. A opção de tamanho (200ml, 300ml) entra no nome do componente.
+11. Complementos de montagem (sabores, frutas, cremes, coberturas do açaí) NÃO são itens nem componentes: acrescente ao nome do item entre parênteses.
+12. Campo não encontrado: use 0 (valores) ou null (textos).
+13. Retorne APENAS o JSON, sem explicações e sem markdown.
 
 EXEMPLOS DE ITENS:
-- "(1) Copo da Felicidade Mulan (300ml) R$ 29,60" → { "produto": "Copo da Felicidade Mulan (300ml)", "quantidade": 1, "valor_unitario": 29.60, "valor_total": 29.60 }
-- "2x Pizza Margherita R$ 50,00" → { "produto": "Pizza Margherita", "quantidade": 2, "valor_unitario": 25.00, "valor_total": 50.00 }`
+- "(1) Copo da Felicidade Mulan (300ml) R$ 29,60" → { "produto": "Copo da Felicidade Mulan (300ml)", "quantidade": 1, "valor_unitario": 29.60, "valor_total": 29.60, "componentes": [] }
+- "2x Pizza Margherita R$ 50,00" → { "produto": "Pizza Margherita", "quantidade": 2, "valor_unitario": 25.00, "valor_total": 50.00, "componentes": [] }`
         },
         {
           role: "user",
@@ -164,6 +162,8 @@ EXEMPLOS DE ITENS:
       parsed.incentivos_plataforma = parsed.incentivos_plataforma || 0;
       parsed.incentivos_loja = parsed.incentivos_loja || 0;
       parsed.numero_pedido = parsed.numero_pedido || null;
+      (parsed as any).descontos = Array.isArray((parsed as any).descontos) ? (parsed as any).descontos : [];
+      parsed.itens = (parsed.itens || []).map((i: any) => ({ ...i, componentes: Array.isArray(i.componentes) ? i.componentes : [] }));
       console.log("Parsed data with financial breakdown:", JSON.stringify({
         subtotal: parsed.subtotal,
         taxa_entrega: parsed.taxa_entrega,

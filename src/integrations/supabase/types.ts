@@ -1959,15 +1959,19 @@ export type Database = {
           data_venda: string
           desconto: number
           empresa_id: string
+          entrega_por: string | null
           forma_pagamento: string | null
           id: string
           idempotency_key: string | null
+          incentivo_plataforma_info: number
           numero_externo: string | null
           origem: string
+          pagamento_recebido_por: string | null
           qtd_itens: number
           status: string
           taxa_canal: number
           taxa_entrega: number
+          taxa_servico_info: number
           updated_at: string
           valor_bruto: number
           valor_liquido: number
@@ -1980,15 +1984,19 @@ export type Database = {
           data_venda?: string
           desconto?: number
           empresa_id: string
+          entrega_por?: string | null
           forma_pagamento?: string | null
           id?: string
           idempotency_key?: string | null
+          incentivo_plataforma_info?: number
           numero_externo?: string | null
           origem?: string
+          pagamento_recebido_por?: string | null
           qtd_itens?: number
           status?: string
           taxa_canal?: number
           taxa_entrega?: number
+          taxa_servico_info?: number
           updated_at?: string
           valor_bruto?: number
           valor_liquido?: number
@@ -2001,15 +2009,19 @@ export type Database = {
           data_venda?: string
           desconto?: number
           empresa_id?: string
+          entrega_por?: string | null
           forma_pagamento?: string | null
           id?: string
           idempotency_key?: string | null
+          incentivo_plataforma_info?: number
           numero_externo?: string | null
           origem?: string
+          pagamento_recebido_por?: string | null
           qtd_itens?: number
           status?: string
           taxa_canal?: number
           taxa_entrega?: number
+          taxa_servico_info?: number
           updated_at?: string
           valor_bruto?: number
           valor_liquido?: number

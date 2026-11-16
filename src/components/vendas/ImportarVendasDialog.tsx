@@ -21,6 +21,7 @@ import { formatCurrencyBRL, fmtNum } from '@/lib/format';
 import * as XLSX from 'xlsx';
 import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { resolverVinculo, classificarDesconto, interpretarData, calcularLiquido, montarItensPedido, somarPedido, type TipoVinculo, type Sugestao, type QuemPaga } from '@/lib/importacaoFotoRegras';
 
 interface ParsedRow {
   data: string;
@@ -40,15 +41,36 @@ interface ParsedItem {
   valor_total: number;
   produto_id?: string;
   selected: boolean;
-  matchType?: 'saved' | 'auto' | 'manual' | 'none';
+  matchType: TipoVinculo;
+  sugestoes: Sugestao[];
+  componentes: ParsedComponente[];
 }
+
+interface ParsedComponente {
+  produto: string;
+  quantidade: number;
+  produto_id?: string;
+  matchType: TipoVinculo;
+  sugestoes: Sugestao[];
+}
+
+interface DescontoLinha { texto: string; valor: number; quem: QuemPaga | null }
 
 interface PhotoImportData {
   tipo: 'comanda' | 'relatorio';
   plataforma: string;
   data: string;
+  data_confirmada: boolean;
+  data_texto: string | null;
   numero_pedido: string | null;
   cliente: string | null;
+  telefone_cliente: string | null;
+  cadastrar_cliente: boolean;
+  canal_proprio: boolean;
+  entrega_por: 'loja' | 'plataforma' | null;
+  forma_pagamento: string | null;
+  cobrar_do_cliente: number;
+  descontos: DescontoLinha[];
   subtotal: number;
   taxa_entrega: number;
   taxa_servico: number;
@@ -86,11 +108,13 @@ const KNOWN_MAPPINGS: Record<string, Partial<ColumnMapping>> = {
 const STATUS_CONCLUIDO = ['concluído', 'concluido', 'completed', 'entregue', 'finalizado', 'delivered'];
 
 // Searchable product select component
-const ProductSearchSelect = ({ produtos, value, onChange, disabled }: {
+const ProductSearchSelect = ({ produtos, value, onChange, disabled, semProduto, sugestoes = [] }: {
   produtos: { id: string; nome: string }[];
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  semProduto?: boolean;
+  sugestoes?: Sugestao[];
 }) => {
   const [open, setOpen] = useState(false);
   const selectedProduct = produtos.find(p => p.id === value);
@@ -106,7 +130,7 @@ const ProductSearchSelect = ({ produtos, value, onChange, disabled }: {
           disabled={disabled}
         >
           <span className="truncate">
-            {selectedProduct ? selectedProduct.nome : 'Não vincular'}
+            {selectedProduct ? selectedProduct.nome : semProduto ? 'Sem produto (ligar depois)' : 'Escolha o produto...'}
           </span>
           <X
             className={`ml-1 h-3 w-3 shrink-0 opacity-50 ${!selectedProduct ? 'hidden' : ''}`}
@@ -121,8 +145,20 @@ const ProductSearchSelect = ({ produtos, value, onChange, disabled }: {
             <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
             <CommandGroup>
               <CommandItem value="__none__" onSelect={() => { onChange('__none__'); setOpen(false); }}>
-                Não vincular
+                Sem produto (ligar depois em Vendas)
               </CommandItem>
+            </CommandGroup>
+            {sugestoes.length > 0 && (
+              <CommandGroup heading="Sugestões">
+                {sugestoes.map(sg => (
+                  <CommandItem key={`sg-${sg.id}`} value={`sugestao ${sg.nome}`} onSelect={() => { onChange(sg.id); setOpen(false); }}>
+                    <span className="truncate">{sg.nome}</span>
+                    <span className="ml-auto text-[10px] text-muted-foreground">sugestão</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+            <CommandGroup heading="Todos os produtos">
               {produtos.map(p => (
                 <CommandItem key={p.id} value={p.nome} onSelect={() => { onChange(p.id); setOpen(false); }}>
                   <span className={value === p.id ? 'font-semibold' : ''}>{p.nome}</span>
@@ -134,6 +170,18 @@ const ProductSearchSelect = ({ produtos, value, onChange, disabled }: {
       </PopoverContent>
     </Popover>
   );
+};
+
+const VinculoBadge = ({ tipo, combo }: { tipo: TipoVinculo; combo?: boolean }) => {
+  const cfg: Record<TipoVinculo, { txt: string; cls: string; title: string }> = {
+    saved: { txt: '🔗 Salvo', cls: 'bg-primary/15 text-primary border-primary/20', title: 'Ligação salva de importação anterior' },
+    exact: { txt: '✓ Nome igual', cls: 'bg-primary/15 text-primary border-primary/20', title: 'Mesmo nome do produto cadastrado' },
+    manual: { txt: '✋ Escolhido', cls: 'bg-secondary text-secondary-foreground', title: 'Escolhido por você (fica salvo)' },
+    pendente: { txt: 'Escolha o produto', cls: 'bg-amber-500/15 text-amber-700 border-amber-500/30', title: 'Veja as sugestões e escolha' },
+    sem_produto: { txt: combo ? 'Combo (estoque pelos itens)' : 'Sem produto', cls: 'bg-muted text-muted-foreground', title: 'Conta na receita, não baixa estoque. Ligue depois em Vendas.' },
+  };
+  const c = cfg[tipo];
+  return <span className={`shrink-0 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium border ${c.cls}`} title={c.title}>{c.txt}</span>;
 };
 
 const ImportarVendasDialog: React.FC = () => {
@@ -230,16 +278,26 @@ const ImportarVendasDialog: React.FC = () => {
     return matches.sort((a, b) => Number(b.taxaTotal || 0) - Number(a.taxaTotal || 0))[0];
   };
 
-  // Get comissão for a result
-  const getComissao = (data: PhotoImportData) => {
-    const plat = canalOverride || data.plataforma || '';
-    const canal = findCanalByPlataforma(plat);
-    const subtotal = Number(data.subtotal || 0);
-    const taxaTotal = Number(canal?.taxaTotal || 0);
-
-    if (!Number.isFinite(subtotal) || !Number.isFinite(taxaTotal) || taxaTotal <= 0) return 0;
-    return subtotal * (taxaTotal / 100);
+  // Canal usado no pedido (cardápio próprio nunca paga comissão)
+  const getCanal = (data: PhotoImportData) => {
+    const canal = findCanalByPlataforma(canalOverride || data.plataforma || '');
+    if (data.canal_proprio && !canalOverride && canal && Number(canal.taxaTotal || 0) > 0) return null;
+    return canal;
   };
+  const getDescontoLoja = (data: PhotoImportData) =>
+    data.descontos.length > 0
+      ? data.descontos.filter(d => d.quem === 'loja').reduce((s, d) => s + Number(d.valor || 0), 0)
+      : Number(data.incentivos_loja || 0);
+  const getDescontoPlataforma = (data: PhotoImportData) =>
+    data.descontos.length > 0
+      ? data.descontos.filter(d => d.quem === 'plataforma').reduce((s, d) => s + Number(d.valor || 0), 0)
+      : Number(data.incentivos_plataforma || 0);
+  const getValores = (data: PhotoImportData) => {
+    const canal = getCanal(data);
+    const taxaPct = data.canal_proprio && !canalOverride ? 0 : Number(canal?.taxaTotal || 0);
+    return { canal, taxaPct, ...calcularLiquido({ subtotal: Number(data.subtotal || 0), descontoLoja: getDescontoLoja(data), taxaPct }) };
+  };
+  const getComissao = (data: PhotoImportData) => getValores(data).comissao;
 
   const resetState = () => {
     setStep('upload');
@@ -259,47 +317,8 @@ const ImportarVendasDialog: React.FC = () => {
     setCurrentResultIndex(0);
   };
 
-  const calculateSimilarity = (str1: string, str2: string): number => {
-    const s1 = str1.toLowerCase().trim();
-    const s2 = str2.toLowerCase().trim();
-    if (s1 === s2) return 1;
-    if (s1.length === 0 || s2.length === 0) return 0;
-    if (s1.includes(s2) || s2.includes(s1)) return Math.min(s1.length, s2.length) / Math.max(s1.length, s2.length);
-    const words1 = s1.split(/\s+/);
-    const words2 = s2.split(/\s+/);
-    let matchingWords = 0;
-    for (const w1 of words1) {
-      if (w1.length < 3) continue;
-      for (const w2 of words2) {
-        if (w2.length < 3) continue;
-        if (w1.includes(w2) || w2.includes(w1)) { matchingWords++; break; }
-      }
-    }
-    return matchingWords / Math.max(words1.filter(w => w.length >= 3).length, 1);
-  };
-
-  const findBestMatchingProduct = (itemName: string, plataforma?: string): { id: string; matchType: 'saved' | 'auto' } | undefined => {
-    // First check saved mappings
-    if (mapeamentos && mapeamentos.length > 0) {
-      const saved = mapeamentos.find((m: any) => 
-        m.nome_externo?.toLowerCase().trim() === itemName.toLowerCase().trim() &&
-        (!plataforma || !m.plataforma || m.plataforma === plataforma)
-      );
-      if (saved) return { id: (saved as any).produto_id, matchType: 'saved' };
-    }
-    
-    // Then try similarity matching
-    if (!produtos || produtos.length === 0) return undefined;
-    let bestMatch: { id: string; score: number } | null = null;
-    for (const produto of produtos) {
-      const score = calculateSimilarity(itemName, produto.nome);
-      if (score >= 0.5 && (!bestMatch || score > bestMatch.score)) {
-        bestMatch = { id: produto.id, score };
-      }
-    }
-    if (bestMatch) return { id: bestMatch.id, matchType: 'auto' };
-    return undefined;
-  };
+  const vincular = (nome: string, plataforma: string) =>
+    resolverVinculo(nome, plataforma, (mapeamentos || []) as any, (produtos || []) as any);
 
   // Multi-image handling
   const handleMultiImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -414,24 +433,49 @@ const ImportarVendasDialog: React.FC = () => {
         if (data.success && data.data?.itens?.length > 0) {
           const plataforma = data.data.plataforma || '';
           const itens: ParsedItem[] = data.data.itens.map((item: any) => {
-            const match = findBestMatchingProduct(item.produto || '', plataforma);
+            const componentes: ParsedComponente[] = (item.componentes || []).map((c: any) => {
+              const v = vincular(c.produto || '', plataforma);
+              return { produto: c.produto || '', quantidade: Number(c.quantidade) || 1, produto_id: v.produto_id, matchType: v.tipo, sugestoes: v.sugestoes };
+            });
+            const match = vincular(item.produto || '', plataforma);
+            // Combo sem produto próprio: a linha leva o valor e o estoque sai pelos componentes
+            const comboSemProduto = componentes.length > 0 && match.tipo === 'pendente';
             return {
               produto: item.produto || '',
               quantidade: item.quantidade || 1,
               valor_unitario: item.valor_unitario || 0,
               valor_total: item.valor_total || 0,
-              produto_id: match?.id,
+              produto_id: match.produto_id,
               selected: true,
-              matchType: match ? match.matchType : 'none' as const,
+              matchType: comboSemProduto ? 'sem_produto' as const : match.tipo,
+              sugestoes: match.sugestoes,
+              componentes,
             };
           });
+          const descontos: DescontoLinha[] = (data.data.descontos || [])
+            .filter((d: any) => Number(d?.valor) > 0)
+            .map((d: any) => ({ texto: String(d.texto || 'Desconto'), valor: Math.abs(Number(d.valor)), quem: classificarDesconto(String(d.texto || '')) }));
+          const dataLida = interpretarData(data.data.data) || interpretarData(data.data.data_texto);
+          const hojeIso = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+          const entregaPor = data.data.entrega_por === 'loja' || data.data.entrega_por === 'plataforma'
+            ? data.data.entrega_por
+            : (data.data.canal_proprio ? 'loja' : null);
 
           const result: PhotoImportData = {
             tipo: data.data.tipo || 'comanda',
             plataforma,
-            data: data.data.data || new Date().toISOString().split('T')[0],
+            data: dataLida || hojeIso,
+            data_confirmada: !!dataLida,
+            data_texto: data.data.data_texto || null,
             numero_pedido: data.data.numero_pedido || null,
             cliente: data.data.cliente || null,
+            telefone_cliente: data.data.telefone_cliente || null,
+            cadastrar_cliente: false,
+            canal_proprio: !!data.data.canal_proprio,
+            entrega_por: entregaPor,
+            forma_pagamento: data.data.forma_pagamento || null,
+            cobrar_do_cliente: Number(data.data.cobrar_do_cliente) || 0,
+            descontos,
             subtotal: data.data.subtotal || 0,
             taxa_entrega: data.data.taxa_entrega || 0,
             taxa_servico: data.data.taxa_servico || 0,
@@ -485,15 +529,28 @@ const ImportarVendasDialog: React.FC = () => {
     setMultiImages(prev => [...prev, { file, preview: base64, status: 'pending' }]);
   };
 
-  const handleLinkProduct = (resultIdx: number, itemIdx: number, produtoId: string) => {
-    setAllPhotoResults(prev => prev.map((result, ri) => 
+  const handleLinkProduct = (resultIdx: number, itemIdx: number, produtoId: string, compIdx?: number) => {
+    const novo = produtoId === '__none__'
+      ? { produto_id: undefined, matchType: 'sem_produto' as const }
+      : { produto_id: produtoId, matchType: 'manual' as const };
+    setAllPhotoResults(prev => prev.map((result, ri) =>
       ri === resultIdx ? {
         ...result,
-        itens: result.itens.map((item, ii) => 
-          ii === itemIdx ? { ...item, produto_id: produtoId === '__none__' ? undefined : produtoId, matchType: produtoId === '__none__' ? 'none' as const : 'manual' as const } : item
-        )
+        itens: result.itens.map((item, ii) => {
+          if (ii !== itemIdx) return item;
+          if (compIdx === undefined) return { ...item, ...novo };
+          return { ...item, componentes: item.componentes.map((c, ci) => ci === compIdx ? { ...c, ...novo } : c) };
+        })
       } : result
     ));
+  };
+
+  const updateResult = (resultIdx: number, patch: Partial<PhotoImportData>) => {
+    setAllPhotoResults(prev => prev.map((r, ri) => ri === resultIdx ? { ...r, ...patch } : r));
+  };
+
+  const setDescontoQuem = (resultIdx: number, dIdx: number, quem: QuemPaga) => {
+    setAllPhotoResults(prev => prev.map((r, ri) => ri === resultIdx ? { ...r, descontos: r.descontos.map((d, di) => di === dIdx ? { ...d, quem } : d) } : r));
   };
 
   const handleToggleItem = (resultIdx: number, itemIdx: number) => {
@@ -532,118 +589,66 @@ const ImportarVendasDialog: React.FC = () => {
       const newMappings: { nome_externo: string; produto_id: string; plataforma: string }[] = [];
 
       for (const result of allPhotoResults) {
-        // Skip duplicates
         if (result.isDuplicate) continue;
-        const selectedItems = result.itens.filter(i => i.selected && i.produto_id);
-        if (selectedItems.length === 0) continue;
-
-        // Calculate comissão do canal
-        const comissao = getComissao(result);
-
-        // Valor líquido real: subtotal - taxa de serviço - incentivo da loja - comissão app
-        const valorLiquidoReal =
-          Number(result.subtotal || 0) -
-          Number(result.taxa_servico || 0) -
-          Number(result.incentivos_loja || 0) -
-          Number(comissao || 0);
-
-        const vendas = selectedItems.map(item => ({
-          empresa_id: usuario.empresa_id,
-          data_venda: result.data,
-          valor_total: item.valor_total,
-          canal: canalOverride || result.plataforma || 'Venda Direta',
-          descricao_produto: item.produto,
-          quantidade: item.quantidade,
-          origem: 'importacao_foto',
-          tipo_venda: result.tipo === 'comanda' ? 'direta' : 'app',
-          produto_id: item.produto_id,
-          cliente_id: null,
-          numero_pedido_externo: result.numero_pedido,
-          subtotal: result.subtotal,
-          taxa_entrega: result.taxa_entrega,
-          taxa_servico: result.taxa_servico,
-          incentivo_plataforma: result.incentivos_plataforma,
-          incentivo_loja: result.incentivos_loja,
-          comissao_plataforma: comissao,
-          valor_liquido: valorLiquidoReal,
-          plataforma: result.plataforma || null,
+        const itensImport = result.itens.map(i => ({
+          nome: i.produto, quantidade: i.quantidade, valor_total: i.valor_total, selected: i.selected,
+          produto_id: i.produto_id, tipo: i.matchType,
+          componentes: i.componentes.map(c => ({ nome: c.produto, quantidade: c.quantidade, produto_id: c.produto_id, tipo: c.matchType })),
         }));
+        const linhas = montarItensPedido(itensImport);
+        if (linhas.length === 0) continue;
 
-        const { error } = await supabase.from('vendas').insert(vendas);
-        if (error) throw error;
-
-        // Generate caixa movements for taxes and incentives
-        const caixaMovimentos: any[] = [];
+        const { canal } = getValores(result);
         const plat = canalOverride || result.plataforma || 'Venda Direta';
 
-        // Entry: subtotal bruto (antes das deduções)
-        const subtotalBruto = Number(result.subtotal || 0);
-        if (subtotalBruto > 0) {
-          caixaMovimentos.push({
-            empresa_id: usuario.empresa_id,
-            tipo: 'entrada',
-            categoria: 'Venda',
-            descricao: `${plat}${result.numero_pedido ? ` #${result.numero_pedido}` : ''} - Subtotal`,
-            valor: subtotalBruto,
-            data_movimento: result.data,
-            origem: 'importacao_foto',
-          });
-        }
-        
-        // Exit: taxa de serviço
-        if (result.taxa_servico > 0) {
-          caixaMovimentos.push({
-            empresa_id: usuario.empresa_id,
-            tipo: 'saida',
-            categoria: 'Taxas Plataforma',
-            descricao: `${plat}${result.numero_pedido ? ` #${result.numero_pedido}` : ''} - Taxa de serviço`,
-            valor: result.taxa_servico,
-            data_movimento: result.data,
-            origem: 'importacao_foto',
-          });
-        }
-        
-        // Exit: incentivo da loja
-        if (result.incentivos_loja > 0) {
-          caixaMovimentos.push({
-            empresa_id: usuario.empresa_id,
-            tipo: 'saida',
-            categoria: 'Descontos/Promoções',
-            descricao: `${plat}${result.numero_pedido ? ` #${result.numero_pedido}` : ''} - Incentivo da loja`,
-            valor: result.incentivos_loja,
-            data_movimento: result.data,
-            origem: 'importacao_foto',
-          });
-        }
-
-        // Exit: comissão do canal
-        if (comissao > 0) {
-          caixaMovimentos.push({
-            empresa_id: usuario.empresa_id,
-            tipo: 'saida',
-            categoria: 'Comissão App',
-            descricao: `${plat}${result.numero_pedido ? ` #${result.numero_pedido}` : ''} - Comissão do canal`,
-            valor: comissao,
-            data_movimento: result.data,
-            origem: 'importacao_foto',
-          });
-        }
-        
-        if (caixaMovimentos.length > 0) {
-          await supabase.from('caixa_movimentos').insert(caixaMovimentos);
-        }
-
-        totalImported += selectedItems.length;
-
-        // Collect mappings to save
-        selectedItems.forEach(item => {
-          if (item.produto_id) {
-            newMappings.push({
-              nome_externo: item.produto,
-              produto_id: item.produto_id,
-              plataforma: result.plataforma || '',
-            });
+        // Cliente do cupom (cardápio próprio), só com confirmação
+        let clienteId: string | null = null;
+        if (result.cadastrar_cliente && result.cliente) {
+          const tel = (result.telefone_cliente || '').replace(/\D/g, '');
+          if (tel) {
+            const { data: existentes } = await supabase.from('clientes').select('id, whatsapp').eq('empresa_id', usuario.empresa_id).not('whatsapp', 'is', null);
+            clienteId = (existentes || []).find(c => (c.whatsapp || '').replace(/\D/g, '').endsWith(tel.slice(-8)))?.id || null;
           }
+          if (!clienteId) {
+            const { data: novo, error: cliErr } = await supabase.from('clientes')
+              .insert({ empresa_id: usuario.empresa_id, nome: result.cliente, whatsapp: result.telefone_cliente || null })
+              .select('id').single();
+            if (cliErr) throw cliErr;
+            clienteId = novo.id;
+          }
+        }
+
+        const entregaLoja = result.entrega_por === 'loja';
+        const recebidoPor = result.cobrar_do_cliente > 0 || result.canal_proprio ? 'loja' : 'plataforma';
+
+        const { error } = await supabase.rpc('salvar_venda_pedido' as any, {
+          p_pedido: {
+            canal_id: canal?.id || null,
+            plataforma: result.plataforma || plat,
+            cliente_id: clienteId,
+            forma_pagamento: result.forma_pagamento,
+            data_venda: result.data,
+            origem: 'foto',
+            numero_externo: result.numero_pedido,
+            desconto: getDescontoLoja(result),
+            taxa_entrega: entregaLoja ? Number(result.taxa_entrega || 0) : 0,
+            entrega_por: result.entrega_por,
+            pagamento_recebido_por: recebidoPor,
+            taxa_servico_info: Number(result.taxa_servico || 0),
+            incentivo_plataforma_info: getDescontoPlataforma(result),
+          },
+          p_itens: linhas,
+        });
+        if (error) throw error;
+
+        totalImported += 1;
+
+        const salvarLigacao = (nome: string, produtoId?: string, tipo?: TipoVinculo) => {
+          if (produtoId && tipo === 'manual') newMappings.push({ nome_externo: nome, produto_id: produtoId, plataforma: result.plataforma || '' });
+        };
+        result.itens.filter(i => i.selected).forEach(item => {
+          salvarLigacao(item.produto, item.produto_id, item.matchType);
+          item.componentes.forEach(c => salvarLigacao(c.produto, c.produto_id, c.matchType));
         });
       }
 
@@ -655,7 +660,7 @@ const ImportarVendasDialog: React.FC = () => {
     onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ['vendas'] });
       queryClient.invalidateQueries({ queryKey: ['caixa-movimentos'] });
-      toast({ title: `${count} vendas importadas com sucesso!` });
+      toast({ title: `${count} pedido(s) importado(s) com sucesso!` });
       setOpen(false);
       setOpen(false);
       resetState();
@@ -806,25 +811,39 @@ const ImportarVendasDialog: React.FC = () => {
   const currentResult = allPhotoResults[currentResultIndex];
   const nonDuplicateResults = allPhotoResults.filter(r => !r.isDuplicate);
   const photoDuplicateCount = allPhotoResults.filter(r => r.isDuplicate).length;
-  const totalPhotoItemsLinked = nonDuplicateResults.reduce((sum, r) => sum + r.itens.filter(i => i.selected && i.produto_id).length, 0);
+  const pendenciasDoPedido = (r: PhotoImportData) => {
+    const sel = r.itens.filter(i => i.selected);
+    const itensPend = sel.filter(i => i.matchType === 'pendente').length
+      + sel.reduce((n, i) => n + i.componentes.filter(c => c.matchType === 'pendente').length, 0);
+    const descPend = r.descontos.filter(d => d.quem === null).length;
+    return { itensPend, descPend, dataPend: !r.data_confirmada || !r.data };
+  };
+  const totaisPend = nonDuplicateResults.reduce((acc, r) => {
+    const p = pendenciasDoPedido(r);
+    return { itens: acc.itens + p.itensPend, desc: acc.desc + p.descPend, data: acc.data + (p.dataPend ? 1 : 0) };
+  }, { itens: 0, desc: 0, data: 0 });
   const totalPhotoItemsTotal = nonDuplicateResults.reduce((sum, r) => sum + r.itens.filter(i => i.selected).length, 0);
-  const totalPhotoItemsUnlinked = totalPhotoItemsTotal - totalPhotoItemsLinked;
-  const totalPhotoValue = nonDuplicateResults.reduce((sum, r) => sum + r.itens.filter(i => i.selected && i.produto_id).reduce((s, i) => s + i.valor_total, 0), 0);
+  const totalPhotoValue = nonDuplicateResults.reduce((sum, r) => sum + somarPedido(montarItensPedido(r.itens.map(i => ({
+    nome: i.produto, quantidade: i.quantidade, valor_total: i.valor_total, selected: i.selected, produto_id: i.produto_id, tipo: i.matchType, componentes: [],
+  })))), 0);
+  const temPendencia = totaisPend.itens + totaisPend.desc + totaisPend.data > 0;
+  const textoBotaoImportar = totaisPend.data > 0 ? `Confirme a data de ${totaisPend.data} pedido(s)`
+    : totaisPend.desc > 0 ? `Diga quem pagou ${totaisPend.desc} desconto(s)`
+    : totaisPend.itens > 0 ? `Escolha o produto de ${totaisPend.itens} item(ns)`
+    : `Importar ${nonDuplicateResults.length} pedido(s)`;
 
   // Financial breakdown component
-  const FinancialBreakdown = ({ data }: { data: PhotoImportData }) => {
-    const comissao = getComissao(data);
-    const canalMatch = findCanalByPlataforma(canalOverride || data.plataforma || '');
-    const valorLiquidoReal =
-      Number(data.subtotal || 0) -
-      Number(data.taxa_servico || 0) -
-      Number(data.incentivos_loja || 0) -
-      Number(comissao || 0);
+  const FinancialBreakdown = ({ data, resultIdx }: { data: PhotoImportData; resultIdx: number }) => {
+    const { canal, taxaPct, comissao, liquido } = getValores(data);
+    const somaItens = somarPedido(montarItensPedido(data.itens.map(i => ({
+      nome: i.produto, quantidade: i.quantidade, valor_total: i.valor_total, selected: true, produto_id: i.produto_id, tipo: i.matchType, componentes: [],
+    }))));
+    const diferenca = Math.abs(somaItens - Number(data.subtotal || 0)) >= 0.01;
     return (
       <div className="bg-muted/50 rounded-lg p-3 space-y-2 text-sm">
         <div className="flex items-center gap-2 font-medium">
           <DollarSign className="h-4 w-4" />
-          Breakdown Financeiro
+          Resumo financeiro
           {data.numero_pedido && <Badge variant="outline" className="text-xs">{data.numero_pedido}</Badge>}
         </div>
         <div className="space-y-1">
@@ -832,89 +851,86 @@ const ImportarVendasDialog: React.FC = () => {
             <span>Subtotal (itens)</span>
             <span className="font-medium">{formatCurrency(data.subtotal)}</span>
           </div>
-          {data.taxa_entrega > 0 && (
-            <div className="flex justify-between text-muted-foreground">
-              <span>Taxa de entrega</span>
-              <span>{formatCurrency(data.taxa_entrega)}</span>
-            </div>
+          {diferenca && (
+            <p className="text-xs text-amber-600 flex items-center gap-1"><AlertTriangle className="h-3 w-3" />A soma dos itens lidos ({formatCurrency(somaItens)}) não bate com o subtotal. Confira a foto.</p>
           )}
-          {data.taxa_servico > 0 && (
-            <div className="flex justify-between text-muted-foreground">
-              <span>Taxa de serviço</span>
-              <span>-{formatCurrency(data.taxa_servico)}</span>
+          {data.descontos.map((d, di) => (
+            <div key={di} className="flex flex-col gap-1">
+              <div className={`flex justify-between ${d.quem === 'loja' ? 'text-destructive' : d.quem === 'plataforma' ? 'text-muted-foreground' : 'text-amber-600'}`}>
+                <span className="flex items-center gap-1">
+                  {d.texto}
+                  <span className="text-[10px]">({d.quem === 'loja' ? 'pago pela loja' : d.quem === 'plataforma' ? 'pago pela plataforma, não reduz seu valor' : 'quem pagou?'})</span>
+                </span>
+                <span>{d.quem === 'loja' ? '-' : ''}{formatCurrency(d.valor)}</span>
+              </div>
+              {d.quem === null && (
+                <div className="flex items-center gap-2 text-xs">
+                  <span>Quem pagou este desconto?</span>
+                  <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setDescontoQuem(resultIdx, di, 'loja')}>Loja</Button>
+                  <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setDescontoQuem(resultIdx, di, 'plataforma')}>Plataforma</Button>
+                </div>
+              )}
             </div>
+          ))}
+          {data.descontos.length === 0 && data.incentivos_loja > 0 && (
+            <div className="flex justify-between text-destructive"><span>Desconto pago pela loja</span><span>-{formatCurrency(data.incentivos_loja)}</span></div>
           )}
-          {canalMatch && comissao > 0 && (
+          {data.descontos.length === 0 && data.incentivos_plataforma > 0 && (
+            <div className="flex justify-between text-muted-foreground"><span>Incentivo da plataforma (não reduz seu valor)</span><span>{formatCurrency(data.incentivos_plataforma)}</span></div>
+          )}
+          {canal && taxaPct > 0 && (
             <div className="flex justify-between text-destructive">
               <span className="flex items-center gap-1">
                 <TrendingDown className="h-3 w-3" />
-                Comissão {canalMatch.nome} ({fmtNum(canalMatch.taxaTotal, 1)}%)
+                Comissão prevista do canal {canal.nome} ({fmtNum(taxaPct, 1)}%)
                 <Tooltip>
                   <TooltipTrigger><Info className="h-3 w-3" /></TooltipTrigger>
-                  <TooltipContent><p>Taxa configurada do canal.<br/>Não aparece no print mas é cobrada.</p></TooltipContent>
+                  <TooltipContent><p>O comprovante não mostra a comissão real.<br/>É a taxa cadastrada do canal, sobre os itens menos o desconto da loja.</p></TooltipContent>
                 </Tooltip>
               </span>
               <span className="font-medium">-{formatCurrency(comissao)}</span>
             </div>
           )}
-          {canalMatch && comissao === 0 && (
-            <div className="flex justify-between text-amber-600">
-              <span className="flex items-center gap-1">
-                <AlertTriangle className="h-3 w-3" />
-                Comissão {canalMatch.nome} (0%)
-                <Tooltip>
-                  <TooltipTrigger><Info className="h-3 w-3" /></TooltipTrigger>
-                  <TooltipContent><p>Canal encontrado mas sem taxas configuradas.<br/>Configure em Configurações → Canais de Venda.</p></TooltipContent>
-                </Tooltip>
-              </span>
-              <span>R$ 0,00</span>
+          {data.canal_proprio && !canalOverride && (
+            <div className="flex justify-between text-muted-foreground"><span>Cardápio próprio: sem comissão</span><span>R$ 0,00</span></div>
+          )}
+          {!data.canal_proprio && canal && taxaPct === 0 && (
+            <div className="flex justify-between text-amber-600"><span className="flex items-center gap-1"><AlertTriangle className="h-3 w-3" />Canal {canal.nome} sem taxa cadastrada</span><span>R$ 0,00</span></div>
+          )}
+          {!data.canal_proprio && !canal && (data.plataforma || canalOverride) && (
+            <div className="flex justify-between text-amber-600"><span className="flex items-center gap-1"><AlertTriangle className="h-3 w-3" />Canal "{canalOverride || data.plataforma}" não cadastrado: comissão não calculada</span><span>—</span></div>
+          )}
+          {data.taxa_servico > 0 && (
+            <div className="flex justify-between text-muted-foreground">
+              <span>Taxa de serviço (paga pelo cliente à plataforma)</span>
+              <span>{formatCurrency(data.taxa_servico)}</span>
             </div>
           )}
-          {!canalMatch && (data.plataforma || canalOverride) && (
-            <div className="flex justify-between text-amber-600">
-              <span className="flex items-center gap-1">
-                <AlertTriangle className="h-3 w-3" />
-                Comissão não calculada
-                <Tooltip>
-                  <TooltipTrigger><Info className="h-3 w-3" /></TooltipTrigger>
-                  <TooltipContent><p>Canal "{canalOverride || data.plataforma}" não encontrado.<br/>Configure em Configurações → Canais de Venda.</p></TooltipContent>
-                </Tooltip>
-              </span>
-              <span>—</span>
-            </div>
-          )}
-          {data.incentivos_plataforma > 0 && (
-            <div className="flex justify-between text-green-600">
-              <span className="flex items-center gap-1">
-                Incentivo {data.plataforma || 'plataforma'}
-                <Tooltip>
-                  <TooltipTrigger><Info className="h-3 w-3" /></TooltipTrigger>
-                  <TooltipContent><p>A plataforma paga este desconto.<br/>NÃO sai do seu bolso.</p></TooltipContent>
-                </Tooltip>
-              </span>
-              <span>-{formatCurrency(data.incentivos_plataforma)}</span>
-            </div>
-          )}
-          {data.incentivos_loja > 0 && (
-            <div className="flex justify-between text-destructive">
-              <span className="flex items-center gap-1">
-                <TrendingDown className="h-3 w-3" />
-                Incentivo da loja
-                <Tooltip>
-                  <TooltipTrigger><Info className="h-3 w-3" /></TooltipTrigger>
-                  <TooltipContent><p>Este desconto SAI DO SEU BOLSO.<br/>Reduz o que você recebe.</p></TooltipContent>
-                </Tooltip>
-              </span>
-              <span className="font-medium">-{formatCurrency(data.incentivos_loja)}</span>
-            </div>
-          )}
-          <div className="border-t pt-1 flex justify-between">
-            <span>Total pago pelo cliente</span>
-            <span>{formatCurrency(data.total_geral)}</span>
-          </div>
           <div className="border-t pt-1 flex justify-between font-bold text-primary">
-            <span>💰 Valor Líquido (seu)</span>
-            <span>{formatCurrency(valorLiquidoReal)}</span>
+            <span>Valor líquido dos produtos</span>
+            <span>{formatCurrency(liquido)}</span>
+          </div>
+          <div className="border-t pt-2 grid grid-cols-2 gap-2 text-xs">
+            <div className="space-y-1">
+              <Label className="text-xs">Quem entregou</Label>
+              <Select value={data.entrega_por || '__none__'} onValueChange={v => updateResult(resultIdx, { entrega_por: v === '__none__' ? null : v as 'loja' | 'plataforma' })}>
+                <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Não informado</SelectItem>
+                  <SelectItem value="loja">A loja</SelectItem>
+                  <SelectItem value="plataforma">A plataforma</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Taxa de entrega</Label>
+              <p className="h-7 flex items-center">{formatCurrency(data.taxa_entrega)}{data.entrega_por === 'loja' && data.taxa_entrega > 0 ? ' (receita da loja)' : ''}</p>
+            </div>
+            <div className="col-span-2 text-muted-foreground">
+              Pagamento: {data.forma_pagamento || 'não informado'} • {data.cobrar_do_cliente > 0 || data.canal_proprio
+                ? `recebido pela loja${data.cobrar_do_cliente > 0 ? ` na entrega (${formatCurrency(data.cobrar_do_cliente)})` : ''}`
+                : 'pago pela plataforma'}
+            </div>
           </div>
         </div>
       </div>
@@ -1091,13 +1107,34 @@ const ImportarVendasDialog: React.FC = () => {
                           {currentResult.isDuplicate && <Badge variant="destructive" className="text-xs">⚠️ Duplicata</Badge>}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {currentResult.data}{currentResult.cliente && ` • ${currentResult.cliente}`}
+                          {currentResult.cliente}{currentResult.telefone_cliente && ` • ${currentResult.telefone_cliente}`}
                         </p>
                       </div>
+                      <div className={`flex flex-wrap items-center gap-2 rounded-md p-2 ${!currentResult.data_confirmada ? 'border-2 border-amber-500 bg-amber-500/10' : ''}`}>
+                        <Label className="text-xs">Data da venda</Label>
+                        <Input type="date" className="h-8 w-40 text-sm" value={currentResult.data}
+                          onChange={e => updateResult(currentResultIndex, { data: e.target.value })} />
+                        {!currentResult.data_confirmada ? (
+                          <>
+                            <span className="text-xs text-amber-700">
+                              {currentResult.data_texto ? `Lido "${currentResult.data_texto}". Confira o ano.` : 'O comprovante não tem data.'}
+                            </span>
+                            <Button size="sm" className="h-7 text-xs" disabled={!currentResult.data} onClick={() => updateResult(currentResultIndex, { data_confirmada: true })}>Confirmar data</Button>
+                          </>
+                        ) : (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1"><CheckCircle2 className="h-3 w-3" />Data confirmada</span>
+                        )}
+                      </div>
+                      {currentResult.canal_proprio && currentResult.cliente && (
+                        <label className="flex items-center gap-2 text-xs">
+                          <Checkbox checked={currentResult.cadastrar_cliente} onCheckedChange={v => updateResult(currentResultIndex, { cadastrar_cliente: !!v })} />
+                          Cadastrar o cliente {currentResult.cliente}{currentResult.telefone_cliente ? ` (${currentResult.telefone_cliente})` : ''} em Clientes
+                        </label>
+                      )}
                     </div>
 
                     {/* Financial Breakdown */}
-                    <FinancialBreakdown data={currentResult} />
+                    <FinancialBreakdown data={currentResult} resultIdx={currentResultIndex} />
 
                     {/* Canal override */}
                     <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2">
@@ -1117,22 +1154,10 @@ const ImportarVendasDialog: React.FC = () => {
                       <div className="p-2 sm:p-3 border-b bg-muted/30 flex items-center justify-between">
                         <div>
                           <p className="text-sm font-medium">
-                            {currentResult.itens.length} itens • 
-                            <span className="text-muted-foreground ml-1">
-                              {currentResult.itens.filter(i => i.selected && i.produto_id).length} vinculados
-                              {(() => {
-                                const saved = currentResult.itens.filter(i => i.matchType === 'saved').length;
-                                const auto = currentResult.itens.filter(i => i.matchType === 'auto').length;
-                                const manual = currentResult.itens.filter(i => i.matchType === 'manual').length;
-                                const none = currentResult.itens.filter(i => !i.produto_id || i.matchType === 'none').length;
-                                const parts = [];
-                                if (saved > 0) parts.push(`${saved} 🔗`);
-                                if (auto > 0) parts.push(`${auto} ✨`);
-                                if (manual > 0) parts.push(`${manual} ✋`);
-                                if (none > 0) parts.push(`${none} sem vínculo`);
-                                return parts.length > 0 ? ` (${parts.join(', ')})` : '';
-                              })()}
-                            </span>
+                            {currentResult.itens.length} itens
+                            {pendenciasDoPedido(currentResult).itensPend > 0 && (
+                              <span className="text-amber-600 ml-1">• {pendenciasDoPedido(currentResult).itensPend} para escolher o produto</span>
+                            )}
                           </p>
                         </div>
                       </div>
@@ -1146,21 +1171,7 @@ const ImportarVendasDialog: React.FC = () => {
                                   <div className="flex items-center justify-between gap-2">
                                     <div className="flex items-center gap-1.5 min-w-0">
                                       <span className="font-medium text-sm truncate">{item.produto}</span>
-                                      {item.matchType === 'saved' && (
-                                        <span className="shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-primary/15 text-primary border border-primary/20" title="Vinculado por mapeamento salvo anteriormente">
-                                          🔗 Salvo
-                                        </span>
-                                      )}
-                                      {item.matchType === 'auto' && (
-                                        <span className="shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-accent text-accent-foreground border" title="Vinculado automaticamente por similaridade de nome">
-                                          ✨ Auto
-                                        </span>
-                                      )}
-                                      {item.matchType === 'manual' && (
-                                        <span className="shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-secondary text-secondary-foreground border" title="Vinculado manualmente por você">
-                                          ✋ Manual
-                                        </span>
-                                      )}
+                                      <VinculoBadge tipo={item.matchType} combo={item.componentes.length > 0} />
                                     </div>
                                     <span className="text-sm font-medium shrink-0">
                                       {item.quantidade > 1 && <span className="text-muted-foreground mr-1">{item.quantidade}×</span>}
@@ -1172,7 +1183,30 @@ const ImportarVendasDialog: React.FC = () => {
                                     value={item.produto_id || ''}
                                     onChange={(v) => handleLinkProduct(currentResultIndex, idx, v)}
                                     disabled={!item.selected}
+                                    semProduto={item.matchType === 'sem_produto'}
+                                    sugestoes={item.sugestoes}
                                   />
+                                  {item.componentes.length > 0 && (
+                                    <div className="pl-3 border-l-2 space-y-1.5">
+                                      <p className="text-[11px] text-muted-foreground">Itens do combo (valor zero, só para baixar estoque):</p>
+                                      {item.componentes.map((c, ci) => (
+                                        <div key={ci} className="space-y-1">
+                                          <div className="flex items-center gap-1.5 min-w-0">
+                                            <span className="text-xs truncate">{c.quantidade > 1 ? `${c.quantidade}× ` : ''}{c.produto}</span>
+                                            <VinculoBadge tipo={c.matchType} />
+                                          </div>
+                                          <ProductSearchSelect
+                                            produtos={produtos || []}
+                                            value={c.produto_id || ''}
+                                            onChange={(v) => handleLinkProduct(currentResultIndex, idx, v, ci)}
+                                            disabled={!item.selected}
+                                            semProduto={c.matchType === 'sem_produto'}
+                                            sugestoes={c.sugestoes}
+                                          />
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -1187,15 +1221,14 @@ const ImportarVendasDialog: React.FC = () => {
                         <span className="font-medium">Total: </span>
                         <span className="text-base sm:text-lg font-bold text-primary">{formatCurrency(totalPhotoValue)}</span>
                         <span className="text-muted-foreground text-xs ml-1">
-                          ({totalPhotoItemsLinked} de {totalPhotoItemsTotal} itens vinculados — {nonDuplicateResults.length} pedido(s))
-                          {totalPhotoItemsUnlinked > 0 && <span className="text-destructive"> • {totalPhotoItemsUnlinked} item(ns) sem vínculo</span>}
+                          ({totalPhotoItemsTotal} itens — {nonDuplicateResults.length} pedido(s), pelo subtotal do comprovante)
                           {photoDuplicateCount > 0 && <span className="text-destructive"> • {photoDuplicateCount} duplicata(s) ignorada(s)</span>}
                         </span>
                       </div>
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={() => { setPhotoStep('upload'); setAllPhotoResults([]); setMultiImages([]); }}>Voltar</Button>
-                        <Button size="sm" className="flex-1 sm:flex-none" onClick={() => importPhotoItemsMutation.mutate()} disabled={importPhotoItemsMutation.isPending || totalPhotoItemsLinked === 0 || totalPhotoItemsUnlinked > 0}>
-                          {importPhotoItemsMutation.isPending ? 'Importando...' : totalPhotoItemsUnlinked > 0 ? `Vincule ${totalPhotoItemsUnlinked} item(ns)` : `Importar ${totalPhotoItemsLinked} vendas`}
+                        <Button size="sm" className="flex-1 sm:flex-none" onClick={() => importPhotoItemsMutation.mutate()} disabled={importPhotoItemsMutation.isPending || nonDuplicateResults.length === 0 || temPendencia}>
+                          {importPhotoItemsMutation.isPending ? 'Importando...' : textoBotaoImportar}
                         </Button>
                       </div>
                     </div>
