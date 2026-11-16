@@ -661,9 +661,9 @@ const Estoque = () => {
                   renderMobileHeader={(m) => m.insumos?.nome}
                   renderMobileSubtitle={(m) => format(new Date(m.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                   renderMobileHighlight={(m) => m.tipo === 'entrada' ? (
-                    <Badge variant="outline" className="text-green-600 border-green-600"><ArrowUp className="h-3 w-3 mr-1" />+{fmtNum(Number(m.quantidade), 2)}</Badge>
+                    <Badge variant="outline" className="text-green-600 border-green-600"><ArrowUp className="h-3 w-3 mr-1" />+{formatQuantidadeBR(Number(m.quantidade))}</Badge>
                   ) : (
-                    <Badge variant="outline" className="text-red-600 border-red-600"><ArrowDown className="h-3 w-3 mr-1" />-{fmtNum(Number(m.quantidade), 2)}</Badge>
+                    <Badge variant="outline" className="text-red-600 border-red-600"><ArrowDown className="h-3 w-3 mr-1" />-{formatQuantidadeBR(Number(m.quantidade))}</Badge>
                   )}
                   emptyMessage={temFiltrosAtivos ? 'Nenhuma movimentação encontrada. Tente ajustar os filtros.' : 'Nenhuma movimentação registrada.'}
                   emptyAction={!temFiltrosAtivos ? (
