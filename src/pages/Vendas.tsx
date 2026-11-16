@@ -210,7 +210,6 @@ const Vendas = () => {
             <MobileDataView
               data={pagination.paginatedData}
               keyExtractor={(p) => p.id}
-              onRowClick={(p) => setPedidoAberto(p)}
               columns={[
                 { key: 'data', header: 'Data', mobilePriority: 2, render: (p) => (
                   <span className="text-muted-foreground whitespace-nowrap text-xs sm:text-sm">{format(parseDataLocal(p.data_venda), 'dd/MM/yy', { locale: ptBR })}</span>
