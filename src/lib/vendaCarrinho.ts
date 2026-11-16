@@ -63,3 +63,9 @@ export function diferencaEstoque(antes: { produto_id: string | null; quantidade:
   depois.forEach(i => i.produto_id && m.set(i.produto_id, (m.get(i.produto_id) || 0) + i.quantidade));
   return Object.fromEntries([...m.entries()].filter(([, v]) => v !== 0));
 }
+
+/** Conta pedidos (não itens): itens do mesmo pedido contam uma vez só. */
+export function contarPedidos(vendas: { id: string; pedido_id?: string | null }[] | null | undefined): number {
+  if (!vendas) return 0;
+  return new Set(vendas.map(v => v.pedido_id || v.id)).size;
+}

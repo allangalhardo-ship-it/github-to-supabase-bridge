@@ -1,3 +1,4 @@
+import { contarPedidos } from '@/lib/vendaCarrinho';
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -69,6 +70,7 @@ export const AnaliseVendas: React.FC<AnaliseVendasProps> = ({ onBack }) => {
         .from('vendas')
         .select(`
           id,
+          pedido_id,
           valor_total,
           quantidade,
           data_venda,
@@ -97,7 +99,7 @@ export const AnaliseVendas: React.FC<AnaliseVendasProps> = ({ onBack }) => {
 
     // Faturamento total
     const faturamentoTotal = vendas.reduce((acc, v) => acc + (v.valor_total || 0), 0);
-    const totalVendas = vendas.length;
+    const totalVendas = contarPedidos(vendas as any);
     const ticketMedio = faturamentoTotal / totalVendas;
 
     // Vendas por dia da semana
@@ -107,7 +109,7 @@ export const AnaliseVendas: React.FC<AnaliseVendasProps> = ({ onBack }) => {
         return dataVenda.getDay() === dia;
       });
       const total = vendasDoDia.reduce((acc, v) => acc + (v.valor_total || 0), 0);
-      const quantidade = vendasDoDia.length;
+      const quantidade = contarPedidos(vendasDoDia as any);
       return {
         dia: diasSemana[dia],
         diaCompleto: ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][dia],
@@ -121,7 +123,7 @@ export const AnaliseVendas: React.FC<AnaliseVendasProps> = ({ onBack }) => {
     const vendasPorCanal = canaisUnicos.map((canal) => {
       const vendasDoCanal = vendas.filter((v) => (v.canal || 'balcao') === canal);
       const total = vendasDoCanal.reduce((acc, v) => acc + (v.valor_total || 0), 0);
-      const quantidade = vendasDoCanal.length;
+      const quantidade = contarPedidos(vendasDoCanal as any);
       return {
         canal: canal.charAt(0).toUpperCase() + canal.slice(1),
         faturamento: total,
@@ -167,7 +169,7 @@ export const AnaliseVendas: React.FC<AnaliseVendasProps> = ({ onBack }) => {
         data: format(data, 'dd/MM'),
         dataCompleta: format(data, "dd 'de' MMMM", { locale: ptBR }),
         faturamento: total,
-        quantidade: vendasDoDia.length,
+        quantidade: contarPedidos(vendasDoDia as any),
       };
     });
 

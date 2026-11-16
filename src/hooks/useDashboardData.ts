@@ -1,3 +1,4 @@
+import { contarPedidos } from '@/lib/vendaCarrinho';
 import { encontrarCanal } from "@/lib/canalUtils";
 import { useState, useMemo } from 'react';
 import React from 'react';
@@ -210,17 +211,19 @@ export function useDashboardData() {
 
   // Calculations
   const receitaBruta = vendas?.reduce((sum, v) => sum + Number(v.valor_total), 0) || 0;
-  const totalVendas = vendas?.length || 0;
+  // Ticket médio e contagem são por PEDIDO, não por item
+  const totalVendas = contarPedidos(vendas as any);
   const ticketMedio = totalVendas > 0 ? receitaBruta / totalVendas : 0;
 
   const ticketPorCanal = React.useMemo(() => {
     if (!vendas || vendas.length === 0) return [];
-    const porCanal: Record<string, { total: number; quantidade: number }> = {};
-    vendas.forEach((venda) => {
+    const porCanal: Record<string, { total: number; quantidade: number; pedidos: Set<string> }> = {};
+    vendas.forEach((venda: any) => {
       const canal = venda.canal || 'Direto';
-      if (!porCanal[canal]) porCanal[canal] = { total: 0, quantidade: 0 };
+      if (!porCanal[canal]) porCanal[canal] = { total: 0, quantidade: 0, pedidos: new Set() };
       porCanal[canal].total += Number(venda.valor_total);
-      porCanal[canal].quantidade += 1;
+      porCanal[canal].pedidos.add(venda.pedido_id || venda.id);
+      porCanal[canal].quantidade = porCanal[canal].pedidos.size;
     });
     return Object.entries(porCanal)
       .map(([canal, dados]) => ({ canal: canal.charAt(0).toUpperCase() + canal.slice(1), ticketMedio: dados.quantidade > 0 ? dados.total / dados.quantidade : 0, quantidade: dados.quantidade }))
