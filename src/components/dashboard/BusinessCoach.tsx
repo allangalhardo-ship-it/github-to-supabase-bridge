@@ -1,6 +1,7 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { usePrecoUnico } from '@/hooks/usePrecoUnico';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
@@ -139,6 +140,7 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
   const navigate = useNavigate();
   const { usuario } = useAuth();
   const queryClient = useQueryClient();
+  const { precoDe } = usePrecoUnico();
   const [insightsPopoverOpen, setInsightsPopoverOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [lastSavedHeadline, setLastSavedHeadline] = useState<string | null>(null);
@@ -242,7 +244,7 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
 
       produtos.forEach((produto) => {
         const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any, produto.rendimento_padrao || 1);
-        const preco = Number(produto.preco_venda) || 0;
+        const preco = precoDe(produto);
         if (custoInsumos <= 0 || preco <= 0) return;
 
         const cmvAtual = (custoInsumos / preco) * 100;
@@ -337,8 +339,9 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
           
           if (custoInsumos === 0) return null;
           
-          const margem = produto.preco_venda > 0 
-            ? ((produto.preco_venda - custoInsumos) / produto.preco_venda) * 100 
+          const precoBalcao = precoDe(produto);
+          const margem = precoBalcao > 0 
+            ? ((precoBalcao - custoInsumos) / precoBalcao) * 100 
             : 0;
           
           const vendasProduto = vendas.filter(v => v.produto_id === produto.id).length;
@@ -439,7 +442,7 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
     }
     
     return main;
-  }, [vendas, produtos, canaisConfigurados, config, custosFixos, historicoPrecos, periodo, margemMeta, custoFixoMensal, formatCurrency]);
+  }, [vendas, produtos, canaisConfigurados, config, custosFixos, historicoPrecos, periodo, margemMeta, custoFixoMensal, formatCurrency, precoDe]);
 
   // Query para buscar histórico
   const { data: coachHistorico } = useQuery({
