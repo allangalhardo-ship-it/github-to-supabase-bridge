@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -219,13 +220,38 @@ const CustosFixos = () => {
 
   const formatCurrency = formatCurrencyBRL;
 
+  const inicioMes = format(startOfMonth(new Date()), 'yyyy-MM-dd');
+  const fimMes = format(endOfMonth(new Date()), 'yyyy-MM-dd');
+  const { data: vendasMes } = useQuery({
+    queryKey: ['custos-fixos-faturado-mes', usuario?.empresa_id, inicioMes],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('vendas')
+        .select('valor_total')
+        .eq('empresa_id', usuario!.empresa_id)
+        .gte('data_venda', inicioMes)
+        .lte('data_venda', fimMes);
+      if (error) throw error;
+      return (data || []).reduce((acc, v) => acc + Number(v.valor_total || 0), 0);
+    },
+    enabled: !!usuario?.empresa_id,
+  });
+
   const totalMensal = custos?.reduce((sum, c) => sum + Number(c.valor_mensal), 0) || 0;
-  const faturamento = configuracoes?.faturamento_mensal || 0;
-  const percentualCustoFixo = faturamento > 0 ? (totalMensal / faturamento) * 100 : 0;
+  const metaFaturamento = configuracoes?.faturamento_mensal || 0;
+  // Faturado no mês atual: mesma conta do DRE (soma de vendas.valor_total do mês)
+  const faturadoMes = vendasMes || 0;
+  const percentualMeta = metaFaturamento > 0 ? (totalMensal / metaFaturamento) * 100 : 0;
+  const percentualFaturado = faturadoMes > 0 ? (totalMensal / faturadoMes) * 100 : 0;
+  // Base usada na classificação: meta quando informada; senão, o faturado no mês
+  const baseClassificacao: 'meta' | 'faturado' = metaFaturamento > 0 ? 'meta' : 'faturado';
+  const faturamento = baseClassificacao === 'meta' ? metaFaturamento : faturadoMes;
+  const percentualCustoFixo = baseClassificacao === 'meta' ? percentualMeta : percentualFaturado;
+  const rotuloBase = baseClassificacao === 'meta' ? 'sobre a meta de faturamento' : 'sobre o faturado no mês';
 
   const getHealthStatus = (percentual: number) => {
     if (percentual === 0 || faturamento === 0) {
-      return { label: 'Informe o faturamento', color: 'text-muted-foreground', bgColor: 'bg-muted', icon: AlertCircle, status: 'neutral' };
+      return { label: 'Informe a meta', color: 'text-muted-foreground', bgColor: 'bg-muted', icon: AlertCircle, status: 'neutral' };
     }
     if (percentual <= 20) {
       return { label: 'Saudável', color: 'text-green-600', bgColor: 'bg-green-100', icon: CheckCircle2, status: 'healthy' };
@@ -342,7 +368,7 @@ const CustosFixos = () => {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-primary" />
-                <Label className="text-base font-medium">Faturamento Mensal</Label>
+                <Label className="text-base font-medium">Meta de faturamento mensal</Label>
               </div>
               
               {isEditingFaturamento ? (
@@ -377,13 +403,13 @@ const CustosFixos = () => {
                     onClick={() => setIsEditingFaturamento(true)}
                   >
                     <span className="text-2xl font-bold">
-                      {faturamento > 0 ? formatCurrency(faturamento) : 'R$ 0,00'}
+                      {metaFaturamento > 0 ? formatCurrency(metaFaturamento) : 'R$ 0,00'}
                     </span>
                     <Button size="sm" variant="ghost" className="h-7 px-2">
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                  {faturamento === 0 && totalMensal > 0 && (
+                  {metaFaturamento === 0 && faturadoMes === 0 && totalMensal > 0 && (
                     <div className="space-y-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                       <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
                         💡 Para seus custos fixos ficarem saudáveis (até 20%):
@@ -392,13 +418,13 @@ const CustosFixos = () => {
                         Fature pelo menos {formatCurrency(totalMensal / 0.20)}/mês
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Clique acima para informar seu faturamento atual
+                        Clique acima para informar sua meta de faturamento
                       </p>
                     </div>
                   )}
-                  {faturamento === 0 && totalMensal === 0 && (
+                  {metaFaturamento === 0 && faturadoMes === 0 && totalMensal === 0 && (
                     <p className="text-sm text-muted-foreground">
-                      Clique para informar seu faturamento mensal
+                      Clique para informar sua meta de faturamento mensal
                     </p>
                   )}
                 </div>
@@ -417,12 +443,26 @@ const CustosFixos = () => {
                   <span className={`font-medium ${healthStatus.color}`}>
                     {healthStatus.label}
                   </span>
+                  {faturamento > 0 && <span className="text-[10px] text-muted-foreground hidden sm:inline">({rotuloBase})</span>}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className={`rounded-lg border p-2.5 ${baseClassificacao === 'meta' ? 'border-primary/40' : ''}`}>
+                  <p className="text-xs text-muted-foreground">sobre a meta de faturamento</p>
+                  <p className="text-lg font-bold">{metaFaturamento > 0 ? `${fmtNum(percentualMeta, 1)}%` : '—'}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">meta {formatCurrency(metaFaturamento)}</p>
+                </div>
+                <div className={`rounded-lg border p-2.5 ${baseClassificacao === 'faturado' ? 'border-primary/40' : ''}`}>
+                  <p className="text-xs text-muted-foreground">sobre o faturado no mês</p>
+                  <p className="text-lg font-bold">{faturadoMes > 0 ? `${fmtNum(percentualFaturado, 1)}%` : '—'}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">vendido {formatCurrency(faturadoMes)} (igual ao DRE)</p>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Percentual do Faturamento</span>
+                  <span className="text-muted-foreground">Classificação {rotuloBase}</span>
                   <span className={`font-bold ${faturamento > 0 ? healthStatus.color : 'text-muted-foreground'}`}>
                     {faturamento > 0 ? `${fmtNum(percentualCustoFixo, 1)}%` : '—'}
                   </span>
@@ -446,13 +486,13 @@ const CustosFixos = () => {
 
               {faturamento > 0 && percentualCustoFixo <= 20 && (
                 <p className="text-sm text-green-600">
-                  ✓ Seus custos fixos estão controlados e dentro do ideal para um negócio saudável.
+                  ✓ Calculado {rotuloBase}: seus custos fixos estão controlados e dentro do ideal para um negócio saudável.
                 </p>
               )}
 
               {faturamento > 0 && percentualCustoFixo > 20 && percentualCustoFixo <= 25 && (
                 <p className="text-sm text-yellow-600">
-                  ⚠️ Seus custos fixos estão próximos do limite. Fique atento para não ultrapassar 25%.
+                  ⚠️ Calculado {rotuloBase}: seus custos fixos estão próximos do limite. Fique atento para não ultrapassar 25%.
                 </p>
               )}
 
@@ -468,11 +508,11 @@ const CustosFixos = () => {
 
                 return (
                   <div className="text-sm text-red-600 space-y-2">
-                    <p>⚠️ Seus custos fixos estão acima de 25% do faturamento. Considere revisar suas despesas.</p>
+                    <p>⚠️ Calculado {rotuloBase}: seus custos fixos estão acima de 25%. Considere revisar suas despesas.</p>
                     <div className="bg-red-50 dark:bg-red-950/30 p-3 rounded-lg space-y-1">
-                      <p className="font-medium">Para alcançar uma margem saudável (20%):</p>
+                      <p className="font-medium">Para chegar a 20% {rotuloBase}:</p>
                       <p>• Reduza <strong>{formatCurrency(reducaoCustos)}</strong> em custos fixos, ou</p>
-                      <p>• Aumente o faturamento em <strong>{formatCurrency(aumentoFaturamento)}</strong></p>
+                      <p>• Aumente {baseClassificacao === 'meta' ? 'a meta de faturamento' : 'o faturamento do mês'} em <strong>{formatCurrency(aumentoFaturamento)}</strong></p>
                     </div>
                   </div>
                 );
