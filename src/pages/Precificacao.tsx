@@ -14,6 +14,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePrecosCanais, sincronizarBalcaoComBase } from '@/hooks/usePrecosCanais';
+import { usePrecoUnico } from '@/hooks/usePrecoUnico';
+import { canalPrincipal } from '@/lib/precoCanalUtils';
 import { Link } from 'react-router-dom';
 import { formatCurrencyBRL, fmtNum } from '@/lib/format';
 import {
@@ -61,6 +63,19 @@ const Precificacao = () => {
     config,
     isLoading,
   } = useMenuEngineering(periodo);
+
+  const { canais: canaisAtivos, precos: precosTodos } = usePrecoUnico();
+  // Canais (exceto o Balcão) com produtos ainda sem preço próprio definido
+  const canaisSemPreco = useMemo(() => {
+    const principalId = canalPrincipal(canaisAtivos)?.id;
+    return canaisAtivos
+      .filter(c => c.id !== principalId)
+      .map(c => {
+        const faltando = produtosAnalisados.filter(p => !precosTodos.some(x => x.produto_id === p.id && x.canal === c.id && Number(x.preco) > 0));
+        return { canal: c, faltando };
+      })
+      .filter(x => x.faltando.length > 0);
+  }, [canaisAtivos, precosTodos, produtosAnalisados]);
 
   const semVendasNoPeriodo = !produtosAnalisados.some(p => p.quantidadeVendida > 0);
 
@@ -267,6 +282,18 @@ const Precificacao = () => {
           </AlertDescription>
         </Alert>
       )}
+
+      {canaisSemPreco.map(({ canal, faltando }) => (
+        <Alert key={canal.id} className="border-warning/40 bg-warning/5">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+            <span>{faltando.length} produto{faltando.length > 1 ? 's' : ''} sem preço revisado no canal {canal.nome}.</span>
+            <Button size="sm" variant="outline" onClick={() => handleSelectProduto(faltando[0])}>
+              Revisar no simulador
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ))}
 
       {/* Verificar se há produtos */}
       {produtosAnalisados.length === 0 ? (
