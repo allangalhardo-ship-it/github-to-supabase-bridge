@@ -723,6 +723,7 @@ const Caixa = () => {
                     { key: 'origem', header: 'Origem', mobilePriority: 5, hideOnMobile: true, render: (m) => {
                       if (m.origem === 'venda') return <Badge variant="outline" className="gap-1 text-[10px] px-1.5 py-0"><ShoppingCart className="h-3 w-3" />Venda</Badge>;
                       if (m.origem === 'nota') return <Badge variant="outline" className="gap-1 text-[10px] px-1.5 py-0"><Receipt className="h-3 w-3" />NF-e</Badge>;
+                      if (m.origem !== 'manual') return <Badge variant="outline" className="gap-1 text-[10px] px-1.5 py-0">Automático</Badge>;
                       return <Badge variant="secondary" className="gap-1 text-[10px] px-1.5 py-0">Manual</Badge>;
                     }},
                     { key: 'acoes', header: '', align: 'right', mobilePriority: 7, render: (m) => renderAcoes(m) },
