@@ -1,368 +1,115 @@
 import React, { useState, useMemo } from 'react';
 import { BotChef } from '@/components/brand/BotChef';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { invalidateEmpresaCachesAndRefetch } from '@/lib/queryConfig';
-import { storePendingAction } from '@/lib/offlineStorage';
 import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/ui/pagination-controls';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { SearchableSelect } from '@/components/ui/searchable-select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { MobileDataView } from '@/components/ui/mobile-data-view';
-import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Package, User, Filter, DollarSign, ShoppingCart, Upload, TrendingUp, TrendingDown } from 'lucide-react';
+import { Plus, Package, Filter, DollarSign, ShoppingCart, AlertTriangle, ChevronRight } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import ImportarVendasDialog from '@/components/vendas/ImportarVendasDialog';
-import { formatCurrencyBRL, parseDataLocal, formatCanalLabel, fmtNum } from '@/lib/format';
+import VendaRapidaDialog, { PedidoParaEditar } from '@/components/vendas/VendaRapidaDialog';
+import PedidoDetalheDialog, { PedidoLista, ORIGEM_LABEL } from '@/components/vendas/PedidoDetalheDialog';
+import { formatCurrencyBRL, parseDataLocal } from '@/lib/format';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import ContextualTip from '@/components/onboarding/ContextualTip';
-import { calcularCustoFicha } from '@/utils/custoFicha';
-import { usePrecoUnico } from '@/hooks/usePrecoUnico';
-
-interface Cliente {
-  id: string;
-  nome: string;
-  whatsapp: string | null;
-}
 
 const Vendas = () => {
   const { usuario } = useAuth();
-  const { toast } = useToast();
-  const [dialogOpen, setDialogOpen] = useState(false);
-  
-  // Filtros
+  const [vendaRapidaAberta, setVendaRapidaAberta] = useState(false);
+  const [pedidoEditar, setPedidoEditar] = useState<PedidoParaEditar | null>(null);
+  const [pedidoAberto, setPedidoAberto] = useState<PedidoLista | null>(null);
+
   const [filtroDataInicio, setFiltroDataInicio] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [filtroDataFim, setFiltroDataFim] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
   const [filtroProduto, setFiltroProduto] = useState<string>('todos');
   const [filtroCanal, setFiltroCanal] = useState<string>('todos');
   const [filtroOrigem, setFiltroOrigem] = useState<string>('todos');
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [vendaToDelete, setVendaToDelete] = useState<string | null>(null);
-  
-  const [formData, setFormData] = useState({
-    produto_id: '',
-    quantidade: '1',
-    valor_unitario: '',
-    valor_total: '',
-    canal: 'balcao',
-    data_venda: format(new Date(), 'yyyy-MM-dd'),
-    tipo_venda: 'direto' as 'direto' | 'app',
-    cliente_id: '',
-  });
 
-  // Fetch produtos para o select com ficha técnica para calcular custo
+  const { canaisConfigurados } = usePrecosCanais();
+
   const { data: produtos } = useQuery({
-    queryKey: ['produtos-select', usuario?.empresa_id],
+    queryKey: ['produtos-filtro-vendas', usuario?.empresa_id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('produtos')
-        .select(`
-          id, 
-          nome, 
-          preco_venda,
-          rendimento_padrao,
-          fichas_tecnicas (
-            quantidade,
-            insumos (
-              custo_unitario
-            )
-          )
-        `)
-        .eq('ativo', true)
-        .eq('empresa_id', usuario?.empresa_id!)
-        .order('nome');
-
+      const { data, error } = await supabase.from('produtos').select('id, nome').eq('empresa_id', usuario!.empresa_id).order('nome');
       if (error) throw error;
       return data;
     },
     enabled: !!usuario?.empresa_id,
   });
 
-  // Hook para buscar canais configurados e preços por canal
-  const { canaisConfigurados, todosPrecos, getPrecoCanal } = usePrecosCanais();
-  const { precoDe } = usePrecoUnico();
-
-  // Apps de delivery (canais tipo app_delivery ativos)
-  const appsDeliveryList = canaisConfigurados?.filter(c => c.tipo === 'app_delivery') || [];
-
-  // Fetch clientes para vendas diretas
-  const { data: clientes } = useQuery({
-    queryKey: ['clientes', usuario?.empresa_id],
+  // Uma linha por pedido, com seus itens
+  const { data: pedidos, isLoading } = useQuery({
+    queryKey: ['vendas', 'pedidos', usuario?.empresa_id, filtroDataInicio, filtroDataFim],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('clientes')
-        .select('id, nome, whatsapp')
-        .order('nome');
-      if (error) throw error;
-      return data as Cliente[];
-    },
-    enabled: !!usuario?.empresa_id,
-  });
-
-  // Apps de delivery (nomes dos canais tipo app_delivery)
-  const appsDelivery = appsDeliveryList.map(c => c.nome);
-
-  // Fetch vendas com filtro de data
-  const { data: vendas, isLoading } = useQuery({
-    queryKey: ['vendas', usuario?.empresa_id, filtroDataInicio, filtroDataFim],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('vendas')
-        .select(`
-          *,
-          produtos (nome),
-          clientes (nome)
-        `)
+        .from('vendas_pedidos' as any)
+        .select('*, canais_venda (nome), clientes (nome), vendas (id, produto_id, descricao_produto, quantidade, preco_unitario, valor_total, produtos (nome))')
+        .eq('empresa_id', usuario!.empresa_id)
         .gte('data_venda', filtroDataInicio)
         .lte('data_venda', filtroDataFim)
         .order('data_venda', { ascending: false })
-        .order('created_at', { ascending: false });
-
+        .order('created_at', { ascending: false })
+        .limit(5000);
       if (error) throw error;
-      return data;
+      return (data || []) as unknown as PedidoLista[];
     },
     enabled: !!usuario?.empresa_id,
   });
 
-  // Filtrar vendas localmente
-  const vendasFiltradas = useMemo(() => {
-    if (!vendas) return [];
-    
-    return vendas.filter(venda => {
-      if (filtroProduto !== 'todos' && venda.produto_id !== filtroProduto) return false;
-      if (filtroCanal !== 'todos' && venda.canal !== filtroCanal) return false;
-      if (filtroOrigem !== 'todos' && venda.origem !== filtroOrigem) return false;
-      return true;
-    });
-  }, [vendas, filtroProduto, filtroCanal, filtroOrigem]);
-
-  // Calcular totalizadores
-  const totais = useMemo(() => {
-    const totalValor = vendasFiltradas.reduce((acc, v) => acc + Number(v.valor_total), 0);
-    const totalQuantidade = vendasFiltradas.reduce((acc, v) => acc + Number(v.quantidade), 0);
-    const totalVendas = vendasFiltradas.length;
-    const totalTaxaServico = vendasFiltradas.reduce((acc, v) => acc + Number(v.taxa_servico || 0), 0);
-    const totalIncentivoLoja = vendasFiltradas.reduce((acc, v) => acc + Number(v.incentivo_loja || 0), 0);
-    const totalIncentivoPlataforma = vendasFiltradas.reduce((acc, v) => acc + Number(v.incentivo_plataforma || 0), 0);
-    const totalLiquido = vendasFiltradas.reduce((acc, v) => acc + Number(v.valor_liquido || v.valor_total || 0), 0);
-    return { totalValor, totalQuantidade, totalVendas, totalTaxaServico, totalIncentivoLoja, totalIncentivoPlataforma, totalLiquido };
-  }, [vendasFiltradas]);
-
-  // Paginação da lista (evita renderizar centenas de linhas de uma vez)
-  const vendasPagination = usePagination(vendasFiltradas, { pageSize: 30 });
-
-  // Extrair canais únicos para o filtro
-  const canaisUnicos = useMemo(() => {
-    if (!vendas) return [];
-    const canais = new Set(vendas.map(v => v.canal).filter(Boolean));
-    return Array.from(canais) as string[];
-  }, [vendas]);
-
-  const createMutation = useMutation({
-    mutationFn: async (data: typeof formData): Promise<{ queued: boolean }> => {
-      const produto = produtos?.find(p => p.id === data.produto_id);
-      
-      // Define canal baseado no tipo de venda
-      // O cliente fica só em cliente_id; o canal continua o escolhido
-      const canal = data.canal || 'balcao';
-
-      const payload = {
-        empresa_id: usuario!.empresa_id,
-        produto_id: data.produto_id || null,
-        descricao_produto: produto?.nome || null,
-        quantidade: parseFloat(data.quantidade) || 1,
-        valor_total: parseFloat(data.valor_total) || 0,
-        canal: canal,
-        data_venda: data.data_venda,
-        origem: 'manual',
-        tipo_venda: data.tipo_venda,
-        cliente_id: data.tipo_venda === 'direto' ? (data.cliente_id || null) : null,
-      };
-
-      // Sem internet: guarda no aparelho e sincroniza quando a conexão voltar
-      if (!navigator.onLine) {
-        await storePendingAction({
-          type: 'insert',
-          table: 'vendas',
-          data: payload,
-          label: `Venda ${produto?.nome || ''}`.trim(),
-        });
-        return { queued: true };
-      }
-
-      const { error } = await supabase.from('vendas').insert(payload);
-      if (error) {
-        // Falha de rede (não de validação): também vai para a fila
-        const isNetworkError = /fetch|network|failed to fetch|timeout/i.test(error.message || '');
-        if (isNetworkError) {
-          await storePendingAction({
-            type: 'insert',
-            table: 'vendas',
-            data: payload,
-            label: `Venda ${produto?.nome || ''}`.trim(),
-          });
-          return { queued: true };
-        }
-        throw error;
-      }
-      return { queued: false };
+  // Pedidos de qualquer data com canal para revisar
+  const { data: qtdRevisar } = useQuery({
+    queryKey: ['vendas', 'revisar-canal', usuario?.empresa_id],
+    queryFn: async () => {
+      const { count } = await supabase.from('vendas_pedidos' as any).select('id', { count: 'exact', head: true })
+        .eq('empresa_id', usuario!.empresa_id).is('canal_id', null);
+      return count || 0;
     },
-    onSuccess: (result) => {
-      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
-      toast(
-        result.queued
-          ? { title: 'Venda guardada no aparelho', description: 'Ela entra no sistema assim que a internet voltar.' }
-          : { title: 'Venda registrada!' }
-      );
-      resetForm();
-    },
-    onError: (error) => {
-      toast({ title: 'Erro ao registrar', description: error.message, variant: 'destructive' });
-    },
+    enabled: !!usuario?.empresa_id,
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('vendas').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      invalidateEmpresaCachesAndRefetch(usuario?.empresa_id);
-      toast({ title: 'Venda excluída!' });
-      setDeleteConfirmOpen(false);
-      setVendaToDelete(null);
-    },
-    onError: (error) => {
-      toast({ title: 'Erro ao excluir', description: error.message, variant: 'destructive' });
-    },
-  });
+  const filtrados = useMemo(() => (pedidos || []).filter(p => {
+    if (filtroProduto !== 'todos' && !p.vendas.some(v => v.produto_id === filtroProduto)) return false;
+    if (filtroCanal === 'revisar' && p.canal_id) return false;
+    if (filtroCanal !== 'todos' && filtroCanal !== 'revisar' && p.canal_id !== filtroCanal) return false;
+    if (filtroOrigem !== 'todos' && p.origem !== filtroOrigem) return false;
+    return true;
+  }), [pedidos, filtroProduto, filtroCanal, filtroOrigem]);
 
-  const resetForm = () => {
-    setFormData({
-      produto_id: '',
-      quantidade: '1',
-      valor_unitario: '',
-      valor_total: '',
-      canal: 'balcao',
-      data_venda: format(new Date(), 'yyyy-MM-dd'),
-      tipo_venda: 'direto',
-      cliente_id: '',
+  const totais = useMemo(() => ({
+    totalValor: filtrados.reduce((a, p) => a + Number(p.valor_bruto), 0),
+    totalLiquido: filtrados.reduce((a, p) => a + Number(p.valor_liquido), 0),
+    totalVendas: filtrados.length,
+    totalQuantidade: filtrados.reduce((a, p) => a + p.vendas.reduce((b, v) => b + Number(v.quantidade), 0), 0),
+  }), [filtrados]);
+
+  const pagination = usePagination(filtrados, { pageSize: 30 });
+  const origens = useMemo(() => Array.from(new Set((pedidos || []).map(p => p.origem))), [pedidos]);
+  const fmt = formatCurrencyBRL;
+  const nomeItens = (p: PedidoLista) => p.vendas.map(v => `${Number(v.quantidade)}× ${v.produtos?.nome || v.descricao_produto || 'Item'}`).join(', ');
+  const canalNome = (p: PedidoLista) => p.canais_venda?.nome || p.canal_texto || 'Sem canal';
+
+  const abrirEdicao = (p: PedidoLista) => {
+    setPedidoAberto(null);
+    setPedidoEditar({
+      id: p.id, canal_id: p.canal_id, cliente_id: p.cliente_id, forma_pagamento: p.forma_pagamento,
+      data_venda: p.data_venda, desconto: Number(p.desconto), taxa_entrega: Number(p.taxa_entrega),
+      itens: p.vendas.map(v => ({
+        id: v.id, produto_id: v.produto_id, descricao: v.produtos?.nome || v.descricao_produto || 'Item',
+        quantidade: Number(v.quantidade),
+        preco_unitario: Number(v.preco_unitario ?? (Number(v.quantidade) > 0 ? Number(v.valor_total) / Number(v.quantidade) : 0)),
+      })),
     });
-    setDialogOpen(false);
+    setVendaRapidaAberta(true);
   };
-
-  const handleProdutoChange = (produtoId: string) => {
-    const produto = produtos?.find(p => p.id === produtoId);
-    // Buscar preço do canal atual, se existir
-    const canalConfig = formData.tipo_venda === 'app' 
-      ? appsDeliveryList.find(c => c.nome === formData.canal)
-      : canaisConfigurados?.find(c => c.tipo === 'presencial');
-    const canalId = canalConfig?.id || formData.canal;
-    const precoCanal = produto ? getPrecoCanal(produtoId, canalId, precoDe(produto)) : 0;
-    const valorUnitario = precoCanal.toString();
-    const quantidade = parseFloat(formData.quantidade) || 1;
-    const valorTotal = valorUnitario ? (parseFloat(valorUnitario) * quantidade).toFixed(2) : '';
-    
-    setFormData({
-      ...formData,
-      produto_id: produtoId,
-      valor_unitario: valorUnitario,
-      valor_total: valorTotal,
-    });
-  };
-
-  // Atualizar preço quando mudar o canal
-  const handleCanalChange = (canal: string) => {
-    if (!formData.produto_id) {
-      setFormData({ ...formData, canal });
-      return;
-    }
-    
-    const produto = produtos?.find(p => p.id === formData.produto_id);
-    if (!produto) {
-      setFormData({ ...formData, canal });
-      return;
-    }
-
-    // Buscar preço do novo canal
-    const canalConfig = formData.tipo_venda === 'app' 
-      ? appsDeliveryList.find(c => c.nome === canal)
-      : canaisConfigurados?.find(c => c.tipo === 'presencial');
-    const canalId = canalConfig?.id || canal;
-    const precoCanal = getPrecoCanal(formData.produto_id, canalId, precoDe(produto));
-    const quantidade = parseFloat(formData.quantidade) || 1;
-    const valorTotal = (precoCanal * quantidade).toFixed(2);
-    
-    setFormData({
-      ...formData,
-      canal,
-      valor_unitario: precoCanal.toString(),
-      valor_total: valorTotal,
-    });
-  };
-
-  const handleQuantidadeChange = (quantidade: string) => {
-    const qtd = parseFloat(quantidade) || 0;
-    const valorUnitario = parseFloat(formData.valor_unitario) || 0;
-    const valorTotal = (qtd * valorUnitario).toFixed(2);
-    
-    setFormData({
-      ...formData,
-      quantidade,
-      valor_total: valorUnitario > 0 ? valorTotal : formData.valor_total,
-    });
-  };
-
-  const handleValorUnitarioChange = (valorUnitario: string) => {
-    const unitario = parseFloat(valorUnitario) || 0;
-    const quantidade = parseFloat(formData.quantidade) || 1;
-    const valorTotal = (quantidade * unitario).toFixed(2);
-    
-    setFormData({
-      ...formData,
-      valor_unitario: valorUnitario,
-      valor_total: valorTotal,
-    });
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    createMutation.mutate(formData);
-  };
-
-  // Calcular custo e lucro estimado do produto selecionado
-  const calcularLucroEstimado = () => {
-    if (!formData.produto_id || !formData.valor_total) return null;
-    
-    const produto = produtos?.find(p => p.id === formData.produto_id);
-    if (!produto) return null;
-    
-    // Calcular custo unitário do produto (soma dos insumos da ficha técnica)
-    const custoUnitario = calcularCustoFicha((produto.fichas_tecnicas || []) as any, (produto as any).rendimento_padrao || 1);
-    
-    const quantidade = parseFloat(formData.quantidade) || 1;
-    const valorTotal = parseFloat(formData.valor_total) || 0;
-    const custoTotal = custoUnitario * quantidade;
-    const lucro = valorTotal - custoTotal;
-    const margem = valorTotal > 0 ? (lucro / valorTotal) * 100 : 0;
-    
-    return { custoUnitario, custoTotal, lucro, margem };
-  };
-
-  const lucroEstimado = calcularLucroEstimado();
-
-  const formatCurrency = formatCurrencyBRL;
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -379,495 +126,162 @@ const Vendas = () => {
             <p className="text-sm sm:text-base text-muted-foreground">Registre e acompanhe suas vendas</p>
           </div>
         </div>
-
         <div className="flex flex-wrap gap-2">
-          <Dialog open={dialogOpen} onOpenChange={(open) => {
-            setDialogOpen(open);
-            if (!open) resetForm();
-          }}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Nova Venda
-              </Button>
-            </DialogTrigger>
-          <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Registrar Venda</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="produto">Produto</Label>
-                <SearchableSelect
-                  options={produtos?.map((produto) => ({
-                    value: produto.id,
-                    label: `${produto.nome} - ${formatCurrency(precoDe(produto))}`,
-                    searchTerms: produto.nome,
-                    icon: <Package className="h-3 w-3 text-primary" />,
-                  })) || []}
-                  value={formData.produto_id}
-                  onValueChange={handleProdutoChange}
-                  placeholder="Buscar produto..."
-                  searchPlaceholder="Digite para buscar..."
-                  emptyMessage="Nenhum produto encontrado."
-                />
-              </div>
-              
-              {/* Layout responsivo: 2 colunas no mobile, 3 no desktop */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="quantidade" className="text-xs sm:text-sm">Qtd</Label>
-                  <Input
-                    id="quantidade"
-                    type="number"
-                    step="1"
-                    min="1"
-                    value={formData.quantidade}
-                    onChange={(e) => handleQuantidadeChange(e.target.value)}
-                    className="text-base"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="valor_unitario" className="text-xs sm:text-sm">Valor Unit.</Label>
-                  <Input
-                    id="valor_unitario"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.valor_unitario}
-                    onChange={(e) => handleValorUnitarioChange(e.target.value)}
-                    className="text-base"
-                    placeholder="R$"
-                    required
-                  />
-                </div>
-                <div className="space-y-2 col-span-2 sm:col-span-1">
-                  <Label htmlFor="valor_total" className="text-xs sm:text-sm">Total</Label>
-                  <Input
-                    id="valor_total"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.valor_total}
-                    className="bg-muted/50 text-base font-semibold"
-                    readOnly
-                  />
-                </div>
-              </div>
-
-              {/* Card de Lucro Estimado - mais compacto no mobile */}
-              {lucroEstimado && (
-                <div className={`rounded-lg p-2 sm:p-3 border ${lucroEstimado.lucro >= 0 ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900' : 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900'}`}>
-                  <div className="flex items-center gap-2 mb-1 sm:mb-2">
-                    {lucroEstimado.lucro >= 0 ? (
-                      <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
-                    ) : (
-                      <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
-                    )}
-                    <span className="text-xs sm:text-sm font-medium">Previsão desta venda</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-1 sm:gap-2 text-center">
-                    <div>
-                      <p className="text-[9px] sm:text-[10px] text-muted-foreground">Custo</p>
-                      <p className="text-xs sm:text-sm font-medium text-muted-foreground">{formatCurrency(lucroEstimado.custoTotal)}</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] sm:text-[10px] text-muted-foreground">Lucro</p>
-                      <p className={`text-xs sm:text-sm font-bold ${lucroEstimado.lucro >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {formatCurrency(lucroEstimado.lucro)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] sm:text-[10px] text-muted-foreground">Margem</p>
-                      <p className={`text-xs sm:text-sm font-bold ${lucroEstimado.margem >= 30 ? 'text-green-600' : lucroEstimado.margem >= 20 ? 'text-yellow-600' : 'text-red-600'}`}>
-                        {fmtNum(lucroEstimado.margem, 1)}%
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div className="space-y-3">
-                <Label>Tipo de Venda</Label>
-                <RadioGroup
-                  value={formData.tipo_venda}
-                  onValueChange={(value: 'direto' | 'app') => {
-                    const novoCanal = value === 'direto' ? 'balcao' : (appsDelivery[0] || 'iFood');
-                    
-                    // Atualizar preço baseado no novo canal
-                    if (formData.produto_id) {
-                      const produto = produtos?.find(p => p.id === formData.produto_id);
-                      if (produto) {
-                        const canalConfig = value === 'app' 
-                          ? appsDeliveryList.find(c => c.nome === novoCanal)
-                          : canaisConfigurados?.find(c => c.tipo === 'presencial');
-                        const canalId = canalConfig?.id || novoCanal;
-                        const precoCanal = getPrecoCanal(formData.produto_id, canalId, precoDe(produto));
-                        const quantidade = parseFloat(formData.quantidade) || 1;
-                        setFormData({ 
-                          ...formData, 
-                          tipo_venda: value, 
-                          canal: novoCanal, 
-                          cliente_id: '',
-                          valor_unitario: precoCanal.toString(),
-                          valor_total: (precoCanal * quantidade).toFixed(2)
-                        });
-                        return;
-                      }
-                    }
-                    setFormData({ ...formData, tipo_venda: value, canal: novoCanal, cliente_id: '' });
-                  }}
-                  className="flex gap-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="direto" id="direto" />
-                    <Label htmlFor="direto" className="font-normal cursor-pointer">Venda Direta</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="app" id="app" />
-                    <Label htmlFor="app" className="font-normal cursor-pointer">App de Delivery</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              {formData.tipo_venda === 'direto' ? (
-                <div className="space-y-2">
-                  <Label htmlFor="cliente">Cliente (opcional)</Label>
-                  <SearchableSelect
-                    options={[
-                      { value: '', label: 'Sem cliente', searchTerms: 'sem cliente nenhum' },
-                      ...(clientes?.map((cliente) => ({
-                        value: cliente.id,
-                        label: cliente.nome,
-                        searchTerms: `${cliente.nome} ${cliente.whatsapp || ''}`,
-                        icon: <User className="h-3 w-3 text-muted-foreground" />,
-                      })) || []),
-                    ]}
-                    value={formData.cliente_id}
-                    onValueChange={(value) => setFormData({ ...formData, cliente_id: value })}
-                    placeholder="Buscar cliente..."
-                    searchPlaceholder="Digite para buscar..."
-                    emptyMessage="Nenhum cliente encontrado."
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Vendas de balcão, WhatsApp ou encomendas diretas
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Label htmlFor="canal">App de Delivery</Label>
-                  {appsDeliveryList.length > 0 ? (
-                    <Select
-                      value={formData.canal}
-                      onValueChange={handleCanalChange}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o app" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {appsDeliveryList.map((canal) => (
-                          <SelectItem key={canal.id} value={canal.nome}>
-                            {canal.nome} {canal.taxa > 0 && `(${fmtNum(canal.taxa, 1)}%)`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <p className="text-sm text-muted-foreground py-2">
-                      Nenhum app de delivery configurado. Configure em Configurações → Canais de Venda.
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="data_venda">Data</Label>
-                <Input
-                  id="data_venda"
-                  type="date"
-                  value={formData.data_venda}
-                  onChange={(e) => setFormData({ ...formData, data_venda: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={createMutation.isPending}>
-                  Registrar
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-          
+          <Button onClick={() => { setPedidoEditar(null); setVendaRapidaAberta(true); }}>
+            <Plus className="mr-2 h-4 w-4" />Nova Venda
+          </Button>
           <ImportarVendasDialog />
         </div>
       </div>
 
+      {!!qtdRevisar && (
+        <button type="button" onClick={() => { setFiltroCanal('revisar'); setFiltroDataInicio('2000-01-01'); }}
+          className="w-full text-left rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span className="flex-1">{qtdRevisar} {qtdRevisar === 1 ? 'venda está' : 'vendas estão'} com canal para revisar. Toque para ver.</span>
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      )}
+
       <div className="space-y-3 sm:space-y-4">
-          {/* Totalizadores - Primeiro no mobile para dar destaque */}
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            <Card className="bg-primary/5 border-primary/20">
-              <CardContent className="p-2.5 sm:p-4">
-                <div className="flex flex-col items-center text-center gap-1">
-                  <div className="p-1.5 sm:p-2 rounded-full bg-primary/10">
-                    <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground">Total</p>
-                    <p className="text-xs sm:text-lg font-bold text-primary truncate max-w-full">{formatCurrency(totais.totalValor)}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-2.5 sm:p-4">
-                <div className="flex flex-col items-center text-center gap-1">
-                  <div className="p-1.5 sm:p-2 rounded-full bg-muted">
-                    <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground">Vendas</p>
-                    <p className="text-sm sm:text-lg font-bold">{totais.totalVendas}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-2.5 sm:p-4">
-                <div className="flex flex-col items-center text-center gap-1">
-                  <div className="p-1.5 sm:p-2 rounded-full bg-muted">
-                    <Package className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground">Itens</p>
-                    <p className="text-sm sm:text-lg font-bold">{totais.totalQuantidade}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <Card className="bg-primary/5 border-primary/20">
+            <CardContent className="p-2.5 sm:p-4 flex flex-col items-center text-center gap-1">
+              <div className="p-1.5 sm:p-2 rounded-full bg-primary/10"><DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-primary" /></div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Total</p>
+              <p className="text-xs sm:text-lg font-bold text-primary truncate max-w-full">{fmt(totais.totalValor)}</p>
+              <p className="text-[10px] text-muted-foreground truncate max-w-full">Líq. {fmt(totais.totalLiquido)}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-2.5 sm:p-4 flex flex-col items-center text-center gap-1">
+              <div className="p-1.5 sm:p-2 rounded-full bg-muted"><ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" /></div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Vendas</p>
+              <p className="text-sm sm:text-lg font-bold">{totais.totalVendas}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-2.5 sm:p-4 flex flex-col items-center text-center gap-1">
+              <div className="p-1.5 sm:p-2 rounded-full bg-muted"><Package className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" /></div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Itens</p>
+              <p className="text-sm sm:text-lg font-bold">{totais.totalQuantidade}</p>
+            </CardContent>
+          </Card>
+        </div>
 
-          {/* Filtros - Mobile First */}
-          <div className="bg-muted/30 rounded-lg p-3 space-y-2">
-            <div className="flex items-center gap-1.5">
-              <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs font-medium text-muted-foreground">Filtros</span>
-            </div>
-            
-            {/* Datas em linha */}
-            <div className="flex items-center gap-2">
-              <Input
-                type="date"
-                value={filtroDataInicio}
-                onChange={(e) => setFiltroDataInicio(e.target.value)}
-                className="h-9 text-sm flex-1"
-              />
-              <span className="text-muted-foreground text-xs shrink-0">a</span>
-              <Input
-                type="date"
-                value={filtroDataFim}
-                onChange={(e) => setFiltroDataFim(e.target.value)}
-                className="h-9 text-sm flex-1"
-              />
-            </div>
-            
-            {/* Selects em grid 2x2 no mobile */}
-            <div className="grid grid-cols-3 gap-2">
-              <Select value={filtroProduto} onValueChange={setFiltroProduto}>
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Produto" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  {produtos?.map((produto) => (
-                    <SelectItem key={produto.id} value={produto.id}>
-                      <span className="truncate">{produto.nome}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={filtroCanal} onValueChange={setFiltroCanal}>
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Canal" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  {canaisUnicos.map((canal) => (
-                    <SelectItem key={canal} value={canal}>
-                      {formatCanalLabel(canal)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={filtroOrigem} onValueChange={setFiltroOrigem}>
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Origem" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todas</SelectItem>
-                  <SelectItem value="manual">Manual</SelectItem>
-                  <SelectItem value="importacao">Import</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+        <div className="bg-muted/30 rounded-lg p-3 space-y-2">
+          <div className="flex items-center gap-1.5">
+            <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-xs font-medium text-muted-foreground">Filtros</span>
           </div>
+          <div className="flex items-center gap-2">
+            <Input type="date" value={filtroDataInicio} onChange={(e) => setFiltroDataInicio(e.target.value)} className="h-9 text-sm flex-1" />
+            <span className="text-muted-foreground text-xs shrink-0">a</span>
+            <Input type="date" value={filtroDataFim} onChange={(e) => setFiltroDataFim(e.target.value)} className="h-9 text-sm flex-1" />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <Select value={filtroProduto} onValueChange={setFiltroProduto}>
+              <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Produto" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                {produtos?.map(p => <SelectItem key={p.id} value={p.id}><span className="truncate">{p.nome}</span></SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filtroCanal} onValueChange={setFiltroCanal}>
+              <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Canal" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                {(canaisConfigurados || []).map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                <SelectItem value="revisar">Sem canal (revisar)</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filtroOrigem} onValueChange={setFiltroOrigem}>
+              <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Origem" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todas</SelectItem>
+                {origens.map(o => <SelectItem key={o} value={o}>{ORIGEM_LABEL[o] || o}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
-          {isLoading ? (
-            <Skeleton className="h-96" />
-          ) : (
-            <>
+        {isLoading ? <Skeleton className="h-96" /> : (
+          <>
             <MobileDataView
-              data={vendasPagination.paginatedData}
+              data={pagination.paginatedData}
+              keyExtractor={(p) => p.id}
               columns={[
-                {
-                  key: 'data',
-                  header: 'Data',
-                  mobilePriority: 2,
-                  render: (venda) => (
-                    <span className="text-muted-foreground whitespace-nowrap text-xs sm:text-sm">
-                      {format(parseDataLocal(venda.data_venda), 'dd/MM/yy', { locale: ptBR })}
-                    </span>
-                  ),
-                },
-                {
-                  key: 'produto',
-                  header: 'Produto',
-                  mobilePriority: 1,
-                  render: (venda) => (
-                    <span className="font-medium truncate block max-w-[120px] sm:max-w-[200px]">
-                      {venda.produtos?.nome || venda.descricao_produto || '-'}
-                    </span>
-                  ),
-                },
-                {
-                  key: 'quantidade',
-                  header: 'Qtd',
-                  align: 'center',
-                  mobilePriority: 4,
-                  hideOnMobile: true,
-                  render: (venda) => Number(venda.quantidade),
-                },
-                {
-                  key: 'valor',
-                  header: 'Valor',
-                  align: 'right',
-                  mobilePriority: 3,
-                  render: (venda) => (
-                    <span className="font-medium whitespace-nowrap text-xs sm:text-sm">{formatCurrency(Number(venda.valor_total))}</span>
-                  ),
-                },
-                {
-                  key: 'liquido',
-                  header: 'Líquido',
-                  align: 'right',
-                  mobilePriority: 7,
-                  hideOnMobile: true,
-                  render: (venda) => {
-                    const liquido = Number(venda.valor_liquido || 0);
-                    if (liquido <= 0 || liquido === Number(venda.valor_total)) return <span className="text-xs text-muted-foreground">-</span>;
-                    return <span className="font-medium whitespace-nowrap text-xs text-green-600">{formatCurrency(liquido)}</span>;
-                  },
-                },
-                {
-                  key: 'canal',
-                  header: 'Canal',
-                  mobilePriority: 5,
-                  hideOnMobile: true,
-                  render: (venda) => (
-                    <div className="min-w-0"><Badge variant="secondary" className="text-[10px] px-1.5 py-0 truncate max-w-[80px]">
-                      {formatCanalLabel(venda.canal)}
-                    </Badge>
-                    {(venda as any).clientes?.nome && (
-                      <span className="block text-[10px] text-muted-foreground truncate max-w-[100px]">{(venda as any).clientes.nome}</span>
-                    )}</div>
-                  ),
-                },
-                {
-                  key: 'origem',
-                  header: 'Origem',
-                  mobilePriority: 6,
-                  hideOnMobile: true,
-                  render: (venda) => (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                      {venda.origem}
-                    </Badge>
-                  ),
-                },
+                { key: 'data', header: 'Data', mobilePriority: 2, render: (p) => (
+                  <span className="text-muted-foreground whitespace-nowrap text-xs sm:text-sm">{format(parseDataLocal(p.data_venda), 'dd/MM/yy', { locale: ptBR })}</span>
+                )},
+                { key: 'itens', header: 'Itens', mobilePriority: 1, render: (p) => (
+                  <span className="font-medium truncate block max-w-[140px] sm:max-w-[280px]">{nomeItens(p)}</span>
+                )},
+                { key: 'canal', header: 'Canal', mobilePriority: 5, hideOnMobile: true, render: (p) => (
+                  <div className="min-w-0">
+                    <Badge variant={p.canal_id ? 'secondary' : 'destructive'} className="text-[10px] px-1.5 py-0 truncate max-w-[100px]">{canalNome(p)}</Badge>
+                    {p.clientes?.nome && <span className="block text-[10px] text-muted-foreground truncate max-w-[100px]">{p.clientes.nome}</span>}
+                  </div>
+                )},
+                { key: 'valor', header: 'Total', align: 'right', mobilePriority: 3, render: (p) => (
+                  <span className="font-medium whitespace-nowrap text-xs sm:text-sm">{fmt(Number(p.valor_bruto))}</span>
+                )},
+                { key: 'liquido', header: 'Líquido', align: 'right', mobilePriority: 7, hideOnMobile: true, render: (p) => (
+                  Number(p.valor_liquido) === Number(p.valor_bruto)
+                    ? <span className="text-xs text-muted-foreground">-</span>
+                    : <span className="font-medium whitespace-nowrap text-xs text-success">{fmt(Number(p.valor_liquido))}</span>
+                )},
+                { key: 'origem', header: 'Origem', mobilePriority: 6, hideOnMobile: true, render: (p) => (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">{ORIGEM_LABEL[p.origem] || p.origem}</Badge>
+                )},
               ]}
-              keyExtractor={(venda) => venda.id}
-              renderActions={(venda) => (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive"
-                  onClick={() => {
-                    setVendaToDelete(venda.id);
-                    setDeleteConfirmOpen(true);
-                  }}
-                >
-                  <Trash2 className="h-4 w-4" />
+              renderActions={(p) => (
+                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Abrir venda" onClick={() => setPedidoAberto(p)}>
+                  <ChevronRight className="h-4 w-4" />
                 </Button>
               )}
-              renderMobileHeader={(venda) => (
-                <span className="truncate block max-w-[150px]">
-                  {venda.produtos?.nome || venda.descricao_produto || 'Venda'}
-                </span>
-              )}
-              renderMobileSubtitle={(venda) => (
+              renderMobileHeader={(p) => <span className="truncate block max-w-[180px]">{nomeItens(p)}</span>}
+              renderMobileSubtitle={(p) => (
                 <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
-                  <span className="text-xs whitespace-nowrap">{format(parseDataLocal(venda.data_venda), 'dd/MM/yy', { locale: ptBR })}</span>
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 truncate max-w-[70px] shrink-0">{formatCanalLabel(venda.canal)}</Badge>
-                  {(venda as any).clientes?.nome && <span className="text-[10px] text-muted-foreground truncate">{(venda as any).clientes.nome}</span>}
+                  <span className="text-xs whitespace-nowrap">{format(parseDataLocal(p.data_venda), 'dd/MM/yy', { locale: ptBR })}</span>
+                  <Badge variant={p.canal_id ? 'secondary' : 'destructive'} className="text-[10px] px-1.5 py-0 truncate max-w-[80px] shrink-0">{canalNome(p)}</Badge>
+                  {p.clientes?.nome && <span className="text-[10px] text-muted-foreground truncate">{p.clientes.nome}</span>}
                 </div>
               )}
-              renderMobileHighlight={(venda) => (
+              renderMobileHighlight={(p) => (
                 <div className="text-right whitespace-nowrap shrink-0">
-                  <p className="font-bold text-foreground text-sm">{formatCurrency(Number(venda.valor_total))}</p>
-                  {Number(venda.valor_liquido || 0) > 0 && Number(venda.valor_liquido) !== Number(venda.valor_total) && (
-                    <p className="text-[10px] text-green-600">Líq: {formatCurrency(Number(venda.valor_liquido))}</p>
-                  )}
-                  {Number(venda.taxa_servico || 0) > 0 && (
-                    <p className="text-[10px] text-destructive">Taxa: {formatCurrency(Number(venda.taxa_servico))}</p>
-                  )}
-                  <p className="text-[10px] text-muted-foreground">Qtd: {Number(venda.quantidade)}</p>
+                  <p className="font-bold text-foreground text-sm">{fmt(Number(p.valor_bruto))}</p>
+                  {Number(p.valor_liquido) !== Number(p.valor_bruto) && <p className="text-[10px] text-success">Líq: {fmt(Number(p.valor_liquido))}</p>}
                 </div>
               )}
-              emptyMessage={
-                vendas && vendas.length > 0 
-                  ? 'Nenhuma venda corresponde aos filtros selecionados.'
-                  : 'Registre vendas manualmente ou importe do iFood.'
-              }
-              emptyAction={
-                !vendas || vendas.length === 0 ? (
-                  <Button onClick={() => setDialogOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Nova Venda
-                  </Button>
-                ) : undefined
-              }
+              emptyMessage={pedidos && pedidos.length > 0 ? 'Nenhuma venda corresponde aos filtros selecionados.' : 'Registre vendas manualmente ou importe do iFood.'}
+              emptyAction={!pedidos || pedidos.length === 0 ? (
+                <Button onClick={() => { setPedidoEditar(null); setVendaRapidaAberta(true); }}><Plus className="mr-2 h-4 w-4" />Nova Venda</Button>
+              ) : undefined}
             />
             <PaginationControls
-              currentPage={vendasPagination.currentPage}
-              totalPages={vendasPagination.totalPages}
-              startIndex={vendasPagination.startIndex}
-              endIndex={vendasPagination.endIndex}
-              totalItems={vendasPagination.totalItems}
-              onPrevPage={vendasPagination.prevPage}
-              onNextPage={vendasPagination.nextPage}
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              startIndex={pagination.startIndex}
+              endIndex={pagination.endIndex}
+              totalItems={pagination.totalItems}
+              onPrevPage={pagination.prevPage}
+              onNextPage={pagination.nextPage}
             />
-            </>
-          )}
+          </>
+        )}
       </div>
 
-      <DeleteConfirmationDialog
-        open={deleteConfirmOpen}
-        onOpenChange={setDeleteConfirmOpen}
-        onConfirm={() => vendaToDelete && deleteMutation.mutate(vendaToDelete)}
-        title="Excluir venda"
-        description="Tem certeza que deseja excluir esta venda? Esta ação não pode ser desfeita."
+      <VendaRapidaDialog
+        open={vendaRapidaAberta}
+        onOpenChange={(o) => { setVendaRapidaAberta(o); if (!o) setPedidoEditar(null); }}
+        pedido={pedidoEditar}
+      />
+      <PedidoDetalheDialog
+        pedido={pedidoAberto}
+        onClose={() => setPedidoAberto(null)}
+        onEditar={abrirEdicao}
+        canais={(canaisConfigurados || []).map(c => ({ id: c.id, nome: c.nome }))}
       />
     </div>
   );

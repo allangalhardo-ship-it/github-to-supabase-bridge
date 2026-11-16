@@ -1852,7 +1852,9 @@ export type Database = {
           incentivo_plataforma: number | null
           numero_pedido_externo: string | null
           origem: string
+          pedido_id: string | null
           plataforma: string | null
+          preco_unitario: number | null
           produto_id: string | null
           qtd_acabado_baixada: number
           quantidade: number
@@ -1877,7 +1879,9 @@ export type Database = {
           incentivo_plataforma?: number | null
           numero_pedido_externo?: string | null
           origem?: string
+          pedido_id?: string | null
           plataforma?: string | null
+          preco_unitario?: number | null
           produto_id?: string | null
           qtd_acabado_baixada?: number
           quantidade?: number
@@ -1902,7 +1906,9 @@ export type Database = {
           incentivo_plataforma?: number | null
           numero_pedido_externo?: string | null
           origem?: string
+          pedido_id?: string | null
           plataforma?: string | null
+          preco_unitario?: number | null
           produto_id?: string | null
           qtd_acabado_baixada?: number
           quantidade?: number
@@ -1929,10 +1935,105 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "vendas_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "vendas_pedidos"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "vendas_produto_id_fkey"
             columns: ["produto_id"]
             isOneToOne: false
             referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendas_pedidos: {
+        Row: {
+          canal_id: string | null
+          canal_texto: string | null
+          cliente_id: string | null
+          created_at: string
+          data_venda: string
+          desconto: number
+          empresa_id: string
+          forma_pagamento: string | null
+          id: string
+          idempotency_key: string | null
+          numero_externo: string | null
+          origem: string
+          qtd_itens: number
+          status: string
+          taxa_canal: number
+          taxa_entrega: number
+          updated_at: string
+          valor_bruto: number
+          valor_liquido: number
+        }
+        Insert: {
+          canal_id?: string | null
+          canal_texto?: string | null
+          cliente_id?: string | null
+          created_at?: string
+          data_venda?: string
+          desconto?: number
+          empresa_id: string
+          forma_pagamento?: string | null
+          id?: string
+          idempotency_key?: string | null
+          numero_externo?: string | null
+          origem?: string
+          qtd_itens?: number
+          status?: string
+          taxa_canal?: number
+          taxa_entrega?: number
+          updated_at?: string
+          valor_bruto?: number
+          valor_liquido?: number
+        }
+        Update: {
+          canal_id?: string | null
+          canal_texto?: string | null
+          cliente_id?: string | null
+          created_at?: string
+          data_venda?: string
+          desconto?: number
+          empresa_id?: string
+          forma_pagamento?: string | null
+          id?: string
+          idempotency_key?: string | null
+          numero_externo?: string | null
+          origem?: string
+          qtd_itens?: number
+          status?: string
+          taxa_canal?: number
+          taxa_entrega?: number
+          updated_at?: string
+          valor_bruto?: number
+          valor_liquido?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendas_pedidos_canal_id_fkey"
+            columns: ["canal_id"]
+            isOneToOne: false
+            referencedRelation: "canais_venda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendas_pedidos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendas_pedidos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
             referencedColumns: ["id"]
           },
         ]
@@ -2062,6 +2163,10 @@ export type Database = {
           margem_min: number
         }[]
       }
+      cancelar_venda_pedido: {
+        Args: { p_pedido_id: string }
+        Returns: undefined
+      }
       check_and_increment_ai_quota: {
         Args: {
           p_empresa_id: string
@@ -2096,10 +2201,12 @@ export type Database = {
         }
         Returns: {
           canal: string
+          canal_id: string
           custo_insumos: number
           custo_snapshot: number
           data_venda: string
           id: string
+          pedido_id: string
           produto_id: string
           produto_nome: string
           produto_preco_venda: number
@@ -2150,9 +2257,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      normalizar_nome_canal: { Args: { p: string }; Returns: string }
+      origem_pedido_de_venda: {
+        Args: { p_origem: string; p_plataforma: string }
+        Returns: string
+      }
       recalcular_custo_intermediario: {
         Args: { p_depth?: number; p_insumo_id: string }
         Returns: number
+      }
+      recalcular_totais_pedido: {
+        Args: { p_pedido_id: string }
+        Returns: undefined
       }
       registrar_venda_encomenda: {
         Args: { p_encomenda_id: string }
@@ -2165,6 +2281,19 @@ export type Database = {
       resolver_alertas_custo_produto: {
         Args: { p_produto_id: string }
         Returns: undefined
+      }
+      resolver_canal_id: {
+        Args: { p_empresa_id: string; p_texto: string }
+        Returns: string
+      }
+      salvar_venda_pedido: {
+        Args: {
+          p_idempotency_key?: string
+          p_itens: Json
+          p_pedido: Json
+          p_pedido_id?: string
+        }
+        Returns: string
       }
     }
     Enums: {

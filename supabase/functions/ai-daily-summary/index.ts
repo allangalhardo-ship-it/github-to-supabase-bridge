@@ -104,7 +104,7 @@ serve(async (req) => {
     const seteDiasStr = brtDateStr(seteDiasBRT);
 
     const [vendasHojeRes, vendasOntemRes, vendas7dRes, insumosRes] = await Promise.all([
-      supabase.from("vendas").select("valor_total, quantidade, canal, descricao_produto, produto_id, produtos(nome)").eq("empresa_id", empresaId).eq("data_venda", hojeStr),
+      supabase.from("vendas").select("id, pedido_id, valor_total, quantidade, canal, descricao_produto, produto_id, produtos(nome)").eq("empresa_id", empresaId).eq("data_venda", hojeStr),
       supabase.from("vendas").select("valor_total").eq("empresa_id", empresaId).eq("data_venda", ontemStr),
       supabase.from("vendas").select("valor_total, data_venda").eq("empresa_id", empresaId).gte("data_venda", seteDiasStr),
       supabase.from("insumos").select("nome, estoque_atual, estoque_minimo, unidade_medida").eq("empresa_id", empresaId).eq("ativo", true),
@@ -117,7 +117,7 @@ serve(async (req) => {
 
     const receitaHoje = vendasHoje.reduce((s, v) => s + Number(v.valor_total || 0), 0);
     const receitaOntem = vendasOntem.reduce((s, v) => s + Number(v.valor_total || 0), 0);
-    const qtdVendasHoje = vendasHoje.length;
+    const qtdVendasHoje = new Set(vendasHoje.map((v: any) => v.pedido_id || v.id)).size;
     const ticketMedio = qtdVendasHoje > 0 ? receitaHoje / qtdVendasHoje : 0;
 
     // Top produto hoje

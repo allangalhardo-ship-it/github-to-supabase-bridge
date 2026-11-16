@@ -28,7 +28,7 @@ export const AnalisePlataformas: React.FC<Props> = ({ onBack }) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('vendas')
-        .select('id, data_venda, valor_total, subtotal, taxa_entrega, taxa_servico, incentivo_plataforma, incentivo_loja, valor_liquido, plataforma, canal, origem')
+        .select('id, pedido_id, data_venda, valor_total, subtotal, taxa_entrega, taxa_servico, incentivo_plataforma, incentivo_loja, valor_liquido, plataforma, canal, origem')
         .gte('data_venda', dataInicio)
         .lte('data_venda', dataFim)
         .order('data_venda');
@@ -51,12 +51,14 @@ export const AnalisePlataformas: React.FC<Props> = ({ onBack }) => {
       valorLiquido: number;
     }> = {};
 
-    vendas.forEach(v => {
-      const plat = v.plataforma || v.canal || 'Venda Direta';
+    const pedidosPorPlat: Record<string, Set<string>> = {};
+    vendas.forEach((v: any) => {
+      const plat = v.canal || v.plataforma || 'Venda Direta';
       if (!map[plat]) {
         map[plat] = { pedidos: 0, receitaBruta: 0, taxaServico: 0, incentivoLoja: 0, incentivoPlataforma: 0, taxaEntrega: 0, valorLiquido: 0 };
       }
-      map[plat].pedidos++;
+      (pedidosPorPlat[plat] ||= new Set()).add(v.pedido_id || v.id);
+      map[plat].pedidos = pedidosPorPlat[plat].size;
       map[plat].receitaBruta += Number(v.subtotal || v.valor_total || 0);
       map[plat].taxaServico += Number(v.taxa_servico || 0);
       map[plat].incentivoLoja += Number(v.incentivo_loja || 0);
@@ -95,7 +97,7 @@ export const AnalisePlataformas: React.FC<Props> = ({ onBack }) => {
 
     vendas.forEach(v => {
       const mes = v.data_venda.substring(0, 7); // YYYY-MM
-      const plat = v.plataforma || v.canal || 'Venda Direta';
+      const plat = v.canal || v.plataforma || 'Venda Direta';
       if (!porMes[mes]) porMes[mes] = {};
       if (!porMes[mes][plat]) porMes[mes][plat] = 0;
       porMes[mes][plat] += Number(v.taxa_servico || 0) + Number(v.incentivo_loja || 0);

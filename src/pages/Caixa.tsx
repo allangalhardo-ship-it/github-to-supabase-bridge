@@ -47,7 +47,6 @@ import {
   Info
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { valorCaixaVenda } from '@/lib/caixaUtils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -93,10 +92,23 @@ interface XmlNota {
   fornecedor: string | null;
 }
 
-const descricaoVenda = (v: Venda, produtoNome: string) => {
-  const base = `${produtoNome} (${v.quantidade}x) - ${v.canal || 'balcão'}`;
-  const taxa = Number(v.valor_total || 0) - valorCaixaVenda(v);
-  if (taxa > 0.004) return `${base} | bruto ${formatCurrencyBRL(v.valor_total)}, taxa ${formatCurrencyBRL(taxa)}`;
+interface PedidoCaixa {
+  id: string;
+  data_venda: string;
+  valor_bruto: number;
+  valor_liquido: number;
+  taxa_canal: number;
+  canal_texto: string | null;
+  canais_venda: { nome: string } | null;
+  vendas: { quantidade: number; descricao_produto: string | null; produtos: { nome: string } | null }[];
+}
+
+/** Uma linha por pedido: itens, canal e, quando houver taxa, bruto e taxa. */
+const descricaoPedido = (p: PedidoCaixa) => {
+  const itens = p.vendas.map(v => `${v.produtos?.nome || v.descricao_produto || 'Produto'} (${Number(v.quantidade)}x)`).join(', ');
+  const base = `${itens || 'Venda'} - ${p.canais_venda?.nome || p.canal_texto || 'sem canal'}`;
+  const taxa = Number(p.taxa_canal || 0);
+  if (taxa > 0.004) return `${base} | bruto ${formatCurrencyBRL(Number(p.valor_bruto))}, taxa ${formatCurrencyBRL(taxa)}`;
   return base;
 };
 
@@ -177,14 +189,14 @@ const Caixa = () => {
     queryKey: ['caixa-vendas', usuario?.empresa_id, dataInicio, dataFim],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('vendas')
-        .select('id, valor_total, valor_liquido, comissao_plataforma, data_venda, quantidade, produto_id, descricao_produto, canal, produtos(nome)')
+        .from('vendas_pedidos' as any)
+        .select('id, data_venda, valor_bruto, valor_liquido, taxa_canal, canal_texto, canais_venda(nome), vendas(quantidade, descricao_produto, produtos(nome))')
         .gte('data_venda', dataInicio)
         .lte('data_venda', dataFim)
         .order('data_venda', { ascending: false });
 
       if (error) throw error;
-      return data as Venda[];
+      return (data || []) as unknown as PedidoCaixa[];
     },
     enabled: !!usuario?.empresa_id,
   });
@@ -371,13 +383,13 @@ const Caixa = () => {
 
     // Vendas como entrada
     vendas?.forEach(v => {
-      const produtoNome = v.produtos?.nome || v.descricao_produto || 'Produto';
       items.push({
         id: `venda-${v.id}`,
         tipo: 'entrada',
         categoria: 'Venda',
-        descricao: descricaoVenda(v, produtoNome),
-        valor: valorCaixaVenda(v),
+        descricao: descricaoPedido(v),
+        // Líquido do pedido (já sem a taxa do canal, com a taxa de entrega)
+        valor: Number(v.valor_liquido) > 0 ? Number(v.valor_liquido) : Number(v.valor_bruto),
         data: v.data_venda,
         origem: 'venda',
       });

@@ -90,7 +90,8 @@ async function buildBusinessSnapshot(supabase: any, empresaId: string): Promise<
   const receita30 = vendas30.reduce((s: number, v: any) => s + Number(v.valor_total || 0), 0);
   const receita7 = vendas7.reduce((s: number, v: any) => s + Number(v.valor_total || 0), 0);
   const custoTotal30 = vendas30.reduce((s: number, v: any) => s + Number(v.custo_insumos || 0) * Number(v.quantidade || 1), 0);
-  const qtdVendas30 = vendas30.length;
+  // Conta pedidos, não itens
+  const qtdVendas30 = new Set(vendas30.map((v: any) => v.pedido_id || v.id)).size;
   const ticketMedio = qtdVendas30 ? receita30 / qtdVendas30 : 0;
   const cmvPct = receita30 > 0 ? (custoTotal30 / receita30) * 100 : 0;
 
