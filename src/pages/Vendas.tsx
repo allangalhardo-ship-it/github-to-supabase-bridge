@@ -28,6 +28,7 @@ import { formatCurrencyBRL, parseDataLocal, formatCanalLabel, fmtNum } from '@/l
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import ContextualTip from '@/components/onboarding/ContextualTip';
 import { calcularCustoFicha } from '@/utils/custoFicha';
+import { usePrecoUnico } from '@/hooks/usePrecoUnico';
 
 interface Cliente {
   id: string;
@@ -90,6 +91,7 @@ const Vendas = () => {
 
   // Hook para buscar canais configurados e preços por canal
   const { canaisConfigurados, todosPrecos, getPrecoCanal } = usePrecosCanais();
+  const { precoDe } = usePrecoUnico();
 
   // Apps de delivery (canais tipo app_delivery ativos)
   const appsDeliveryList = canaisConfigurados?.filter(c => c.tipo === 'app_delivery') || [];
@@ -267,7 +269,7 @@ const Vendas = () => {
       ? appsDeliveryList.find(c => c.nome === formData.canal)
       : canaisConfigurados?.find(c => c.tipo === 'presencial');
     const canalId = canalConfig?.id || formData.canal;
-    const precoCanal = produto ? getPrecoCanal(produtoId, canalId, produto.preco_venda) : 0;
+    const precoCanal = produto ? getPrecoCanal(produtoId, canalId, precoDe(produto)) : 0;
     const valorUnitario = precoCanal.toString();
     const quantidade = parseFloat(formData.quantidade) || 1;
     const valorTotal = valorUnitario ? (parseFloat(valorUnitario) * quantidade).toFixed(2) : '';
@@ -298,7 +300,7 @@ const Vendas = () => {
       ? appsDeliveryList.find(c => c.nome === canal)
       : canaisConfigurados?.find(c => c.tipo === 'presencial');
     const canalId = canalConfig?.id || canal;
-    const precoCanal = getPrecoCanal(formData.produto_id, canalId, produto.preco_venda);
+    const precoCanal = getPrecoCanal(formData.produto_id, canalId, precoDe(produto));
     const quantidade = parseFloat(formData.quantidade) || 1;
     const valorTotal = (precoCanal * quantidade).toFixed(2);
     
@@ -399,7 +401,7 @@ const Vendas = () => {
                 <SearchableSelect
                   options={produtos?.map((produto) => ({
                     value: produto.id,
-                    label: `${produto.nome} - ${formatCurrency(Number(produto.preco_venda))}`,
+                    label: `${produto.nome} - ${formatCurrency(precoDe(produto))}`,
                     searchTerms: produto.nome,
                     icon: <Package className="h-3 w-3 text-primary" />,
                   })) || []}
@@ -500,7 +502,7 @@ const Vendas = () => {
                           ? appsDeliveryList.find(c => c.nome === novoCanal)
                           : canaisConfigurados?.find(c => c.tipo === 'presencial');
                         const canalId = canalConfig?.id || novoCanal;
-                        const precoCanal = getPrecoCanal(formData.produto_id, canalId, produto.preco_venda);
+                        const precoCanal = getPrecoCanal(formData.produto_id, canalId, precoDe(produto));
                         const quantidade = parseFloat(formData.quantidade) || 1;
                         setFormData({ 
                           ...formData, 

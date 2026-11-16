@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { usePrecoUnico } from '@/hooks/usePrecoUnico';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -593,7 +594,7 @@ const Producao = () => {
                       const estoque = Number(p.estoque_acabado);
                       return <span className={estoque === 0 ? 'text-muted-foreground' : 'font-semibold text-green-600'}>{estoque} un</span>;
                     }},
-                    { key: 'preco', header: 'Preço Venda', align: 'right', mobilePriority: 5, render: (p) => <span className="text-muted-foreground">{formatCurrency(Number(p.preco_venda))}</span> },
+                    { key: 'preco', header: 'Preço Venda', align: 'right', mobilePriority: 5, render: (p) => <span className="text-muted-foreground">{formatCurrency(precoDe(p))}</span> },
                     { key: 'status', header: 'Status', align: 'center', mobilePriority: 3, render: (p) => {
                       const estoque = Number(p.estoque_acabado);
                       return estoque > 0 ? (
