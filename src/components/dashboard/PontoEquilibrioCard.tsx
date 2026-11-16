@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Target, TrendingUp, HelpCircle, CheckCircle, AlertTriangle } from 'lucide-react';
-import { formatCurrencyBRL } from '@/lib/format';
+import { formatCurrencyBRL, fmtNum } from '@/lib/format';
 
 interface MargemEstimada {
   receitaSimulada: number;
@@ -196,12 +196,12 @@ export const PontoEquilibrioCard: React.FC<PontoEquilibrioCardProps> = ({
               {usandoEstimativa ? 'Margem Estimada' : 'Seu Faturamento'}
             </p>
             <p className={`text-2xl font-bold ${usandoEstimativa ? 'text-primary' : atingiuEquilibrio ? 'text-green-600' : 'text-foreground'}`}>
-              {usandoEstimativa ? `${margemContribuicaoPercent.toFixed(1)}%` : formatCurrencyBRL(receitaBruta)}
+              {usandoEstimativa ? `${fmtNum(margemContribuicaoPercent, 1)}%` : formatCurrencyBRL(receitaBruta)}
             </p>
             <p className="text-xs text-muted-foreground">
               {usandoEstimativa 
                 ? 'baseada nos seus produtos' 
-                : `margem contribuição: ${margemContribuicaoPercent.toFixed(1)}%`}
+                : `margem contribuição: ${fmtNum(margemContribuicaoPercent, 1)}%`}
             </p>
           </div>
         </div>
@@ -261,15 +261,15 @@ export const PontoEquilibrioCard: React.FC<PontoEquilibrioCardProps> = ({
             </p>
             {margemEstimada?.margemPercentBruta !== undefined && (
               <div className="text-xs bg-background/60 rounded p-2 font-mono leading-relaxed text-foreground/80">
-                <div>Margem bruta dos produtos: <strong>{margemEstimada.margemPercentBruta.toFixed(1)}%</strong></div>
+                <div>Margem bruta dos produtos: <strong>{fmtNum(margemEstimada.margemPercentBruta, 1)}%</strong></div>
                 {(margemEstimada.impostoPercent ?? 0) > 0 && (
-                  <div>− Impostos: {margemEstimada.impostoPercent!.toFixed(1)}%</div>
+                  <div>− Impostos: {fmtNum(margemEstimada.impostoPercent!, 1)}%</div>
                 )}
                 {(margemEstimada.taxaMediaCanal ?? 0) > 0 && (
-                  <div>− Taxa média canais ativos: {margemEstimada.taxaMediaCanal!.toFixed(1)}%</div>
+                  <div>− Taxa média canais ativos: {fmtNum(margemEstimada.taxaMediaCanal!, 1)}%</div>
                 )}
                 <div className="border-t border-border/50 mt-1 pt-1">
-                  = Margem líquida estimada: <strong className="text-primary">{margemContribuicaoPercent.toFixed(1)}%</strong>
+                  = Margem líquida estimada: <strong className="text-primary">{fmtNum(margemContribuicaoPercent, 1)}%</strong>
                 </div>
               </div>
             )}

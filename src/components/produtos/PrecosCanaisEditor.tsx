@@ -9,6 +9,7 @@ import { Store, Smartphone, Save, Calculator, Info } from 'lucide-react';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import { cn } from '@/lib/utils';
 import { calcularPrecoPorCmvAlvo } from '@/lib/precificacaoUtils';
+import { fmtNum } from '@/lib/format';
 
 interface PrecosCanaisEditorProps {
   produtoId: string;
@@ -183,7 +184,7 @@ const PrecosCanaisEditor: React.FC<PrecosCanaisEditorProps> = ({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Badge variant="secondary" className="text-[10px] px-1 h-4 cursor-help">
-                            Taxa: {canal.taxa.toFixed(1)}%
+                            Taxa: {fmtNum(canal.taxa, 1)}%
                             <Info className="h-2.5 w-2.5 ml-0.5" />
                           </Badge>
                         </TooltipTrigger>
@@ -214,7 +215,7 @@ const PrecosCanaisEditor: React.FC<PrecosCanaisEditorProps> = ({
                   {precoAtual > 0 && (
                     <div className="w-16 text-right">
                       <p className={cn("text-sm font-bold", getCorMargem(margem))}>
-                        {margem.toFixed(1)}%
+                        {fmtNum(margem, 1)}%
                       </p>
                       <p className="text-[10px] text-muted-foreground">margem</p>
                     </div>

@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { formatCurrencyBRL } from '@/lib/format';
+import { formatCurrencyBRL, fmtNum, formatQuantidadeBR } from '@/lib/format';
 import WelcomeChecklist from '@/components/dashboard/WelcomeChecklist';
 import AlertasInteligentes from '@/components/dashboard/AlertasInteligentes';
 import MargemEvolutionChart from '@/components/dashboard/MargemEvolutionChart';
@@ -41,7 +41,7 @@ const Dashboard = () => {
     const isPositive = invertColors ? delta < 0 : delta > 0;
     return (
       <p className={`text-[10px] flex items-center gap-0.5 mt-0.5 ${isPositive ? 'text-green-600' : 'text-destructive'}`}>
-        {delta > 0 ? '↑' : '↓'} {Math.abs(delta).toFixed(1)}% vs anterior
+        {delta > 0 ? '↑' : '↓'} {fmtNum(Math.abs(delta), 1)}% vs anterior
       </p>
     );
   };
@@ -161,7 +161,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
             {d.isLoading ? <Skeleton className="h-8 w-24" /> : (
-              <><div className="text-2xl font-bold">{d.cmvPercent.toFixed(1)}%</div><p className="text-xs sm:text-sm text-muted-foreground mt-1">{formatCurrency(d.cmvTotal)} em insumos</p></>
+              <><div className="text-2xl font-bold">{fmtNum(d.cmvPercent, 1)}%</div><p className="text-xs sm:text-sm text-muted-foreground mt-1">{formatCurrency(d.cmvTotal)} em insumos</p></>
             )}
           </CardContent>
         </StaggeredCard>
@@ -176,7 +176,7 @@ const Dashboard = () => {
               <>
                 <div className="text-2xl font-bold">{formatCurrency(d.margemContribuicao)}</div>
                 {renderDelta(d.deltaLucroBruto)}
-                <p className="text-xs sm:text-sm text-muted-foreground mt-1">Receita - CMV ({d.receitaBruta > 0 ? ((d.margemContribuicao / d.receitaBruta) * 100).toFixed(1) : 0}%)</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">Receita - CMV ({d.receitaBruta > 0 ? fmtNum(((d.margemContribuicao / d.receitaBruta) * 100), 1) : 0}%)</p>
               </>
             )}
           </CardContent>
@@ -249,7 +249,7 @@ const Dashboard = () => {
                 <div><p className="text-[10px] sm:text-xs text-muted-foreground">Taxa de Serviço</p><p className="text-sm sm:text-lg font-bold text-destructive">{formatCurrency(totalTaxaServico)}</p></div>
                 <div><p className="text-[10px] sm:text-xs text-muted-foreground">Incentivo Loja</p><p className="text-sm sm:text-lg font-bold text-destructive">{formatCurrency(totalIncentivoLoja)}</p><p className="text-[9px] text-muted-foreground">Sai do seu bolso</p></div>
                 <div><p className="text-[10px] sm:text-xs text-muted-foreground">Incentivo Plataforma</p><p className="text-sm sm:text-lg font-bold text-green-600">{formatCurrency(totalIncentivoPlataforma)}</p><p className="text-[9px] text-muted-foreground">Não sai do seu bolso</p></div>
-                <div><p className="text-[10px] sm:text-xs text-muted-foreground">Custo Total Plataformas</p><p className="text-sm sm:text-lg font-bold text-destructive">{formatCurrency(custoReal)}</p><p className="text-[9px] text-muted-foreground">{d.receitaBruta > 0 ? `${((custoReal / d.receitaBruta) * 100).toFixed(1)}% da receita` : ''}</p></div>
+                <div><p className="text-[10px] sm:text-xs text-muted-foreground">Custo Total Plataformas</p><p className="text-sm sm:text-lg font-bold text-destructive">{formatCurrency(custoReal)}</p><p className="text-[9px] text-muted-foreground">{d.receitaBruta > 0 ? `${fmtNum(((custoReal / d.receitaBruta) * 100), 1)}% da receita` : ''}</p></div>
               </div>
             </CardContent>
           </Card>
@@ -321,7 +321,7 @@ const Dashboard = () => {
                       <p className="text-xs text-muted-foreground truncate">Mín: {insumo.estoque_minimo} {insumo.unidade_medida}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="font-bold text-amber-600 text-sm whitespace-nowrap">{Number(insumo.estoque_atual).toFixed(1)} {insumo.unidade_medida}</p>
+                      <p className="font-bold text-amber-600 text-sm whitespace-nowrap">{formatQuantidadeBR(Number(insumo.estoque_atual))} {insumo.unidade_medida}</p>
                     </div>
                   </div>
                 ))}

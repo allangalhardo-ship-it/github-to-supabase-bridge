@@ -18,6 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Download, ChevronRight, ChevronLeft, Package, Check, AlertCircle, Loader2 } from "lucide-react";
 import { RAMOS_TEMPLATES, verificarDuplicado, type RamoTemplate, type InsumoTemplate } from "@/lib/insumosTemplates";
+import { fmtNum } from '@/lib/format';
 
 interface ImportarBasePadraoDialogProps {
   trigger?: React.ReactNode;
@@ -276,7 +277,7 @@ export function ImportarBasePadraoDialog({ trigger }: ImportarBasePadraoDialogPr
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {insumo.unidade_medida} • R$ {insumo.custo_unitario.toFixed(2)} • Mín: {insumo.estoque_minimo}
+                          {insumo.unidade_medida} • R$ {fmtNum(insumo.custo_unitario, 2, 4)} • Mín: {insumo.estoque_minimo}
                         </p>
                       </div>
                     </div>

@@ -18,7 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
 import { normalizeString, findBestMatch } from '@/lib/importUtils';
 import { inserirMovimentoEstoque } from '@/lib/estoqueUtils';
-import { formatCurrencySmartBRL } from '@/lib/format';
+import { formatCurrencySmartBRL, formatQuantidadeBR } from '@/lib/format';
 
 interface XmlItem {
   produto_descricao: string;
@@ -1154,7 +1154,7 @@ const XmlImport = () => {
                         <TableCell className="text-right">
                           {item.mapeado && insumoMapeado ? (
                             <span className={fator !== 1 ? 'text-primary font-medium' : ''}>
-                              {qtdConv.toFixed(2)} {insumoMapeado.unidade_medida}
+                              {formatQuantidadeBR(qtdConv)} {insumoMapeado.unidade_medida}
                             </span>
                           ) : (
                             <span className="text-muted-foreground">-</span>
@@ -1450,7 +1450,7 @@ const XmlImport = () => {
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Entrada no estoque:</span>
                         <Badge className="bg-primary">
-                          {quantidadeConvertida.toFixed(2)} {insumoSelecionadoParaMapeamento.unidade_medida}
+                          {formatQuantidadeBR(quantidadeConvertida)} {insumoSelecionadoParaMapeamento.unidade_medida}
                         </Badge>
                       </div>
                       <div className="flex items-center justify-between text-sm">

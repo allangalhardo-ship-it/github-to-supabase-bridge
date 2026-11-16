@@ -9,7 +9,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Store, Smartphone, AlertTriangle, Info, TrendingUp, TrendingDown } from 'lucide-react';
-import { formatCurrencyBRL } from '@/lib/format';
+import { formatCurrencyBRL, fmtNum } from '@/lib/format';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import { cn } from '@/lib/utils';
 
@@ -145,7 +145,7 @@ const CustoMargemCard: React.FC<CustoMargemCardProps> = ({
                       <span className="truncate font-medium">{linha.nome}</span>
                       {linha.taxa > 0 && (
                         <Badge variant="secondary" className="text-[9px] px-1 h-4 shrink-0">
-                          {linha.taxa.toFixed(1)}%
+                          {fmtNum(linha.taxa, 1)}%
                         </Badge>
                       )}
                     </div>
@@ -155,7 +155,7 @@ const CustoMargemCard: React.FC<CustoMargemCardProps> = ({
                       </span>
                       <div className={cn('flex items-center gap-0.5 font-bold tabular-nums', corMargem(margem, linha.preco))}>
                         <Trend className="h-3 w-3" />
-                        <span>{valido ? `${margem.toFixed(1)}%` : '—'}</span>
+                        <span>{valido ? `${fmtNum(margem, 1)}%` : '—'}</span>
                       </div>
                     </div>
                   </div>

@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { formatPercent } from './types';
 import type { PeriodoBCG } from './useMenuEngineering';
+import { fmtNum } from '@/lib/format';
 
 interface KpisAvancadosProps {
   cmvTeorico: number;        // % — média ponderada dos custos da ficha (já vem do useMenuEngineering.metricas.cmvMedio)
@@ -124,7 +125,7 @@ const KpisAvancados: React.FC<KpisAvancadosProps> = ({
       subtitle: temVendas
         ? (Math.abs(variacaoTeoricoReal) < 0.5
             ? 'igual ao teórico ✓'
-            : `${variacaoTeoricoReal > 0 ? '+' : ''}${variacaoTeoricoReal.toFixed(1)}pp vs teórico`)
+            : `${variacaoTeoricoReal > 0 ? '+' : ''}${fmtNum(variacaoTeoricoReal, 1)}pp vs teórico`)
         : 'sem vendas no período',
       tooltip:
         'CMV real das vendas do período (custo congelado na hora da venda ÷ receita). ' +

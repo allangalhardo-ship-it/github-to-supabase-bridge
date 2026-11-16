@@ -17,7 +17,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, X, AlertTriangle, Camera, ImageIcon, Loader2, Plus, Trash2, DollarSign, TrendingDown, Info } from 'lucide-react';
-import { formatCurrencyBRL } from '@/lib/format';
+import { formatCurrencyBRL, fmtNum } from '@/lib/format';
 import * as XLSX from 'xlsx';
 import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -848,7 +848,7 @@ const ImportarVendasDialog: React.FC = () => {
             <div className="flex justify-between text-destructive">
               <span className="flex items-center gap-1">
                 <TrendingDown className="h-3 w-3" />
-                Comissão {canalMatch.nome} ({canalMatch.taxaTotal?.toFixed(1)}%)
+                Comissão {canalMatch.nome} ({fmtNum(canalMatch.taxaTotal, 1)}%)
                 <Tooltip>
                   <TooltipTrigger><Info className="h-3 w-3" /></TooltipTrigger>
                   <TooltipContent><p>Taxa configurada do canal.<br/>Não aparece no print mas é cobrada.</p></TooltipContent>

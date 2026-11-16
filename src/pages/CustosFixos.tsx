@@ -16,7 +16,7 @@ import { MobileDataView } from '@/components/ui/mobile-data-view';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, Wallet, TrendingUp, AlertTriangle, CheckCircle2, AlertCircle } from 'lucide-react';
-import { formatCurrencyBRL } from '@/lib/format';
+import { formatCurrencyBRL, fmtNum } from '@/lib/format';
 
 const categorias = [
   'Aluguel',
@@ -424,7 +424,7 @@ const CustosFixos = () => {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Percentual do Faturamento</span>
                   <span className={`font-bold ${faturamento > 0 ? healthStatus.color : 'text-muted-foreground'}`}>
-                    {faturamento > 0 ? `${percentualCustoFixo.toFixed(1)}%` : '—'}
+                    {faturamento > 0 ? `${fmtNum(percentualCustoFixo, 1)}%` : '—'}
                   </span>
                 </div>
                 <div className="relative h-3 w-full rounded-full bg-muted overflow-hidden">

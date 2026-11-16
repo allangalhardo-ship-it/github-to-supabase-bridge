@@ -20,7 +20,7 @@ import {
 import FichaTecnicaForm from "./FichaTecnicaForm";
 import CustoMargemCard from "./CustoMargemCard";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { formatCurrencyBRL } from '@/lib/format';
+import { formatCurrencyBRL, fmtNum } from '@/lib/format';
 import { calcularCustoFicha } from '@/utils/custoFicha';
 import { calcularPrecoPorCmvAlvo } from '@/lib/precificacaoUtils';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
@@ -464,7 +464,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                           <TooltipContent side="top" className="text-xs">
                             <p className="font-medium">{canal.nome}</p>
                             <p>Preço: {formatCurrency(precoCanal)} {temPrecoCustom ? '✓' : '(base)'}</p>
-                            <p>Margem: {margem.toFixed(1)}%</p>
+                            <p>Margem: {fmtNum(margem, 1)}%</p>
                             {canal.taxa > 0 && <p className="text-muted-foreground">Taxa: {canal.taxa}%</p>}
                           </TooltipContent>
                         </Tooltip>
@@ -583,7 +583,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 </div>
                 <div className="bg-muted/50 rounded-md p-2">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wide">CMV</p>
-                  <p className="font-semibold">{cmvAtual.toFixed(1)}%</p>
+                  <p className="font-semibold">{fmtNum(cmvAtual, 1)}%</p>
                 </div>
               </div>
 

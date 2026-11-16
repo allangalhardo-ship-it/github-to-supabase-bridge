@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Store, TrendingDown, DollarSign, Percent, BarChart3 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { formatCurrencyBRL } from '@/lib/format';
+import { formatCurrencyBRL, fmtNum } from '@/lib/format';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line } from 'recharts';
 
 interface Props {
@@ -171,7 +171,7 @@ export const AnalisePlataformas: React.FC<Props> = ({ onBack }) => {
                 <p className="text-xs text-muted-foreground">Custo das Plataformas</p>
                 <p className="text-lg sm:text-xl font-bold text-destructive">{formatCurrencyBRL(totais.custoPlataforma)}</p>
                 <p className="text-xs text-muted-foreground">
-                  {totais.receitaBruta > 0 ? ((totais.custoPlataforma / totais.receitaBruta) * 100).toFixed(1) : 0}% da receita
+                  {totais.receitaBruta > 0 ? fmtNum(((totais.custoPlataforma / totais.receitaBruta) * 100), 1) : 0}% da receita
                 </p>
               </CardContent>
             </Card>
@@ -225,7 +225,7 @@ export const AnalisePlataformas: React.FC<Props> = ({ onBack }) => {
                       <td className="p-3 text-right font-medium text-destructive">{formatCurrencyBRL(p.custoPlataforma)}</td>
                       <td className="p-3 text-right">
                         <Badge variant={p.percentualCusto > 15 ? 'destructive' : 'outline'}>
-                          {p.percentualCusto.toFixed(1)}%
+                          {fmtNum(p.percentualCusto, 1)}%
                         </Badge>
                       </td>
                       <td className="p-3 text-right font-bold">{formatCurrencyBRL(p.valorLiquido)}</td>
@@ -242,7 +242,7 @@ export const AnalisePlataformas: React.FC<Props> = ({ onBack }) => {
                     <td className="p-3 text-right text-green-600">{formatCurrencyBRL(totais.incentivoPlataforma)}</td>
                     <td className="p-3 text-right text-destructive">{formatCurrencyBRL(totais.custoPlataforma)}</td>
                     <td className="p-3 text-right">
-                      {totais.receitaBruta > 0 ? ((totais.custoPlataforma / totais.receitaBruta) * 100).toFixed(1) : 0}%
+                      {totais.receitaBruta > 0 ? fmtNum(((totais.custoPlataforma / totais.receitaBruta) * 100), 1) : 0}%
                     </td>
                     <td className="p-3 text-right">{formatCurrencyBRL(totais.valorLiquido)}</td>
                   </tr>

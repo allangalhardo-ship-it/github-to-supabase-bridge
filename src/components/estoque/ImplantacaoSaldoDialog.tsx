@@ -25,6 +25,7 @@ import { Search, PackageOpen, Check, Loader2, ArrowRight, Plus } from 'lucide-re
 import { InsumoIcon } from '@/lib/insumoIconUtils';
 import { inserirMovimentoEstoque } from '@/lib/estoqueUtils';
 import { cn } from '@/lib/utils';
+import { formatQuantidadeBR } from '@/lib/format';
 
 interface ImplantacaoSaldoDialogProps {
   open: boolean;
@@ -471,7 +472,7 @@ const ImplantacaoSaldoDialog: React.FC<ImplantacaoSaldoDialogProps> = ({
                         : saldo.nova_unidade_nome || 'un'}</span>
                       <ArrowRight className="h-3 w-3" />
                       <span className="font-semibold text-foreground">
-                        {qtdConvertida.toFixed(2)} {insumo.unidade_medida}
+                        {formatQuantidadeBR(qtdConvertida)} {insumo.unidade_medida}
                       </span>
                     </div>
                     {custoNum > 0 && (
@@ -491,7 +492,7 @@ const ImplantacaoSaldoDialog: React.FC<ImplantacaoSaldoDialogProps> = ({
                 {/* Info estoque atual */}
                 {Number(insumo.estoque_atual) > 0 && (
                   <p className="text-[10px] text-muted-foreground mt-1.5">
-                    Estoque atual: {Number(insumo.estoque_atual).toFixed(2)} {insumo.unidade_medida}
+                    Estoque atual: {formatQuantidadeBR(Number(insumo.estoque_atual))} {insumo.unidade_medida}
                   </p>
                 )}
               </div>

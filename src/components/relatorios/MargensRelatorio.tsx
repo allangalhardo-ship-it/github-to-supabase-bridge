@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { formatCurrencyBRL } from '@/lib/format';
+import { formatCurrencyBRL, fmtNum } from '@/lib/format';
 import {
   BarChart,
   Bar,
@@ -72,7 +72,7 @@ interface CustoFixo {
 }
 
 const formatCurrency = formatCurrencyBRL;
-const formatPercent = (value: number) => `${value.toFixed(1)}%`;
+const formatPercent = (value: number) => `${fmtNum(value, 1)}%`;
 const COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#84cc16'];
 
 export const MargensRelatorio: React.FC<MargensRelatorioProps> = ({ onBack }) => {

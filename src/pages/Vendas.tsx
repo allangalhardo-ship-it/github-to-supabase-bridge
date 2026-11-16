@@ -24,7 +24,7 @@ import { Plus, Trash2, Package, User, Filter, DollarSign, ShoppingCart, Upload, 
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import ImportarVendasDialog from '@/components/vendas/ImportarVendasDialog';
-import { formatCurrencyBRL, parseDataLocal, formatCanalLabel } from '@/lib/format';
+import { formatCurrencyBRL, parseDataLocal, formatCanalLabel, fmtNum } from '@/lib/format';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import ContextualTip from '@/components/onboarding/ContextualTip';
 import { calcularCustoFicha } from '@/utils/custoFicha';
@@ -479,7 +479,7 @@ const Vendas = () => {
                     <div>
                       <p className="text-[9px] sm:text-[10px] text-muted-foreground">Margem</p>
                       <p className={`text-xs sm:text-sm font-bold ${lucroEstimado.margem >= 30 ? 'text-green-600' : lucroEstimado.margem >= 20 ? 'text-yellow-600' : 'text-red-600'}`}>
-                        {lucroEstimado.margem.toFixed(1)}%
+                        {fmtNum(lucroEstimado.margem, 1)}%
                       </p>
                     </div>
                   </div>
@@ -565,7 +565,7 @@ const Vendas = () => {
                       <SelectContent>
                         {appsDeliveryList.map((canal) => (
                           <SelectItem key={canal.id} value={canal.nome}>
-                            {canal.nome} {canal.taxa > 0 && `(${canal.taxa.toFixed(1)}%)`}
+                            {canal.nome} {canal.taxa > 0 && `(${fmtNum(canal.taxa, 1)}%)`}
                           </SelectItem>
                         ))}
                       </SelectContent>

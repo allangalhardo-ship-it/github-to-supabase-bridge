@@ -13,6 +13,7 @@ import {
   Lightbulb,
   FileWarning,
 } from 'lucide-react';
+import { fmtNum } from '@/lib/format';
 
 interface Produto {
   id: string;
@@ -107,7 +108,7 @@ export const DashboardInsights: React.FC<DashboardInsightsProps> = ({
                 </p>
                 {melhorProduto.margem > 0 && (
                   <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                    Margem: {melhorProduto.margem.toFixed(1)}%
+                    Margem: {fmtNum(melhorProduto.margem, 1)}%
                   </p>
                 )}
               </div>

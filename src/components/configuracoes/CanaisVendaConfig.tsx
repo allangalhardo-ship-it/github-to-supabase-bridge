@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useCanaisVenda, CanalComTaxaTotal, TaxaCanal } from '@/hooks/useCanaisVenda';
 import { cn } from '@/lib/utils';
+import { fmtNum } from '@/lib/format';
 
 const TIPOS_CANAL = [
   { value: 'presencial', label: 'Presencial', icon: Store, description: 'Balcão, loja física' },
@@ -350,7 +351,7 @@ const CanalCard: React.FC<CanalCardProps> = ({
                 {canal.taxaTotal > 0 && (
                   <span className="flex items-center gap-1">
                     <Percent className="h-3 w-3" />
-                    {canal.taxaTotal.toFixed(1)}% total
+                    {fmtNum(canal.taxaTotal, 1)}% total
                   </span>
                 )}
               </div>
@@ -398,7 +399,7 @@ const CanalCard: React.FC<CanalCardProps> = ({
                       <span className="text-sm">{taxa.nome}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline">{Number(taxa.percentual).toFixed(1)}%</Badge>
+                      <Badge variant="outline">{fmtNum(Number(taxa.percentual), 1)}%</Badge>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -420,7 +421,7 @@ const CanalCard: React.FC<CanalCardProps> = ({
                 ))}
                 <div className="flex justify-end pt-2 border-t">
                   <span className="text-sm font-medium">
-                    Total: {canal.taxaTotal.toFixed(1)}%
+                    Total: {fmtNum(canal.taxaTotal, 1)}%
                   </span>
                 </div>
               </div>

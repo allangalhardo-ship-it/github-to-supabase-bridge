@@ -23,7 +23,7 @@ import { Plus, Calculator, Package, ArrowRight, Loader2 } from 'lucide-react';
 import { SearchableSelect, SearchableSelectOption } from '@/components/ui/searchable-select';
 import { inserirMovimentoEstoque } from '@/lib/estoqueUtils';
 import { InsumoIcon } from '@/lib/insumoIconUtils';
-import { formatCurrencySmartBRL } from '@/lib/format';
+import { formatCurrencySmartBRL, formatQuantidadeBR } from '@/lib/format';
 
 interface Insumo {
   id: string;
@@ -427,7 +427,7 @@ export const RegistrarCompraDialog: React.FC<RegistrarCompraDialogProps> = ({
                         </Badge>
                         <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                         <Badge className="bg-primary text-xs">
-                          {quantidadeConvertida.toFixed(2)} {insumoSelecionado?.unidade_medida}
+                          {formatQuantidadeBR(quantidadeConvertida)} {insumoSelecionado?.unidade_medida}
                         </Badge>
                       </div>
                       <div className="flex justify-between pt-2 border-t">

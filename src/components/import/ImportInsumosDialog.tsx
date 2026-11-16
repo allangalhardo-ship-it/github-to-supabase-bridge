@@ -17,6 +17,7 @@ import {
   INSUMOS_TEMPLATE,
   normalizeString,
 } from '@/lib/importUtils';
+import { fmtNum } from '@/lib/format';
 
 interface ImportInsumoData {
   nome: string;
@@ -283,7 +284,7 @@ const ImportInsumosDialog = ({ open, onOpenChange, existingInsumos }: ImportInsu
                         )}
                       </TableCell>
                       <TableCell>{item.unidade_medida}</TableCell>
-                      <TableCell className="text-right">R$ {parseFloat(item.custo_unitario || '0').toFixed(2)}</TableCell>
+                      <TableCell className="text-right">R$ {fmtNum(parseFloat(item.custo_unitario || '0'), 2, 4)}</TableCell>
                       <TableCell className="text-right">{item.estoque_atual || '0'}</TableCell>
                       <TableCell className="text-right">{item.estoque_minimo || '0'}</TableCell>
                     </TableRow>

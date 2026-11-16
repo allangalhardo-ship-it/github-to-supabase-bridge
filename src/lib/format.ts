@@ -76,3 +76,10 @@ export function formatCategoriaCaixa(cat: string | null | undefined) {
   const t = cat.replace(/_/g, ' ');
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
+
+/** Número pt-BR com casas fixas (ou faixa min..max): 23,7 / 10,83 */
+export function fmtNum(value: number | null | undefined, casas = 2, maxCasas?: number) {
+  const n = Number(value);
+  const safe = Number.isFinite(n) ? n : 0;
+  return safe.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: maxCasas ?? casas });
+}
