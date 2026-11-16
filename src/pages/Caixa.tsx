@@ -47,6 +47,7 @@ import {
   Info
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { valorCaixaVenda } from '@/lib/caixaUtils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -91,10 +92,6 @@ interface XmlNota {
   data_emissao: string | null;
   fornecedor: string | null;
 }
-
-/** Entrada de venda no Caixa: valor líquido (já sem a taxa do app) quando existir, senão o total. */
-export const valorCaixaVenda = (v: { valor_total: number; valor_liquido?: number | null }) =>
-  v.valor_liquido != null && Number(v.valor_liquido) > 0 ? Number(v.valor_liquido) : Number(v.valor_total || 0);
 
 const descricaoVenda = (v: Venda, produtoNome: string) => {
   const base = `${produtoNome} (${v.quantidade}x) - ${v.canal || 'balcão'}`;

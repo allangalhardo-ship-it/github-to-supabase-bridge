@@ -1,3 +1,4 @@
+import { valorCaixaVenda } from '@/lib/caixaUtils';
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -111,8 +112,7 @@ export const FluxoCaixa: React.FC<FluxoCaixaProps> = ({ onBack }) => {
 
   // Calcular fluxo de caixa
   // Venda entra no caixa pelo valor líquido (já sem taxa do app) quando existir
-  const liq = (v: { valor_total: number; valor_liquido: number | null }) =>
-    v.valor_liquido != null && Number(v.valor_liquido) > 0 ? Number(v.valor_liquido) : Number(v.valor_total || 0);
+  const liq = valorCaixaVenda;
 
   const fluxo = useMemo(() => {
     if (!vendas && !compras && !movimentos) return null;
