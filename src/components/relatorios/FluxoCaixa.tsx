@@ -79,14 +79,14 @@ export const FluxoCaixa: React.FC<FluxoCaixaProps> = ({ onBack }) => {
     queryKey: ['fluxo-vendas', usuario?.empresa_id, dataInicio, dataFim],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('vendas')
-        .select('id, valor_total, valor_liquido, data_venda')
+        .from('vendas_pedidos' as any)
+        .select('id, valor_total:valor_bruto, valor_liquido, data_venda')
         .eq('empresa_id', usuario?.empresa_id)
         .gte('data_venda', dataInicio)
         .lte('data_venda', dataFim);
 
       if (error) throw error;
-      return data;
+      return (data || []) as unknown as { id: string; valor_total: number; valor_liquido: number | null; data_venda: string }[];
     },
     enabled: !!usuario?.empresa_id,
   });
