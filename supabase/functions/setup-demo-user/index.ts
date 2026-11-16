@@ -387,23 +387,8 @@ serve(async (req) => {
     console.log(`Vendas inseridas: ${vendasPayload.length}`);
 
     // 3) Caixa: entradas diárias por canal (proporcionais às vendas) + custos fixos mensais
-    const nomeCanal: Record<string, string> = { balcao: "Balcão", Ifood: "iFood", "99Food": "99Food", WhatsApp: "WhatsApp" };
     const caixaPayload: any[] = [];
-    for (const e of Object.values(entradasCaixa)) {
-      const data = daysAgo(e.dia);
-      caixaPayload.push({
-        empresa_id: demoEmpresaId, tipo: "entrada", categoria: "venda",
-        descricao: `Vendas ${nomeCanal[e.canal.db]}`, valor: Math.round(e.bruto * 100) / 100,
-        data_movimento: data, origem: "manual",
-      });
-      if (e.taxa > 0) {
-        caixaPayload.push({
-          empresa_id: demoEmpresaId, tipo: "saida", categoria: "taxa_plataforma",
-          descricao: `Taxa ${nomeCanal[e.canal.db]}`, valor: Math.round(e.taxa * 100) / 100,
-          data_movimento: data, origem: "manual",
-        });
-      }
-    }
+    // Vendas entram sozinhas no Caixa (pelo valor líquido); não criar lançamentos manuais duplicados de venda/taxa.
     const { data: demoCustosFixos } = await admin
       .from("custos_fixos").select("nome, valor_mensal, categoria").eq("empresa_id", demoEmpresaId);
     for (let mes = 0; mes < 3; mes++) {
