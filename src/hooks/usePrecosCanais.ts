@@ -4,6 +4,43 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { invalidateAndRefetch } from '@/lib/queryConfig';
+import { canalPrincipal } from '@/lib/precoCanalUtils';
+
+/** Mantém produtos.preco_venda igual ao preço do canal presencial principal (Balcão). */
+async function sincronizarPrecoBase(empresaId: string, precos: { produtoId: string; canal: string; preco: number }[]) {
+  const { data: canais } = await supabase
+    .from('canais_venda')
+    .select('id, nome, tipo, ativo, created_at')
+    .eq('empresa_id', empresaId)
+    .eq('ativo', true);
+  const principal = canalPrincipal(canais || []);
+  if (!principal) return;
+  const doBalcao = precos.filter(p => p.canal === principal.id && Number(p.preco) > 0);
+  for (const p of doBalcao) {
+    const { error } = await supabase
+      .from('produtos')
+      .update({ preco_venda: p.preco })
+      .eq('id', p.produtoId)
+      .eq('empresa_id', empresaId);
+    if (error) throw error;
+  }
+}
+
+/** Quando o preço base muda, grava o mesmo valor no Balcão (se existir) para os dois não divergirem. */
+export async function sincronizarBalcaoComBase(empresaId: string, produtoId: string, preco: number) {
+  if (!(Number(preco) > 0)) return;
+  const { data: canais } = await supabase
+    .from('canais_venda')
+    .select('id, nome, tipo, ativo, created_at')
+    .eq('empresa_id', empresaId)
+    .eq('ativo', true);
+  const principal = canalPrincipal(canais || []);
+  if (!principal) return;
+  const { error } = await supabase
+    .from('precos_canais')
+    .upsert({ empresa_id: empresaId, produto_id: produtoId, canal: principal.id, preco }, { onConflict: 'produto_id,canal,empresa_id' });
+  if (error) throw error;
+}
 
 export interface PrecoCanal {
   id: string;
@@ -125,6 +162,7 @@ export function usePrecosCanais(produtoId?: string, opcoes?: { avisoSalvoSilenci
         });
 
       if (error) throw error;
+      await sincronizarPrecoBase(usuario.empresa_id, [{ produtoId, canal, preco }]);
     },
     onSuccess: (_, variables) => {
       invalidateAndRefetch([
@@ -133,6 +171,7 @@ export function usePrecosCanais(produtoId?: string, opcoes?: { avisoSalvoSilenci
         ['todos-precos-canais'],
         ['precos-canais-todos'],
         ['produtos-menu-engineering'],
+        ['produtos'],
       ]);
       toast({ 
         title: variables.canalNome 
@@ -168,6 +207,7 @@ export function usePrecosCanais(produtoId?: string, opcoes?: { avisoSalvoSilenci
         });
 
       if (error) throw error;
+      await sincronizarPrecoBase(usuario.empresa_id, precos);
     },
     onSuccess: () => {
       invalidateAndRefetch([
@@ -176,6 +216,7 @@ export function usePrecosCanais(produtoId?: string, opcoes?: { avisoSalvoSilenci
         ['todos-precos-canais'],
         ['precos-canais-todos'],
         ['produtos-menu-engineering'],
+        ['produtos'],
       ]);
       if (!opcoes?.avisoSalvoSilencioso) toast({ title: 'Preços salvos com sucesso!' });
     },

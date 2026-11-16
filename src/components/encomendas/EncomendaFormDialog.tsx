@@ -25,6 +25,7 @@ import { CalendarIcon, Plus, Trash2, UserPlus, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrencyBRL } from '@/lib/format';
 import { ClienteFormDialog as ClienteFormDialogComponent } from '@/components/clientes/ClienteFormDialog';
+import { usePrecoUnico } from '@/hooks/usePrecoUnico';
 
 interface Props {
   open: boolean;
@@ -100,6 +101,8 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
     enabled: !!usuario?.empresa_id && open,
   });
 
+  const { precoDe } = usePrecoUnico();
+
   // Buscar preços por canal
   const { data: precosCanais = [] } = useQuery({
     queryKey: ['precos-canais-encomenda', usuario?.empresa_id],
@@ -139,9 +142,9 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
   const produtoOptions = useMemo(() =>
     produtos.map(p => ({
       value: p.id,
-      label: `${p.nome} — ${formatCurrencyBRL(p.preco_venda)}`,
+      label: `${p.nome} — ${formatCurrencyBRL(precoDe(p))}`,
       searchTerms: p.nome,
-    })), [produtos]);
+    })), [produtos, precoDe]);
 
   // Formatar endereço do cliente
   const formatarEndereco = (c: ClienteDB): string => {
@@ -151,12 +154,8 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
 
   // Obter preço do produto pelo canal selecionado
   const getPrecoParaCanal = (produtoId: string): number => {
-    if (canalSelecionado) {
-      const precoCanal = precosCanais.find(p => p.produto_id === produtoId && p.canal === canalSelecionado);
-      if (precoCanal) return precoCanal.preco;
-    }
     const produto = produtos.find(p => p.id === produtoId);
-    return produto?.preco_venda || 0;
+    return produto ? precoDe(produto, canalSelecionado || null) : 0;
   };
 
   const selecionarCliente = (id: string) => {
@@ -212,11 +211,10 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
     setCanalSelecionado(canal);
     setItens(prev => prev.map(item => {
       if (!item.produto_id) return item;
-      const precoCanal = precosCanais.find(p => p.produto_id === item.produto_id && p.canal === canal);
       const produto = produtos.find(p => p.id === item.produto_id);
       return {
         ...item,
-        preco_unitario: precoCanal?.preco ?? produto?.preco_venda ?? item.preco_unitario,
+        preco_unitario: produto ? precoDe(produto, canal || null) : item.preco_unitario,
       };
     }));
   };

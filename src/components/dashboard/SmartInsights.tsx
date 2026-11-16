@@ -1,5 +1,6 @@
 import { encontrarCanal } from "@/lib/canalUtils";
 import React, { useMemo } from 'react';
+import { usePrecoUnico } from '@/hooks/usePrecoUnico';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -116,6 +117,7 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
   const impostoPercent = config?.imposto_medio_sobre_vendas ?? 10;
   const custoFixoMensal = custosFixos?.reduce((sum, c) => sum + Number(c.valor_mensal), 0) || 0;
 
+  const { precoDe } = usePrecoUnico();
   const insights = useMemo(() => {
     const result: InsightData[] = [];
 
@@ -281,8 +283,9 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
           
           if (custoInsumos === 0) return null;
           
-          const margemAtual = produto.preco_venda > 0 
-            ? ((produto.preco_venda - custoInsumos) / produto.preco_venda) * 100 
+          const precoBalcao = precoDe(produto);
+          const margemAtual = precoBalcao > 0 
+            ? ((precoBalcao - custoInsumos) / precoBalcao) * 100 
             : 0;
           
           const diferenca = margemMeta - margemAtual;
@@ -290,7 +293,7 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
           // Calcular preço sugerido para atingir a margem meta
           // Preço = Custo / (1 - Margem%)
           const precoSugerido = custoInsumos / (1 - margemMeta / 100);
-          const ajusteNecessario = precoSugerido - produto.preco_venda;
+          const ajusteNecessario = precoSugerido - precoBalcao;
           
           return {
             ...produto,
@@ -326,8 +329,9 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
           
           if (custoInsumos === 0) return null;
           
-          const margemAtual = produto.preco_venda > 0 
-            ? ((produto.preco_venda - custoInsumos) / produto.preco_venda) * 100 
+          const precoBalcao = precoDe(produto);
+          const margemAtual = precoBalcao > 0 
+            ? ((precoBalcao - custoInsumos) / precoBalcao) * 100 
             : 0;
           
           const excesso = margemAtual - margemMeta;
@@ -382,20 +386,22 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
       produtos.forEach((produto) => {
         const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any, produto.rendimento_padrao || 1);
         
-        if (custoInsumos === 0 || produto.preco_venda === 0) return;
+        if (custoInsumos === 0) return;
         
         canaisConfigurados.forEach((canal) => {
           const taxaTotal = canal.taxa + impostoPercent;
+          const precoCanal = precoDe(produto, canal.id);
+          if (precoCanal <= 0) return;
           
           // Margem líquida = (Preço - Custo - Taxas) / Preço
           // Margem líquida = 1 - (Custo/Preço) - Taxa%
-          const margemNoCanal = ((produto.preco_venda - custoInsumos) / produto.preco_venda * 100) - taxaTotal;
+          const margemNoCanal = ((precoCanal - custoInsumos) / precoCanal * 100) - taxaTotal;
           
           // Se margem no canal está abaixo da meta
           if (margemNoCanal < margemMeta - 5) {
             // Preço mínimo = Custo / (1 - Margem% - Taxa%)
             const precoMinimo = custoInsumos / (1 - (margemMeta + taxaTotal) / 100);
-            const ajuste = precoMinimo - produto.preco_venda;
+            const ajuste = precoMinimo - precoCanal;
             
             if (ajuste > 0) {
               analiseCanais.push({
@@ -526,8 +532,9 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
       const produtosComMargem = produtos.map((produto) => {
         const custoInsumos = calcularCustoFicha(produto.fichas_tecnicas as any, produto.rendimento_padrao || 1);
         
-        const margem = produto.preco_venda > 0 
-          ? ((produto.preco_venda - custoInsumos) / produto.preco_venda) * 100 
+        const precoBalcao = precoDe(produto);
+        const margem = precoBalcao > 0 
+          ? ((precoBalcao - custoInsumos) / precoBalcao) * 100 
           : 0;
         
         // Contar vendas deste produto
@@ -654,7 +661,7 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
     }
 
     return result;
-  }, [vendas, produtos, canaisConfigurados, config, custosFixos, periodo, margemMeta, impostoPercent, custoFixoMensal, formatCurrency]);
+  }, [vendas, produtos, canaisConfigurados, config, custosFixos, periodo, margemMeta, impostoPercent, custoFixoMensal, formatCurrency, precoDe]);
 
   if (insights.length === 0) {
     return null;
