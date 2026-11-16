@@ -170,7 +170,6 @@ const Vendas = () => {
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData): Promise<{ queued: boolean }> => {
       const produto = produtos?.find(p => p.id === data.produto_id);
-      const cliente = clientes?.find(c => c.id === data.cliente_id);
       
       // Define canal baseado no tipo de venda
       // O cliente fica só em cliente_id; o canal continua o escolhido
