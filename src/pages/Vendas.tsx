@@ -695,7 +695,7 @@ const Vendas = () => {
                   <SelectItem value="todos">Todos</SelectItem>
                   {canaisUnicos.map((canal) => (
                     <SelectItem key={canal} value={canal}>
-                      {canal}
+                      {formatCanalLabel(canal)}
                     </SelectItem>
                   ))}
                 </SelectContent>

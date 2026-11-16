@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { formatCurrencyBRL, fmtNum } from '@/lib/format';
+import { formatCurrencyBRL, fmtNum, formatCanalLabel } from '@/lib/format';
 import {
   BarChart,
   Bar,
@@ -467,7 +467,7 @@ export const MargensRelatorio: React.FC<MargensRelatorioProps> = ({ onBack }) =>
                   <CardContent className="p-3">
                     <div className="flex items-center gap-2 mb-2">
                       <Icon className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">{canal.canal}</span>
+                      <span className="text-sm font-medium">{formatCanalLabel(canal.canal)}</span>
                       {canal.taxa > 0 && (
                         <Badge variant="outline" className="text-xs ml-auto">
                           -{canal.taxa}%

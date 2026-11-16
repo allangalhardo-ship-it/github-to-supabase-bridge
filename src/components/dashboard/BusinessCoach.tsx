@@ -29,6 +29,7 @@ import { custoVenda } from '@/lib/vendasUtils';
 import { encontrarCanal } from '@/lib/canalUtils';
 import { calcularMargemContribuicao } from '@/lib/margemUtils';
 import { calcularPrecoPorCmvAlvo } from '@/lib/precificacaoUtils';
+import { formatCanalLabel } from '@/lib/format';
 
 interface Venda {
   id: string;
@@ -320,8 +321,8 @@ export const BusinessCoach: React.FC<BusinessCoachProps> = ({
       if (melhor.margem - pior.margem > 15 && pior.vendas >= 3) {
         messages.push({
           status: 'warning',
-          headline: `${pior.canal} está corroendo sua margem`,
-          detail: `Depois de insumos, taxa e imposto, sobra ${pior.margem.toFixed(0)}% no ${pior.canal}, contra ${melhor.margem.toFixed(0)}% no ${melhor.canal}. Ajuste o preço desse canal.`,
+          headline: `${formatCanalLabel(pior.canal)} está corroendo sua margem`,
+          detail: `Depois de insumos, taxa e imposto, sobra ${pior.margem.toFixed(0)}% no ${formatCanalLabel(pior.canal)}, contra ${melhor.margem.toFixed(0)}% no ${formatCanalLabel(melhor.canal)}. Ajuste o preço desse canal.`,
           action: { label: 'Ajustar preços', route: '/precificacao' },
           priority: 7,
         });

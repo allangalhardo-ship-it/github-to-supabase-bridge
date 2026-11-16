@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { formatCurrencyBRL } from '@/lib/format';
+import { formatCurrencyBRL, formatCategoriaCaixa } from '@/lib/format';
 import { 
   Wallet,
   TrendingUp,

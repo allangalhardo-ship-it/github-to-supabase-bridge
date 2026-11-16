@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { formatCurrencyBRL, fmtNum, formatQuantidadeBR } from '@/lib/format';
+import { formatCurrencyBRL, fmtNum, formatQuantidadeBR, formatCanalLabel } from '@/lib/format';
 import WelcomeChecklist from '@/components/dashboard/WelcomeChecklist';
 import AlertasInteligentes from '@/components/dashboard/AlertasInteligentes';
 import MargemEvolutionChart from '@/components/dashboard/MargemEvolutionChart';
@@ -141,7 +141,7 @@ const Dashboard = () => {
                     <table className="w-full text-xs table-fixed"><tbody>
                       {d.ticketPorCanal.map((item) => (
                         <tr key={item.canal}>
-                          <td className="text-muted-foreground py-0.5 truncate max-w-[60px] overflow-hidden">{item.canal}</td>
+                          <td className="text-muted-foreground py-0.5 truncate max-w-[60px] overflow-hidden">{formatCanalLabel(item.canal)}</td>
                           <td className="text-right font-medium py-0.5 whitespace-nowrap">{formatCurrency(item.ticketMedio)}</td>
                           <td className="text-right text-muted-foreground py-0.5 w-8 whitespace-nowrap">({item.quantidade})</td>
                         </tr>
