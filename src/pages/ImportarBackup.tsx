@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Upload, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { fmtNum } from '@/lib/format';
 
 interface ImportResult {
   success: boolean;
@@ -93,7 +94,7 @@ export default function ImportarBackup() {
             />
             {file && (
               <p className="text-sm text-muted-foreground">
-                Arquivo selecionado: <strong>{file.name}</strong> ({(file.size / 1024).toFixed(1)} KB)
+                Arquivo selecionado: <strong>{file.name}</strong> ({fmtNum((file.size / 1024), 1)} KB)
               </p>
             )}
           </div>

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { calcularCustoFicha } from '@/utils/custoFicha';
 import { custoVenda, unidadesVenda } from '@/lib/vendasUtils';
+import { formatCanalLabel } from '@/lib/format';
 
 interface Venda {
   id: string;
@@ -153,8 +154,8 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
             type: 'ticket_canal',
             icon: Wallet,
             title: 'Ticket médio por canal',
-            value: `${melhor.canal}: ${formatCurrency(melhor.ticketMedio)}`,
-            description: `${pior.canal} tem ticket ${diferencaPercent.toFixed(0)}% menor (${formatCurrency(pior.ticketMedio)})`,
+            value: `${formatCanalLabel(melhor.canal)}: ${formatCurrency(melhor.ticketMedio)}`,
+            description: `${formatCanalLabel(pior.canal)} tem ticket ${diferencaPercent.toFixed(0)}% menor (${formatCurrency(pior.ticketMedio)})`,
             badge: `+${formatCurrency(diferenca)}`,
             badgeVariant: 'default',
             trend: 'up',
@@ -512,7 +513,7 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
         icon: Store,
         title: 'Canal mais rentável',
         value: melhorCanal.canal,
-        description: `Margem de ${melhorCanal.margem.toFixed(0)}%${canaisOrdenados.length > 1 && piorCanal.margem < melhorCanal.margem ? ` (${piorCanal.canal}: ${piorCanal.margem.toFixed(0)}%)` : ''}`,
+        description: `Margem de ${melhorCanal.margem.toFixed(0)}%${canaisOrdenados.length > 1 && piorCanal.margem < melhorCanal.margem ? ` (${formatCanalLabel(piorCanal.canal)}: ${piorCanal.margem.toFixed(0)}%)` : ''}`,
         badge: `${melhorCanal.vendas} vendas`,
         badgeVariant: 'secondary',
         trend: 'up',

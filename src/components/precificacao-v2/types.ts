@@ -1,4 +1,5 @@
-/**
+
+import { fmtNum } from '@/lib/format';/**
  * Tipos para o novo sistema de Precificação baseado em Menu Engineering Matrix
  */
 
@@ -91,7 +92,7 @@ export const formatCurrency = (value: number): string => {
 };
 
 export const formatPercent = (value: number): string => {
-  return `${value.toFixed(1)}%`;
+  return `${fmtNum(value, 1)}%`;
 };
 
 export const formatNumber = (value: number): string => {

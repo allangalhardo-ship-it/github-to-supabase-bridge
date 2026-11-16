@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatCurrencyBRL } from '@/lib/format';
+import { formatCurrencyBRL, fmtNum } from '@/lib/format';
 import { ArrowLeft, TrendingUp, TrendingDown, Minus, DollarSign, MinusCircle, PieChart } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
@@ -310,7 +310,7 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
                     {formatCurrencyBRL(dre.lucroLiquido)}
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {dre.percentuais.lucroLiquido.toFixed(1)}% da receita
+                    {fmtNum(dre.percentuais.lucroLiquido, 1)}% da receita
                   </p>
                 </div>
                 <div className={`p-4 rounded-full ${dre.lucroLiquido >= 0 ? 'bg-success/20' : 'bg-destructive/20'}`}>
@@ -346,21 +346,21 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
                   <span className="text-muted-foreground">(-) CMV (Custo dos Materiais)</span>
                   <div className="text-right">
                     <span className="text-destructive">{formatCurrencyBRL(dre.cmv)}</span>
-                    <span className="text-xs text-muted-foreground ml-2">({dre.percentuais.cmv.toFixed(1)}%)</span>
+                    <span className="text-xs text-muted-foreground ml-2">({fmtNum(dre.percentuais.cmv, 1)}%)</span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center py-1">
                   <span className="text-muted-foreground">(-) Taxas de Apps/Delivery</span>
                   <div className="text-right">
                     <span className="text-destructive">{formatCurrencyBRL(dre.taxasApps)}</span>
-                    <span className="text-xs text-muted-foreground ml-2">({dre.percentuais.taxas.toFixed(1)}%)</span>
+                    <span className="text-xs text-muted-foreground ml-2">({fmtNum(dre.percentuais.taxas, 1)}%)</span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center py-1">
                   <span className="text-muted-foreground">(-) Impostos Estimados</span>
                   <div className="text-right">
                     <span className="text-destructive">{formatCurrencyBRL(dre.impostos)}</span>
-                    <span className="text-xs text-muted-foreground ml-2">({dre.percentuais.impostos.toFixed(1)}%)</span>
+                    <span className="text-xs text-muted-foreground ml-2">({fmtNum(dre.percentuais.impostos, 1)}%)</span>
                   </div>
                 </div>
               </div>
@@ -370,7 +370,7 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
                 <span className="font-medium">(=) Margem de Contribuição</span>
                 <div className="text-right">
                   <span className="text-lg font-bold text-primary">{formatCurrencyBRL(dre.margemContribuicao)}</span>
-                  <span className="text-xs text-muted-foreground ml-2">({dre.percentuais.margemContribuicao.toFixed(1)}%)</span>
+                  <span className="text-xs text-muted-foreground ml-2">({fmtNum(dre.percentuais.margemContribuicao, 1)}%)</span>
                 </div>
               </div>
 
@@ -380,7 +380,7 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
                   <span className="text-muted-foreground">(-) Custos Fixos</span>
                   <div className="text-right">
                     <span className="text-destructive">{formatCurrencyBRL(dre.custosFixos)}</span>
-                    <span className="text-xs text-muted-foreground ml-2">({dre.percentuais.custosFixos.toFixed(1)}%)</span>
+                    <span className="text-xs text-muted-foreground ml-2">({fmtNum(dre.percentuais.custosFixos, 1)}%)</span>
                   </div>
                 </div>
               </div>
@@ -392,7 +392,7 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
                   <span className={`text-xl font-bold ${dre.lucroLiquido >= 0 ? 'text-success' : 'text-destructive'}`}>
                     {formatCurrencyBRL(dre.lucroLiquido)}
                   </span>
-                  <span className="text-xs text-muted-foreground ml-2">({dre.percentuais.lucroLiquido.toFixed(1)}%)</span>
+                  <span className="text-xs text-muted-foreground ml-2">({fmtNum(dre.percentuais.lucroLiquido, 1)}%)</span>
                 </div>
               </div>
             </CardContent>

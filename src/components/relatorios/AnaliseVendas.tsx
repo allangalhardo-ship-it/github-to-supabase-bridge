@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { formatCurrencyBRL } from '@/lib/format';
+import { formatCurrencyBRL, formatCanalLabel } from '@/lib/format';
 import { 
   ArrowLeft, 
   TrendingUp, 
@@ -348,7 +348,7 @@ export const AnaliseVendas: React.FC<AnaliseVendasProps> = ({ onBack }) => {
                       fill="#8884d8"
                       dataKey="faturamento"
                       nameKey="canal"
-                      label={({ canal, percentual }) => `${canal}: ${percentual.toFixed(0)}%`}
+                      label={({ canal, percentual }) => `${formatCanalLabel(canal)}: ${percentual.toFixed(0)}%`}
                     >
                       {analise.vendasPorCanal.map((_, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

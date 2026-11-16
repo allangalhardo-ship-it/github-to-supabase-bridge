@@ -18,7 +18,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
 import { format } from 'date-fns';
 import RegistrarCompraDialog from '@/components/compras/RegistrarCompraDialog';
-import { formatCurrencyBRL } from '@/lib/format';
+import { formatCurrencyBRL, fmtNum, formatQuantidadeBR } from '@/lib/format';
 import { supabase } from '@/integrations/supabase/client';
 
 const Compras = () => {
@@ -417,7 +417,7 @@ const Compras = () => {
                                     <div className="flex items-center gap-1">
                                       <div>
                                         <span className="text-muted-foreground text-xs">Conv.:</span>
-                                        <p className={`font-medium ${fator !== 1 ? 'text-primary' : ''}`}>{qtdConv.toFixed(2)} {insumoMapeado.unidade_medida}</p>
+                                        <p className={`font-medium ${fator !== 1 ? 'text-primary' : ''}`}>{formatQuantidadeBR(qtdConv)} {insumoMapeado.unidade_medida}</p>
                                       </div>
                                       <Button variant="ghost" size="icon" className={`h-7 w-7 ${possivelErroConversao ? 'text-amber-500' : ''}`} onClick={() => {
                                         c.setConversionItemIndex(index);
@@ -669,7 +669,7 @@ const Compras = () => {
                 <div className="flex justify-between"><span className="text-muted-foreground">Novo custo:</span><span className="font-medium">{formatCurrency(c.costVariationWarning?.custoNovo || 0)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Variação:</span>
                   <span className={`font-bold ${(c.costVariationWarning?.variacao || 0) > 0 ? 'text-destructive' : 'text-green-600'}`}>
-                    {(c.costVariationWarning?.variacao || 0) > 0 ? '+' : ''}{c.costVariationWarning?.variacao?.toFixed(1)}%
+                    {(c.costVariationWarning?.variacao || 0) > 0 ? '+' : ''}{fmtNum(c.costVariationWarning?.variacao, 1)}%
                   </span>
                 </div>
               </div>
@@ -733,7 +733,7 @@ const Compras = () => {
                       <div className="flex items-center gap-2">
                         <Badge variant="outline">{c.conversionItem.quantidade} {c.conversionItem.unidade}</Badge>
                         <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                        <Badge className="bg-primary">{(c.conversionItem.quantidade * c.conversionFatorAtivo).toFixed(2)} {c.conversionInsumo.unidade_medida}</Badge>
+                        <Badge className="bg-primary">{formatQuantidadeBR((c.conversionItem.quantidade * c.conversionFatorAtivo))} {c.conversionInsumo.unidade_medida}</Badge>
                       </div>
                       <div className="flex justify-between pt-2 border-t">
                         <span className="text-muted-foreground">Custo por {c.conversionInsumo.unidade_medida}:</span>

@@ -576,7 +576,6 @@ const Produtos = () => {
         open={wizardOpen}
         onOpenChange={setWizardOpen}
         categorias={categorias}
-        onCreated={(id) => setOpenFichaForProductId(id)}
       />
 
       {/* Ficha técnica controlada para novo produto duplicado */}

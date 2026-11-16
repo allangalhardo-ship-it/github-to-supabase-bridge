@@ -17,6 +17,7 @@ import {
   PRODUTOS_TEMPLATE,
   normalizeString,
 } from '@/lib/importUtils';
+import { fmtNum } from '@/lib/format';
 
 interface ImportProdutoData {
   nome: string;
@@ -278,7 +279,7 @@ const ImportProdutosDialog = ({ open, onOpenChange, existingProdutos }: ImportPr
                         )}
                       </TableCell>
                       <TableCell>{item.categoria || '-'}</TableCell>
-                      <TableCell className="text-right">R$ {parseFloat(item.preco_venda || '0').toFixed(2)}</TableCell>
+                      <TableCell className="text-right">R$ {fmtNum(parseFloat(item.preco_venda || '0'), 2)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

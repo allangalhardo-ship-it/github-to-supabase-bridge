@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import { Link } from 'react-router-dom';
-import { formatCurrencyBRL } from '@/lib/format';
+import { formatCurrencyBRL, fmtNum } from '@/lib/format';
 import {
   Settings,
   Package,
@@ -441,7 +441,7 @@ const Precificacao = () => {
                       em{' '}
                       <strong className={confirmacao.novoPreco > confirmacao.precoAnterior ? 'text-green-600' : 'text-red-600'}>
                         {confirmacao.novoPreco > confirmacao.precoAnterior ? '+' : '−'}
-                        {confirmacao.variacao.toFixed(1)}%
+                        {fmtNum(confirmacao.variacao, 1)}%
                       </strong>
                       .
                     </p>

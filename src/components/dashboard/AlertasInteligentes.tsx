@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, TrendingUp, DollarSign, X } from 'lucide-react';
 import { BotChef } from '@/components/brand/BotChef';
-import { formatCurrencyBRL } from '@/lib/format';
+import { formatCurrencyBRL, fmtNum } from '@/lib/format';
 import { useAlertasCusto } from '@/hooks/useAlertasCusto';
 
 interface AlertasInteligentesProps {
@@ -50,7 +50,7 @@ const AlertasInteligentes: React.FC<AlertasInteligentesProps> = ({
     alertas.push({
       tipo: 'critico',
       icone: <AlertTriangle className="h-4 w-4" />,
-      titulo: `CMV em ${cmvAtual.toFixed(1)}% (alvo: ${cmvAlvo}%)`,
+      titulo: `CMV em ${fmtNum(cmvAtual, 1)}% (alvo: ${cmvAlvo}%)`,
       descricao: 'Seu custo de mercadoria está acima do alvo. Revise preços ou negocie com fornecedores.',
       acao: { label: 'Revisar preços', rota: '/precificacao' },
     });
@@ -64,7 +64,7 @@ const AlertasInteligentes: React.FC<AlertasInteligentesProps> = ({
       tipo: 'critico',
       icone: <TrendingUp className="h-4 w-4" />,
       titulo: `${insumoNome} subiu ${a.variacao_pct.toFixed(0)}% — ${produtoNome} em risco`,
-      descricao: `De ${formatCurrencyBRL(a.custo_anterior)} para ${formatCurrencyBRL(a.custo_novo)}. Margem agora em ${a.margem_depois?.toFixed(1) ?? '—'}% no ${a.canal_pior ?? 'canal'} (meta ${a.margem_meta?.toFixed(0) ?? '?'}%).`,
+      descricao: `De ${formatCurrencyBRL(a.custo_anterior)} para ${formatCurrencyBRL(a.custo_novo)}. Margem agora em ${fmtNum(a.margem_depois, 1) ?? '—'}% no ${a.canal_pior ?? 'canal'} (meta ${a.margem_meta?.toFixed(0) ?? '?'}%).`,
       acao: { label: 'Reajustar preço', rota: '/precificacao' },
       onDispensar: () => dispensar(a.id),
     });

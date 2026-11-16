@@ -400,6 +400,7 @@ const NovoProdutoWizard: React.FC<NovoProdutoWizardProps> = ({
                 impostoPercentual={config?.imposto_medio_sobre_vendas || 0}
                 cmvAlvo={config?.cmv_alvo || 35}
                 autoSugerir
+                avisoSalvoSilencioso
               />
             </div>
           )}

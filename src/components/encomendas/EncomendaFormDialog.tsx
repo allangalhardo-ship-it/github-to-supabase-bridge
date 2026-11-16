@@ -67,6 +67,7 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
   const queryClient = useQueryClient();
 
   // Cliente
+  const [calendarioAberto, setCalendarioAberto] = useState(false);
   const [clienteId, setClienteId] = useState<string | null>(null);
   const [clienteNome, setClienteNome] = useState('');
   const [clienteWhatsapp, setClienteWhatsapp] = useState('');
@@ -346,7 +347,7 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
             <div className="grid grid-cols-3 gap-2">
               <div className="space-y-1.5">
                 <Label className="text-xs">Data *</Label>
-                <Popover>
+                <Popover open={calendarioAberto} onOpenChange={setCalendarioAberto}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn('w-full justify-start text-left h-9 text-sm', !dataEntrega && 'text-muted-foreground')}>
                       <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
@@ -354,7 +355,7 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={dataEntrega} onSelect={setDataEntrega} locale={ptBR} className="p-3 pointer-events-auto" />
+                    <Calendar mode="single" selected={dataEntrega} onSelect={(d) => { setDataEntrega(d); if (d) setCalendarioAberto(false); }} locale={ptBR} className="p-3 pointer-events-auto" />
                   </PopoverContent>
                 </Popover>
               </div>

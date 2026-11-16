@@ -35,6 +35,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import ComposicaoPrecoModal from './ComposicaoPrecoModal';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
+import { fmtNum } from '@/lib/format';
 
 interface ProdutoDetalheDrawerProps {
   produto: ProdutoAnalise | null;
@@ -538,7 +539,7 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
                     <span className={cn("font-semibold", corVariacao)}>
                       {!houveMudanca
                         ? 'sem alteração'
-                        : `${variacao > 0 ? '+' : ''}${variacao.toFixed(1)}%`}
+                        : `${variacao > 0 ? '+' : ''}${fmtNum(variacao, 1)}%`}
                     </span>
                   </div>
                 </div>
@@ -665,7 +666,7 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
                         "font-semibold tabular-nums w-14 text-right",
                         variacao > 0 ? "text-emerald-600" : "text-destructive"
                       )}>
-                        {variacao > 0 ? '+' : ''}{variacao.toFixed(1)}%
+                        {variacao > 0 ? '+' : ''}{fmtNum(variacao, 1)}%
                       </span>
                     </div>
                   </div>

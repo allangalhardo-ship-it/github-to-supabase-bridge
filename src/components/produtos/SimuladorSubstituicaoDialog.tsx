@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowRight, Search, Replace, TrendingDown, TrendingUp, Minus, AlertTriangle } from 'lucide-react';
-import { formatCurrencyBRL, formatCurrencySmartBRL } from '@/lib/format';
+import { formatCurrencyBRL, formatCurrencySmartBRL, fmtNum } from '@/lib/format';
 import { calcularCustoItem, unidadesCompativeis } from '@/utils/custoFicha';
 import { InsumoIcon } from '@/lib/insumoIconUtils';
 import BuscarInsumoDialog from './BuscarInsumoDialog';
@@ -288,7 +288,7 @@ const SimuladorSubstituicaoDialog: React.FC<Props> = ({
                       <span className={`font-bold tabular-nums ${deltaColor}`}>
                         {deltaFicha >= 0 ? '+' : ''}
                         {formatCurrencyBRL(deltaFicha)} ({deltaPct >= 0 ? '+' : ''}
-                        {deltaPct.toFixed(1)}%)
+                        {fmtNum(deltaPct, 1)}%)
                       </span>
                     </div>
                   </div>
@@ -300,12 +300,12 @@ const SimuladorSubstituicaoDialog: React.FC<Props> = ({
                       </p>
                       <div className="flex items-center justify-between">
                         <span>Atual:</span>
-                        <span className="font-medium tabular-nums">{cmvAtualPct.toFixed(1)}%</span>
+                        <span className="font-medium tabular-nums">{fmtNum(cmvAtualPct, 1)}%</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span>Simulado:</span>
                         <span className={`font-semibold tabular-nums ${deltaColor}`}>
-                          {cmvNovoPct.toFixed(1)}%
+                          {fmtNum(cmvNovoPct, 1)}%
                         </span>
                       </div>
                     </div>

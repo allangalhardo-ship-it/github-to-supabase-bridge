@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { formatCurrencyBRL } from '@/lib/format';
+import { formatCurrencyBRL, formatCategoriaCaixa } from '@/lib/format';
 import { 
   Wallet,
   TrendingUp,
@@ -599,7 +599,7 @@ const Caixa = () => {
                     ) : (
                       <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-100 text-[10px] px-1.5 py-0"><ArrowDownCircle className="h-3 w-3 mr-1" />Saída</Badge>
                     )},
-                    { key: 'categoria', header: 'Categoria', mobilePriority: 4, hideOnMobile: true, render: (m) => <span className="text-xs truncate block max-w-[80px]">{m.categoria}</span> },
+                    { key: 'categoria', header: 'Categoria', mobilePriority: 4, hideOnMobile: true, render: (m) => <span className="text-xs truncate block max-w-[80px]">{formatCategoriaCaixa(m.categoria)}</span> },
                     { key: 'descricao', header: 'Descrição', mobilePriority: 1, render: (m) => <span className="truncate block max-w-[120px] sm:max-w-none">{m.descricao}</span> },
                     { key: 'origem', header: 'Origem', mobilePriority: 5, hideOnMobile: true, render: (m) => {
                       if (m.origem === 'venda') return <Badge variant="outline" className="gap-1 text-[10px] px-1.5 py-0"><ShoppingCart className="h-3 w-3" />Venda</Badge>;
@@ -622,7 +622,7 @@ const Caixa = () => {
                         {m.tipo === 'entrada' ? '↑' : '↓'}
                       </Badge>
                       <span className="text-xs text-muted-foreground truncate max-w-[80px]">
-                        {m.categoria}
+                        {formatCategoriaCaixa(m.categoria)}
                       </span>
                     </div>
                   )}

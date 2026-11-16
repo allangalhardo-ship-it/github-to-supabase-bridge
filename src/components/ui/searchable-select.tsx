@@ -80,12 +80,24 @@ export function SearchableSelect({
         avoidCollisions={true}
         collisionPadding={16}
       >
-        <Command className="max-h-[300px]">
+        <Command
+          className="max-h-[300px]"
+          filter={(itemValue, search) => {
+            const norm = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+            const alvo = norm(itemValue);
+            const termos = norm(search).split(/\s+/).filter(Boolean);
+            return termos.every((t) => alvo.includes(t)) ? 1 : 0;
+          }}
+        >
           <div className="flex items-center border-b px-3">
             <Search className="h-4 w-4 shrink-0 text-muted-foreground mr-2" />
             <CommandInput 
               placeholder={searchPlaceholder} 
               className="h-10 border-0 focus:ring-0"
+              onKeyDown={(e) => {
+                // Espaço faz parte da busca: não deixa fechar a lista nem selecionar item
+                if (e.key === " ") e.stopPropagation();
+              }}
             />
           </div>
           <CommandList className="max-h-[250px] overflow-y-auto">
@@ -96,7 +108,7 @@ export function SearchableSelect({
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.searchTerms || option.label}
+                  value={`${option.label} ${option.searchTerms || ''} ${option.value}`}
                   onSelect={() => {
                     onValueChange(option.value);
                     setOpen(false);

@@ -47,6 +47,7 @@ import {
 import { toast } from "sonner";
 import { Insumo, Produto, IngredienteLote, formatCurrency, formatCurrencySmart } from "./types";
 import { calcularCustoFicha } from '@/utils/custoFicha';
+import { fmtNum, formatQuantidadeBR } from '@/lib/format';
 
 interface CalculadorFichaTecnicaProps {
   produtos: Produto[] | undefined;
@@ -496,7 +497,7 @@ export function CalculadorFichaTecnica({
                                   : "destructive"
                               }
                             >
-                              Margem: {margemLucro.toFixed(1)}%
+                              Margem: {fmtNum(margemLucro, 1)}%
                             </Badge>
                           </div>
                         )}
@@ -518,7 +519,7 @@ export function CalculadorFichaTecnica({
                                 >
                                   <span>{ing.nome}</span>
                                   <span className="text-muted-foreground">
-                                    {qtdUnitaria.toFixed(4)} {ing.unidade} ={" "}
+                                    {formatQuantidadeBR(qtdUnitaria)} {ing.unidade} ={" "}
                                     {formatCurrencySmart(
                                       qtdUnitaria * ing.custoUnitarioInsumo
                                     )}
@@ -617,7 +618,7 @@ export function CalculadorFichaTecnica({
                     <div className="flex items-center gap-2">
                       <div className="flex-1">
                         <div className="flex justify-between text-xs mb-1">
-                          <span>Margem: {margem.toFixed(1)}%</span>
+                          <span>Margem: {fmtNum(margem, 1)}%</span>
                           {produto.rendimento_padrao && (
                             <span className="text-muted-foreground">
                               Rende: {produto.rendimento_padrao} un

@@ -20,6 +20,7 @@ import { ProdutoAnalise, QuadranteMenu, ConfiguracoesPrecificacao, formatCurrenc
 import { cn } from '@/lib/utils';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import { calcularPricingScore, arredondarCharm } from '@/utils/pricingScore';
+import { fmtNum } from '@/lib/format';
 
 interface ProdutoListaCompactaProps {
   produtos: ProdutoAnalise[];
@@ -158,7 +159,7 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
                     <span className="text-xs text-muted-foreground cursor-help ml-1">ⓘ</span>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="text-xs max-w-[220px]">
-                    As margens exibidas já são líquidas de impostos ({((config?.imposto_medio_sobre_vendas || 0)).toFixed(1)}%) e taxas do canal.
+                    As margens exibidas já são líquidas de impostos ({fmtNum(((config?.imposto_medio_sobre_vendas || 0)), 1)}%) e taxas do canal.
                   </TooltipContent>
                 </Tooltip>
               </>

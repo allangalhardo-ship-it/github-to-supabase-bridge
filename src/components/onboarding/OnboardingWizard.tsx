@@ -22,6 +22,7 @@ import {
   Check,
   Loader2
 } from 'lucide-react';
+import { fmtNum } from '@/lib/format';
 
 interface OnboardingWizardProps {
   onComplete: () => void;
@@ -552,16 +553,16 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, 
                 >
                   <div className="flex justify-between text-sm">
                     <span>Custo do insumo:</span>
-                    <span className="font-medium">R$ {custoTotal.toFixed(2)}</span>
+                    <span className="font-medium">R$ {fmtNum(custoTotal, 2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Preço de balcão:</span>
-                    <span className="font-medium">R$ {precoVenda.toFixed(2)}</span>
+                    <span className="font-medium">R$ {fmtNum(precoVenda, 2)}</span>
                   </div>
                   <div className="border-t pt-2 flex justify-between">
                     <span className="font-medium">Lucro estimado:</span>
                     <span className={`font-bold ${lucro >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      R$ {lucro.toFixed(2)} ({margem.toFixed(0)}%)
+                      R$ {fmtNum(lucro, 2)} ({margem.toFixed(0)}%)
                     </span>
                   </div>
                 </motion.div>

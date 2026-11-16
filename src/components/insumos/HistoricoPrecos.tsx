@@ -10,7 +10,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { TrendingUp, TrendingDown, Minus, History } from 'lucide-react';
-import { formatCurrencySmartBRL } from '@/lib/format';
+import { formatCurrencySmartBRL, fmtNum } from '@/lib/format';
 
 interface HistoricoPrecosProps {
   open: boolean;
@@ -213,7 +213,7 @@ const HistoricoPrecos: React.FC<HistoricoPrecosProps> = ({
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Evolução do Preço</CardTitle>
                   <CardDescription>
-                    Variação total: {stats.variation > 0 ? '+' : ''}{stats.variation.toFixed(1)}%
+                    Variação total: {stats.variation > 0 ? '+' : ''}{fmtNum(stats.variation, 1)}%
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -233,7 +233,7 @@ const HistoricoPrecos: React.FC<HistoricoPrecosProps> = ({
                           className="text-muted-foreground"
                         />
                         <YAxis 
-                          tickFormatter={(value) => `R$${value.toFixed(2)}`}
+                          tickFormatter={(value) => `R$${fmtNum(value, 2)}`}
                           tick={{ fontSize: 12 }}
                           className="text-muted-foreground"
                           width={70}
@@ -277,7 +277,7 @@ const HistoricoPrecos: React.FC<HistoricoPrecosProps> = ({
                         <span className="font-medium">{formatCurrency(Number(item.preco_novo))}</span>
                         {item.variacao_percentual !== null && item.variacao_percentual !== 0 && (
                           <span className={`text-xs ${Number(item.variacao_percentual) > 0 ? 'text-red-500' : 'text-green-500'}`}>
-                            {Number(item.variacao_percentual) > 0 ? '+' : ''}{Number(item.variacao_percentual).toFixed(1)}%
+                            {Number(item.variacao_percentual) > 0 ? '+' : ''}{fmtNum(Number(item.variacao_percentual), 1)}%
                           </span>
                         )}
                       </div>

@@ -19,7 +19,7 @@ import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, AlertTriangle, ShoppingCart, Upload, TrendingUp, Search, X, Download, Package } from 'lucide-react';
 import { InsumoIcon } from '@/lib/insumoIconUtils';
-import { formatCurrencySmartBRL } from '@/lib/format';
+import { formatCurrencySmartBRL, formatQuantidadeBR } from '@/lib/format';
 import ListaCompras from '@/components/insumos/ListaCompras';
 import ImportInsumosDialog from '@/components/import/ImportInsumosDialog';
 import HistoricoPrecos from '@/components/insumos/HistoricoPrecos';
@@ -255,7 +255,7 @@ const Insumos = () => {
         const estoqueBaixo = Number(insumo.estoque_atual) <= Number(insumo.estoque_minimo);
         return (
           <span className={estoqueBaixo ? 'text-destructive font-medium' : ''}>
-            {Number(insumo.estoque_atual).toFixed(2)}
+            {formatQuantidadeBR(Number(insumo.estoque_atual))}
           </span>
         );
       },
@@ -267,7 +267,7 @@ const Insumos = () => {
       mobilePriority: 5,
       render: (insumo) => (
         <span className="text-muted-foreground">
-          {Number(insumo.estoque_minimo).toFixed(2)}
+          {formatQuantidadeBR(Number(insumo.estoque_minimo))}
         </span>
       ),
     },
@@ -344,7 +344,7 @@ const Insumos = () => {
         <div className="text-right">
           <p className="font-bold text-foreground">{formatCurrency(Number(insumo.custo_unitario))}</p>
           <p className="text-xs text-muted-foreground">
-            Estoque: {Number(insumo.estoque_atual).toFixed(2)}
+            Estoque: {formatQuantidadeBR(Number(insumo.estoque_atual))}
           </p>
         </div>
       )}

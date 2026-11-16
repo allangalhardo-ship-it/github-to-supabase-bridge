@@ -24,7 +24,7 @@ import { Plus, Trash2, Package, User, Filter, DollarSign, ShoppingCart, Upload, 
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import ImportarVendasDialog from '@/components/vendas/ImportarVendasDialog';
-import { formatCurrencyBRL } from '@/lib/format';
+import { formatCurrencyBRL, parseDataLocal, formatCanalLabel, fmtNum } from '@/lib/format';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import ContextualTip from '@/components/onboarding/ContextualTip';
 import { calcularCustoFicha } from '@/utils/custoFicha';
@@ -119,7 +119,8 @@ const Vendas = () => {
         .from('vendas')
         .select(`
           *,
-          produtos (nome)
+          produtos (nome),
+          clientes (nome)
         `)
         .gte('data_venda', filtroDataInicio)
         .lte('data_venda', filtroDataFim)
@@ -169,13 +170,10 @@ const Vendas = () => {
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData): Promise<{ queued: boolean }> => {
       const produto = produtos?.find(p => p.id === data.produto_id);
-      const cliente = clientes?.find(c => c.id === data.cliente_id);
       
       // Define canal baseado no tipo de venda
-      let canal = data.canal;
-      if (data.tipo_venda === 'direto' && cliente) {
-        canal = `Cliente: ${cliente.nome}`;
-      }
+      // O cliente fica só em cliente_id; o canal continua o escolhido
+      const canal = data.canal || 'balcao';
 
       const payload = {
         empresa_id: usuario!.empresa_id,
@@ -481,7 +479,7 @@ const Vendas = () => {
                     <div>
                       <p className="text-[9px] sm:text-[10px] text-muted-foreground">Margem</p>
                       <p className={`text-xs sm:text-sm font-bold ${lucroEstimado.margem >= 30 ? 'text-green-600' : lucroEstimado.margem >= 20 ? 'text-yellow-600' : 'text-red-600'}`}>
-                        {lucroEstimado.margem.toFixed(1)}%
+                        {fmtNum(lucroEstimado.margem, 1)}%
                       </p>
                     </div>
                   </div>
@@ -567,7 +565,7 @@ const Vendas = () => {
                       <SelectContent>
                         {appsDeliveryList.map((canal) => (
                           <SelectItem key={canal.id} value={canal.nome}>
-                            {canal.nome} {canal.taxa > 0 && `(${canal.taxa.toFixed(1)}%)`}
+                            {canal.nome} {canal.taxa > 0 && `(${fmtNum(canal.taxa, 1)}%)`}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -697,7 +695,7 @@ const Vendas = () => {
                   <SelectItem value="todos">Todos</SelectItem>
                   {canaisUnicos.map((canal) => (
                     <SelectItem key={canal} value={canal}>
-                      {canal}
+                      {formatCanalLabel(canal)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -728,7 +726,7 @@ const Vendas = () => {
                   mobilePriority: 2,
                   render: (venda) => (
                     <span className="text-muted-foreground whitespace-nowrap text-xs sm:text-sm">
-                      {format(new Date(venda.data_venda), 'dd/MM/yy', { locale: ptBR })}
+                      {format(parseDataLocal(venda.data_venda), 'dd/MM/yy', { locale: ptBR })}
                     </span>
                   ),
                 },
@@ -777,9 +775,12 @@ const Vendas = () => {
                   mobilePriority: 5,
                   hideOnMobile: true,
                   render: (venda) => (
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 truncate max-w-[80px]">
-                      {venda.canal}
+                    <div className="min-w-0"><Badge variant="secondary" className="text-[10px] px-1.5 py-0 truncate max-w-[80px]">
+                      {formatCanalLabel(venda.canal)}
                     </Badge>
+                    {(venda as any).clientes?.nome && (
+                      <span className="block text-[10px] text-muted-foreground truncate max-w-[100px]">{(venda as any).clientes.nome}</span>
+                    )}</div>
                   ),
                 },
                 {
@@ -815,8 +816,9 @@ const Vendas = () => {
               )}
               renderMobileSubtitle={(venda) => (
                 <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
-                  <span className="text-xs whitespace-nowrap">{format(new Date(venda.data_venda), 'dd/MM/yy', { locale: ptBR })}</span>
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 truncate max-w-[70px] shrink-0">{venda.canal}</Badge>
+                  <span className="text-xs whitespace-nowrap">{format(parseDataLocal(venda.data_venda), 'dd/MM/yy', { locale: ptBR })}</span>
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 truncate max-w-[70px] shrink-0">{formatCanalLabel(venda.canal)}</Badge>
+                  {(venda as any).clientes?.nome && <span className="text-[10px] text-muted-foreground truncate">{(venda as any).clientes.nome}</span>}
                 </div>
               )}
               renderMobileHighlight={(venda) => (

@@ -20,7 +20,7 @@ import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { format, startOfMonth, endOfMonth, subMonths, differenceInDays, isBefore } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { inserirMovimentoEstoque, calcularEstoqueDeMovimentos } from '@/lib/estoqueUtils';
-import { formatCurrencySmartBRL, parseDataLocal } from '@/lib/format';
+import { formatCurrencySmartBRL, parseDataLocal, fmtNum, formatQuantidadeBR } from '@/lib/format';
 import ContextualTip from '@/components/onboarding/ContextualTip';
 import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/ui/pagination-controls';
@@ -378,12 +378,12 @@ const Estoque = () => {
                       const estoqueZerado = Number(i.estoque_atual) <= 0;
                       return (
                         <span className={estoqueZerado ? 'text-red-600 font-semibold' : estoqueBaixo ? 'text-amber-600 font-semibold' : ''}>
-                          {Number(i.estoque_atual).toFixed(2)} {i.unidade_medida}
+                          {formatQuantidadeBR(Number(i.estoque_atual))} {i.unidade_medida}
                         </span>
                       );
                     }},
                     { key: 'minimo', header: 'Estoque Mínimo', align: 'right', mobilePriority: 4, hideOnMobile: true, render: (i) => (
-                      <span className="text-muted-foreground text-xs whitespace-nowrap">{Number(i.estoque_minimo).toFixed(2)} {i.unidade_medida}</span>
+                      <span className="text-muted-foreground text-xs whitespace-nowrap">{formatQuantidadeBR(Number(i.estoque_minimo))} {i.unidade_medida}</span>
                     )},
                     { key: 'custo', header: 'Custo Unit.', align: 'right', mobilePriority: 5, hideOnMobile: true, render: (i) => (
                       <span className="text-muted-foreground">{formatCurrencySmartBRL(Number(i.custo_unitario))}</span>
@@ -411,7 +411,7 @@ const Estoque = () => {
                     const estoqueZerado = Number(i.estoque_atual) <= 0;
                     return (
                       <span className={`whitespace-nowrap ${estoqueZerado ? 'text-red-600 font-semibold' : estoqueBaixo ? 'text-amber-600 font-semibold' : ''}`}>
-                        {Number(i.estoque_atual).toFixed(2)} {i.unidade_medida}
+                        {formatQuantidadeBR(Number(i.estoque_atual))} {i.unidade_medida}
                       </span>
                     );
                   }}
@@ -501,7 +501,7 @@ const Estoque = () => {
                         </div>
                       );
                     }},
-                    { key: 'preco', header: 'Preço', align: 'right', mobilePriority: 5, render: (p) => <span className="text-muted-foreground">R$ {Number(p.preco_venda).toFixed(2)}</span> },
+                    { key: 'preco', header: 'Preço', align: 'right', mobilePriority: 5, render: (p) => <span className="text-muted-foreground">R$ {fmtNum(Number(p.preco_venda), 2)}</span> },
                     { key: 'status', header: 'Status', align: 'center', mobilePriority: 6, render: (p) => {
                       const estoque = Number(p.estoque_acabado);
                       return estoque > 0 ? (
@@ -653,7 +653,7 @@ const Estoque = () => {
                       <Badge variant="outline" className="text-red-600 border-red-600"><ArrowDown className="h-3 w-3 mr-1" />Saída</Badge>
                     )},
                     { key: 'quantidade', header: 'Quantidade', align: 'right', mobilePriority: 4, render: (m) => (
-                      <span className="whitespace-nowrap">{Number(m.quantidade).toFixed(2)} {m.insumos?.unidade_medida}</span>
+                      <span className="whitespace-nowrap">{formatQuantidadeBR(Number(m.quantidade))} {m.insumos?.unidade_medida}</span>
                     )},
                     { key: 'origem', header: 'Origem', mobilePriority: 5, render: (m) => <Badge variant="secondary">{m.origem}</Badge> },
                     { key: 'obs', header: 'Observação', mobilePriority: 6, render: (m) => <span className="text-muted-foreground">{m.observacao || '-'}</span> },
@@ -661,9 +661,9 @@ const Estoque = () => {
                   renderMobileHeader={(m) => m.insumos?.nome}
                   renderMobileSubtitle={(m) => format(new Date(m.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                   renderMobileHighlight={(m) => m.tipo === 'entrada' ? (
-                    <Badge variant="outline" className="text-green-600 border-green-600"><ArrowUp className="h-3 w-3 mr-1" />+{Number(m.quantidade).toFixed(2)}</Badge>
+                    <Badge variant="outline" className="text-green-600 border-green-600"><ArrowUp className="h-3 w-3 mr-1" />+{formatQuantidadeBR(Number(m.quantidade))}</Badge>
                   ) : (
-                    <Badge variant="outline" className="text-red-600 border-red-600"><ArrowDown className="h-3 w-3 mr-1" />-{Number(m.quantidade).toFixed(2)}</Badge>
+                    <Badge variant="outline" className="text-red-600 border-red-600"><ArrowDown className="h-3 w-3 mr-1" />-{formatQuantidadeBR(Number(m.quantidade))}</Badge>
                   )}
                   emptyMessage={temFiltrosAtivos ? 'Nenhuma movimentação encontrada. Tente ajustar os filtros.' : 'Nenhuma movimentação registrada.'}
                   emptyAction={!temFiltrosAtivos ? (
