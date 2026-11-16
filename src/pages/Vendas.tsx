@@ -12,10 +12,11 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MobileDataView } from '@/components/ui/mobile-data-view';
-import { Plus, Package, Filter, DollarSign, ShoppingCart, AlertTriangle, ChevronRight } from 'lucide-react';
+import { Plus, Package, Filter, DollarSign, ShoppingCart, AlertTriangle, ChevronRight, CalendarCheck } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import ImportarVendasDialog from '@/components/vendas/ImportarVendasDialog';
+import FechamentoDiaDialog from '@/components/vendas/FechamentoDiaDialog';
 import VendaRapidaDialog, { PedidoParaEditar } from '@/components/vendas/VendaRapidaDialog';
 import PedidoDetalheDialog, { PedidoLista, ORIGEM_LABEL } from '@/components/vendas/PedidoDetalheDialog';
 import { formatCurrencyBRL, parseDataLocal } from '@/lib/format';
@@ -25,6 +26,7 @@ import ContextualTip from '@/components/onboarding/ContextualTip';
 const Vendas = () => {
   const { usuario } = useAuth();
   const [vendaRapidaAberta, setVendaRapidaAberta] = useState(false);
+  const [fechamentoAberto, setFechamentoAberto] = useState(false);
   const [pedidoEditar, setPedidoEditar] = useState<PedidoParaEditar | null>(null);
   const [pedidoAberto, setPedidoAberto] = useState<PedidoLista | null>(null);
 
@@ -129,6 +131,9 @@ const Vendas = () => {
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => { setPedidoEditar(null); setVendaRapidaAberta(true); }}>
             <Plus className="mr-2 h-4 w-4" />Nova Venda
+          </Button>
+          <Button variant="outline" onClick={() => setFechamentoAberto(true)}>
+            <CalendarCheck className="mr-2 h-4 w-4" />Fechamento do dia
           </Button>
           <ImportarVendasDialog />
         </div>
@@ -277,6 +282,7 @@ const Vendas = () => {
         onOpenChange={(o) => { setVendaRapidaAberta(o); if (!o) setPedidoEditar(null); }}
         pedido={pedidoEditar}
       />
+      <FechamentoDiaDialog open={fechamentoAberto} onOpenChange={setFechamentoAberto} />
       <PedidoDetalheDialog
         pedido={pedidoAberto}
         onClose={() => setPedidoAberto(null)}
