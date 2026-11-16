@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { invalidateAndRefetch } from '@/lib/queryConfig';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,6 +23,7 @@ import {
   Package,
   ArrowRight,
   Info
+  AlertTriangle,
 } from 'lucide-react';
 
 import {
