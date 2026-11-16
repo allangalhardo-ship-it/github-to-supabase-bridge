@@ -1,5 +1,6 @@
 import { encontrarCanal } from "@/lib/canalUtils";
 import React, { useMemo } from 'react';
+import { usePrecoUnico } from '@/hooks/usePrecoUnico';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -116,6 +117,7 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
   const impostoPercent = config?.imposto_medio_sobre_vendas ?? 10;
   const custoFixoMensal = custosFixos?.reduce((sum, c) => sum + Number(c.valor_mensal), 0) || 0;
 
+  const { precoDe } = usePrecoUnico();
   const insights = useMemo(() => {
     const result: InsightData[] = [];
 
@@ -659,7 +661,7 @@ export const SmartInsights: React.FC<SmartInsightsProps> = ({
     }
 
     return result;
-  }, [vendas, produtos, canaisConfigurados, config, custosFixos, periodo, margemMeta, impostoPercent, custoFixoMensal, formatCurrency]);
+  }, [vendas, produtos, canaisConfigurados, config, custosFixos, periodo, margemMeta, impostoPercent, custoFixoMensal, formatCurrency, precoDe]);
 
   if (insights.length === 0) {
     return null;
