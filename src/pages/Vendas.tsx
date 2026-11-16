@@ -775,12 +775,12 @@ const Vendas = () => {
                   mobilePriority: 5,
                   hideOnMobile: true,
                   render: (venda) => (
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 truncate max-w-[80px]">
+                    <div className="min-w-0"><Badge variant="secondary" className="text-[10px] px-1.5 py-0 truncate max-w-[80px]">
                       {formatCanalLabel(venda.canal)}
                     </Badge>
                     {(venda as any).clientes?.nome && (
                       <span className="block text-[10px] text-muted-foreground truncate max-w-[100px]">{(venda as any).clientes.nome}</span>
-                    )}
+                    )}</div>
                   ),
                 },
                 {
