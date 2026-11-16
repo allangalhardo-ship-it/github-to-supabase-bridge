@@ -79,7 +79,7 @@ export const FluxoCaixa: React.FC<FluxoCaixaProps> = ({ onBack }) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('vendas')
-        .select('id, valor_total, data_venda')
+        .select('id, valor_total, valor_liquido, data_venda')
         .eq('empresa_id', usuario?.empresa_id)
         .gte('data_venda', dataInicio)
         .lte('data_venda', dataFim);
@@ -110,11 +110,15 @@ export const FluxoCaixa: React.FC<FluxoCaixaProps> = ({ onBack }) => {
   });
 
   // Calcular fluxo de caixa
+  // Venda entra no caixa pelo valor líquido (já sem taxa do app) quando existir
+  const liq = (v: { valor_total: number; valor_liquido: number | null }) =>
+    v.valor_liquido != null && Number(v.valor_liquido) > 0 ? Number(v.valor_liquido) : Number(v.valor_total || 0);
+
   const fluxo = useMemo(() => {
     if (!vendas && !compras && !movimentos) return null;
 
     // Total de entradas (vendas + entradas manuais)
-    const totalVendas = vendas?.reduce((acc, v) => acc + (v.valor_total || 0), 0) || 0;
+    const totalVendas = vendas?.reduce((acc, v) => acc + liq(v), 0) || 0;
     const entradasManuais = movimentos?.filter(m => m.tipo === 'entrada').reduce((acc, m) => acc + (m.valor || 0), 0) || 0;
     const totalEntradas = totalVendas + entradasManuais;
 
@@ -150,7 +154,7 @@ export const FluxoCaixa: React.FC<FluxoCaixaProps> = ({ onBack }) => {
     const evolucaoDiaria = dias.map(dia => {
       const dataStr = format(dia, 'yyyy-MM-dd');
       
-      const entradasDia = (vendas?.filter(v => v.data_venda === dataStr).reduce((acc, v) => acc + v.valor_total, 0) || 0) +
+      const entradasDia = (vendas?.filter(v => v.data_venda === dataStr).reduce((acc, v) => acc + liq(v), 0) || 0) +
         (movimentos?.filter(m => m.data_movimento === dataStr && m.tipo === 'entrada').reduce((acc, m) => acc + m.valor, 0) || 0);
       
       const saidasDia = (compras?.filter(c => c.created_at.startsWith(dataStr)).reduce((acc, c) => acc + (c.custo_total || 0), 0) || 0) +
@@ -180,7 +184,7 @@ export const FluxoCaixa: React.FC<FluxoCaixaProps> = ({ onBack }) => {
         data: v.data_venda,
         tipo: 'entrada' as const,
         categoria: 'Vendas',
-        valor: v.valor_total,
+        valor: liq(v),
         descricao: 'Venda registrada',
       })) || []),
       ...(movimentos?.slice(-10).map(m => ({
