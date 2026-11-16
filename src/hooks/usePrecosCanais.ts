@@ -20,7 +20,7 @@ export interface CanalConfig {
   isBalcao: boolean;
 }
 
-export function usePrecosCanais(produtoId?: string) {
+export function usePrecosCanais(produtoId?: string, opcoes?: { avisoSalvoSilencioso?: boolean }) {
   const { usuario } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -177,7 +177,7 @@ export function usePrecosCanais(produtoId?: string) {
         ['precos-canais-todos'],
         ['produtos-menu-engineering'],
       ]);
-      toast({ title: 'Preços salvos com sucesso!' });
+      if (!opcoes?.avisoSalvoSilencioso) toast({ title: 'Preços salvos com sucesso!' });
     },
     onError: (error) => {
       toast({ 

@@ -18,6 +18,8 @@ interface PrecosCanaisEditorProps {
   cmvAlvo?: number;
   autoSugerir?: boolean;
   onSave?: () => void;
+  /** Não mostra o aviso flutuante de "Preços salvos" (usado no assistente de novo produto) */
+  avisoSalvoSilencioso?: boolean;
 }
 
 const PrecosCanaisEditor: React.FC<PrecosCanaisEditorProps> = ({
@@ -28,6 +30,7 @@ const PrecosCanaisEditor: React.FC<PrecosCanaisEditorProps> = ({
   cmvAlvo = 35,
   autoSugerir = false,
   onSave,
+  avisoSalvoSilencioso = false,
 }) => {
   const { 
     canaisConfigurados, 
@@ -35,7 +38,7 @@ const PrecosCanaisEditor: React.FC<PrecosCanaisEditorProps> = ({
     isLoadingPrecos, 
     upsertMultiplosPrecos,
     isSaving 
-  } = usePrecosCanais(produtoId);
+  } = usePrecosCanais(produtoId, { avisoSalvoSilencioso });
   
   const [precos, setPrecos] = useState<Record<string, string>>({});
   const [hasChanges, setHasChanges] = useState(false);
