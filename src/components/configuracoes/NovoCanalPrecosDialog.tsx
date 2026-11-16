@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PercentInput } from '@/components/ui/percent-input';
+import { PercentInput } from '@/components/ui/currency-input';
 import { calcularCustoFicha } from '@/utils/custoFicha';
 import { calcularPrecoPorCmvAlvo } from '@/lib/precificacaoUtils';
 import { precoEfetivo, type CanalBasico, type PrecoCanalBasico } from '@/lib/precoCanalUtils';
@@ -28,7 +28,8 @@ const NovoCanalPrecosDialog: React.FC<Props> = ({ canal, onClose }) => {
   const open = !!canal;
   const [opcao, setOpcao] = useState<Opcao>('copiar');
   const [canalOrigem, setCanalOrigem] = useState('');
-  const [taxa, setTaxa] = useState<number>(0);
+  const [taxaTxt, setTaxaTxt] = useState('');
+  const taxa = parseFloat(taxaTxt.replace(',', '.')) || 0;
   const [salvando, setSalvando] = useState(false);
 
   const precisaTaxa = canal?.tipo === 'app_delivery';
@@ -59,6 +60,10 @@ const NovoCanalPrecosDialog: React.FC<Props> = ({ canal, onClose }) => {
   const salvar = async () => {
     if (!canal || !empresaId || !data) return;
     if (opcao === 'depois') { onClose(); return; }
+    if (opcao === 'sugerido' && precisaTaxa && taxa <= 0) {
+      toast({ title: 'Informe a taxa do aplicativo', variant: 'destructive' });
+      return;
+    }
     if (opcao === 'copiar' && !canalOrigem) {
       toast({ title: 'Escolha de qual canal copiar os preços', variant: 'destructive' });
       return;
@@ -137,7 +142,7 @@ const NovoCanalPrecosDialog: React.FC<Props> = ({ canal, onClose }) => {
               {opcao === 'sugerido' && precisaTaxa && (
                 <div className="space-y-1">
                   <Label className="text-xs">Taxa do aplicativo (%)</Label>
-                  <PercentInput value={taxa} onChange={(v: number) => setTaxa(v || 0)} />
+                  <PercentInput value={taxaTxt} onChange={setTaxaTxt} />
                 </div>
               )}
             </div>

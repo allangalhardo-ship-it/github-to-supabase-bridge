@@ -16,6 +16,7 @@ import {
 import { useCanaisVenda, CanalComTaxaTotal, TaxaCanal } from '@/hooks/useCanaisVenda';
 import { cn } from '@/lib/utils';
 import { fmtNum } from '@/lib/format';
+import NovoCanalPrecosDialog from './NovoCanalPrecosDialog';
 
 const TIPOS_CANAL = [
   { value: 'presencial', label: 'Presencial', icon: Store, description: 'Balcão, loja física' },
@@ -56,6 +57,7 @@ const CanaisVendaConfig: React.FC = () => {
   const [editingTaxa, setEditingTaxa] = useState<TaxaCanal | null>(null);
   const [taxaFormData, setTaxaFormData] = useState({ nome: '', percentual: '' });
 
+  const [canalNovo, setCanalNovo] = useState<{ id: string; nome: string; tipo: string } | null>(null);
   const [expandedCanais, setExpandedCanais] = useState<Set<string>>(new Set());
 
   const resetCanalForm = () => {
@@ -82,7 +84,7 @@ const CanaisVendaConfig: React.FC = () => {
     if (editingCanal) {
       updateCanal({ id: editingCanal.id, ...formData });
     } else {
-      createCanal(formData);
+      createCanal(formData, { onSuccess: (c: any) => c && setCanalNovo({ id: c.id, nome: c.nome, tipo: c.tipo }) });
     }
     resetCanalForm();
   };
@@ -297,6 +299,7 @@ const CanaisVendaConfig: React.FC = () => {
           </form>
         </DialogContent>
       </Dialog>
+      <NovoCanalPrecosDialog canal={canalNovo} onClose={() => setCanalNovo(null)} />
     </Card>
   );
 };
