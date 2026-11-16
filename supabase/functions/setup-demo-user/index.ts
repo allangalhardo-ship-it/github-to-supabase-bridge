@@ -356,7 +356,6 @@ serve(async (req) => {
     }
 
     const vendasPayload: any[] = [];
-    const entradasCaixa: Record<string, { dia: number; canal: typeof CANAIS_MIX[number]; bruto: number; taxa: number }> = {};
     for (const { prod, dia, canal, qtd } of Object.values(agrupado)) {
       const preco = precoDe(prod, canal);
       const subtotal = Math.round(preco * qtd * 100) / 100;
@@ -375,10 +374,6 @@ serve(async (req) => {
         valor_liquido: subtotal - comissao,
         cliente_id: !canal.isApp && Math.random() < 0.3 && clienteIds.length ? pick(clienteIds) : null,
       });
-      const ck = `${dia}|${canal.db}`;
-      if (!entradasCaixa[ck]) entradasCaixa[ck] = { dia, canal, bruto: 0, taxa: 0 };
-      entradasCaixa[ck].bruto += subtotal;
-      entradasCaixa[ck].taxa += comissao;
     }
     for (let i = 0; i < vendasPayload.length; i += 100) {
       const { error } = await admin.from("vendas").insert(vendasPayload.slice(i, i + 100));
