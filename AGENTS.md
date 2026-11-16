@@ -1,0 +1,1 @@
+- Format on-screen numbers, channel names and cash categories with helpers in src/lib/format.ts (fmtNum, formatQuantidadeBR, formatCanalLabel, formatCategoriaCaixa); keep toFixed only for form/DB values — keeps pt-BR display consistent without breaking inputs.
