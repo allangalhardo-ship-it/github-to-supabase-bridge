@@ -73,7 +73,7 @@ export default function PedidoDetalheDialog({ pedido, onClose, onEditar, canais 
       const nome = canais.find(c => c.id === canalId)?.nome;
       const { error } = await supabase.from('vendas_pedidos' as any).update({ canal_id: canalId } as any).eq('id', id);
       if (error) throw error;
-      const { error: e2 } = await supabase.from('vendas').update({ canal: nome }).eq('pedido_id' as any, id);
+      const { error: e2 } = await (supabase.from('vendas') as any).update({ canal: nome }).eq('pedido_id', id);
       if (e2) throw e2;
     },
     onSuccess: () => {
