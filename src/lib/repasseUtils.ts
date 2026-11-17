@@ -3,7 +3,7 @@ export interface LinhaCaixaPedido {
   canal_id: string | null;
   canal_nome: string | null;
   data_caixa: string; // yyyy-MM-dd
-  tipo: 'venda' | 'repasse' | 'desconto_repasse' | 'mensalidade';
+  tipo: 'venda' | 'repasse' | 'desconto_repasse' | 'mensalidade' | 'mensalidade_saida';
   valor: number;
 }
 
@@ -13,7 +13,7 @@ export interface GrupoAReceber { canal: string; data: string; repasses: number; 
 export function montarAReceber(linhas: LinhaCaixaPedido[], hoje: string) {
   const map = new Map<string, GrupoAReceber>();
   for (const l of linhas) {
-    if (l.tipo === 'venda' || l.data_caixa <= hoje) continue;
+    if (l.tipo === 'venda' || l.tipo === 'mensalidade_saida' || l.data_caixa <= hoje) continue;
     const canal = l.canal_nome || 'Sem canal';
     const k = `${canal}|${l.data_caixa}`;
     const g = map.get(k) || { canal, data: l.data_caixa, repasses: 0, descontos: 0, total: 0 };

@@ -400,7 +400,7 @@ const Caixa = () => {
     const pedidosPorId = new Map((vendas || []).map(v => [v.id, v]));
     (linhasPedidos || []).forEach((l, i) => {
       if (l.data_caixa < dataInicio || l.data_caixa > dataFim) return;
-      if (l.tipo !== 'venda' && l.data_caixa > hojeStr) return; // ainda a receber
+      if (l.tipo !== 'venda' && l.tipo !== 'mensalidade_saida' && l.data_caixa > hojeStr) return; // ainda a receber
       const ped = l.pedido_id ? pedidosPorId.get(l.pedido_id) : undefined;
       const valor = Math.abs(Number(l.valor));
       if (valor === 0) return;
@@ -408,8 +408,9 @@ const Caixa = () => {
       items.push({
         id: `ped-${l.tipo}-${l.pedido_id || l.canal_id}-${i}`,
         tipo: Number(l.valor) >= 0 ? 'entrada' : 'saida',
-        categoria: l.tipo === 'mensalidade' ? 'Taxas de Apps/Delivery' : l.tipo === 'desconto_repasse' ? 'Taxas de Apps/Delivery' : l.tipo === 'repasse' ? 'Repasse de plataforma' : 'Venda',
-        descricao: l.tipo === 'mensalidade' ? `Mensalidade ${l.canal_nome || ''}`.trim()
+        categoria: l.tipo === 'mensalidade' || l.tipo === 'mensalidade_saida' ? 'Taxas de Apps/Delivery' : l.tipo === 'desconto_repasse' ? 'Taxas de Apps/Delivery' : l.tipo === 'repasse' ? 'Repasse de plataforma' : 'Venda',
+        descricao: l.tipo === 'mensalidade' ? `Mensalidade ${l.canal_nome || ''} (descontada no repasse)`.replace('  ', ' ')
+          : l.tipo === 'mensalidade_saida' ? `Mensalidade ${l.canal_nome || ''} (sem repasse no mês)`.replace('  ', ' ')
           : l.tipo === 'desconto_repasse' ? `Comissão descontada no repasse - ${base}`
           : base,
         valor,
