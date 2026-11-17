@@ -55,6 +55,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { format, startOfMonth, endOfMonth, subMonths, parseISO, addMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { montarAReceber, type LinhaCaixaPedido } from '@/lib/repasseUtils';
 import { useToast } from '@/hooks/use-toast';
 import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { usePagination } from '@/hooks/usePagination';
@@ -841,6 +842,24 @@ const Caixa = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        <Dialog open={aReceberOpen} onOpenChange={setAReceberOpen}>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>A receber das plataformas</DialogTitle></DialogHeader>
+            <p className="text-xs text-muted-foreground">Valores que a plataforma ainda vai repassar, já sem as taxas. Comissões de pedidos recebidos pela loja e mensalidades aparecem descontando.</p>
+            <div className="space-y-2">
+              {aReceber.grupos.map(g => (
+                <div key={g.canal + g.data} className="rounded border p-2 text-sm">
+                  <div className="flex justify-between font-medium"><span>{g.canal}</span><span>{formatCurrency(g.total)}</span></div>
+                  <div className="text-xs text-muted-foreground">Previsto para {format(parseISO(g.data), 'dd/MM/yyyy')}</div>
+                  {g.descontos > 0 && (
+                    <div className="text-xs text-muted-foreground">Repasse {formatCurrency(g.repasses)} − descontos {formatCurrency(g.descontos)}</div>
+                  )}
+                </div>
+              ))}
+              <div className="flex justify-between border-t pt-2 font-bold"><span>Total</span><span>{formatCurrency(aReceber.total)}</span></div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
   );
 };
