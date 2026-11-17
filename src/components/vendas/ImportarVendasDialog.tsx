@@ -315,7 +315,7 @@ const ImportarVendasDialog: React.FC = () => {
     setVerLista(false);
     setDuplicateCount(0);
     setCheckingDuplicates(false);
-    setImportMethod('csv');
+    setImportMethod('foto');
     setIsProcessingAI(false);
     setMultiImages([]);
     setAllPhotoResults([]);
