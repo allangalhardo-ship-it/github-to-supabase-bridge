@@ -1232,6 +1232,9 @@ const ImportarVendasDialog: React.FC = () => {
                     return n > 0 ? <Badge key={t} variant="outline">{t}: {n}</Badge> : null;
                   })}
                 </div>
+                {allPhotoResults.some(r => r.fonte === 'planilha' && !r.atualizarPedidoId && r.itens.some(i => i.matchType === 'sem_produto' && /^pedido( #|$)/i.test(i.produto))) && (
+                  <p className="text-xs text-amber-700 bg-amber-50/60 border border-amber-300 rounded p-2">Alguns pedidos vieram sem itens (ex.: extrato da 99Food) e entram sem produto: não baixam estoque nem calculam custo. Para estoque e custo certos, importe esses pedidos por foto. Pedidos que já vieram por foto só têm a taxa real atualizada.</p>
+                )}
                 <ScrollArea className="h-[50vh] border rounded-lg">
                   <div className="divide-y">
                     {allPhotoResults.map((r, idx) => {
@@ -1278,6 +1281,12 @@ const ImportarVendasDialog: React.FC = () => {
                     )}
                     {currentResult.atualizarPedidoId && (
                       <div className="p-3 border rounded-lg bg-muted/40 text-sm">{currentResult.duplicateReason}</div>
+                    )}
+                    {currentResult.fonte === 'planilha' && !currentResult.atualizarPedidoId && currentResult.itens.some(i => i.matchType === 'sem_produto' && /^pedido( #|$)/i.test(i.produto)) && (
+                      <div className="flex items-start gap-2 p-3 border border-amber-300 bg-amber-50/60 rounded-lg text-sm">
+                        <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                        <p>Esta planilha não traz os itens do pedido, então ele entra <b>sem produto</b>: não baixa estoque nem calcula custo. Quer estoque e custo certos? Importe este pedido por <b>foto</b>. Se ele já foi importado por foto, a planilha só atualiza a taxa real.</p>
+                      </div>
                     )}
                     {/* Duplicate warning */}
                     {currentResult.isDuplicate && (
