@@ -82,7 +82,7 @@ export function identificarFormato(headers: string[]): FormatoPlanilha {
 
 /** "2x Brigadeiro (R$ 10,00), 1 x Brownie" → itens. */
 export function lerTextoItens(texto: string): { produto: string; quantidade: number; valor: number }[] {
-  return String(texto || '').split(/[;\n]|,(?![^(]*\))/).map(p => p.trim()).filter(Boolean).map(p => {
+  return String(texto || '').split(/[;\n]|,(?!\d)(?![^(]*\))/).map(p => p.trim()).filter(Boolean).map(p => {
     const q = p.match(/^(\d+(?:[.,]\d+)?)\s*x\s*/i);
     const quantidade = q ? numeroBR(q[1]) : 1;
     let resto = q ? p.slice(q[0].length) : p;
@@ -117,7 +117,7 @@ export function lerIfoodPedidos(linhas: Linha[]): PedidoPlanilha[] {
   const cData = acharColuna(h, ['data e hora'], ['data', 'pedido'], ['data']);
   const cStatus = acharColuna(h, ['status']);
   const cItensValor = acharColuna(h, ['valor dos itens'], ['subtotal'], ['valor', 'itens']);
-  const cItens = acharColuna(h, ['itens do pedido'], ['itens'], ['produtos']);
+  const cItens = acharColuna(h.filter(x => !/valor|qtd|quantidade|r\$/.test(norm(x))), ['itens do pedido'], ['itens'], ['produtos']);
   const cEntrega = acharColuna(h, ['taxa de entrega']);
   const cServico = acharColuna(h, ['taxa de servico']);
   const cIncLoja = acharColuna(h, ['incentivo', 'loja'], ['desconto', 'loja']);
@@ -226,7 +226,7 @@ export function lerGenerica(linhas: Linha[], plataformaPadrao = ''): PedidoPlani
   const cCanal = acharColuna(h, ['canal'], ['plataforma'], ['channel']);
   const cNum = acharColuna(h, ['pedido'], ['order']);
   const cStatus = acharColuna(h, ['status'], ['estado']);
-  const cItens = acharColuna(h, ['itens'], ['produto']);
+  const cItens = acharColuna(h.filter(x => !/valor|qtd|quantidade|r\$/.test(norm(x))), ['itens'], ['produto']);
   if (!cData || !cValor) return [];
   return linhas.map(l => {
     const p = vazio(cCanal ? String(l[cCanal] ?? '').trim() || plataformaPadrao : plataformaPadrao);
