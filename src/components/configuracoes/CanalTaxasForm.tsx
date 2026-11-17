@@ -9,20 +9,20 @@ import { AlertTriangle } from 'lucide-react';
 import { useCanaisVenda, CanalComTaxaTotal } from '@/hooks/useCanaisVenda';
 import { separarTaxasCanal, taxaEfetivaAcimaDaPrevista } from '@/lib/taxaCanalUtils';
 import { fmtNum } from '@/lib/format';
-import { toLocalDateString } from '@/lib/dateUtils';
+const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
 const CanalTaxasForm: React.FC<{ canal: CanalComTaxaTotal }> = ({ canal }) => {
   const { salvarTaxasCanal, isSalvandoTaxas } = useCanaisVenda();
   const atual = separarTaxasCanal(canal.taxas || []);
-  const [comissao, setComissao] = useState(atual.comissao);
-  const [online, setOnline] = useState(atual.online);
-  const [mensalidade, setMensalidade] = useState(Number(canal.mensalidade || 0));
+  const [comissao, setComissao] = useState(String(atual.comissao));
+  const [online, setOnline] = useState(String(atual.online));
+  const [mensalidade, setMensalidade] = useState(String(canal.mensalidade || 0));
   const [prazo, setPrazo] = useState(String(canal.prazo_repasse_dias ?? 0));
 
   useEffect(() => {
     const a = separarTaxasCanal(canal.taxas || []);
-    setComissao(a.comissao); setOnline(a.online);
-    setMensalidade(Number(canal.mensalidade || 0)); setPrazo(String(canal.prazo_repasse_dias ?? 0));
+    setComissao(String(a.comissao)); setOnline(String(a.online));
+    setMensalidade(String(canal.mensalidade || 0)); setPrazo(String(canal.prazo_repasse_dias ?? 0));
   }, [canal]);
 
   // Aviso: taxa efetiva real dos últimos 30 dias x prevista
@@ -32,7 +32,7 @@ const CanalTaxasForm: React.FC<{ canal: CanalComTaxaTotal }> = ({ canal }) => {
       const ini = new Date(); ini.setDate(ini.getDate() - 30);
       const { data } = await supabase.from('vendas_pedidos' as any)
         .select('valor_bruto, taxa_entrega, taxa_prevista, taxa_real')
-        .eq('canal_id', canal.id).gte('data_venda', toLocalDateString(ini)).not('taxa_real', 'is', null);
+        .eq('canal_id', canal.id).gte('data_venda', ymd(ini)).not('taxa_real', 'is', null);
       return taxaEfetivaAcimaDaPrevista((data || []) as any[], Number(canal.mensalidade || 0));
     },
     enabled: canal.tipo === 'app_delivery',
@@ -69,9 +69,9 @@ const CanalTaxasForm: React.FC<{ canal: CanalComTaxaTotal }> = ({ canal }) => {
         </div>
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">Usado no preço: {fmtNum(comissao + online, 1)}%</span>
+        <span className="text-xs text-muted-foreground">Usado no preço: {fmtNum((Number(comissao) || 0) + (Number(online) || 0), 1)}%</span>
         <Button size="sm" disabled={isSalvandoTaxas}
-          onClick={() => salvarTaxasCanal({ canal_id: canal.id, comissao, online, mensalidade, prazo: Number(prazo) || 0 })}>
+          onClick={() => salvarTaxasCanal({ canal_id: canal.id, comissao: Number(comissao) || 0, online: Number(online) || 0, mensalidade: Number(mensalidade) || 0, prazo: Number(prazo) || 0 })}>
           Salvar taxas
         </Button>
       </div>
