@@ -87,7 +87,7 @@ export const FluxoCaixa: React.FC<FluxoCaixaProps> = ({ onBack }) => {
           id: `${l.pedido_id || l.canal_id}-${l.tipo}-${i}`,
           data_venda: l.data_caixa as string,
           valor: Number(l.valor),
-          previsto: l.tipo !== 'venda' && l.data_caixa > hoje,
+          previsto: l.tipo !== 'venda' && l.tipo !== 'mensalidade_saida' && l.data_caixa > hoje,
           categoria: l.tipo === 'venda' ? 'Vendas'
             : l.tipo === 'repasse' ? (l.data_caixa > hoje ? 'A receber das plataformas (previsto)' : 'Repasse de plataforma')
             : 'Taxas de Apps/Delivery',
