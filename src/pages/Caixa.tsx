@@ -201,6 +201,20 @@ const Caixa = () => {
     enabled: !!usuario?.empresa_id,
   });
 
+  // Linhas de caixa dos pedidos (venda, repasse da plataforma, desconto no repasse, mensalidade)
+  const { data: linhasPedidos } = useQuery({
+    queryKey: ['caixa-pedidos-linhas', usuario?.empresa_id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_caixa_pedidos' as any, { p_empresa_id: usuario!.empresa_id });
+      if (error) throw error;
+      return (data || []) as LinhaCaixaPedido[];
+    },
+    enabled: !!usuario?.empresa_id,
+  });
+  const [aReceberOpen, setAReceberOpen] = useState(false);
+  const hojeStr = format(new Date(), 'yyyy-MM-dd');
+  const aReceber = useMemo(() => montarAReceber(linhasPedidos || [], hojeStr), [linhasPedidos, hojeStr]);
+
   // Buscar notas do mês
   const { data: notas, isLoading: loadingNotas } = useQuery({
     queryKey: ['caixa-notas', usuario?.empresa_id, dataInicio, dataFim],
@@ -381,16 +395,24 @@ const Caixa = () => {
       });
     });
 
-    // Vendas como entrada
-    vendas?.forEach(v => {
+    // Vendas, repasses, descontos no repasse e mensalidades (só o que já caiu no caixa)
+    const pedidosPorId = new Map((vendas || []).map(v => [v.id, v]));
+    (linhasPedidos || []).forEach((l, i) => {
+      if (l.data_caixa < dataInicio || l.data_caixa > dataFim) return;
+      if (l.tipo !== 'venda' && l.data_caixa > hojeStr) return; // ainda a receber
+      const ped = l.pedido_id ? pedidosPorId.get(l.pedido_id) : undefined;
+      const valor = Math.abs(Number(l.valor));
+      if (valor === 0) return;
+      const base = ped ? descricaoPedido(ped) : (l.canal_nome || 'Pedido');
       items.push({
-        id: `venda-${v.id}`,
-        tipo: 'entrada',
-        categoria: 'Venda',
-        descricao: descricaoPedido(v),
-        // Líquido do pedido (já sem a taxa do canal, com a taxa de entrega)
-        valor: Number(v.valor_liquido) > 0 ? Number(v.valor_liquido) : Number(v.valor_bruto),
-        data: v.data_venda,
+        id: `ped-${l.tipo}-${l.pedido_id || l.canal_id}-${i}`,
+        tipo: Number(l.valor) >= 0 ? 'entrada' : 'saida',
+        categoria: l.tipo === 'mensalidade' ? 'Taxas de Apps/Delivery' : l.tipo === 'desconto_repasse' ? 'Taxas de Apps/Delivery' : l.tipo === 'repasse' ? 'Repasse de plataforma' : 'Venda',
+        descricao: l.tipo === 'mensalidade' ? `Mensalidade ${l.canal_nome || ''}`.trim()
+          : l.tipo === 'desconto_repasse' ? `Comissão descontada no repasse - ${base}`
+          : base,
+        valor,
+        data: l.data_caixa,
         origem: 'venda',
       });
     });
@@ -412,7 +434,7 @@ const Caixa = () => {
 
     // Ordenar por data decrescente
     return items.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
-  }, [movimentosManuais, vendas, notas]);
+  }, [movimentosManuais, vendas, notas, linhasPedidos, dataInicio, dataFim, hojeStr]);
 
   // Filtrar movimentos
   const movimentosFiltrados = useMemo(() => {
@@ -639,6 +661,24 @@ const Caixa = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* A receber das plataformas */}
+            {aReceber.total !== 0 && (
+              <Card className="border-l-4 border-l-amber-500 cursor-pointer hover:bg-muted/30" onClick={() => setAReceberOpen(true)}>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-full bg-amber-100 dark:bg-amber-900/30 shrink-0">
+                      <Calendar className="h-5 w-5 text-amber-600" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">A receber das plataformas</p>
+                      <p className="text-lg font-bold truncate text-amber-600">{formatCurrency(aReceber.total)}</p>
+                      <p className="text-[10px] text-muted-foreground">Não soma no Saldo Atual. Toque para ver.</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Entradas do mês */}
             <Card className="border-l-4 border-l-green-500">
