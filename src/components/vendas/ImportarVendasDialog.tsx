@@ -1017,6 +1017,9 @@ const ImportarVendasDialog: React.FC = () => {
               <span>{formatCurrency(data.taxa_servico)}</span>
             </div>
           )}
+          {data.taxa_real != null && (
+            <div className="flex justify-between text-destructive"><span>Taxa real cobrada (relatório da plataforma)</span><span className="font-medium">-{formatCurrency(data.taxa_real)}</span></div>
+          )}
           <div className="border-t pt-1 flex justify-between font-bold text-primary">
             <span>Valor líquido dos produtos</span>
             <span>{formatCurrency(liquido)}</span>
