@@ -403,7 +403,9 @@ export type Database = {
           created_at: string
           empresa_id: string
           id: string
+          mensalidade: number
           nome: string
+          prazo_repasse_dias: number
           tipo: string
           updated_at: string
         }
@@ -412,7 +414,9 @@ export type Database = {
           created_at?: string
           empresa_id: string
           id?: string
+          mensalidade?: number
           nome: string
+          prazo_repasse_dias?: number
           tipo?: string
           updated_at?: string
         }
@@ -421,7 +425,9 @@ export type Database = {
           created_at?: string
           empresa_id?: string
           id?: string
+          mensalidade?: number
           nome?: string
+          prazo_repasse_dias?: number
           tipo?: string
           updated_at?: string
         }
@@ -1956,6 +1962,7 @@ export type Database = {
           canal_texto: string | null
           cliente_id: string | null
           created_at: string
+          data_repasse_prevista: string | null
           data_venda: string
           desconto: number
           empresa_id: string
@@ -1971,6 +1978,8 @@ export type Database = {
           status: string
           taxa_canal: number
           taxa_entrega: number
+          taxa_prevista: number
+          taxa_real: number | null
           taxa_servico_info: number
           updated_at: string
           valor_bruto: number
@@ -1981,6 +1990,7 @@ export type Database = {
           canal_texto?: string | null
           cliente_id?: string | null
           created_at?: string
+          data_repasse_prevista?: string | null
           data_venda?: string
           desconto?: number
           empresa_id: string
@@ -1996,6 +2006,8 @@ export type Database = {
           status?: string
           taxa_canal?: number
           taxa_entrega?: number
+          taxa_prevista?: number
+          taxa_real?: number | null
           taxa_servico_info?: number
           updated_at?: string
           valor_bruto?: number
@@ -2006,6 +2018,7 @@ export type Database = {
           canal_texto?: string | null
           cliente_id?: string | null
           created_at?: string
+          data_repasse_prevista?: string | null
           data_venda?: string
           desconto?: number
           empresa_id?: string
@@ -2021,6 +2034,8 @@ export type Database = {
           status?: string
           taxa_canal?: number
           taxa_entrega?: number
+          taxa_prevista?: number
+          taxa_real?: number | null
           taxa_servico_info?: number
           updated_at?: string
           valor_bruto?: number
@@ -2153,6 +2168,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      atualizar_taxa_real_pedido: {
+        Args: { p_pedido_id: string; p_taxa_real: number }
+        Returns: undefined
+      }
       baixar_insumo_recursivo: {
         Args: {
           p_depth: number
@@ -2204,6 +2223,17 @@ export type Database = {
       estornar_venda_pedido: {
         Args: { p_pedido_id: string }
         Returns: undefined
+      }
+      get_caixa_pedidos: {
+        Args: { p_empresa_id: string }
+        Returns: {
+          canal_id: string
+          canal_nome: string
+          data_caixa: string
+          pedido_id: string
+          tipo: string
+          valor: number
+        }[]
       }
       get_dashboard_vendas: {
         Args: {
@@ -2306,6 +2336,15 @@ export type Database = {
           p_pedido_id?: string
         }
         Returns: string
+      }
+      taxas_do_canal: {
+        Args: { p_canal_id: string }
+        Returns: {
+          comissao: number
+          mensalidade: number
+          online: number
+          prazo: number
+        }[]
       }
     }
     Enums: {

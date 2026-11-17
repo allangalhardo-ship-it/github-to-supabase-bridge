@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useRef } from 'react';
-import Importar99FoodTab from './Importar99FoodDialog';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,6 +20,7 @@ import { formatCurrencyBRL, fmtNum } from '@/lib/format';
 import * as XLSX from 'xlsx';
 import { isNativePlatform, takePictureNative, pickImageNative } from '@/lib/cameraUtils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { identificarFormato, ler99Food, lerIfoodPedidos, lerIfoodFinanceiro, lerGenerica, cruzarIfood, NOMES_FORMATO, type FormatoPlanilha, type PedidoPlanilha } from '@/lib/planilhaFormatos';
 import { resolverVinculo, classificarDesconto, interpretarData, calcularLiquido, montarItensPedido, somarPedido, type TipoVinculo, type Sugestao, type QuemPaga } from '@/lib/importacaoFotoRegras';
 
 interface ParsedRow {
@@ -78,6 +78,10 @@ interface PhotoImportData {
   incentivos_loja: number;
   total_geral: number;
   itens: ParsedItem[];
+  fonte?: 'foto' | 'planilha';
+  taxa_real?: number | null;
+  recebido_por?: 'loja' | 'plataforma' | null;
+  atualizarPedidoId?: string;
   isDuplicate?: boolean;
   duplicateReason?: string;
 }
@@ -200,7 +204,7 @@ const ImportarVendasDialog: React.FC = () => {
   const [duplicateCount, setDuplicateCount] = useState(0);
   const [checkingDuplicates, setCheckingDuplicates] = useState(false);
   
-  const [importMethod, setImportMethod] = useState<'csv' | 'foto' | '99food'>('csv');
+  const [importMethod, setImportMethod] = useState<'foto' | 'planilha'>('foto');
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const multiImageInputRef = useRef<HTMLInputElement>(null);
@@ -307,9 +311,11 @@ const ImportarVendasDialog: React.FC = () => {
     setMapping({ data: '', valor: '', canal: '', status: '', descricao: '' });
     setParsedRows([]);
     setCanalOverride('');
+    setPlanilhas([]);
+    setVerLista(false);
     setDuplicateCount(0);
     setCheckingDuplicates(false);
-    setImportMethod('csv');
+    setImportMethod('foto');
     setIsProcessingAI(false);
     setMultiImages([]);
     setAllPhotoResults([]);
@@ -357,7 +363,7 @@ const ImportarVendasDialog: React.FC = () => {
 
       let query = supabase
         .from('vendas')
-        .select('numero_pedido_externo, plataforma, data_venda, subtotal, valor_total')
+        .select('numero_pedido_externo, plataforma, data_venda, subtotal, valor_total, pedido_id')
         .eq('empresa_id', usuario.empresa_id);
 
       if (dataInicio && dataFim) {
@@ -379,11 +385,15 @@ const ImportarVendasDialog: React.FC = () => {
             (v.plataforma || '').toLowerCase() === (result.plataforma || '').toLowerCase()
           );
           if (byPedido) {
+            if (result.taxa_real != null && byPedido.pedido_id) {
+              return { ...result, isDuplicate: false, atualizarPedidoId: byPedido.pedido_id, duplicateReason: `Pedido ${result.numero_pedido} já existe: só a taxa real será atualizada` };
+            }
             return { ...result, isDuplicate: true, duplicateReason: `Pedido ${result.numero_pedido} já importado` };
           }
         }
 
         // 2. Check by data + subtotal + plataforma (fallback for orders without number)
+        if (result.atualizarPedidoId) return result;
         const byValor = existingVendas.find(v =>
           v.data_venda === result.data &&
           Math.abs(Number(v.subtotal || v.valor_total) - result.subtotal) < 0.01 &&
@@ -408,6 +418,88 @@ const ImportarVendasDialog: React.FC = () => {
       });
     } catch {
       return results;
+    }
+  };
+
+  // ===== Planilha =====
+  const [planilhas, setPlanilhas] = useState<{ file: File; linhas: Record<string, unknown>[]; formato: FormatoPlanilha }[]>([]);
+  const [lendoPlanilhas, setLendoPlanilhas] = useState(false);
+  const [verLista, setVerLista] = useState(false);
+
+  const handlePlanilhasSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    const lidas: typeof planilhas = [];
+    for (const file of files) {
+      try {
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { type: 'array', cellDates: true });
+        const linhas = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[wb.SheetNames[0]], { raw: false, defval: '' });
+        lidas.push({ file, linhas, formato: identificarFormato(Object.keys(linhas[0] || {})) });
+      } catch {
+        toast({ title: `Não consegui abrir ${file.name}`, variant: 'destructive' });
+      }
+    }
+    setPlanilhas(prev => [...prev, ...lidas]);
+  };
+
+  const pedidoPlanilhaParaConferencia = (p: PedidoPlanilha): PhotoImportData => {
+    const plataforma = canalOverride || p.plataforma;
+    return {
+      tipo: 'relatorio', plataforma, data: p.data, data_confirmada: !!p.data, data_texto: p.data || null,
+      numero_pedido: p.numero, cliente: null, telefone_cliente: null, cadastrar_cliente: false, canal_proprio: false,
+      entrega_por: p.entrega_por, forma_pagamento: p.forma_pagamento, cobrar_do_cliente: 0,
+      descontos: [
+        ...(p.desconto_loja > 0 ? [{ texto: 'Desconto pago pela loja', valor: p.desconto_loja, quem: 'loja' as QuemPaga }] : []),
+        ...(p.incentivo_plataforma > 0 ? [{ texto: 'Incentivo da plataforma', valor: p.incentivo_plataforma, quem: 'plataforma' as QuemPaga }] : []),
+      ],
+      subtotal: p.subtotal, taxa_entrega: p.taxa_entrega, taxa_servico: p.taxa_servico,
+      incentivos_plataforma: p.incentivo_plataforma, incentivos_loja: p.desconto_loja, total_geral: p.subtotal,
+      itens: p.itens.map(i => {
+        const semNome = /^pedido( #|$)/i.test(i.produto);
+        const match = semNome ? { produto_id: undefined, tipo: 'sem_produto' as TipoVinculo, sugestoes: [] as Sugestao[] } : vincular(i.produto, plataforma);
+        return {
+          produto: i.produto, quantidade: i.quantidade, valor_unitario: i.quantidade ? i.valor_total / i.quantidade : i.valor_total,
+          valor_total: i.valor_total, produto_id: match.produto_id, selected: true, matchType: match.tipo, sugestoes: match.sugestoes, componentes: [],
+        };
+      }),
+      fonte: 'planilha', taxa_real: p.taxa_real, recebido_por: p.recebido_por,
+    };
+  };
+
+  const lerPlanilhas = async () => {
+    setLendoPlanilhas(true);
+    try {
+      let pedidosIfood: PedidoPlanilha[] = [];
+      const finIfood = new Map<string, { taxa_real: number; data: string; subtotal: number }>();
+      const outros: PedidoPlanilha[] = [];
+      for (const pl of planilhas) {
+        if (pl.formato === 'ifood_pedidos') pedidosIfood = pedidosIfood.concat(lerIfoodPedidos(pl.linhas));
+        else if (pl.formato === 'ifood_financeiro') lerIfoodFinanceiro(pl.linhas).forEach((v, k) => finIfood.set(k, v));
+        else if (pl.formato === '99food') outros.push(...ler99Food(pl.linhas));
+        else if (pl.formato === 'generica') outros.push(...lerGenerica(pl.linhas, canalOverride || ''));
+      }
+      const { pedidos, soFinanceiro } = cruzarIfood(pedidosIfood, finIfood);
+      const todos = [...pedidos, ...soFinanceiro, ...outros];
+      if (todos.length === 0) {
+        toast({ title: 'Nenhum pedido encontrado', description: 'Confira se o arquivo é o relatório de pedidos e se o formato está certo.', variant: 'destructive' });
+        return;
+      }
+      let conferencia = await checkPhotoDuplicates(todos.map(pedidoPlanilhaParaConferencia));
+      // Linhas só do financeiro sem pedido já lançado não viram venda nova sem itens conferidos
+      conferencia = conferencia.map(r => {
+        const soFin = soFinanceiro.some(f => f.numero === r.numero_pedido);
+        if (soFin && !r.atualizarPedidoId && !r.isDuplicate && r.subtotal <= 0) {
+          return { ...r, isDuplicate: true, duplicateReason: 'Só aparece no financeiro e não há pedido com este número' };
+        }
+        return r;
+      });
+      setAllPhotoResults(conferencia);
+      setCurrentResultIndex(0);
+      setVerLista(conferencia.length > 5);
+      setPhotoStep('items');
+    } finally {
+      setLendoPlanilhas(false);
     }
   };
 
@@ -510,6 +602,7 @@ const ImportarVendasDialog: React.FC = () => {
     if (checkedResults.length > 0) {
       setPhotoStep('items');
       setCurrentResultIndex(0);
+      setVerLista(checkedResults.length > 5);
       const desc = dupeCount > 0
         ? `${checkedResults.reduce((sum, r) => sum + r.itens.length, 0)} itens encontrados. ⚠️ ${dupeCount} possível(is) duplicata(s).`
         : `${checkedResults.reduce((sum, r) => sum + r.itens.length, 0)} itens encontrados no total.`;
@@ -586,10 +679,17 @@ const ImportarVendasDialog: React.FC = () => {
       if (!usuario?.empresa_id || allPhotoResults.length === 0) throw new Error('Dados inválidos');
 
       let totalImported = 0;
+      let totalAtualizados = 0;
       const newMappings: { nome_externo: string; produto_id: string; plataforma: string }[] = [];
 
       for (const result of allPhotoResults) {
         if (result.isDuplicate) continue;
+        if (result.atualizarPedidoId) {
+          const { error: upErr } = await supabase.rpc('atualizar_taxa_real_pedido' as any, { p_pedido_id: result.atualizarPedidoId, p_taxa_real: result.taxa_real });
+          if (upErr) throw upErr;
+          totalAtualizados += 1;
+          continue;
+        }
         const itensImport = result.itens.map(i => ({
           nome: i.produto, quantidade: i.quantidade, valor_total: i.valor_total, selected: i.selected,
           produto_id: i.produto_id, tipo: i.matchType,
@@ -619,16 +719,16 @@ const ImportarVendasDialog: React.FC = () => {
         }
 
         const entregaLoja = result.entrega_por === 'loja';
-        const recebidoPor = result.cobrar_do_cliente > 0 || result.canal_proprio ? 'loja' : 'plataforma';
+        const recebidoPor = result.recebido_por ?? (result.cobrar_do_cliente > 0 || result.canal_proprio ? 'loja' : 'plataforma');
 
-        const { error } = await supabase.rpc('salvar_venda_pedido' as any, {
+        const { data: pedidoId, error } = await supabase.rpc('salvar_venda_pedido' as any, {
           p_pedido: {
             canal_id: canal?.id || null,
             plataforma: result.plataforma || plat,
             cliente_id: clienteId,
             forma_pagamento: result.forma_pagamento,
             data_venda: result.data,
-            origem: 'foto',
+            origem: result.fonte === 'planilha' ? 'planilha' : 'foto',
             numero_externo: result.numero_pedido,
             desconto: getDescontoLoja(result),
             taxa_entrega: entregaLoja ? Number(result.taxa_entrega || 0) : 0,
@@ -640,6 +740,10 @@ const ImportarVendasDialog: React.FC = () => {
           p_itens: linhas,
         });
         if (error) throw error;
+        if (result.taxa_real != null && pedidoId) {
+          const { error: tErr } = await supabase.rpc('atualizar_taxa_real_pedido' as any, { p_pedido_id: pedidoId, p_taxa_real: result.taxa_real });
+          if (tErr) throw tErr;
+        }
 
         totalImported += 1;
 
@@ -655,13 +759,13 @@ const ImportarVendasDialog: React.FC = () => {
       // Save product name mappings for future auto-link
       await saveMappings(newMappings);
       
-      return totalImported;
+      return { totalImported, totalAtualizados };
     },
-    onSuccess: (count) => {
+    onSuccess: ({ totalImported: count, totalAtualizados }) => {
       queryClient.invalidateQueries({ queryKey: ['vendas'] });
       queryClient.invalidateQueries({ queryKey: ['caixa-movimentos'] });
-      toast({ title: `${count} pedido(s) importado(s) com sucesso!` });
-      setOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['vendas-pedidos'] });
+      toast({ title: `${count} pedido(s) importado(s)${totalAtualizados ? ` e ${totalAtualizados} com taxa real atualizada` : ''}!` });
       setOpen(false);
       resetState();
     },
@@ -818,7 +922,7 @@ const ImportarVendasDialog: React.FC = () => {
     const descPend = r.descontos.filter(d => d.quem === null).length;
     return { itensPend, descPend, dataPend: !r.data_confirmada || !r.data };
   };
-  const totaisPend = nonDuplicateResults.reduce((acc, r) => {
+  const totaisPend = nonDuplicateResults.filter(r => !r.atualizarPedidoId).reduce((acc, r) => {
     const p = pendenciasDoPedido(r);
     return { itens: acc.itens + p.itensPend, desc: acc.desc + p.descPend, data: acc.data + (p.dataPend ? 1 : 0) };
   }, { itens: 0, desc: 0, data: 0 });
@@ -831,6 +935,13 @@ const ImportarVendasDialog: React.FC = () => {
     : totaisPend.desc > 0 ? `Diga quem pagou ${totaisPend.desc} desconto(s)`
     : totaisPend.itens > 0 ? `Escolha o produto de ${totaisPend.itens} item(ns)`
     : `Importar ${nonDuplicateResults.length} pedido(s)`;
+  const statusPedido = (r: PhotoImportData) => {
+    if (r.isDuplicate) return { txt: 'Já importado', cls: 'text-muted-foreground' };
+    if (r.atualizarPedidoId) return { txt: 'Atualiza taxa real', cls: 'text-primary' };
+    const p = pendenciasDoPedido(r);
+    if (p.dataPend || p.descPend || p.itensPend) return { txt: 'Precisa escolher', cls: 'text-amber-600' };
+    return { txt: 'Pronto', cls: 'text-green-600' };
+  };
 
   // Financial breakdown component
   const FinancialBreakdown = ({ data, resultIdx }: { data: PhotoImportData; resultIdx: number }) => {
@@ -906,6 +1017,9 @@ const ImportarVendasDialog: React.FC = () => {
               <span>{formatCurrency(data.taxa_servico)}</span>
             </div>
           )}
+          {data.taxa_real != null && (
+            <div className="flex justify-between text-destructive"><span>Taxa real cobrada (relatório da plataforma)</span><span className="font-medium">-{formatCurrency(data.taxa_real)}</span></div>
+          )}
           <div className="border-t pt-1 flex justify-between font-bold text-primary">
             <span>Valor líquido dos produtos</span>
             <span>{formatCurrency(liquido)}</span>
@@ -952,34 +1066,16 @@ const ImportarVendasDialog: React.FC = () => {
 
         {step === 'upload' && (
           <div className="space-y-4 py-4">
-            <Tabs value={importMethod} onValueChange={(v) => setImportMethod(v as 'csv' | 'foto' | '99food')} className="w-full">
+            {photoStep === 'upload' && (
+            <Tabs value={importMethod} onValueChange={(v) => setImportMethod(v as 'foto' | 'planilha')} className="w-full">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="csv" className="flex items-center gap-1 text-xs sm:text-sm"><FileSpreadsheet className="h-4 w-4" />CSV/Excel</TabsTrigger>
                 <TabsTrigger value="foto" className="flex items-center gap-1 text-xs sm:text-sm"><Camera className="h-4 w-4" />Foto</TabsTrigger>
                 <TabsTrigger value="99food" className="flex items-center gap-1 text-xs sm:text-sm"><FileSpreadsheet className="h-4 w-4" />99Food</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="csv" className="mt-4 space-y-4">
-                <div className="border-2 border-dashed rounded-lg p-8 text-center">
-                  <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-lg font-medium mb-2">Arraste ou selecione um arquivo</p>
-                  <p className="text-sm text-muted-foreground mb-4">Suporta Excel (.xlsx, .xls) e CSV do iFood, Rappi, 99Food e outros</p>
-                  <Input type="file" accept=".xlsx,.xls,.csv" onChange={handleFileChange} className="max-w-xs mx-auto" />
-                </div>
-                <div className="bg-muted/50 rounded-lg p-4">
-                  <h4 className="font-medium mb-2 flex items-center gap-2"><AlertCircle className="h-4 w-4" />Como exportar do iFood:</h4>
-                  <ol className="text-sm text-muted-foreground list-decimal list-inside space-y-1">
-                    <li>Acesse o Portal do Parceiro iFood</li>
-                    <li>Vá em Pedidos no menu lateral</li>
-                    <li>Selecione o período desejado</li>
-                    <li>Clique em "Exportar" → "Gerar Relatório"</li>
-                    <li>O arquivo XLS será enviado para seu e-mail</li>
-                  </ol>
-                </div>
-              </TabsContent>
-
               <TabsContent value="foto" className="mt-4 space-y-4">
-                {photoStep === 'upload' && (
+                {(
                   <div className="space-y-4">
                     {/* Multi-image upload area */}
                     <div className="border-2 border-dashed rounded-lg p-6 text-center">
@@ -1075,7 +1171,98 @@ const ImportarVendasDialog: React.FC = () => {
                   </div>
                 )}
 
-                {photoStep === 'items' && allPhotoResults.length > 0 && currentResult && (
+              </TabsContent>
+
+              <TabsContent value="planilha" className="mt-4 space-y-4">
+                <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                  <FileSpreadsheet className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-lg font-medium mb-1">Envie uma ou mais planilhas</p>
+                  <p className="text-sm text-muted-foreground mb-4">Pode mandar juntos o relatório de pedidos e o financeiro do iFood, ou o extrato da 99Food. Eu reconheço cada um sozinho.</p>
+                  <input type="file" accept=".xlsx,.xls,.csv" multiple onChange={handlePlanilhasSelect} className="hidden" id="planilhas-input-sales" />
+                  <label htmlFor="planilhas-input-sales">
+                    <Button type="button" variant="outline" className="cursor-pointer" asChild><span><Plus className="h-4 w-4 mr-2" />Selecionar planilhas</span></Button>
+                  </label>
+                </div>
+                {planilhas.length > 0 && (
+                  <div className="space-y-2">
+                    {planilhas.map((pl, idx) => (
+                      <div key={idx} className="flex flex-col sm:flex-row sm:items-center gap-2 border rounded-lg p-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{pl.file.name}</p>
+                          <p className="text-xs text-muted-foreground">{pl.linhas.length} linha(s)</p>
+                        </div>
+                        <Select value={pl.formato} onValueChange={v => setPlanilhas(prev => prev.map((x, i) => i === idx ? { ...x, formato: v as FormatoPlanilha } : x))}>
+                          <SelectTrigger className="h-8 text-xs sm:w-72"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {(Object.keys(NOMES_FORMATO) as FormatoPlanilha[]).map(f => <SelectItem key={f} value={f}>{NOMES_FORMATO[f]}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <Button variant="ghost" size="sm" onClick={() => setPlanilhas(prev => prev.filter((_, i) => i !== idx))}><X className="h-4 w-4" /></Button>
+                      </div>
+                    ))}
+                    {planilhas.some(p => p.formato === 'generica') && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Label className="text-sm">Canal da planilha genérica:</Label>
+                        <Select value={canalOverride || "__fromfile__"} onValueChange={v => setCanalOverride(v === "__fromfile__" ? "" : v)}>
+                          <SelectTrigger className="w-40 h-8"><SelectValue placeholder="Do arquivo" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__fromfile__">Do arquivo</SelectItem>
+                            {(canaisConfigurados || []).map(canal => (<SelectItem key={canal.id} value={canal.nome}>{canal.nome}</SelectItem>))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    <Button className="w-full" onClick={lerPlanilhas} disabled={lendoPlanilhas}>
+                      {lendoPlanilhas ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Lendo...</> : 'Ler planilhas e conferir'}
+                    </Button>
+                  </div>
+                )}
+                <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground space-y-1">
+                  <p className="font-medium text-foreground flex items-center gap-2"><AlertCircle className="h-4 w-4" />Dica</p>
+                  <p>Se você já importou o pedido por foto, mande a planilha financeira: eu só atualizo a taxa real cobrada, sem duplicar a venda.</p>
+                </div>
+              </TabsContent>
+            </Tabs>
+            )}
+            {photoStep === 'items' && allPhotoResults.length > 0 && verLista && (
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {(['Pronto', 'Precisa escolher', 'Atualiza taxa real', 'Já importado'] as const).map(t => {
+                    const n = allPhotoResults.filter(r => statusPedido(r).txt === t).length;
+                    return n > 0 ? <Badge key={t} variant="outline">{t}: {n}</Badge> : null;
+                  })}
+                </div>
+                <ScrollArea className="h-[50vh] border rounded-lg">
+                  <div className="divide-y">
+                    {allPhotoResults.map((r, idx) => {
+                      const st = statusPedido(r);
+                      return (
+                        <button key={idx} type="button" onClick={() => { setCurrentResultIndex(idx); setVerLista(false); }} className="w-full flex items-center justify-between gap-2 p-2 text-left hover:bg-muted/50">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{r.plataforma || 'Venda'} {r.numero_pedido ? `#${r.numero_pedido}` : ''}</p>
+                            <p className="text-xs text-muted-foreground">{r.data ? r.data.split('-').reverse().join('/') : 'sem data'} • {r.itens.length} item(ns)</p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-sm">{formatCurrency(r.subtotal)}</p>
+                            <p className={`text-xs ${st.cls}`}>{st.txt}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t">
+                  <span className="text-sm">Total: <span className="font-bold text-primary">{formatCurrency(totalPhotoValue)}</span></span>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => { setPhotoStep('upload'); setAllPhotoResults([]); setMultiImages([]); }}>Voltar</Button>
+                    <Button size="sm" onClick={() => importPhotoItemsMutation.mutate()} disabled={importPhotoItemsMutation.isPending || nonDuplicateResults.length === 0 || temPendencia}>
+                      {importPhotoItemsMutation.isPending ? 'Importando...' : textoBotaoImportar}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+                {photoStep === 'items' && allPhotoResults.length > 0 && currentResult && !verLista && (
                   <div className="space-y-3">
                     {/* Navigation between orders */}
                     {allPhotoResults.length > 1 && (
@@ -1086,6 +1273,12 @@ const ImportarVendasDialog: React.FC = () => {
                       </div>
                     )}
 
+                    {allPhotoResults.length > 5 && (
+                      <Button variant="link" size="sm" className="px-0" onClick={() => setVerLista(true)}>← Voltar à lista de pedidos</Button>
+                    )}
+                    {currentResult.atualizarPedidoId && (
+                      <div className="p-3 border rounded-lg bg-muted/40 text-sm">{currentResult.duplicateReason}</div>
+                    )}
                     {/* Duplicate warning */}
                     {currentResult.isDuplicate && (
                       <div className="flex items-center gap-2 p-3 border border-destructive/50 bg-destructive/10 rounded-lg">
@@ -1234,12 +1427,6 @@ const ImportarVendasDialog: React.FC = () => {
                     </div>
                   </div>
                 )}
-              </TabsContent>
-
-              <TabsContent value="99food" className="mt-4">
-                <Importar99FoodTab onImportComplete={() => { setOpen(false); resetState(); }} />
-              </TabsContent>
-            </Tabs>
           </div>
         )}
 

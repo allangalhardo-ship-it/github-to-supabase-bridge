@@ -19,6 +19,8 @@ export interface CanalVenda {
   ativo: boolean;
   created_at: string;
   updated_at: string;
+  mensalidade?: number;
+  prazo_repasse_dias?: number;
   taxas?: TaxaCanal[];
 }
 
@@ -206,6 +208,34 @@ export function useCanaisVenda() {
     },
   });
 
+  // Salvar as três taxas do canal (comissão %, pagamento online %, mensalidade R$) e o prazo de repasse
+  const salvarTaxasCanalMutation = useMutation({
+    mutationFn: async (d: { canal_id: string; comissao: number; online: number; mensalidade: number; prazo: number }) => {
+      const { data: atuais, error: e1 } = await supabase.from('taxas_canais').select('id, nome').eq('canal_id', d.canal_id);
+      if (e1) throw e1;
+      const ids = (atuais || []).map(t => t.id);
+      if (ids.length) {
+        const { error } = await supabase.from('taxas_canais').delete().in('id', ids);
+        if (error) throw error;
+      }
+      const linhas = [{ canal_id: d.canal_id, nome: 'Comissão', percentual: d.comissao }];
+      if (d.online > 0) linhas.push({ canal_id: d.canal_id, nome: 'Pagamento online', percentual: d.online });
+      const { error: e2 } = await supabase.from('taxas_canais').insert(linhas);
+      if (e2) throw e2;
+      const { error: e3 } = await supabase.from('canais_venda')
+        .update({ mensalidade: d.mensalidade, prazo_repasse_dias: Math.max(0, Math.round(d.prazo)) } as any)
+        .eq('id', d.canal_id);
+      if (e3) throw e3;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['canais_venda'] });
+      toast({ title: 'Taxas do canal salvas!' });
+    },
+    onError: (error) => {
+      toast({ title: 'Erro ao salvar taxas', description: error.message, variant: 'destructive' });
+    },
+  });
+
   // Canais ativos para usar em selects
   const canaisAtivos = canais?.filter(c => c.ativo) || [];
 
@@ -228,6 +258,8 @@ export function useCanaisVenda() {
     addTaxa: addTaxaMutation.mutate,
     updateTaxa: updateTaxaMutation.mutate,
     deleteTaxa: deleteTaxaMutation.mutate,
+    salvarTaxasCanal: salvarTaxasCanalMutation.mutate,
+    isSalvandoTaxas: salvarTaxasCanalMutation.isPending,
     isCreating: createCanalMutation.isPending,
     isUpdating: updateCanalMutation.isPending,
   };

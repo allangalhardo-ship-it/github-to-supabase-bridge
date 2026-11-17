@@ -50,7 +50,7 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('vendas')
-        .select('id, valor_total, quantidade, produto_id, canal, comissao_plataforma, taxa_servico, incentivo_loja, subtotal, custo_snapshot')
+        .select('id, data_venda, valor_total, quantidade, produto_id, canal, comissao_plataforma, taxa_servico, incentivo_loja, subtotal, custo_snapshot')
         .eq('empresa_id', usuario?.empresa_id)
         .gte('data_venda', dataInicio)
         .lte('data_venda', dataFim);
@@ -126,6 +126,7 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
         .select(`
           id,
           nome,
+          mensalidade,
           taxas_canais (
             percentual
           )
@@ -181,6 +182,19 @@ export const DREGerencial: React.FC<DREGerencialProps> = ({ onBack }) => {
           taxasApps += (venda.valor_total * taxaTotal) / 100;
         }
       }
+    });
+
+    // Mensalidade fixa do canal: uma vez em cada mês com venda no canal
+    const mesesPorCanal = new Map<string, Set<string>>();
+    vendas.forEach((venda: any) => {
+      const canal: any = encontrarCanal(canais ?? [], venda.canal);
+      if (!canal || !(Number(canal.mensalidade) > 0) || !venda.data_venda) return;
+      if (!mesesPorCanal.has(canal.id)) mesesPorCanal.set(canal.id, new Set());
+      mesesPorCanal.get(canal.id)!.add(String(venda.data_venda).slice(0, 7));
+    });
+    mesesPorCanal.forEach((mesesSet, canalId) => {
+      const canal: any = (canais ?? []).find((c: any) => c.id === canalId);
+      taxasApps += Number(canal?.mensalidade || 0) * mesesSet.size;
     });
 
     // Custos Fixos (proporcional ao período)

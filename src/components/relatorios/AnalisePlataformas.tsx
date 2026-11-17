@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { taxaEfetiva } from '@/lib/taxaCanalUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,6 +38,38 @@ export const AnalisePlataformas: React.FC<Props> = ({ onBack }) => {
     },
     enabled: !!usuario?.empresa_id,
   });
+
+  // Taxa prevista x real por canal (a partir dos pedidos)
+  const { data: pedidosTaxa } = useQuery({
+    queryKey: ['pedidos-taxa-real', usuario?.empresa_id, dataInicio, dataFim],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('vendas_pedidos' as any)
+        .select('canal_id, canal_texto, data_venda, valor_bruto, taxa_entrega, taxa_prevista, taxa_real, canais_venda(nome, mensalidade)')
+        .gte('data_venda', dataInicio).lte('data_venda', dataFim);
+      if (error) throw error;
+      return (data || []) as any[];
+    },
+    enabled: !!usuario?.empresa_id,
+  });
+
+  const taxasPorCanal = useMemo(() => {
+    const m: Record<string, { nome: string; bruto: number; prevista: number; real: number; temReal: boolean; mensal: number; meses: Set<string> }> = {};
+    (pedidosTaxa || []).forEach(p => {
+      const nome = p.canais_venda?.nome || p.canal_texto || 'Sem canal';
+      const r = (m[nome] ||= { nome, bruto: 0, prevista: 0, real: 0, temReal: false, mensal: Number(p.canais_venda?.mensalidade || 0), meses: new Set() });
+      r.bruto += Number(p.valor_bruto || 0) - Number(p.taxa_entrega || 0);
+      r.prevista += Number(p.taxa_prevista || 0);
+      // Sem taxa real do relatório, a real considerada é a prevista
+      r.real += p.taxa_real != null ? Number(p.taxa_real) : Number(p.taxa_prevista || 0);
+      if (p.taxa_real != null) r.temReal = true;
+      r.meses.add(String(p.data_venda).slice(0, 7));
+    });
+    return Object.values(m).filter(r => r.prevista > 0 || r.real > 0 || r.mensal > 0).map(r => {
+      const mensalidades = r.mensal * r.meses.size;
+      return { ...r, mensalidades, diferenca: r.real - r.prevista, efetiva: taxaEfetiva(r.bruto, r.real, mensalidades) };
+    }).sort((a, b) => b.bruto - a.bruto);
+  }, [pedidosTaxa]);
 
   const plataformas = useMemo(() => {
     if (!vendas || vendas.length === 0) return [];
@@ -192,6 +225,41 @@ export const AnalisePlataformas: React.FC<Props> = ({ onBack }) => {
               </CardContent>
             </Card>
           </div>
+
+          {taxasPorCanal.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Taxa prevista x taxa real</CardTitle>
+                <p className="text-xs text-muted-foreground">Prevista = calculada pelo cadastro do canal. Real = a que veio do relatório da plataforma. Taxa efetiva = taxas reais + mensalidade, divididas pelas vendas.</p>
+              </CardHeader>
+              <CardContent className="overflow-x-auto p-0">
+                <table className="w-full text-sm min-w-[560px]">
+                  <thead>
+                    <tr className="border-b bg-muted/30">
+                      <th className="text-left p-3 font-medium">Canal</th>
+                      <th className="text-right p-3 font-medium">Vendas brutas</th>
+                      <th className="text-right p-3 font-medium">Taxa prevista</th>
+                      <th className="text-right p-3 font-medium">Taxa real</th>
+                      <th className="text-right p-3 font-medium">Diferença</th>
+                      <th className="text-right p-3 font-medium">Taxa efetiva</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {taxasPorCanal.map(r => (
+                      <tr key={r.nome} className="border-b">
+                        <td className="p-3"><Badge variant="secondary">{r.nome}</Badge>{r.mensalidades > 0 && <span className="block text-[10px] text-muted-foreground mt-1">+ {formatCurrencyBRL(r.mensalidades)} de mensalidade</span>}</td>
+                        <td className="p-3 text-right">{formatCurrencyBRL(r.bruto)}</td>
+                        <td className="p-3 text-right">{formatCurrencyBRL(r.prevista)}</td>
+                        <td className="p-3 text-right">{r.temReal ? formatCurrencyBRL(r.real) : <span className="text-muted-foreground">sem relatório</span>}</td>
+                        <td className={`p-3 text-right ${r.diferenca > 0.005 ? 'text-destructive' : ''}`}>{formatCurrencyBRL(r.diferenca)}</td>
+                        <td className="p-3 text-right font-medium">{fmtNum(r.efetiva, 1)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Tabela comparativa */}
           <Card>

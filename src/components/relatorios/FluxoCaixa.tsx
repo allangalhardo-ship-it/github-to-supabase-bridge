@@ -1,4 +1,3 @@
-import { valorCaixaVenda } from '@/lib/caixaUtils';
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -78,15 +77,22 @@ export const FluxoCaixa: React.FC<FluxoCaixaProps> = ({ onBack }) => {
   const { data: vendas, isLoading: loadingVendas } = useQuery({
     queryKey: ['fluxo-vendas', usuario?.empresa_id, dataInicio, dataFim],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('vendas_pedidos' as any)
-        .select('id, valor_total:valor_bruto, valor_liquido, data_venda')
-        .eq('empresa_id', usuario?.empresa_id)
-        .gte('data_venda', dataInicio)
-        .lte('data_venda', dataFim);
-
+      // Linhas de caixa dos pedidos (venda, repasse previsto, desconto no repasse, mensalidade)
+      const { data, error } = await supabase.rpc('get_caixa_pedidos' as any, { p_empresa_id: usuario!.empresa_id });
       if (error) throw error;
-      return (data || []) as unknown as { id: string; valor_total: number; valor_liquido: number | null; data_venda: string }[];
+      const hoje = format(new Date(), 'yyyy-MM-dd');
+      return ((data || []) as any[])
+        .filter(l => l.data_caixa >= dataInicio && l.data_caixa <= dataFim && Number(l.valor) !== 0)
+        .map((l, i) => ({
+          id: `${l.pedido_id || l.canal_id}-${l.tipo}-${i}`,
+          data_venda: l.data_caixa as string,
+          valor: Number(l.valor),
+          previsto: l.tipo !== 'venda' && l.data_caixa > hoje,
+          categoria: l.tipo === 'venda' ? 'Vendas'
+            : l.tipo === 'repasse' ? (l.data_caixa > hoje ? 'A receber das plataformas (previsto)' : 'Repasse de plataforma')
+            : 'Taxas de Apps/Delivery',
+          canal: l.canal_nome as string | null,
+        }));
     },
     enabled: !!usuario?.empresa_id,
   });
@@ -112,27 +118,29 @@ export const FluxoCaixa: React.FC<FluxoCaixaProps> = ({ onBack }) => {
 
   // Calcular fluxo de caixa
   // Venda entra no caixa pelo valor líquido (já sem taxa do app) quando existir
-  const liq = valorCaixaVenda;
 
   const fluxo = useMemo(() => {
     if (!vendas && !compras && !movimentos) return null;
 
     // Total de entradas (vendas + entradas manuais)
-    const totalVendas = vendas?.reduce((acc, v) => acc + liq(v), 0) || 0;
+    const entradasPed = vendas?.filter(v => v.valor > 0) || [];
+    const saidasPed = vendas?.filter(v => v.valor < 0) || [];
+    const totalVendas = entradasPed.reduce((acc, v) => acc + v.valor, 0);
+    const totalSaidasPed = saidasPed.reduce((acc, v) => acc - v.valor, 0);
     const entradasManuais = movimentos?.filter(m => m.tipo === 'entrada').reduce((acc, m) => acc + (m.valor || 0), 0) || 0;
     const totalEntradas = totalVendas + entradasManuais;
 
     // Total de saídas (compras + saídas manuais)
     const totalCompras = compras?.reduce((acc, c) => acc + (c.custo_total || 0), 0) || 0;
     const saidasManuais = movimentos?.filter(m => m.tipo === 'saida').reduce((acc, m) => acc + (m.valor || 0), 0) || 0;
-    const totalSaidas = totalCompras + saidasManuais;
+    const totalSaidas = totalCompras + saidasManuais + totalSaidasPed;
 
     // Saldo
     const saldo = totalEntradas - totalSaidas;
 
     // Agrupar por categoria
     const entradasPorCategoria = new Map<string, number>();
-    entradasPorCategoria.set('Vendas', totalVendas);
+    entradasPed.forEach(v => entradasPorCategoria.set(v.categoria, (entradasPorCategoria.get(v.categoria) || 0) + v.valor));
     movimentos?.filter(m => m.tipo === 'entrada').forEach(m => {
       const cat = m.categoria || 'Outros';
       entradasPorCategoria.set(cat, (entradasPorCategoria.get(cat) || 0) + m.valor);
@@ -140,6 +148,7 @@ export const FluxoCaixa: React.FC<FluxoCaixaProps> = ({ onBack }) => {
 
     const saidasPorCategoria = new Map<string, number>();
     saidasPorCategoria.set('Compras de Insumos', totalCompras);
+    saidasPed.forEach(v => saidasPorCategoria.set(v.categoria, (saidasPorCategoria.get(v.categoria) || 0) - v.valor));
     movimentos?.filter(m => m.tipo === 'saida').forEach(m => {
       const cat = m.categoria || 'Outros';
       saidasPorCategoria.set(cat, (saidasPorCategoria.get(cat) || 0) + m.valor);
@@ -154,10 +163,10 @@ export const FluxoCaixa: React.FC<FluxoCaixaProps> = ({ onBack }) => {
     const evolucaoDiaria = dias.map(dia => {
       const dataStr = format(dia, 'yyyy-MM-dd');
       
-      const entradasDia = (vendas?.filter(v => v.data_venda === dataStr).reduce((acc, v) => acc + liq(v), 0) || 0) +
+      const entradasDia = entradasPed.filter(v => v.data_venda === dataStr).reduce((acc, v) => acc + v.valor, 0) +
         (movimentos?.filter(m => m.data_movimento === dataStr && m.tipo === 'entrada').reduce((acc, m) => acc + m.valor, 0) || 0);
       
-      const saidasDia = (compras?.filter(c => c.created_at.startsWith(dataStr)).reduce((acc, c) => acc + (c.custo_total || 0), 0) || 0) +
+      const saidasDia = saidasPed.filter(v => v.data_venda === dataStr).reduce((acc, v) => acc - v.valor, 0) + (compras?.filter(c => c.created_at.startsWith(dataStr)).reduce((acc, c) => acc + (c.custo_total || 0), 0) || 0) +
         (movimentos?.filter(m => m.data_movimento === dataStr && m.tipo === 'saida').reduce((acc, m) => acc + m.valor, 0) || 0);
       
       saldoAcumulado += entradasDia - saidasDia;
@@ -182,10 +191,10 @@ export const FluxoCaixa: React.FC<FluxoCaixaProps> = ({ onBack }) => {
       ...(vendas?.slice(-10).map(v => ({
         id: v.id,
         data: v.data_venda,
-        tipo: 'entrada' as const,
-        categoria: 'Vendas',
-        valor: liq(v),
-        descricao: 'Venda registrada',
+        tipo: (v.valor >= 0 ? 'entrada' : 'saida') as 'entrada' | 'saida',
+        categoria: v.categoria,
+        valor: Math.abs(v.valor),
+        descricao: v.previsto ? `Previsto${v.canal ? ' - ' + v.canal : ''}` : (v.categoria === 'Vendas' ? 'Venda registrada' : (v.canal || v.categoria)),
       })) || []),
       ...(movimentos?.slice(-10).map(m => ({
         id: m.id,

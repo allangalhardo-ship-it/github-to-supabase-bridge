@@ -17,6 +17,7 @@ import { useCanaisVenda, CanalComTaxaTotal, TaxaCanal } from '@/hooks/useCanaisV
 import { cn } from '@/lib/utils';
 import { fmtNum } from '@/lib/format';
 import NovoCanalPrecosDialog from './NovoCanalPrecosDialog';
+import CanalTaxasForm from './CanalTaxasForm';
 
 const TIPOS_CANAL = [
   { value: 'presencial', label: 'Presencial', icon: Store, description: 'Balcão, loja física' },
@@ -381,59 +382,7 @@ const CanalCard: React.FC<CanalCardProps> = ({
         </div>
 
         <CollapsibleContent>
-          <div className="border-t p-3 bg-muted/30 space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">Taxas</p>
-              <Button size="sm" variant="outline" onClick={onAddTaxa}>
-                <Plus className="mr-1 h-3 w-3" />
-                Adicionar
-              </Button>
-            </div>
-
-            {hasTaxas ? (
-              <div className="space-y-1">
-                {canal.taxas!.map(taxa => (
-                  <div
-                    key={taxa.id}
-                    className="flex items-center justify-between p-2 bg-background rounded border"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Percent className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-sm">{taxa.nome}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">{fmtNum(Number(taxa.percentual), 1)}%</Badge>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => onEditTaxa(taxa)}
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-destructive"
-                        onClick={() => onDeleteTaxa(taxa.id)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                <div className="flex justify-end pt-2 border-t">
-                  <span className="text-sm font-medium">
-                    Total: {fmtNum(canal.taxaTotal, 1)}%
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-2">
-                Nenhuma taxa configurada (0%)
-              </p>
-            )}
-          </div>
+          <CanalTaxasForm canal={canal} />
         </CollapsibleContent>
       </div>
     </Collapsible>
