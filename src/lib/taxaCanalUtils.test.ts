@@ -24,3 +24,17 @@ describe('taxas do canal', () => {
     expect(ok.alerta).toBe(false);
   });
 });
+
+import { cobraTaxaPagamento as cobra, taxaPrevista as tp } from './taxaCanalUtils';
+describe('taxa de pagamento por tipo de canal', () => {
+  it('99Food pago em débito na entrega, recebido pela loja: só 9%', () => {
+    expect(tp(100, 9, 3, cobra('app_delivery', 'loja', 'debito'))).toBe(9);
+  });
+  it('WhatsApp em cartão desconta a maquininha de 4%', () => {
+    expect(tp(100, 0, 4, cobra('whatsapp', 'loja', 'cartao_credito'))).toBe(4);
+  });
+  it('WhatsApp em Pix ou dinheiro não desconta', () => {
+    expect(tp(100, 0, 4, cobra('whatsapp', 'loja', 'pix'))).toBe(0);
+    expect(tp(100, 0, 4, cobra('whatsapp', 'loja', 'dinheiro'))).toBe(0);
+  });
+});

@@ -38,3 +38,9 @@ export function taxaEfetivaAcimaDaPrevista(
 }
 
 function round(n: number, d: number) { const f = 10 ** d; return Math.round(n * f) / f; }
+
+/** Regra da taxa de pagamento: app delivery só quando a plataforma recebe; canal próprio só quando pago em cartão. */
+export function cobraTaxaPagamento(tipoCanal: string | null | undefined, recebidoPor: string | null | undefined, formaPagamento: string | null | undefined) {
+  if (tipoCanal === 'app_delivery') return recebidoPor === 'plataforma';
+  return /cart|cr[eé]dito|d[eé]bito|maquin/i.test(formaPagamento || '');
+}

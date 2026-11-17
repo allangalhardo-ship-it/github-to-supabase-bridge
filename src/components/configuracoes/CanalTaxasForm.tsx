@@ -53,9 +53,9 @@ const CanalTaxasForm: React.FC<{ canal: CanalComTaxaTotal }> = ({ canal }) => {
           <p className="text-xs text-muted-foreground">O quanto a plataforma fica de cada pedido.</p>
         </div>
         <div className="space-y-1">
-          <Label>Taxa de pagamento online (%)</Label>
+          <Label>{canal.tipo === 'app_delivery' ? 'Taxa de pagamento online (%)' : 'Taxa da maquininha (%)'}</Label>
           <PercentInput value={online} onChange={setOnline} />
-          <p className="text-xs text-muted-foreground">Cobrada só quando o cliente paga pelo app. Pago na entrega não tem essa taxa.</p>
+          <p className="text-xs text-muted-foreground">{canal.tipo === 'app_delivery' ? 'Cobrada só quando o cliente paga pelo app. Pago na entrega, recebido pela loja, não tem essa taxa.' : 'Cobrada só quando a venda é paga em cartão (crédito, débito ou maquininha). Pix e dinheiro não pagam.'}</p>
         </div>
         <div className="space-y-1">
           <Label>Mensalidade fixa (R$ por mês)</Label>
