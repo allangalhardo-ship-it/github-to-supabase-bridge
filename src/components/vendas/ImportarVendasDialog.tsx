@@ -1063,6 +1063,7 @@ const ImportarVendasDialog: React.FC = () => {
 
         {step === 'upload' && (
           <div className="space-y-4 py-4">
+            {photoStep === 'upload' && (
             <Tabs value={importMethod} onValueChange={(v) => setImportMethod(v as 'foto' | 'planilha')} className="w-full">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="csv" className="flex items-center gap-1 text-xs sm:text-sm"><FileSpreadsheet className="h-4 w-4" />CSV/Excel</TabsTrigger>
@@ -1070,27 +1071,8 @@ const ImportarVendasDialog: React.FC = () => {
                 <TabsTrigger value="99food" className="flex items-center gap-1 text-xs sm:text-sm"><FileSpreadsheet className="h-4 w-4" />99Food</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="csv" className="mt-4 space-y-4">
-                <div className="border-2 border-dashed rounded-lg p-8 text-center">
-                  <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-lg font-medium mb-2">Arraste ou selecione um arquivo</p>
-                  <p className="text-sm text-muted-foreground mb-4">Suporta Excel (.xlsx, .xls) e CSV do iFood, Rappi, 99Food e outros</p>
-                  <Input type="file" accept=".xlsx,.xls,.csv" onChange={handleFileChange} className="max-w-xs mx-auto" />
-                </div>
-                <div className="bg-muted/50 rounded-lg p-4">
-                  <h4 className="font-medium mb-2 flex items-center gap-2"><AlertCircle className="h-4 w-4" />Como exportar do iFood:</h4>
-                  <ol className="text-sm text-muted-foreground list-decimal list-inside space-y-1">
-                    <li>Acesse o Portal do Parceiro iFood</li>
-                    <li>Vá em Pedidos no menu lateral</li>
-                    <li>Selecione o período desejado</li>
-                    <li>Clique em "Exportar" → "Gerar Relatório"</li>
-                    <li>O arquivo XLS será enviado para seu e-mail</li>
-                  </ol>
-                </div>
-              </TabsContent>
-
               <TabsContent value="foto" className="mt-4 space-y-4">
-                {photoStep === 'upload' && (
+                {(
                   <div className="space-y-4">
                     {/* Multi-image upload area */}
                     <div className="border-2 border-dashed rounded-lg p-6 text-center">
@@ -1186,7 +1168,98 @@ const ImportarVendasDialog: React.FC = () => {
                   </div>
                 )}
 
-                {photoStep === 'items' && allPhotoResults.length > 0 && currentResult && (
+              </TabsContent>
+
+              <TabsContent value="planilha" className="mt-4 space-y-4">
+                <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                  <FileSpreadsheet className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-lg font-medium mb-1">Envie uma ou mais planilhas</p>
+                  <p className="text-sm text-muted-foreground mb-4">Pode mandar juntos o relatório de pedidos e o financeiro do iFood, ou o extrato da 99Food. Eu reconheço cada um sozinho.</p>
+                  <input type="file" accept=".xlsx,.xls,.csv" multiple onChange={handlePlanilhasSelect} className="hidden" id="planilhas-input-sales" />
+                  <label htmlFor="planilhas-input-sales">
+                    <Button type="button" variant="outline" className="cursor-pointer" asChild><span><Plus className="h-4 w-4 mr-2" />Selecionar planilhas</span></Button>
+                  </label>
+                </div>
+                {planilhas.length > 0 && (
+                  <div className="space-y-2">
+                    {planilhas.map((pl, idx) => (
+                      <div key={idx} className="flex flex-col sm:flex-row sm:items-center gap-2 border rounded-lg p-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{pl.file.name}</p>
+                          <p className="text-xs text-muted-foreground">{pl.linhas.length} linha(s)</p>
+                        </div>
+                        <Select value={pl.formato} onValueChange={v => setPlanilhas(prev => prev.map((x, i) => i === idx ? { ...x, formato: v as FormatoPlanilha } : x))}>
+                          <SelectTrigger className="h-8 text-xs sm:w-72"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {(Object.keys(NOMES_FORMATO) as FormatoPlanilha[]).map(f => <SelectItem key={f} value={f}>{NOMES_FORMATO[f]}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <Button variant="ghost" size="sm" onClick={() => setPlanilhas(prev => prev.filter((_, i) => i !== idx))}><X className="h-4 w-4" /></Button>
+                      </div>
+                    ))}
+                    {planilhas.some(p => p.formato === 'generica') && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Label className="text-sm">Canal da planilha genérica:</Label>
+                        <Select value={canalOverride || "__fromfile__"} onValueChange={v => setCanalOverride(v === "__fromfile__" ? "" : v)}>
+                          <SelectTrigger className="w-40 h-8"><SelectValue placeholder="Do arquivo" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__fromfile__">Do arquivo</SelectItem>
+                            {(canaisConfigurados || []).map(canal => (<SelectItem key={canal.id} value={canal.nome}>{canal.nome}</SelectItem>))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    <Button className="w-full" onClick={lerPlanilhas} disabled={lendoPlanilhas}>
+                      {lendoPlanilhas ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Lendo...</> : 'Ler planilhas e conferir'}
+                    </Button>
+                  </div>
+                )}
+                <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground space-y-1">
+                  <p className="font-medium text-foreground flex items-center gap-2"><AlertCircle className="h-4 w-4" />Dica</p>
+                  <p>Se você já importou o pedido por foto, mande a planilha financeira: eu só atualizo a taxa real cobrada, sem duplicar a venda.</p>
+                </div>
+              </TabsContent>
+            </Tabs>
+            )}
+            {photoStep === 'items' && allPhotoResults.length > 0 && verLista && (
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {(['Pronto', 'Precisa escolher', 'Atualiza taxa real', 'Já importado'] as const).map(t => {
+                    const n = allPhotoResults.filter(r => statusPedido(r).txt === t).length;
+                    return n > 0 ? <Badge key={t} variant="outline">{t}: {n}</Badge> : null;
+                  })}
+                </div>
+                <ScrollArea className="h-[50vh] border rounded-lg">
+                  <div className="divide-y">
+                    {allPhotoResults.map((r, idx) => {
+                      const st = statusPedido(r);
+                      return (
+                        <button key={idx} type="button" onClick={() => { setCurrentResultIndex(idx); setVerLista(false); }} className="w-full flex items-center justify-between gap-2 p-2 text-left hover:bg-muted/50">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{r.plataforma || 'Venda'} {r.numero_pedido ? `#${r.numero_pedido}` : ''}</p>
+                            <p className="text-xs text-muted-foreground">{r.data ? r.data.split('-').reverse().join('/') : 'sem data'} • {r.itens.length} item(ns)</p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-sm">{formatCurrency(r.subtotal)}</p>
+                            <p className={`text-xs ${st.cls}`}>{st.txt}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t">
+                  <span className="text-sm">Total: <span className="font-bold text-primary">{formatCurrency(totalPhotoValue)}</span></span>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => { setPhotoStep('upload'); setAllPhotoResults([]); setMultiImages([]); }}>Voltar</Button>
+                    <Button size="sm" onClick={() => importPhotoItemsMutation.mutate()} disabled={importPhotoItemsMutation.isPending || nonDuplicateResults.length === 0 || temPendencia}>
+                      {importPhotoItemsMutation.isPending ? 'Importando...' : textoBotaoImportar}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+                {photoStep === 'items' && allPhotoResults.length > 0 && currentResult && !verLista && (
                   <div className="space-y-3">
                     {/* Navigation between orders */}
                     {allPhotoResults.length > 1 && (
@@ -1197,6 +1270,12 @@ const ImportarVendasDialog: React.FC = () => {
                       </div>
                     )}
 
+                    {allPhotoResults.length > 5 && (
+                      <Button variant="link" size="sm" className="px-0" onClick={() => setVerLista(true)}>← Voltar à lista de pedidos</Button>
+                    )}
+                    {currentResult.atualizarPedidoId && (
+                      <div className="p-3 border rounded-lg bg-muted/40 text-sm">{currentResult.duplicateReason}</div>
+                    )}
                     {/* Duplicate warning */}
                     {currentResult.isDuplicate && (
                       <div className="flex items-center gap-2 p-3 border border-destructive/50 bg-destructive/10 rounded-lg">
@@ -1345,12 +1424,6 @@ const ImportarVendasDialog: React.FC = () => {
                     </div>
                   </div>
                 )}
-              </TabsContent>
-
-              <TabsContent value="99food" className="mt-4">
-                <Importar99FoodTab onImportComplete={() => { setOpen(false); resetState(); }} />
-              </TabsContent>
-            </Tabs>
           </div>
         )}
 
