@@ -136,6 +136,9 @@ export function useCanaisVenda() {
   // Deletar canal
   const deleteCanalMutation = useMutation({
     mutationFn: async (id: string) => {
+      const { count, error: countError } = await supabase.from('vendas_pedidos').select('id', { count: 'exact', head: true }).eq('canal_id', id);
+      if (countError) throw countError;
+      if (count) throw new Error(`Este canal tem ${count} pedidos. Desative-o para manter o histórico.`);
       const { error } = await supabase
         .from('canais_venda')
         .delete()

@@ -56,6 +56,7 @@ import {
 import { format, startOfMonth, endOfMonth, subMonths, parseISO, addMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { montarAReceber, type LinhaCaixaPedido } from '@/lib/repasseUtils';
+import { carregarLinhasCaixaPedidos } from '@/lib/caixaPedidos';
 import { useToast } from '@/hooks/use-toast';
 import { MobileDataView, Column } from '@/components/ui/mobile-data-view';
 import { usePagination } from '@/hooks/usePagination';
@@ -175,6 +176,7 @@ const Caixa = () => {
   // Buscar saldo total via RPC (calculado no backend)
   const { data: saldoData } = useQuery({
     queryKey: ['caixa-saldo-total', usuario?.empresa_id],
+    refetchOnMount: 'always',
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_saldo_caixa', {
         p_empresa_id: usuario!.empresa_id,
@@ -203,12 +205,12 @@ const Caixa = () => {
   });
 
   // Linhas de caixa dos pedidos (venda, repasse da plataforma, desconto no repasse, mensalidade)
-  const { data: linhasPedidos } = useQuery({
+  const { data: linhasPedidos, error: erroLinhasPedidos, isLoading: carregandoLinhasPedidos, refetch: recarregarLinhasPedidos } = useQuery({
     queryKey: ['caixa-pedidos-linhas', usuario?.empresa_id],
+    refetchOnMount: 'always',
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_caixa_pedidos' as any, { p_empresa_id: usuario!.empresa_id });
-      if (error) throw error;
-      return (data || []) as LinhaCaixaPedido[];
+      if (!usuario?.empresa_id) return [];
+      return carregarLinhasCaixaPedidos(usuario.empresa_id);
     },
     enabled: !!usuario?.empresa_id,
   });
@@ -400,7 +402,7 @@ const Caixa = () => {
     const pedidosPorId = new Map((vendas || []).map(v => [v.id, v]));
     (linhasPedidos || []).forEach((l, i) => {
       if (l.data_caixa < dataInicio || l.data_caixa > dataFim) return;
-      if (l.tipo !== 'venda' && l.tipo !== 'mensalidade_saida' && l.data_caixa > hojeStr) return; // ainda a receber
+      if (l.data_caixa > hojeStr) return; // ainda a receber
       const ped = l.pedido_id ? pedidosPorId.get(l.pedido_id) : undefined;
       const valor = Math.abs(Number(l.valor));
       if (valor === 0) return;
@@ -665,7 +667,6 @@ const Caixa = () => {
             </Card>
 
             {/* A receber das plataformas */}
-            {aReceber.total !== 0 && (
               <Card className="border-l-4 border-l-amber-500 cursor-pointer hover:bg-muted/30" onClick={() => setAReceberOpen(true)}>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3">
@@ -674,13 +675,12 @@ const Caixa = () => {
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">A receber das plataformas</p>
-                      <p className="text-lg font-bold truncate text-amber-600">{formatCurrency(aReceber.total)}</p>
+                      <p className="text-lg font-bold truncate text-warning">{carregandoLinhasPedidos ? 'Carregando...' : erroLinhasPedidos ? 'Indisponível' : formatCurrency(aReceber.total)}</p>
                       <p className="text-[10px] text-muted-foreground">Não soma no Saldo Atual. Toque para ver.</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            )}
 
             {/* Entradas do mês */}
             <Card className="border-l-4 border-l-green-500">
@@ -848,12 +848,14 @@ const Caixa = () => {
             <DialogHeader><DialogTitle>A receber das plataformas</DialogTitle></DialogHeader>
             <p className="text-xs text-muted-foreground">Valores que a plataforma ainda vai repassar, já sem as taxas. Comissões de pedidos recebidos pela loja e mensalidades aparecem descontando.</p>
             <div className="space-y-2">
+              {!!erroLinhasPedidos && <div className="text-sm text-destructive">Não foi possível consultar os repasses.<Button variant="outline" size="sm" className="ml-2" onClick={() => { void recarregarLinhasPedidos(); }}>Tentar novamente</Button></div>}
+              {aReceber.grupos.length === 0 && <p className="text-sm text-muted-foreground">Nenhum repasse ou desconto pendente.</p>}
               {aReceber.grupos.map(g => (
-                <div key={g.canal + g.data} className="rounded border p-2 text-sm">
+                <div key={(g.canalId || g.canal) + g.data} className="rounded border p-2 text-sm">
                   <div className="flex justify-between font-medium"><span>{g.canal}</span><span>{formatCurrency(g.total)}</span></div>
                   <div className="text-xs text-muted-foreground">Previsto para {format(parseISO(g.data), 'dd/MM/yyyy')}</div>
                   {g.descontos > 0 && (
-                    <div className="text-xs text-muted-foreground">Repasse {formatCurrency(g.repasses)} − descontos {formatCurrency(g.descontos)}</div>
+                    <div className="text-xs text-muted-foreground">{g.repasses > 0 ? `Repasse ${formatCurrency(g.repasses)} − descontos ${formatCurrency(g.descontos)}` : `A descontar do próximo repasse: ${formatCurrency(g.descontos)}`}</div>
                   )}
                 </div>
               ))}

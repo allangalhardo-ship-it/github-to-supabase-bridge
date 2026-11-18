@@ -1,11 +1,22 @@
 import { describe, it, expect } from 'vitest';
 import { calcularCarrinho, ratearDesconto, adicionarAoCarrinho, diferencaEstoque } from './vendaCarrinho';
 import { normalizarCanal } from './canalUtils';
+import { cobraTaxaPagamento, pagamentoVendaManual } from './taxaCanalUtils';
 
 const item = (produto_id: string, quantidade: number, preco_unitario: number, custo_unitario = 0) =>
   ({ produto_id, descricao: produto_id, quantidade, preco_unitario, custo_unitario });
 
 describe('carrinho da venda rápida', () => {
+  it('Pago pelo app: R$ 100 resulta em R$ 26,20 de taxa e R$ 73,80 líquido', () => {
+    const p = pagamentoVendaManual('app_delivery', 'pago_app');
+    const r = calcularCarrinho([item('a', 1, 100)], { taxaCanalPct: 23 + (cobraTaxaPagamento('app_delivery', p.recebidoPor, p.forma) ? 3.2 : 0) });
+    expect(r.taxaCanal).toBe(26.2);
+    expect(r.liquido).toBe(73.8);
+  });
+  it('R$ 8,72: rodapé cobra R$ 2,28 pelo app ou R$ 2,01 na entrega', () => {
+    expect(calcularCarrinho([item('a', 1, 8.72)], { taxaCanalPct: 26.2 }).taxaCanal).toBe(2.28);
+    expect(calcularCarrinho([item('a', 1, 8.72)], { taxaCanalPct: 23 }).taxaCanal).toBe(2.01);
+  });
   it('desconto de R$ 10 em itens de R$ 30 e R$ 70 fica 3 e 7', () => {
     expect(ratearDesconto([item('a', 1, 30), item('b', 1, 70)], 10)).toEqual([27, 63]);
   });

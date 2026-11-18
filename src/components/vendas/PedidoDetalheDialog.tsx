@@ -23,6 +23,7 @@ export interface PedidoLista {
   canal_texto: string | null;
   cliente_id: string | null;
   forma_pagamento: string | null;
+  pagamento_recebido_por?: string | null;
   data_venda: string;
   origem: string;
   numero_externo: string | null;

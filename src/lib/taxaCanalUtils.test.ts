@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { taxaPrevista, liquidoPedido, separarTaxasCanal, taxaEfetivaAcimaDaPrevista } from './taxaCanalUtils';
+import { taxaPrevista, liquidoPedido, separarTaxasCanal, taxaEfetivaAcimaDaPrevista, pagamentoVendaManual } from './taxaCanalUtils';
 
 describe('taxas do canal', () => {
   it('venda online de R$ 100 com 23% + 3,2% dá líquido R$ 73,80', () => {
@@ -27,6 +27,14 @@ describe('taxas do canal', () => {
 
 import { cobraTaxaPagamento as cobra, taxaPrevista as tp } from './taxaCanalUtils';
 describe('taxa de pagamento por tipo de canal', () => {
+  it('nova venda de app começa recebida pela plataforma', () => {
+    expect(pagamentoVendaManual('app_delivery', '')).toEqual({ recebidoPor: 'plataforma', forma: 'pago_app' });
+  });
+  it('dinheiro e cartões na entrega são recebidos pela loja', () => {
+    for (const forma of ['dinheiro', 'debito', 'credito', 'pix', 'outro']) {
+      expect(pagamentoVendaManual('app_delivery', forma).recebidoPor).toBe('loja');
+    }
+  });
   it('99Food pago em débito na entrega, recebido pela loja: só 9%', () => {
     expect(tp(100, 9, 3, cobra('app_delivery', 'loja', 'debito'))).toBe(9);
   });

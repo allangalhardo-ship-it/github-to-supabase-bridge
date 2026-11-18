@@ -103,6 +103,7 @@ const Vendas = () => {
     setPedidoAberto(null);
     setPedidoEditar({
       id: p.id, canal_id: p.canal_id, cliente_id: p.cliente_id, forma_pagamento: p.forma_pagamento,
+      pagamento_recebido_por: p.pagamento_recebido_por,
       data_venda: p.data_venda, desconto: Number(p.desconto), taxa_entrega: Number(p.taxa_entrega),
       itens: p.vendas.map(v => ({
         id: v.id, produto_id: v.produto_id, descricao: v.produtos?.nome || v.descricao_produto || 'Item',

@@ -1068,10 +1068,9 @@ const ImportarVendasDialog: React.FC = () => {
           <div className="space-y-4 py-4">
             {photoStep === 'upload' && (
             <Tabs value={importMethod} onValueChange={(v) => setImportMethod(v as 'foto' | 'planilha')} className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="csv" className="flex items-center gap-1 text-xs sm:text-sm"><FileSpreadsheet className="h-4 w-4" />CSV/Excel</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="foto" className="flex items-center gap-1 text-xs sm:text-sm"><Camera className="h-4 w-4" />Foto</TabsTrigger>
-                <TabsTrigger value="99food" className="flex items-center gap-1 text-xs sm:text-sm"><FileSpreadsheet className="h-4 w-4" />99Food</TabsTrigger>
+                <TabsTrigger value="planilha" className="flex items-center gap-1 text-xs sm:text-sm"><FileSpreadsheet className="h-4 w-4" />Planilha</TabsTrigger>
               </TabsList>
 
               <TabsContent value="foto" className="mt-4 space-y-4">

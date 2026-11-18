@@ -7,7 +7,7 @@ export interface LinhaCaixaPedido {
   valor: number;
 }
 
-export interface GrupoAReceber { canal: string; data: string; repasses: number; descontos: number; total: number }
+export interface GrupoAReceber { canalId: string | null; canal: string; data: string; repasses: number; descontos: number; total: number }
 
 /** "A receber": repasses, descontos e mensalidades com data prevista depois de hoje. */
 export function montarAReceber(linhas: LinhaCaixaPedido[], hoje: string) {
@@ -15,8 +15,8 @@ export function montarAReceber(linhas: LinhaCaixaPedido[], hoje: string) {
   for (const l of linhas) {
     if (l.tipo === 'venda' || l.tipo === 'mensalidade_saida' || l.data_caixa <= hoje) continue;
     const canal = l.canal_nome || 'Sem canal';
-    const k = `${canal}|${l.data_caixa}`;
-    const g = map.get(k) || { canal, data: l.data_caixa, repasses: 0, descontos: 0, total: 0 };
+    const k = `${l.canal_id || canal}|${l.data_caixa}`;
+    const g = map.get(k) || { canalId: l.canal_id, canal, data: l.data_caixa, repasses: 0, descontos: 0, total: 0 };
     const v = Number(l.valor) || 0;
     if (v >= 0) g.repasses += v; else g.descontos += -v;
     g.total = round2(g.repasses - g.descontos);

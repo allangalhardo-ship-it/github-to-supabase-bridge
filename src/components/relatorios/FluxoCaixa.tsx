@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrencyBRL } from '@/lib/format';
+import { carregarLinhasCaixaPedidos } from '@/lib/caixaPedidos';
 import { 
   ArrowLeft, 
   TrendingUp, 
@@ -76,13 +77,14 @@ export const FluxoCaixa: React.FC<FluxoCaixaProps> = ({ onBack }) => {
   // Buscar vendas para complementar
   const { data: vendas, isLoading: loadingVendas } = useQuery({
     queryKey: ['fluxo-vendas', usuario?.empresa_id, dataInicio, dataFim],
+    refetchOnMount: 'always',
     queryFn: async () => {
       // Linhas de caixa dos pedidos (venda, repasse previsto, desconto no repasse, mensalidade)
-      const { data, error } = await supabase.rpc('get_caixa_pedidos' as any, { p_empresa_id: usuario!.empresa_id });
-      if (error) throw error;
+      if (!usuario?.empresa_id) return [];
+      const data = await carregarLinhasCaixaPedidos(usuario.empresa_id);
       const hoje = format(new Date(), 'yyyy-MM-dd');
       return ((data || []) as any[])
-        .filter(l => l.data_caixa >= dataInicio && l.data_caixa <= dataFim && Number(l.valor) !== 0)
+        .filter(l => l.data_caixa >= dataInicio && l.data_caixa <= dataFim && l.data_caixa <= hoje && Number(l.valor) !== 0)
         .map((l, i) => ({
           id: `${l.pedido_id || l.canal_id}-${l.tipo}-${i}`,
           data_venda: l.data_caixa as string,

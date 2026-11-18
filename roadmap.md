@@ -1,0 +1,6 @@
+- [x] Corrigir pagamentos e valores previstos da venda manual sem alterar vendas antigas.
+- [x] Conferir Caixa, repasses, mensalidade e Fluxo de Caixa.
+- [x] Exibir as abas Foto e Planilha na importação.
+- [x] Confirmar exclusão de canal e impedir exclusão com vendas na tela.
+- [x] Rodar testes e conferir Vendas e Caixa no preview, desktop e celular.
+- [ ] Confirmar o bloqueio adicional de exclusão diretamente no Supabase externo: a alteração executada pelas ferramentas não foi observada no banco usado pelo preview; o bloqueio na tela foi confirmado.

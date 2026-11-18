@@ -18,6 +18,9 @@ import { cn } from '@/lib/utils';
 import { fmtNum } from '@/lib/format';
 import NovoCanalPrecosDialog from './NovoCanalPrecosDialog';
 import CanalTaxasForm from './CanalTaxasForm';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 
 const TIPOS_CANAL = [
   { value: 'presencial', label: 'Presencial', icon: Store, description: 'Balcão, loja física' },
@@ -36,6 +39,16 @@ const getTipoLabel = (tipo: string) => {
 };
 
 const CanaisVendaConfig: React.FC = () => {
+  const { toast } = useToast();
+  const [excluirCanal, setExcluirCanal] = useState<{ canal: CanalComTaxaTotal; vendas: number } | null>(null);
+  const [verificandoExclusao, setVerificandoExclusao] = useState(false);
+  const solicitarExclusao = async (canal: CanalComTaxaTotal) => {
+    setVerificandoExclusao(true);
+    const { count, error } = await supabase.from('vendas_pedidos').select('id', { count: 'exact', head: true }).eq('canal_id', canal.id).eq('empresa_id', canal.empresa_id);
+    setVerificandoExclusao(false);
+    if (error) { toast({ title: 'Não consegui conferir as vendas', description: error.message, variant: 'destructive' }); return; }
+    setExcluirCanal({ canal, vendas: count || 0 });
+  };
   const {
     canais,
     isLoading,
@@ -236,7 +249,7 @@ const CanaisVendaConfig: React.FC = () => {
                   onToggleExpand={() => toggleExpanded(canal.id)}
                   onEdit={() => handleEditCanal(canal)}
                   onToggleAtivo={(ativo) => toggleCanal({ id: canal.id, ativo })}
-                  onDelete={() => deleteCanal(canal.id)}
+                  onDelete={() => { if (!verificandoExclusao) void solicitarExclusao(canal); }}
                   onAddTaxa={() => handleAddTaxa(canal.id)}
                   onEditTaxa={handleEditTaxa}
                   onDeleteTaxa={(id) => deleteTaxa(id)}
@@ -301,6 +314,26 @@ const CanaisVendaConfig: React.FC = () => {
         </DialogContent>
       </Dialog>
       <NovoCanalPrecosDialog canal={canalNovo} onClose={() => setCanalNovo(null)} />
+      <AlertDialog open={!!excluirCanal} onOpenChange={o => { if (!o) setExcluirCanal(null); }}>
+        <AlertDialogContent className="max-h-[90vh] overflow-y-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{excluirCanal?.vendas ? 'Este canal tem vendas' : 'Excluir canal?'}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {excluirCanal?.vendas
+                ? `${excluirCanal.canal.nome} tem ${fmtNum(excluirCanal.vendas, 0)} ${excluirCanal.vendas === 1 ? 'pedido' : 'pedidos'} e não pode ser excluído. Você pode desativá-lo, mantendo o histórico.`
+                : `Quer excluir ${excluirCanal?.canal.nome || 'este canal'}? Os preços e taxas cadastrados neste canal serão removidos.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              if (!excluirCanal) return;
+              if (excluirCanal.vendas) toggleCanal({ id: excluirCanal.canal.id, ativo: false });
+              else deleteCanal(excluirCanal.canal.id);
+            }}>{excluirCanal?.vendas ? 'Desativar canal' : 'Excluir canal'}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };

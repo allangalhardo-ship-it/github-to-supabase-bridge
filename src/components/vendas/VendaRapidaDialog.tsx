@@ -17,6 +17,7 @@ import { usePrecoUnico } from '@/hooks/usePrecoUnico';
 import { calcularCustoFicha } from '@/utils/custoFicha';
 import { formatCurrencyBRL, fmtNum } from '@/lib/format';
 import { adicionarAoCarrinho, calcularCarrinho, ItemCarrinho } from '@/lib/vendaCarrinho';
+import { cobraTaxaPagamento, pagamentoVendaManual } from '@/lib/taxaCanalUtils';
 import { format, subDays } from 'date-fns';
 import { Minus, Plus, Search, Trash2, ChevronDown, User } from 'lucide-react';
 
@@ -25,6 +26,7 @@ export interface PedidoParaEditar {
   canal_id: string | null;
   cliente_id: string | null;
   forma_pagamento: string | null;
+  pagamento_recebido_por?: string | null;
   data_venda: string;
   desconto: number;
   taxa_entrega: number;
@@ -32,6 +34,7 @@ export interface PedidoParaEditar {
 }
 
 export const FORMAS_PAGAMENTO = [
+  { value: 'pago_app', label: 'Pago pelo app' },
   { value: 'pix', label: 'Pix' },
   { value: 'dinheiro', label: 'Dinheiro' },
   { value: 'debito', label: 'Débito' },
@@ -131,7 +134,7 @@ export default function VendaRapidaDialog({ open, onOpenChange, pedido }: Props)
     if (pedido) {
       setCanalId(pedido.canal_id || '');
       setClienteId(pedido.cliente_id || '');
-      setForma(pedido.forma_pagamento || '');
+      setForma(pedido.pagamento_recebido_por === 'plataforma' ? 'pago_app' : pedido.forma_pagamento || '');
       setDesconto(pedido.desconto ? String(pedido.desconto) : '');
       setTaxaEntrega(pedido.taxa_entrega ? String(pedido.taxa_entrega) : '');
       setData(pedido.data_venda);
@@ -170,6 +173,7 @@ export default function VendaRapidaDialog({ open, onOpenChange, pedido }: Props)
 
   const trocarCanal = (id: string) => {
     setCanalId(id);
+    setForma(canais.find(c => c.id === id)?.tipo === 'app_delivery' ? 'pago_app' : '');
     setItens(prev => prev.map(i => {
       const p = produtos?.find(x => x.id === i.produto_id);
       return p ? { ...i, preco_unitario: precoDe(p, id) } : i;
@@ -185,10 +189,12 @@ export default function VendaRapidaDialog({ open, onOpenChange, pedido }: Props)
   const mudarQtd = (idx: number, delta: number) =>
     setItens(prev => prev.flatMap((i, k) => (k !== idx ? [i] : i.quantidade + delta <= 0 ? [] : [{ ...i, quantidade: i.quantidade + delta }])));
 
+  const pagamento = pagamentoVendaManual(canal?.tipo, forma, pedido?.pagamento_recebido_por);
+  const taxaAplicada = (canal?.comissao || 0) + (cobraTaxaPagamento(canal?.tipo, pagamento.recebidoPor, pagamento.forma) ? canal?.online || 0 : 0);
   const resumo = calcularCarrinho(itens, {
     desconto: parseFloat(desconto) || 0,
     taxaEntrega: parseFloat(taxaEntrega) || 0,
-    taxaCanalPct: canal?.taxa || 0,
+    taxaCanalPct: taxaAplicada,
     impostoPct: imposto || 0,
   });
 
@@ -198,7 +204,8 @@ export default function VendaRapidaDialog({ open, onOpenChange, pedido }: Props)
         p_pedido: {
           canal_id: canalId || null,
           cliente_id: clienteId || null,
-          forma_pagamento: forma || null,
+          forma_pagamento: pagamento.forma || null,
+          pagamento_recebido_por: pagamento.recebidoPor,
           data_venda: data,
           desconto: parseFloat(desconto) || 0,
           taxa_entrega: parseFloat(taxaEntrega) || 0,
@@ -260,6 +267,14 @@ export default function VendaRapidaDialog({ open, onOpenChange, pedido }: Props)
 
           {/* Produtos */}
           <div className="space-y-1.5">
+            <Label className="text-xs">Forma de pagamento</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {FORMAS_PAGAMENTO.filter(f => canal?.tipo === 'app_delivery' || f.value !== 'pago_app').map(f => (
+                <Button key={f.value} type="button" size="sm" variant={pagamento.forma === f.value ? 'default' : 'outline'} className="h-8" onClick={() => setForma(f.value)}>{f.label}</Button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-1.5">
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar produto" className="pl-8 h-9" />
@@ -307,7 +322,7 @@ export default function VendaRapidaDialog({ open, onOpenChange, pedido }: Props)
             <CollapsibleTrigger asChild>
               <Button type="button" variant="ghost" size="sm" className="px-0 text-xs">
                 <ChevronDown className={`h-3.5 w-3.5 mr-1 transition-transform ${extrasAbertos ? 'rotate-180' : ''}`} />
-                Cliente, pagamento, desconto e entrega
+                Cliente, desconto e entrega
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-3 pt-2">
@@ -319,14 +334,6 @@ export default function VendaRapidaDialog({ open, onOpenChange, pedido }: Props)
                   value={clienteId} onValueChange={setClienteId}
                   placeholder="Buscar cliente..." searchPlaceholder="Digite para buscar..." emptyMessage="Nenhum cliente encontrado."
                 />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Forma de pagamento</Label>
-                <div className="flex flex-wrap gap-1.5">
-                  {FORMAS_PAGAMENTO.map(f => (
-                    <Button key={f.value} type="button" size="sm" variant={forma === f.value ? 'default' : 'outline'} className="h-8" onClick={() => setForma(forma === f.value ? '' : f.value)}>{f.label}</Button>
-                  ))}
-                </div>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <div className="space-y-1"><Label className="text-xs">Desconto</Label><CurrencyInput value={desconto} onChange={setDesconto} placeholder="0,00" /></div>

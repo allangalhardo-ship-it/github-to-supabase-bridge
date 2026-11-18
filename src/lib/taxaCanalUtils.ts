@@ -44,3 +44,10 @@ export function cobraTaxaPagamento(tipoCanal: string | null | undefined, recebid
   if (tipoCanal === 'app_delivery') return recebidoPor === 'plataforma';
   return /cart|cr[eé]dito|d[eé]bito|maquin/i.test(formaPagamento || '');
 }
+
+/** Na venda manual de app, a forma explícita identifica quem recebe. */
+export function pagamentoVendaManual(tipo: string | undefined, forma: string, recebidoAnterior?: string | null) {
+  if (tipo !== 'app_delivery') return { recebidoPor: 'loja', forma };
+  if (!forma && recebidoAnterior !== undefined) return { recebidoPor: recebidoAnterior, forma };
+  return { recebidoPor: forma === 'pago_app' || !forma ? 'plataforma' : 'loja', forma: forma || 'pago_app' };
+}

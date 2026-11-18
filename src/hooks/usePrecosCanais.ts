@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { invalidateAndRefetch } from '@/lib/queryConfig';
 import { canalPrincipal } from '@/lib/precoCanalUtils';
+import { separarTaxasCanal } from '@/lib/taxaCanalUtils';
 
 /** Mantém produtos.preco_venda igual ao preço do canal presencial principal (Balcão). */
 async function sincronizarPrecoBase(empresaId: string, precos: { produtoId: string; canal: string; preco: number }[]) {
@@ -53,6 +54,8 @@ export interface CanalConfig {
   id: string;
   nome: string;
   taxa: number; // Soma de todas as taxas do canal
+  comissao?: number;
+  online?: number;
   tipo: 'presencial' | 'app_delivery' | 'proprio';
   isBalcao: boolean;
 }
@@ -89,11 +92,14 @@ export function usePrecosCanais(produtoId?: string, opcoes?: { avisoSalvoSilenci
       const canais: CanalConfig[] = (canaisData || []).map(canal => {
         const taxasDoCanal = (taxasData || []).filter(t => t.canal_id === canal.id);
         const taxaTotal = taxasDoCanal.reduce((sum, t) => sum + Number(t.percentual), 0);
+        const { comissao, online } = separarTaxasCanal(taxasDoCanal);
         
         return {
           id: canal.id,
           nome: canal.nome,
           taxa: taxaTotal,
+          comissao,
+          online,
           tipo: canal.tipo as 'presencial' | 'app_delivery' | 'proprio',
           isBalcao: canal.tipo === 'presencial',
         };
