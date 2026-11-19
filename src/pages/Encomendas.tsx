@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { format, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useEncomendas } from '@/hooks/useEncomendas';
+import { useEncomendas, type Encomenda } from '@/hooks/useEncomendas';
+import OQueProduzir from '@/components/encomendas/OQueProduzir';
+import LembretesEncomendas from '@/components/encomendas/LembretesEncomendas';
+import EncomendaImagemDialog from '@/components/encomendas/EncomendaImagemDialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CalendarioMensal from '@/components/encomendas/CalendarioMensal';
 import VistaoDiaria from '@/components/encomendas/VistaoDiaria';
 import EncomendaFormDialog from '@/components/encomendas/EncomendaFormDialog';
@@ -13,13 +17,16 @@ export default function Encomendas() {
   const [mesAtual, setMesAtual] = useState(new Date());
   const [diaSelecionado, setDiaSelecionado] = useState(new Date());
   const [formOpen, setFormOpen] = useState(false);
+  const [editando, setEditando] = useState<Encomenda | null>(null);
+  const [imagem, setImagem] = useState<{ enc: Encomenda; tipo: 'orcamento' | 'recibo' } | null>(null);
 
-  const { encomendas, encomendasPorDia, isLoading, criarEncomenda, atualizarStatus, excluirEncomenda } = useEncomendas(mesAtual);
+  const { encomendas, encomendasPorDia, isLoading, criarEncomenda, atualizarStatus, excluirEncomenda, atualizarEncomenda, cancelarEncomenda, reabrirEncomenda } = useEncomendas(mesAtual);
 
   const diaKey = format(diaSelecionado, 'yyyy-MM-dd');
   const encomendasDoDia = encomendasPorDia[diaKey] || [];
 
   // Contadores
+  const orcamentos = encomendas.filter(e => e.status === 'orcamento').length;
   const pendentes = encomendas.filter(e => e.status === 'pendente').length;
   const emProducao = encomendas.filter(e => e.status === 'em_producao').length;
   const prontas = encomendas.filter(e => e.status === 'pronta').length;
@@ -37,14 +44,26 @@ export default function Encomendas() {
             Gerencie suas encomendas e produção
           </p>
         </div>
-        <Button onClick={() => setFormOpen(true)} className="gap-1.5">
+        <Button onClick={() => { setEditando(null); setFormOpen(true); }} className="gap-1.5">
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">Nova Encomenda</span>
         </Button>
       </div>
 
+      <Tabs defaultValue="agenda">
+        <TabsList>
+          <TabsTrigger value="agenda">Agenda</TabsTrigger>
+          <TabsTrigger value="produzir">O que produzir</TabsTrigger>
+        </TabsList>
+        <TabsContent value="produzir" className="mt-4"><OQueProduzir /></TabsContent>
+        <TabsContent value="agenda" className="mt-4 space-y-4 md:space-y-6">
+      <LembretesEncomendas />
+
       {/* Status badges */}
       <div className="flex items-center gap-2 flex-wrap">
+        {orcamentos > 0 && (
+          <Badge variant="outline">{orcamentos} orçamento{orcamentos > 1 ? 's' : ''}</Badge>
+        )}
         {pendentes > 0 && (
           <Badge variant="outline" className="bg-slate-500/10 text-slate-600 border-slate-200">
             {pendentes} pendente{pendentes > 1 ? 's' : ''}
@@ -101,17 +120,33 @@ export default function Encomendas() {
                 atualizarStatus.mutate({ id, status });
               }}
               onExcluir={(id) => excluirEncomenda.mutate(id)}
+              onEditar={(e) => { setEditando(e); setFormOpen(true); }}
+              onCancelar={(id, devolvido) => { if (!cancelarEncomenda.isPending) cancelarEncomenda.mutate({ id, sinalDevolvido: devolvido }); }}
+              onReabrir={(id) => { if (!reabrirEncomenda.isPending) reabrirEncomenda.mutate(id); }}
+              onEnviar={(enc, tipo) => setImagem({ enc, tipo })}
             />
           </div>
         </div>
       )}
 
+        </TabsContent>
+      </Tabs>
+
       {/* Form dialog */}
       <EncomendaFormDialog
         open={formOpen}
-        onOpenChange={setFormOpen}
-        onSubmit={(data) => criarEncomenda.mutate(data)}
+        onOpenChange={(o) => { setFormOpen(o); if (!o) setEditando(null); }}
+        onSubmit={(data) => editando
+          ? atualizarEncomenda.mutate({ id: editando.id, form: data, statusAtual: editando.status })
+          : criarEncomenda.mutate(data)}
         dataPadrao={diaSelecionado}
+        encomenda={editando}
+      />
+
+      <EncomendaImagemDialog
+        encomenda={imagem?.enc ?? null}
+        tipo={imagem?.tipo ?? 'recibo'}
+        onOpenChange={(o) => { if (!o) setImagem(null); }}
       />
     </div>
   );

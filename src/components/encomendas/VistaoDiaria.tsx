@@ -9,14 +9,18 @@ interface Props {
   encomendas: Encomenda[];
   onAtualizarStatus: (id: string, status: EncomendaStatus) => void;
   onExcluir: (id: string) => void;
+  onEditar?: (e: Encomenda) => void;
+  onCancelar?: (id: string, sinalDevolvido: boolean) => void;
+  onReabrir?: (id: string) => void;
+  onEnviar?: (e: Encomenda, tipo: 'orcamento' | 'recibo') => void;
 }
 
-export default function VistaoDiaria({ dia, encomendas, onAtualizarStatus, onExcluir }: Props) {
+export default function VistaoDiaria({ dia, encomendas, onAtualizarStatus, onExcluir, ...acoes }: Props) {
   const diaFormatado = format(dia, "EEEE, dd 'de' MMMM", { locale: ptBR });
   
   // Ordenar: pendentes e em produção primeiro, depois prontas, entregues por último
   const ordenadas = [...encomendas].sort((a, b) => {
-    const ordem: Record<string, number> = { pendente: 0, em_producao: 1, pronta: 2, entregue: 3, cancelada: 4 };
+    const ordem: Record<string, number> = { orcamento: 0, pendente: 1, em_producao: 2, pronta: 3, entregue: 4, cancelada: 5 };
     return (ordem[a.status] || 0) - (ordem[b.status] || 0);
   });
 
@@ -43,6 +47,7 @@ export default function VistaoDiaria({ dia, encomendas, onAtualizarStatus, onExc
               encomenda={enc}
               onAtualizarStatus={onAtualizarStatus}
               onExcluir={onExcluir}
+              {...acoes}
             />
           ))}
         </div>

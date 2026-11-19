@@ -131,6 +131,15 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
   const [novaQuantidade, setNovaQuantidade] = useState('');
   const [novaUnidade, setNovaUnidade] = useState('');
   const [rendimentoLocal, setRendimentoLocal] = useState<string>('');
+  const [tempoLocal, setTempoLocal] = useState<string>('');
+  const [tempoOriginal, setTempoOriginal] = useState<string>('');
+  useEffect(() => {
+    if (!open || !produtoId) return;
+    supabase.from('produtos').select('tempo_preparo_min').eq('id', produtoId).single().then(({ data }) => {
+      const v = ((data as any)?.tempo_preparo_min ?? '').toString();
+      setTempoLocal(v); setTempoOriginal(v);
+    });
+  }, [open, produtoId]);
   // (mantido valor inicial vindo dos props)
 
   // Inicializar estado local quando abrir o dialog
@@ -193,6 +202,7 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
 
     if (observacoes !== originalObs) return true;
     if (rendimentoLocal !== originalRend) return true;
+    if (tempoLocal !== tempoOriginal) return true;
 
     // Verificar se há itens novos ou deletados
     if (localItems.some(item => item.isNew || item.isDeleted)) return true;
@@ -211,7 +221,7 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
     }
 
     return false;
-  }, [localItems, observacoes, rendimentoLocal, rendimentoPadrao, fichaTecnica, observacoesFicha]);
+  }, [localItems, observacoes, rendimentoLocal, rendimentoPadrao, fichaTecnica, observacoesFicha, tempoLocal, tempoOriginal]);
 
   // Adicionar item localmente
   const handleAddItem = () => {
@@ -261,7 +271,8 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
         .update({
           observacoes_ficha: observacoes || null,
           rendimento_padrao: Number.isFinite(rendimentoNum) && rendimentoNum > 0 ? rendimentoNum : null,
-        })
+          tempo_preparo_min: Number(tempoLocal) > 0 ? Number(tempoLocal) : null,
+        } as any)
         .eq('id', produtoId);
 
       if (produtoError) throw produtoError;
@@ -671,6 +682,15 @@ const FichaTecnicaDialog: React.FC<FichaTecnicaDialogProps> = ({
               />
               <p className="text-xs text-muted-foreground">
                 Use quando a ficha produz um lote (ex: 1 receita = 24 brigadeiros → digite 24). Deixe 1 se a ficha é para uma unidade.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="tempo_preparo">Tempo de preparo/montagem do lote (minutos, opcional)</Label>
+              <Input id="tempo_preparo" type="number" min="0" step="1" placeholder="Ex: 30"
+                value={tempoLocal} onChange={(e) => setTempoLocal(e.target.value)} className="w-32" />
+              <p className="text-xs text-muted-foreground">
+                Tempo próprio deste produto. O tempo das receitas base usadas é somado automaticamente. Serve para o lucro por hora.
               </p>
             </div>
 

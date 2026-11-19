@@ -28,6 +28,7 @@ import MargemEvolutionChart from '@/components/dashboard/MargemEvolutionChart';
 import { AlertaVencimento } from '@/components/producao/AlertaVencimento';
 import { BotChef } from '@/components/brand/BotChef';
 import ResumoDiarioIA from '@/components/dashboard/ResumoDiarioIA';
+import LembretesEncomendas from '@/components/encomendas/LembretesEncomendas';
 
 type PeriodoType = 'hoje' | 'semana' | 'mes' | 'ultimos30' | 'personalizado';
 
@@ -113,6 +114,9 @@ const Dashboard = () => {
 
       {/* Resumo diário com IA */}
       <ResumoDiarioIA />
+
+      {/* Lembretes de encomendas (só aparece quando há algo) */}
+      <LembretesEncomendas compacto />
 
       {/* KPIs */}
       <AnimatedCardContainer className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5" staggerDelay={0.08}>

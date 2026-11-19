@@ -21,6 +21,7 @@ const Configuracoes = () => {
     margem_desejada_padrao: '',
     cmv_alvo: '',
     imposto_medio_sobre_vendas: '',
+    horas_producao_semana: '',
   });
 
   const { data: config, isLoading } = useQuery({
@@ -43,6 +44,7 @@ const Configuracoes = () => {
         margem_desejada_padrao: String(config.margem_desejada_padrao ?? 30),
         cmv_alvo: String(config.cmv_alvo ?? 35),
         imposto_medio_sobre_vendas: String(config.imposto_medio_sobre_vendas ?? 10),
+        horas_producao_semana: (config as any).horas_producao_semana != null ? String((config as any).horas_producao_semana) : '',
       });
     }
   }, [config]);
@@ -53,7 +55,8 @@ const Configuracoes = () => {
         margem_desejada_padrao: data.margem_desejada_padrao === '' ? 0 : parseFloat(data.margem_desejada_padrao),
         cmv_alvo: data.cmv_alvo === '' ? 0 : parseFloat(data.cmv_alvo),
         imposto_medio_sobre_vendas: data.imposto_medio_sobre_vendas === '' ? 0 : parseFloat(data.imposto_medio_sobre_vendas),
-      };
+        horas_producao_semana: data.horas_producao_semana === '' ? null : parseFloat(data.horas_producao_semana),
+      } as any;
 
       if (config) {
         const { error } = await supabase
@@ -142,6 +145,21 @@ const Configuracoes = () => {
                 />
                 <p className="text-xs text-muted-foreground">
                   Custo da Mercadoria Vendida ideal para o seu segmento
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="horas_producao_semana">Horas de produção disponíveis por semana (opcional)</Label>
+                <Input
+                  id="horas_producao_semana"
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  value={formData.horas_producao_semana}
+                  onChange={(e) => setFormData({ ...formData, horas_producao_semana: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Usado na aba "O que produzir" das Encomendas para avisar quando faltar tempo
                 </p>
               </div>
 

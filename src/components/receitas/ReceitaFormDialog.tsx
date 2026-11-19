@@ -50,6 +50,7 @@ export function ReceitaFormDialog({
     nome: editingReceita?.nome || '',
     unidade_medida: editingReceita?.unidade_medida || 'kg',
     rendimento_receita: editingReceita?.rendimento_receita?.toString() || '',
+    tempo_preparo_min: editingReceita?.tempo_preparo_min?.toString() || '',
   });
   const [ingredientesTemp, setIngredientesTemp] = useState<IngredienteTemp[]>([]);
   const [novoIngredienteForm, setNovoIngredienteForm] = useState({ insumo_id: '', quantidade: '' });
@@ -60,6 +61,7 @@ export function ReceitaFormDialog({
       nome: '',
       unidade_medida: 'kg',
       rendimento_receita: '',
+      tempo_preparo_min: '',
     });
     setIngredientesTemp([]);
     setNovoIngredienteForm({ insumo_id: '', quantidade: '' });
@@ -73,6 +75,7 @@ export function ReceitaFormDialog({
         nome: editingReceita.nome,
         unidade_medida: editingReceita.unidade_medida,
         rendimento_receita: editingReceita.rendimento_receita?.toString() || '',
+        tempo_preparo_min: editingReceita.tempo_preparo_min?.toString() || '',
       });
     }
     onOpenChange(isOpen);
@@ -149,7 +152,8 @@ export function ReceitaFormDialog({
         estoque_minimo: 0,
         is_intermediario: true,
         rendimento_receita: data.rendimento_receita ? parseFloat(data.rendimento_receita) : null,
-      }).select("id").single();
+        tempo_preparo_min: data.tempo_preparo_min ? parseFloat(data.tempo_preparo_min) : null,
+      } as any).select("id").single();
       
       if (error) throw error;
 
@@ -185,7 +189,8 @@ export function ReceitaFormDialog({
           nome: data.nome,
           unidade_medida: data.unidade_medida,
           rendimento_receita: data.rendimento_receita ? parseFloat(data.rendimento_receita) : null,
-        })
+          tempo_preparo_min: data.tempo_preparo_min ? parseFloat(data.tempo_preparo_min) : null,
+        } as any)
         .eq("id", data.id);
       if (error) throw error;
     },
@@ -277,6 +282,22 @@ export function ReceitaFormDialog({
               />
               <p className="text-xs text-muted-foreground">
                 Quantidade que essa receita produz
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="tempo_preparo_min">Tempo de preparo (minutos, opcional)</Label>
+              <Input
+                id="tempo_preparo_min"
+                type="number"
+                step="1"
+                min="0"
+                value={formData.tempo_preparo_min}
+                onChange={(e) => setFormData({ ...formData, tempo_preparo_min: e.target.value })}
+                placeholder="Ex: 60"
+              />
+              <p className="text-xs text-muted-foreground">
+                Tempo para fazer a receita inteira. Serve para calcular o lucro por hora.
               </p>
             </div>
           </div>

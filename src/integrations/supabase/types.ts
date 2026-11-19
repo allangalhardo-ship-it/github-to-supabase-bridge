@@ -559,6 +559,7 @@ export type Database = {
           created_at: string
           empresa_id: string
           faturamento_mensal: number
+          horas_producao_semana: number | null
           id: string
           imposto_medio_sobre_vendas: number
           margem_desejada_padrao: number
@@ -570,6 +571,7 @@ export type Database = {
           created_at?: string
           empresa_id: string
           faturamento_mensal?: number
+          horas_producao_semana?: number | null
           id?: string
           imposto_medio_sobre_vendas?: number
           margem_desejada_padrao?: number
@@ -581,6 +583,7 @@ export type Database = {
           created_at?: string
           empresa_id?: string
           faturamento_mensal?: number
+          horas_producao_semana?: number | null
           id?: string
           imposto_medio_sobre_vendas?: number
           margem_desejada_padrao?: number
@@ -742,57 +745,82 @@ export type Database = {
       }
       encomendas: {
         Row: {
+          canal_id: string | null
           cliente_id: string | null
           cliente_nome: string
           cliente_whatsapp: string | null
           created_at: string
           data_entrega: string
+          desconto: number
           empresa_id: string
           forma_pagamento: string | null
           hora_entrega: string | null
           id: string
           local_entrega: string | null
           observacoes: string | null
+          pedido_id: string | null
+          sinal_data: string | null
+          sinal_devolvido: boolean | null
+          sinal_forma_pagamento: string | null
           status: string
           updated_at: string
           valor_sinal: number
           valor_total: number
         }
         Insert: {
+          canal_id?: string | null
           cliente_id?: string | null
           cliente_nome: string
           cliente_whatsapp?: string | null
           created_at?: string
           data_entrega: string
+          desconto?: number
           empresa_id: string
           forma_pagamento?: string | null
           hora_entrega?: string | null
           id?: string
           local_entrega?: string | null
           observacoes?: string | null
+          pedido_id?: string | null
+          sinal_data?: string | null
+          sinal_devolvido?: boolean | null
+          sinal_forma_pagamento?: string | null
           status?: string
           updated_at?: string
           valor_sinal?: number
           valor_total?: number
         }
         Update: {
+          canal_id?: string | null
           cliente_id?: string | null
           cliente_nome?: string
           cliente_whatsapp?: string | null
           created_at?: string
           data_entrega?: string
+          desconto?: number
           empresa_id?: string
           forma_pagamento?: string | null
           hora_entrega?: string | null
           id?: string
           local_entrega?: string | null
           observacoes?: string | null
+          pedido_id?: string | null
+          sinal_data?: string | null
+          sinal_devolvido?: boolean | null
+          sinal_forma_pagamento?: string | null
           status?: string
           updated_at?: string
           valor_sinal?: number
           valor_total?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "encomendas_canal_id_fkey"
+            columns: ["canal_id"]
+            isOneToOne: false
+            referencedRelation: "canais_venda"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "encomendas_cliente_id_fkey"
             columns: ["cliente_id"]
@@ -1111,6 +1139,7 @@ export type Database = {
           is_intermediario: boolean
           nome: string
           rendimento_receita: number | null
+          tempo_preparo_min: number | null
           unidade_medida: string
           updated_at: string
         }
@@ -1125,6 +1154,7 @@ export type Database = {
           is_intermediario?: boolean
           nome: string
           rendimento_receita?: number | null
+          tempo_preparo_min?: number | null
           unidade_medida?: string
           updated_at?: string
         }
@@ -1139,6 +1169,7 @@ export type Database = {
           is_intermediario?: boolean
           nome?: string
           rendimento_receita?: number | null
+          tempo_preparo_min?: number | null
           unidade_medida?: string
           updated_at?: string
         }
@@ -1552,6 +1583,7 @@ export type Database = {
           observacoes_ficha: string | null
           preco_venda: number
           rendimento_padrao: number | null
+          tempo_preparo_min: number | null
           updated_at: string
         }
         Insert: {
@@ -1568,6 +1600,7 @@ export type Database = {
           observacoes_ficha?: string | null
           preco_venda?: number
           rendimento_padrao?: number | null
+          tempo_preparo_min?: number | null
           updated_at?: string
         }
         Update: {
@@ -1584,6 +1617,7 @@ export type Database = {
           observacoes_ficha?: string | null
           preco_venda?: number
           rendimento_padrao?: number | null
+          tempo_preparo_min?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -2216,6 +2250,10 @@ export type Database = {
         Args: { p_de: string; p_para: string; p_qtd: number }
         Returns: number
       }
+      desfazer_venda_encomenda: {
+        Args: { p_encomenda_id: string }
+        Returns: undefined
+      }
       estornar_venda_encomenda: {
         Args: { p_encomenda_id: string }
         Returns: undefined
@@ -2303,6 +2341,10 @@ export type Database = {
       origem_pedido_de_venda: {
         Args: { p_origem: string; p_plataforma: string }
         Returns: string
+      }
+      reabrir_encomenda: {
+        Args: { p_encomenda_id: string }
+        Returns: undefined
       }
       recalcular_custo_intermediario: {
         Args: { p_depth?: number; p_insumo_id: string }

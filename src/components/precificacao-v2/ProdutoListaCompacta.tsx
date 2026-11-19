@@ -21,6 +21,8 @@ import { cn } from '@/lib/utils';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import { calcularPricingScore, arredondarCharm } from '@/utils/pricingScore';
 import { fmtNum } from '@/lib/format';
+import { useTempoPreparoProdutos } from '@/hooks/useTempoPreparo';
+import { lucroPorHora, rendePoucoPorHora } from '@/lib/tempoPreparo';
 
 interface ProdutoListaCompactaProps {
   produtos: ProdutoAnalise[];
@@ -114,6 +116,14 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
     if (qtds.length === 0) return 1;
     return qtds[Math.floor(qtds.length / 2)];
   }, [produtos]);
+
+  // Lucro por hora (só produtos com tempo de preparo informado)
+  const { data: minutosUnidade = {} } = useTempoPreparoProdutos();
+  const { lucroHora, rendePouco } = useMemo(() => {
+    const lh: Record<string, number | null> = {};
+    for (const p of produtos) if (minutosUnidade[p.id]) lh[p.id] = lucroPorHora(p.lucroUnitario, minutosUnidade[p.id]);
+    return { lucroHora: lh, rendePouco: rendePoucoPorHora(lh) };
+  }, [produtos, minutosUnidade]);
 
   // Ordenar: críticos primeiro, depois por margem
   const produtosOrdenados = useMemo(() => {
@@ -233,6 +243,7 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
             </div>
           ) : (
             produtosOrdenados.map((produto) => {
+              const lph = lucroHora[produto.id] ?? null;
               const quadInfo = getQuadranteInfo(produto.quadrante);
               // Preço de referência = Balcão (ou cadastro legado como fallback)
               const precoReferencia = canalBalcao
@@ -282,6 +293,11 @@ const ProdutoListaCompacta: React.FC<ProdutoListaCompactaProps> = ({
                       <div className="flex items-center gap-2">
                         {getSaudeIcon(produto.saudeMargem)}
                         <p className="font-medium text-sm truncate">{produto.nome}</p>
+                        {lph !== null && (
+                          <span className={cn('text-[10px] shrink-0', rendePouco.has(produto.id) ? 'text-destructive font-semibold' : 'text-muted-foreground')}>
+                            {formatCurrency(lph)}/h{rendePouco.has(produto.id) ? ' · Rende pouco por hora de trabalho' : ''}
+                          </span>
+                        )}
                         {produto.quantidadeVendida > 0 && (
                           <Tooltip>
                             <TooltipTrigger asChild>

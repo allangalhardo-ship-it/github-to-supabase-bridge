@@ -11,6 +11,7 @@ export interface Receita {
   estoque_minimo: number;
   is_intermediario: boolean;
   rendimento_receita: number | null;
+  tempo_preparo_min?: number | null;
 }
 
 export interface ReceitaIngrediente {

@@ -36,6 +36,8 @@ import { cn } from '@/lib/utils';
 import ComposicaoPrecoModal from './ComposicaoPrecoModal';
 import { usePrecosCanais } from '@/hooks/usePrecosCanais';
 import { fmtNum } from '@/lib/format';
+import { useTempoPreparoProdutos } from '@/hooks/useTempoPreparo';
+import { lucroPorHora } from '@/lib/tempoPreparo';
 
 interface ProdutoDetalheDrawerProps {
   produto: ProdutoAnalise | null;
@@ -74,6 +76,9 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
   
   // Usar hook que busca canais da nova estrutura
   const { canaisConfigurados, isLoadingPrecos } = usePrecosCanais(produto?.id);
+  const { data: minutosUnidade = {} } = useTempoPreparoProdutos();
+  const minUnid = produto ? minutosUnidade[produto.id] : undefined;
+  const lucroHoraProduto = produto && minUnid ? lucroPorHora(produto.lucroUnitario, minUnid) : null;
 
   // CRÍTICO: Resetar estados quando muda o produto selecionado
   // Isso evita que dados do produto anterior fiquem "presos" no drawer
@@ -245,6 +250,12 @@ const ProdutoDetalheDrawer: React.FC<ProdutoDetalheDrawerProps> = ({
           <p className="text-xs text-muted-foreground">
             Custo: {formatCurrency(produto.custoInsumos)}
           </p>
+          {lucroHoraProduto !== null && minUnid && (
+            <p className="text-xs text-muted-foreground">
+              Lucro por hora: <strong className="text-foreground">{formatCurrency(lucroHoraProduto)}/h</strong>
+              {' '}({fmtNum(minUnid, 1)} min por unidade)
+            </p>
+          )}
         </div>
       </div>
 

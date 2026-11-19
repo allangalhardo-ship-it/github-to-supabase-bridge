@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCanaisVenda } from '@/hooks/useCanaisVenda';
 import { useClientes, ClienteFormData as ClienteForm } from '@/hooks/useClientes';
-import { EncomendaFormData } from '@/hooks/useEncomendas';
+import { EncomendaFormData, Encomenda } from '@/hooks/useEncomendas';
+import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -32,7 +33,11 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: EncomendaFormData) => void;
   dataPadrao?: Date;
+  /** Quando informado, o formulário edita esta encomenda. */
+  encomenda?: Encomenda | null;
 }
+
+const ULTIMO_CANAL_KEY = 'encomenda-ultimo-canal';
 
 interface ItemForm {
   produto_id: string | null;
@@ -61,7 +66,7 @@ interface ClienteDB {
   endereco_cidade: string | null;
 }
 
-export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, dataPadrao }: Props) {
+export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, dataPadrao, encomenda }: Props) {
   const { usuario } = useAuth();
   const { canaisAtivos } = useCanaisVenda();
 
@@ -85,6 +90,11 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
   const [formaPagamento, setFormaPagamento] = useState('dinheiro');
   const [canalSelecionado, setCanalSelecionado] = useState('');
   const [itens, setItens] = useState<ItemForm[]>([{ ...itemVazio }]);
+  const [desconto, setDesconto] = useState(0);
+  const [sinalData, setSinalData] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [sinalForma, setSinalForma] = useState('pix');
+  const [comoOrcamento, setComoOrcamento] = useState(false);
+  const editando = !!encomenda;
 
   // Buscar produtos com preços por canal
   const { data: produtos = [] } = useQuery({
@@ -230,7 +240,38 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
     setItens(itens.filter((_, i) => i !== index));
   };
 
-  const valorTotal = itens.reduce((acc, item) => acc + item.quantidade * item.preco_unitario, 0);
+  const subtotalItens = itens.reduce((acc, item) => acc + item.quantidade * item.preco_unitario, 0);
+  const valorTotal = Math.max(0, subtotalItens - desconto);
+
+  // Canal padrão: último usado (ou Balcão / primeiro ativo)
+  useEffect(() => {
+    if (!open || editando || canalSelecionado || !canaisAtivos?.length) return;
+    const ultimo = localStorage.getItem(ULTIMO_CANAL_KEY);
+    const padrao = canaisAtivos.find(c => c.id === ultimo)
+      || canaisAtivos.find(c => /balc/i.test(c.nome)) || canaisAtivos[0];
+    if (padrao) setCanalSelecionado(padrao.id);
+  }, [open, editando, canaisAtivos, canalSelecionado]);
+
+  // Preencher ao editar
+  useEffect(() => {
+    if (!open || !encomenda) return;
+    setClienteId(encomenda.cliente_id); setClienteNome(encomenda.cliente_nome);
+    setClienteWhatsapp(encomenda.cliente_whatsapp || '');
+    setEnderecoCadastro(encomenda.local_entrega || ''); setUsarEnderecoAlternativo(false);
+    setDataEntrega(new Date(encomenda.data_entrega + 'T12:00:00'));
+    setHoraEntrega(encomenda.hora_entrega || ''); setObservacoes(encomenda.observacoes || '');
+    setValorSinal(Number(encomenda.valor_sinal) || 0);
+    setFormaPagamento(encomenda.forma_pagamento || 'dinheiro');
+    setCanalSelecionado(encomenda.canal_id || '');
+    setDesconto(Number(encomenda.desconto) || 0);
+    setSinalData(encomenda.sinal_data || encomenda.created_at.slice(0, 10));
+    setSinalForma(encomenda.sinal_forma_pagamento || 'pix');
+    setComoOrcamento(encomenda.status === 'orcamento');
+    setItens((encomenda.encomenda_itens || []).map(i => ({
+      produto_id: i.produto_id, produto_nome: i.produto_nome, quantidade: Number(i.quantidade),
+      preco_unitario: Number(i.preco_unitario), observacoes: i.observacoes || '',
+    })));
+  }, [open, encomenda]);
 
   const localEntregaFinal = usarEnderecoAlternativo ? enderecoAlternativo : enderecoCadastro;
 
@@ -240,11 +281,13 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
     setEnderecoAlternativo(''); setDataEntrega(dataPadrao || new Date());
     setHoraEntrega(''); setObservacoes(''); setValorSinal(0);
     setFormaPagamento('dinheiro'); setCanalSelecionado('');
-    setItens([{ ...itemVazio }]);
+    setItens([{ ...itemVazio }]); setDesconto(0);
+    setSinalData(format(new Date(), 'yyyy-MM-dd')); setSinalForma('pix'); setComoOrcamento(false);
   };
 
   const handleSubmit = () => {
-    if (!clienteNome.trim() || !dataEntrega || itens.some(i => !i.produto_nome.trim())) return;
+    if (!clienteNome.trim() || !dataEntrega || !canalSelecionado || itens.some(i => !i.produto_nome.trim())) return;
+    localStorage.setItem(ULTIMO_CANAL_KEY, canalSelecionado);
 
     onSubmit({
       cliente_id: clienteId,
@@ -256,6 +299,11 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
       observacoes: observacoes || undefined,
       valor_sinal: valorSinal,
       forma_pagamento: formaPagamento,
+      canal_id: canalSelecionado,
+      desconto: Math.min(desconto, subtotalItens),
+      sinal_data: valorSinal > 0 ? sinalData : null,
+      sinal_forma_pagamento: valorSinal > 0 ? sinalForma : null,
+      orcamento: comoOrcamento,
       itens: itens.map(i => ({
         produto_id: i.produto_id,
         produto_nome: i.produto_nome,
@@ -276,7 +324,7 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] p-0 flex flex-col overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
-          <DialogTitle>Nova Encomenda</DialogTitle>
+          <DialogTitle>{editando ? 'Editar Encomenda' : 'Nova Encomenda'}</DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-6 pb-6" style={{ WebkitOverflowScrolling: 'touch' }}>
@@ -362,13 +410,12 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
                 <Input type="time" value={horaEntrega} onChange={e => setHoraEntrega(e.target.value)} className="h-9 text-sm" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Canal</Label>
+                <Label className="text-xs">Canal *</Label>
                 <Select value={canalSelecionado} onValueChange={handleCanalChange}>
                   <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Balcão" />
+                    <SelectValue placeholder="Escolha" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="balcao">Balcão (preço base)</SelectItem>
                     {canaisAtivos?.map(c => (
                       <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
                     ))}
@@ -443,7 +490,7 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
               <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Pagamento</Label>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Forma</Label>
+                  <Label className="text-xs">Forma de pagamento do saldo</Label>
                   <Select value={formaPagamento} onValueChange={setFormaPagamento}>
                     <SelectTrigger className="h-9 text-sm">
                       <SelectValue />
@@ -462,6 +509,37 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
                   <CurrencyInput value={String(valorSinal)} onChange={v => setValorSinal(parseFloat(v) || 0)} className="h-9 text-sm" />
                 </div>
               </div>
+              {valorSinal > 0 && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Data do sinal</Label>
+                    <Input type="date" value={sinalData} onChange={e => setSinalData(e.target.value)} className="h-9 text-sm" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Sinal pago em</Label>
+                    <Select value={sinalForma} onValueChange={setSinalForma}>
+                      <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                        <SelectItem value="pix">PIX</SelectItem>
+                        <SelectItem value="cartao_credito">Cartão Crédito</SelectItem>
+                        <SelectItem value="cartao_debito">Cartão Débito</SelectItem>
+                        <SelectItem value="transferencia">Transferência</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Desconto (R$)</Label>
+                <CurrencyInput value={String(desconto)} onChange={v => setDesconto(parseFloat(v) || 0)} className="h-9 text-sm" />
+              </div>
+              {(!editando || encomenda?.status === 'orcamento') && (
+                <label className="flex items-center gap-2 text-sm pt-1">
+                  <Checkbox checked={comoOrcamento} onCheckedChange={v => setComoOrcamento(!!v)} />
+                  Salvar como orçamento (ainda não confirmado)
+                </label>
+              )}
             </div>
 
             {/* ========== OBSERVAÇÕES ========== */}
@@ -475,14 +553,17 @@ export default function EncomendaFormDialog({ open, onOpenChange, onSubmit, data
               <div>
                 <p className="text-xs text-muted-foreground">Total</p>
                 <p className="text-lg font-bold">{formatCurrencyBRL(valorTotal)}</p>
+                {desconto > 0 && (
+                  <p className="text-[11px] text-muted-foreground">Itens {formatCurrencyBRL(subtotalItens)} − desconto {formatCurrencyBRL(desconto)}</p>
+                )}
                 {valorSinal > 0 && (
                   <p className="text-[11px] text-muted-foreground">
                     Sinal: {formatCurrencyBRL(valorSinal)} · Restante: {formatCurrencyBRL(valorTotal - valorSinal)}
                   </p>
                 )}
               </div>
-              <Button onClick={handleSubmit} disabled={!clienteNome.trim() || !dataEntrega || itens.every(i => !i.produto_nome.trim())}>
-                Criar Encomenda
+              <Button onClick={handleSubmit} disabled={!clienteNome.trim() || !dataEntrega || !canalSelecionado || itens.every(i => !i.produto_nome.trim())}>
+                {editando ? 'Salvar' : comoOrcamento ? 'Salvar orçamento' : 'Criar Encomenda'}
               </Button>
             </div>
           </div>
