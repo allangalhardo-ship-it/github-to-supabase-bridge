@@ -48,3 +48,12 @@ Na etapa passada, as mudanças no banco não chegaram ao Supabase usado pelo app
 - **Encomendas antigas já entregues:** ficam como estão.
 - **Cálculos em arquivos separados, com testes:** `src/lib/encomendaProducao.ts` (produzir, comprar, horas) e `src/lib/tempoPreparo.ts`.
 - **Imagem:** gerada com `html-to-image` e compartilhada pelo recurso de compartilhamento do aparelho (Web Share).
+
+## Ajustes aprovados
+1. **Sinal sem contar em dobro:** o pedido em Vendas e o DRE mostram o total cheio. O lançamento automático do Caixa na entrega desse pedido desconta o sinal já recebido: entra o total menos o sinal (e menos a taxa do canal, se houver). No teste de R$ 200,00 com R$ 80,00 de sinal, vou mostrar todos os lançamentos do Caixa, com soma igual a R$ 200,00.
+2. **Editar o sinal:** mudar valor, data ou forma atualiza o mesmo lançamento do Caixa. Zerar o sinal remove o lançamento. Existe no máximo um lançamento de sinal por encomenda.
+3. **Encomenda entregue fica bloqueada:** itens, valores, canal e desconto não podem ser editados. O botão "Reabrir encomenda" desfaz a venda e o saldo no Caixa, mantém o sinal e volta a situação para "pronta".
+4. **Canal obrigatório:** o último canal usado vem como padrão. A taxa e a regra da forma de pagamento são as mesmas das Vendas. Encomendas antigas sem canal continuam como estão.
+5. **Antes de tudo:** vou conferir se a mudança no banco chega ao Supabase do app. Se não chegar, te passo um SQL por vez, explicando o que cada um faz.
+
+**Detalhe técnico:** o sinal fica em `caixa_movimentos` com origem `encomenda_sinal` e referência única por encomenda. O `get_caixa_pedidos` desconta o sinal da linha de venda quando o pedido vem de encomenda. O `cancelar_venda_pedido` e o `salvar_venda_pedido` continuam bloqueando a origem `encomenda` pela tela de Vendas. O reabrir usa uma função própria.
